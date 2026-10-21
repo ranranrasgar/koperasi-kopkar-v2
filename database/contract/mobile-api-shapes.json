@@ -1,0 +1,278 @@
+{
+  "getanggota": {
+    "error": "boolean",
+    "message": "string",
+    "anggota": [
+      {
+        "kode_agt": "string",
+        "tglpencatatan": "string",
+        "nik": "string",
+        "nama": "string",
+        "jns_kelamin": "string",
+        "alamat": "string",
+        "kota": "string",
+        "kode_pos": "number",
+        "tlp_rumah": "string",
+        "hp": "string",
+        "no_ktp": "string",
+        "no_sim": "string",
+        "status": "string",
+        "nama_istri_suami": "string",
+        "jml_tanggungan": "string",
+        "jml_anak": "string",
+        "status_staff": "string",
+        "agt_non_agt": "string",
+        "rp_grade": "number",
+        "grade": "string",
+        "simpanan_pokok": "number",
+        "simpanan_wajib": "number",
+        "simpanan_sukarela": "number",
+        "pekerjaan": "string",
+        "alamat_kerja": "string",
+        "nama_perusahaan": "string",
+        "jabatan": "string",
+        "lama_bekerja_tahun": "string",
+        "lama_bekerja_bulan": "string",
+        "tlp_kantor": "string",
+        "npwp": "string",
+        "fasilitas_listrik": "string",
+        "fasilitas_pdam": "string",
+        "fasilitas_lain_lain": "string",
+        "lama_menempati_tahun": "string",
+        "lama_menempati_bulan": "string",
+        "bank_no_rek": "string",
+        "bank_nama": "string",
+        "bank_atas_nama": "string"
+      }
+    ]
+  },
+  "getpertanyaan": {
+    "error": "boolean",
+    "message": "string",
+    "pertanyaan": [
+      {
+        "id_pertanyaan": "number",
+        "pertanyaan": "string"
+      }
+    ]
+  },
+  "isuserexist": {
+    "error": "boolean",
+    "message": "string"
+  },
+  "getsimpanan": {
+    "error": "boolean",
+    "message": "string",
+    "simpanan": [
+      {
+        "nama_agt": "string",
+        "kode_agt": "string",
+        "jenis_simpanan": "string",
+        "nama_simpanan": "string",
+        "total": "number"
+      }
+    ]
+  },
+  "getsimpananrincipaginated": {
+    "error": "boolean",
+    "message": "string",
+    "simpanan_rinci": [
+      {
+        "tgl_transaksi": "string",
+        "no_bukti": "string",
+        "debit": "number",
+        "kredit": "number"
+      }
+    ]
+  },
+  "getSaldoJenisPinjaman": {
+    "error": "boolean",
+    "message": "string",
+    "saldo_pinjaman": [
+      {
+        "tgl_pinjaman": "string",
+        "no_pinjaman": "string",
+        "kode_kredit": "string",
+        "saldo": "number"
+      }
+    ]
+  },
+  "getpinjaman": {
+    "error": "boolean",
+    "message": "string",
+    "pinjaman": [
+      {
+        "tgl_pinjaman": "string",
+        "no_pinjaman": "string",
+        "bank_no_rek": "string",
+        "kode_agt": "string",
+        "nik": "string",
+        "nama": "string",
+        "bank_nama": "string",
+        "no_rek": "string",
+        "rp_pinjaman_pokok": "number",
+        "persen_adm": "number",
+        "rp_adm_ori": "number",
+        "rp_uang_muka": "number",
+        "rp_provisi": "number",
+        "temp_total_plafond": "number",
+        "temp_total_jasa": "number",
+        "temp_angs_pokok": "number",
+        "temp_angs_bunga": "number",
+        "rp_adm": "number",
+        "temp_angs_per_bulan": "number",
+        "lama_angsuran": "number",
+        "jml_cicilan": "number",
+        "sisa_cicilan": "number",
+        "jml_tunggakan": "number",
+        "jatuh_tempo_tgl": "null",
+        "opr": "string",
+        "kode_kredit": "string",
+        "bayar_pokok": "number",
+        "bayar_bunga": "number",
+        "nama_agt": "string",
+        "nama_kredit": "string",
+        "pinjaman_pokok": "number",
+        "saldo": "number",
+        "bunga": "number",
+        "lamaAngsuran": "number",
+        "persen_bunga": "number"
+      }
+    ]
+  },
+  "getpinjamanrincipaginated": {
+    "error": "boolean",
+    "message": "string",
+    "pinjaman_rinci": [
+      {
+        "angsuran_ke": "number",
+        "tgl_angsuran": "string",
+        "no_bukti": "string",
+        "debit": "number",
+        "kredit": "number"
+      }
+    ]
+  },
+  "getjadwalangsuran": {
+    "error": "boolean",
+    "message": "string",
+    "jadwal": [
+      {
+        "angsuran_ke": "number",
+        "tgl_tagihan": "string",
+        "pokok": "number",
+        "jasa": "number",
+        "total": "number",
+        "tgl_bayar": "null",
+        "no_bukti": "string",
+        "status": "string"
+      }
+    ]
+  },
+  "getjeniskreditv1": {
+    "error": "boolean",
+    "message": "string",
+    "jenis_kredit": [
+      {
+        "kd_kredit": "string",
+        "nm_kredit": "string",
+        "bunga_kredit": "number",
+        "kunci_staff": "number",
+        "kunci_grade": "number",
+        "kunci_saldo": "number",
+        "max_cicilan": "number",
+        "persen_adm": "number",
+        "persen_provisi": "number",
+        "persen_denda": "number",
+        "staff": "number"
+      }
+    ]
+  },
+  "getpotonganbulanan": {
+    "error": "boolean",
+    "message": "string",
+    "potongan": [
+      {
+        "no_rek": "string",
+        "nama_bank": "string",
+        "atas_nama": "string",
+        "s_pokok": "number",
+        "s_wajib": "number",
+        "s_sukarela": "number",
+        "rp_koprasi": "number",
+        "rp_bank": "number",
+        "rp_kpr": "number",
+        "rp_admin_bank": "number",
+        "total_potongan": "number"
+      }
+    ]
+  },
+  "isterdebet": {
+    "error": "boolean",
+    "message": "string",
+    "terdebet": "boolean"
+  },
+  "getshu": {
+    "error": "boolean",
+    "message": "string",
+    "shu": {
+      "rp_sukarela": "number",
+      "rp_uang": "number",
+      "rp_barang": "number",
+      "rp_lama": "number",
+      "temp_sukarela": "number",
+      "temp_uang": "number",
+      "temp_barang": "number",
+      "temp_lama": "number",
+      "total_shu": "number",
+      "no_reff": "string"
+    }
+  },
+  "gettahunshu": {
+    "error": "boolean",
+    "message": "string",
+    "tahun": [
+      "string"
+    ]
+  },
+  "getlognotifikasi": {
+    "error": "boolean",
+    "message": "string",
+    "log": [
+      {
+        "title": "string",
+        "pesan": "string",
+        "datetimes": "string"
+      }
+    ]
+  },
+  "gethistory": {
+    "error": "boolean",
+    "message": "string",
+    "history": [
+      {
+        "tgl": "string",
+        "ref": "string",
+        "title": "string",
+        "sub": "string",
+        "amount": "number",
+        "category": "string"
+      }
+    ]
+  },
+  "dashboard.php": {
+    "error": "boolean",
+    "total_simpanan": "number",
+    "sisa_pinjaman": "number",
+    "total_potongan": "number",
+    "total_shu": "number",
+    "himbauan": "null",
+    "promos": []
+  },
+  "_catatan": {
+    "getSaldoJenisPinjaman": "Server PHP saat ini TIDAK mengenali nama ini (huruf besar) dan hanya membalas error. Bentuk di atas adalah yang dibaca Android (PengajuanKreditActivity); server lama memakai getsaldojenispinjaman.",
+    "gettahunshu": "Tidak ada di server PHP saat ini. Bentuk di atas adalah yang dibaca Android (ShuActivity): daftar tahun buku SHU.",
+    "isuserexist": "Bentuk untuk username yang TIDAK ada. Untuk username ada: username_exist, pertanyaan, dan jawaban (jawaban tidak boleh dikirim lagi pada API baru).",
+    "download_slip.php": "Server PHP saat ini hanya mengembalikan teks placeholder, bukan PDF."
+  }
+}

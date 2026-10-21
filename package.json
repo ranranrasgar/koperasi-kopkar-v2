@@ -1,0 +1,9 @@
+{
+    "name": "kopkar-v2",
+    "private": true,
+    "type": "module",
+    "workspaces": ["backend", "mobile-api", "frontend"],
+    "scripts": {
+        "test": "npm run test -w backend"
+    }
+}
