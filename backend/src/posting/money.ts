@@ -5,6 +5,7 @@ export const toUnits = (v: string | number): bigint => {
     const n = BigInt(i.replace('-', '') || '0') * 10000n + BigInt((f + '0000').slice(0, 4));
     return neg ? -n : n;
 };
+export const round2 = (n: bigint): bigint => ((n + 50n) / 100n) * 100n; // jurnal memakai 2 desimal
 export const fromUnits = (n: bigint): string => {
     const neg = n < 0n;
     const a = neg ? -n : n;
