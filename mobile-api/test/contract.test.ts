@@ -7,7 +7,7 @@ import { createServer } from '../src/server.js';
 
 // Bentuk respons (nama kunci dan tipe) harus sama dengan mobile-api-shapes.json, yaitu apa yang dibaca Android.
 const expected = JSON.parse(fs.readFileSync(new URL('../../database/contract/mobile-api-shapes.json', import.meta.url), 'utf8'));
-const BELUM_ADA = new Set(['getanggota']); // belum diimplementasikan di mobile-api
+const BELUM_ADA = new Set<string>(); // endpoint baca yang belum diimplementasikan
 
 const shape = (v: unknown): unknown => v === null ? 'null' : Array.isArray(v) ? (v.length ? [shape(v[0])] : [])
     : typeof v === 'object' ? Object.fromEntries(Object.entries(v as object).map(([k, x]) => [k, shape(x)])) : typeof v;
@@ -35,6 +35,7 @@ test('bentuk JSON semua endpoint baca = kontrak Android', async () => {
     const { kd, no } = await pick();
     const A = '/v1/Api.php?apicall=';
     const paths: Record<string, string> = {
+        getanggota: `${A}getanggota`,
         getpertanyaan: `${A}getpertanyaan`,
         isuserexist: `${A}isuserexist&username=tidakada_xyz`,
         getsimpanan: `${A}getsimpanan&kdAnggota=${kd}`,

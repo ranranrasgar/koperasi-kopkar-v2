@@ -23,6 +23,8 @@ const int = (p: Query, name: string, def: number) => {
 const ok = (message: string, extra: Result = {}): Result => ({ error: false, message, ...extra });
 
 const handlers: Record<string, Handler> = {
+    // kdAnggota opsional (tambahan): membatasi ke satu anggota; tanpa itu bentuknya sama dengan server lama.
+    getanggota: async (db, p) => ok('Request successfully completed', { anggota: await q.getAnggota(db, p.get('kdAnggota')?.trim() || undefined) }),
     getsimpanan: async (db, p) => { need(p, 'kdAnggota'); return ok('Simpanan berhasil diquery', { simpanan: await q.getSimpanan(db, p.get('kdAnggota')!) }); },
     getsimpananrincipaginated: async (db, p) => {
         need(p, 'kdAnggota', 'jenisSimpanan', 'offset', 'limit');

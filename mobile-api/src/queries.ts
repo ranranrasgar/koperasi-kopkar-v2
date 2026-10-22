@@ -188,3 +188,16 @@ export async function getHimbauan(db: Pool) {
 export async function getPromos(db: Pool) {
     return (await db.query('SELECT id, judul, isi, image FROM promo WHERE status = true ORDER BY id DESC')).rows;
 }
+
+/** Daftar anggota (data diri + detail; yang punya detail lebih dulu, sebagian anggota belum punya detail sehingga kolom detailnya null seperti di server lama). Tanpa token server lama mengembalikan semua anggota; kdAnggota membatasi ke satu orang. */
+export async function getAnggota(db: Pool, kdAnggota?: string) {
+    const r = await db.query(
+        `SELECT a.kode_agt, a.tglpencatatan, a.nik, a.nama, a.jns_kelamin, a.alamat, a.kota, a.kodepos kode_pos, a.telp_rmh tlp_rumah, a.hp,
+                ad.no_ktp_sim no_ktp, ad.no_sim, a.status, ad.nama_istri_suami, ad.jml_tanggungan, ad.jml_anak, a.status_staff, CASE WHEN a.agt_non_agt THEN 'Y' ELSE 'N' END agt_non_agt,
+                a.rp_grade, a.grade, a.simpanan_pokok, a.simpanan_wajib, a.simpanan_sukarela, ad.pekerjaan, ad.alamat_kerja, ad.nama_perusahaan,
+                ad.jabatan, ad.lama_bekerja_tahun, ad.lama_bekerja_bulan, ad.telp_ktr tlp_kantor, ad.npwp, ad.fasilitas_listrik, ad.fasilitas_pdam,
+                ad.fasilitas_lain_lain, ad.lama_menempati_tahun, ad.lama_menempati_bulan, a.bank_no_rek, a.bank_nama, a.bank_atas_nama
+           FROM anggota a LEFT JOIN anggota_detail ad ON ad.anggota_id = a.id
+          WHERE ($1::text IS NULL OR a.kode_agt = $1) ORDER BY (ad.id IS NULL), a.id`, [kdAnggota ?? null]);
+    return r.rows;
+}
