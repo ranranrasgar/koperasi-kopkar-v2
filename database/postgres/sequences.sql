@@ -20,3 +20,11 @@ SELECT setval('seq_pinjaman_tagih_urut', GREATEST((SELECT COALESCE(MAX(urut), 0)
  WHERE (SELECT last_value FROM seq_pinjaman_tagih_urut) = 1 AND NOT (SELECT is_called FROM seq_pinjaman_tagih_urut);
 SELECT setval('seq_pinjaman_no', GREATEST((SELECT COALESCE(MAX(no_pinjaman_urut), 0) FROM pinjaman_tunai), 1))
  WHERE (SELECT last_value FROM seq_pinjaman_no) = 1 AND NOT (SELECT is_called FROM seq_pinjaman_no);
+
+-- KPR: nomor KPR-mmyy-urut dan urut rincian (nomor ANGS-KPR-).
+CREATE SEQUENCE IF NOT EXISTS seq_kpr_no;
+CREATE SEQUENCE IF NOT EXISTS seq_kpr_rincian_urut;
+SELECT setval('seq_kpr_no', GREATEST((SELECT COALESCE(MAX(no_pinjaman_urut), 0) FROM kpr), 1))
+ WHERE (SELECT last_value FROM seq_kpr_no) = 1 AND NOT (SELECT is_called FROM seq_kpr_no);
+SELECT setval('seq_kpr_rincian_urut', GREATEST((SELECT COALESCE(MAX(urut), 0) FROM kpr_rincian), 1))
+ WHERE (SELECT last_value FROM seq_kpr_rincian_urut) = 1 AND NOT (SELECT is_called FROM seq_kpr_rincian_urut);
