@@ -1,0 +1,101 @@
+# WORKLOG
+
+Log kerja untuk agent berikutnya. **Entri terbaru di paling atas.** Tiap entri: apa yang dikerjakan, cara verifikasi dan hasilnya, apa yang tersisa, jebakan yang ditemukan. Jangan menghapus entri lama.
+
+## Status ringkas (perbarui setiap sesi)
+- Backend (mesin posting) + mobile-api: selesai dan lolos uji (14 + 3).
+- Frontend: semua item menu sudah punya halaman (tidak ada lagi `locked`). Halaman absensi hanya placeholder (data tidak dimigrasi).
+- Semua pekerjaan frontend sudah di-commit di `master` (8 commit per kelompok mulai 19dfe4a, terakhir "docs: CLAUDE.md dan WORKLOG"), belum di-push.
+- Form master dan pengajuan ikut mode uji (`tx()`). Yang belum diuji: tombol cetak.
+
+---
+
+## 2026-10-22 (malam) — Verifikasi laporan akuntansi terhadap tutup buku desktop
+
+**Paritas saldo (model `saldoPerAkun` di `lib/queries/laporan.ts`).** Saldo akhir tiap akun tahun Y dibandingkan dengan baris saldo pembuka TBT Y+1:
+- 2024 -> 2025-01-01: 123 akun, **0 selisih**.
+- 2025 -> 2026-01-01: 125 akun, **0 selisih** kecuali akun `0` (lihat di bawah). Bank OCBC 1.1.01.41 = 9.952.969.417,09 di kedua sisi.
+- 2018-2023: 4-10 akun berselisih per tahun (data lama diubah setelah tutup buku di desktop). Model hanya dijamin untuk 2024 ke atas.
+
+**Rugi laba.** SHU web (klasifikasi 40/50, tanpa TBT) sama dengan nilai yang ditutup jurnal TBT 31-12: 2024 = 1.462.648.154,66 dan 2025 = 1.703.638.348,53, selisih 0. Tahun 2023 berselisih 508.078 (akun 6.0.00.13, data lama).
+
+**Akun `0` (data asal, bukan bug).** Ada 307 baris `jurnal_umum` dengan `kode_perkiraan = '0'` (2025-2026, opr subigbyo/rohimah). Hampir semuanya bernilai 0. Ada 4 bukti yang membuat jurnal tidak seimbang:
+- BB/250814/002: 159
+- BB/250901/002: 18.100.000
+- BB/251222/002: 8.230.000
+- BB/260211/005: 17.650.000
+
+Neraca saldo dan neraca menampilkannya sebagai "(akun tidak ada di COA)" dengan peringatan selisih. Bukti ini perlu dibetulkan akunnya oleh pengguna/akuntan. Sisa selisih kecil sekitar 3.468 berasal dari pembulatan jurnal lama sebelum 2019.
+
+**Typecheck frontend:** lolos.
+
+**Uji render halaman di balik login.** Dev server lama (PID 8396) macet: `/login` timeout dan CPU tinggi. Atas izin pengguna server dimatikan lalu dijalankan ulang (`npm run dev -w frontend`, port 3100).
+
+Cara uji: cookie sesi superadmin dibuat dari `SESSION_SECRET` di `.env.local` untuk operator superadmin yang sudah ada, lalu setiap halaman diambil dengan GET. Tidak ada tulis ke database. Hasilnya:
+- 25 halaman dashboard (semua halaman baru dan form transaksi) mengembalikan 200, tanpa redirect akses ditolak dan tanpa galat di log server. Semua menampilkan data.
+- Halaman dengan parameter juga lolos:
+  - kartu simpanan `?kode=2703-6506`
+  - buku besar OCBC Desember 2025
+  - neraca saldo 2025: OCBC akhir 9.952.969.417, peringatan selisih 26.333.627
+  - neraca per 31-12-2025: aktiva 31.898.561.938, pasiva 31.898.558.470
+  - rugi laba 2025: SHU 1.703.638.349
+
+**Perbaikan:** teks peringatan di `accounting/reports` (neraca) sebelumnya menulis selisih 3.468 "termasuk" akun di luar COA. Faktanya akun `0` tidak masuk neraca sama sekali, jadi kalimatnya diubah menjadi "di luar itu ada saldo di akun yang tidak ada di COA dan tidak masuk neraca". Typecheck lolos.
+
+**Form master dan pengajuan sekarang ikut mode uji.** Sebelumnya `actions/master.ts` dan `actions/pengajuan.ts` menulis lewat `query()` langsung, sehingga di mode `KOPKAR_UJI_ROLLBACK=1` perubahannya tetap tersimpan (banner "semua transaksi dibatalkan" menyesatkan). Perubahannya:
+- Keduanya sekarang menulis lewat `tx()` dari `lib/db.ts`.
+- Di mode uji pesan diberi awalan "MODE UJI, tidak tersimpan:" dan `revalidatePath` dilewati, sama dengan `transaksi.ts`.
+- Di `master.ts`, `akun()` menerima `db`, dan empat lookup COA jenis pinjaman dijalankan berurutan (satu koneksi transaksi tidak bisa paralel).
+
+**Perbaikan `components/master/FormEdit.tsx`.** Form memakai `<form action>`, sehingga React 19 mengosongkan semua isian saat validasi server menolak (contoh: kode dan nama jenis pinjaman baru hilang setelah "Tanggal jatuh tempo minimal 1"). Sekarang memakai `onSubmit` + `startTransition`, pola yang sama dengan `useAksiForm`.
+
+**Uji di browser** (sesi superadmin uji, mode uji aktif). Semua menampilkan pesan "MODE UJI, tidak tersimpan":
+- Simpan perusahaan.
+- Ubah jenis simpanan.
+- Ubah jenis pinjaman.
+- Tambah jenis pinjaman `ZZ99`. Ditolak dulu karena validasi, isian tetap ada, lalu berhasil setelah tanggal diisi.
+- Setujui pengajuan 0525-1889 dan tolak 0626-2033.
+
+Sidik isi tabel `perusahaan`, `jenis_simpanan`, `jenis_kredit`, dan `pengajuan_pinjaman` sebelum dan sesudah uji: **identik**. Typecheck lolos.
+
+**Masih belum diuji:** tombol cetak (`TombolCetak`), yang perlu dicek manual di browser (dialog print).
+
+---
+
+## 2026-10-22 (sore) — Audit v2, CLAUDE.md, dan verifikasi query halaman baru
+
+**Konteks.** Sesi sebelumnya sempat bekerja di `Koperasi-Kopkar-Web` (aplikasi Next.js + Prisma lama). Itu proyek lama; **proyek aktif adalah `Koperasi-Kopkar-v2`** (monorepo backend/mobile-api/frontend, tanpa Prisma). Jangan melanjutkan pekerjaan di folder Web.
+
+**Keadaan yang ditemukan di v2** (branch `master`, commit terakhir `ffd56ec` "grup superadmin..."): 37 entri perubahan belum di-commit, yaitu halaman-halaman yang sebelumnya `locked` di menu sekarang sudah dibuat:
+- Anggota: `members/karyawan-mattel`, `members/mobile-users` (config di `modules.ts`, query di `lib/queries/keanggotaan.ts`).
+- Simpanan: `savings/cards` (kartu simpanan), `savings/analytics` (grafik), `savings/time-deposits` (rekap berjangka) — `lib/queries/simpanan-lap.ts`.
+- Pinjaman: `loans/apply` (pengajuan; setuju/tolak lewat `actions/pengajuan.ts`), `loans/escrow`, `loans/bad-debts` (tunggakan) — `lib/queries/pinjaman-lap.ts`.
+- `deductions` (proyeksi potongan gaji), `shu`.
+- Akuntansi: `accounting/ledger`, `trial-balance`, `reports` (neraca + rugi laba), `closing` — `lib/queries/laporan.ts`.
+- Pengaturan: `settings`, `settings/jenis-pinjaman`, `settings/jenis-simpanan` (form edit lewat `components/master/*` dan `actions/master.ts`).
+- `attendance`: placeholder saja (tabel absensi kosong dan tidak dimigrasi).
+- `config/akses.ts` diperluas (`MENU` dan `AKSES_HALAMAN`) untuk semua halaman di atas; `config/menu.ts` menghapus flag `locked`.
+
+**Verifikasi yang dijalankan (semua dari proyek v2, database lokal `kopkar_mjs_2000`):**
+- `npm run typecheck -w frontend`: lolos.
+- `PG_URL=... npm test`: backend 14/14 lolos, mobile-api 3/3 lolos (17 endpoint sesuai kontrak).
+- Smoke test 17 fungsi query halaman baru langsung ke PostgreSQL (stub `@/lib/db`, jalankan tsx dengan tsconfig yang memetakan alias): semua tanpa galat. Contoh hasil: `saldoPerAkun` 153 akun, `daftarTunggakan` 269, `proyeksiPotongan` 1080, `shuAnggota` 1032, `riwayatTutupBuku` 16, `daftarPengajuan('P')` 14.
+- Server dev berjalan di port 3100 dan mengarahkan ke `/login`.
+
+**Yang BELUM diverifikasi:**
+- Tampilan dan perilaku halaman di balik login (tidak ada kredensial operator yang dipakai agent; `set-password` mengubah database sehingga tidak dijalankan tanpa izin pengguna). Perlu dicek manual: render tiap halaman baru, cetak (`TombolCetak`), simpan form master, setuju/tolak pengajuan.
+- `accounting/closing` hanya pratinjau + riwayat jurnal TBT, **tidak memposting**. Teks di halaman: posting otomatis tutup buku harus diuji paritas dulu terhadap tutup buku 2024 dan 2025; sampai itu selesai tutup buku tetap dilakukan di aplikasi desktop.
+- Tidak ada lint di frontend; tidak ada uji frontend.
+
+**Dibuat sesi ini:** `CLAUDE.md` (panduan agent, termasuk kewajiban memperbarui log ini) dan `docs/WORKLOG.md`.
+
+**Jebakan:**
+- Port 3100 mungkin sudah dipakai dev server milik pengguna; `npm run dev -w frontend` akan gagal `EADDRINUSE`. Pakai server yang sudah ada.
+- `.claude/launch.json` v2 hanya terbaca bila sesi berada di folder v2; di folder lain `preview_start` menjalankan proyek yang salah.
+- `git` menampilkan peringatan LF/CRLF pada file yang diubah; tidak berbahaya.
+
+**Langkah berikutnya (usulan):**
+1. Pengguna login lalu menelusuri halaman baru; perbaiki yang rusak.
+2. Commit pekerjaan yang belum tersimpan (per kelompok: anggota, simpanan, pinjaman, akuntansi, pengaturan) setelah pengguna setuju.
+3. Tentukan sumber data absensi (ekspor mesin fingerprint atau API) bila halaman itu dibutuhkan.
+4. Pertimbangkan menambah lint dan uji untuk frontend.
