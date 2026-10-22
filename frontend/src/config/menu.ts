@@ -96,8 +96,7 @@ export const allGroups: MenuGroup[] = [
             {
                 label: "Pengajuan Kredit",
                 icon: "assignment",
-                href: "/dashboard/loans/apply",
-                locked: true
+                href: "/dashboard/loans/apply"
             },
             {
                 label: "Input Pinjaman Tunai",
@@ -117,14 +116,12 @@ export const allGroups: MenuGroup[] = [
             {
                 label: "Setoran Titipan (Escrow)",
                 icon: "layers",
-                href: "/dashboard/loans/escrow",
-                locked: true
+                href: "/dashboard/loans/escrow"
             },
             {
                 label: "Kredit Macet",
                 icon: "trending_down",
-                href: "/dashboard/loans/bad-debts",
-                locked: true
+                href: "/dashboard/loans/bad-debts"
             }
         ]
     },
@@ -134,8 +131,7 @@ export const allGroups: MenuGroup[] = [
             {
                 label: "Transaksi Potongan",
                 icon: "format_list_numbered",
-                href: "/dashboard/deductions",
-                locked: true
+                href: "/dashboard/deductions"
             }
         ]
     },

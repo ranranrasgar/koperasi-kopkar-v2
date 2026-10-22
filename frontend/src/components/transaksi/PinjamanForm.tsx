@@ -14,14 +14,17 @@ export interface JenisKreditOpsi {
 
 type Pratinjau = Awaited<ReturnType<typeof pratinjauPinjamanAction>>
 
-export function PinjamanForm({ jenis, akunKas, hariIni }: { jenis: JenisKreditOpsi[]; akunKas: Akun[]; hariIni: string }) {
+/** Isi awal dari pengajuan kredit yang disetujui. */
+export interface AwalPinjaman extends AnggotaRingkas { kode_kredit: string; pokok: string; lama: number; persen_bunga: string }
+
+export function PinjamanForm({ jenis, akunKas, hariIni, awal }: { jenis: JenisKreditOpsi[]; akunKas: Akun[]; hariIni: string; awal?: AwalPinjaman }) {
     const { hasil, onSubmit, pending } = useAksiForm(cairkanPinjamanAction)
-    const [anggota, setAnggota] = useState<AnggotaRingkas | null>(null)
-    const [kodeKredit, setKodeKredit] = useState(jenis[0]?.kode_kredit ?? "")
+    const [anggota, setAnggota] = useState<AnggotaRingkas | null>(awal ?? null)
+    const [kodeKredit, setKodeKredit] = useState(awal?.kode_kredit ?? jenis[0]?.kode_kredit ?? "")
     const [tanggal, setTanggal] = useState(hariIni)
-    const [pokok, setPokok] = useState("")
-    const [lama, setLama] = useState("")
-    const [persenBunga, setPersenBunga] = useState("")
+    const [pokok, setPokok] = useState(awal ? String(Number(awal.pokok)) : "")
+    const [lama, setLama] = useState(awal ? String(awal.lama) : "")
+    const [persenBunga, setPersenBunga] = useState(awal ? String(Number(awal.persen_bunga)) : "")
     const [pratinjau, setPratinjau] = useState<Pratinjau>(null)
     const form = useRef<HTMLFormElement>(null)
     const jk = jenis.find((j) => j.kode_kredit === kodeKredit)
