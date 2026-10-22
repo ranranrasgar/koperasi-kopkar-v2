@@ -38,7 +38,9 @@ export async function daftarJurnal(s: SearchParams) {
           FROM jurnal_umum j LEFT JOIN perkiraan c ON c.id = j.perkiraan_id
          ${where.length ? `WHERE ${where.join(" AND ")}` : ""}`
     const sortable = Object.fromEntries(["tanggal_jurnalumum", "nomor_bukti", "kode_perkiraan", "debit_jurnalumum", "kredit_jurnalumum"].map((k) => [k, k]))
-    return paged({ base, values, searchParams: s, sortable, defaultSort: "tanggal_jurnalumum DESC, urutan DESC", pageSize: 50 })
+    // Baris satu bukti berkelompok, debit dulu lalu kredit (urutan baca jurnal), lalu urutan input.
+    const perBukti = "nomor_bukti DESC, CASE WHEN debit_jurnalumum > 0 THEN 0 WHEN kredit_jurnalumum > 0 THEN 1 ELSE 2 END, urutan"
+    return paged({ base, values, searchParams: s, sortable, defaultSort: `tanggal_jurnalumum DESC, ${perBukti}`, urutanLanjut: perBukti, pageSize: 50 })
 }
 
 export interface AkunPohon { id: number; parent_id: number | null; kode_perkiraan: string; nama_perkiraan: string; d_k: string; keterangan: string | null }

@@ -28,13 +28,15 @@ export async function paged<T = Record<string, unknown>>(opts: {
     searchParams: SearchParams
     sortable: Record<string, string>
     defaultSort: string
+    /** Urutan tambahan setelah kolom yang dipilih pengguna (penentu urutan baris yang nilainya sama). */
+    urutanLanjut?: string
     pageSize?: number
 }): Promise<PageData<T>> {
     const page = Math.max(1, parseInt(sp(opts.searchParams, "page") || "1", 10) || 1)
     const pageSize = Math.min(200, Math.max(1, parseInt(sp(opts.searchParams, "pageSize") || String(opts.pageSize ?? 25), 10) || 25))
     const sortCol = opts.sortable[sp(opts.searchParams, "sortBy")]
     const dir = sp(opts.searchParams, "sortOrder") === "desc" ? "DESC" : "ASC"
-    const order = sortCol ? `${sortCol} ${dir} NULLS LAST` : opts.defaultSort
+    const order = sortCol ? `${sortCol} ${dir} NULLS LAST${opts.urutanLanjut ? `, ${opts.urutanLanjut}` : ""}` : opts.defaultSort
 
     const n = opts.values.length
     const [count, items] = await Promise.all([
