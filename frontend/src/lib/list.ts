@@ -1,0 +1,47 @@
+import "server-only"
+import { query } from "@/lib/db"
+import type { PageData } from "@/config/modules"
+
+export type SearchParams = Record<string, string | string[] | undefined>
+
+/** Ambil satu nilai teks dari searchParams halaman. */
+export const sp = (s: SearchParams, k: string) => {
+    const v = s[k]
+    return (Array.isArray(v) ? v[0] : v)?.trim() ?? ""
+}
+
+export const isTanggal = (v: string) => /^\d{4}-\d{2}-\d{2}$/.test(v)
+
+/** Pengumpul parameter $1, $2, ... untuk menyusun WHERE dinamis. */
+export function params() {
+    const values: unknown[] = []
+    return { values, p: (v: unknown) => { values.push(v); return `$${values.length}` } }
+}
+
+/**
+ * Halaman tabel: `base` adalah SELECT lengkap tanpa ORDER BY/LIMIT. Kolom urut hanya boleh
+ * dari daftar `sortable` (nama kolom hasil SELECT), karena disisipkan ke SQL.
+ */
+export async function paged<T = Record<string, unknown>>(opts: {
+    base: string
+    values: unknown[]
+    searchParams: SearchParams
+    sortable: Record<string, string>
+    defaultSort: string
+    pageSize?: number
+}): Promise<PageData<T>> {
+    const page = Math.max(1, parseInt(sp(opts.searchParams, "page") || "1", 10) || 1)
+    const pageSize = Math.min(200, Math.max(1, parseInt(sp(opts.searchParams, "pageSize") || String(opts.pageSize ?? 25), 10) || 25))
+    const sortCol = opts.sortable[sp(opts.searchParams, "sortBy")]
+    const dir = sp(opts.searchParams, "sortOrder") === "desc" ? "DESC" : "ASC"
+    const order = sortCol ? `${sortCol} ${dir} NULLS LAST` : opts.defaultSort
+
+    const n = opts.values.length
+    const [count, items] = await Promise.all([
+        query<{ total: number }>(`SELECT COUNT(*) AS total FROM (${opts.base}) t`, opts.values),
+        query<T>(`SELECT * FROM (${opts.base}) t ORDER BY ${order} LIMIT $${n + 1} OFFSET $${n + 2}`,
+            [...opts.values, pageSize, (page - 1) * pageSize]),
+    ])
+    const total = count[0]?.total ?? 0
+    return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) }
+}
