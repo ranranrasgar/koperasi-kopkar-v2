@@ -307,7 +307,7 @@ export function ModuleTable({ config, data, actions }: ModuleTableProps) {
             {selectedItem && (
                 <div className="fixed inset-0 z-50 bg-black/40 flex justify-end animate-in fade-in duration-200 print:hidden">
                     <div className="absolute inset-0" onClick={() => setSelectedItem(null)} />
-                    <div className="relative w-full max-w-md h-full bg-background border-l shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
+                    <div className="relative w-full max-w-[28rem] h-full bg-background border-l shadow-2xl flex flex-col animate-in slide-in-from-right duration-300">
                         <div className="flex items-center justify-between px-6 py-4 border-b">
                             <h3 className="text-base font-extrabold text-foreground">Detail Data</h3>
                             <Button variant="ghost" size="sm" onClick={() => setSelectedItem(null)}>Tutup</Button>

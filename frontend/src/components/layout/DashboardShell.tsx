@@ -5,7 +5,9 @@ import { useSidebar, SidebarProvider } from "./SidebarContext"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
-function ShellContent({ children }: { children: React.ReactNode }) {
+export interface OperatorTampil { nama: string; namaLengkap: string; grup: string | null }
+
+function ShellContent({ children, operator }: { children: React.ReactNode; operator: OperatorTampil }) {
     const { isOpen } = useSidebar()
     const pathname = usePathname()
 
@@ -27,7 +29,7 @@ function ShellContent({ children }: { children: React.ReactNode }) {
                 "flex-1 flex flex-col min-h-screen transition-all duration-300 w-full min-w-0",
                 isOpen ? "md:ml-64" : "md:ml-0"
             )}>
-                <Navbar />
+                <Navbar operator={operator} />
                 
                 <main className={cn(
                     "flex-1 p-4 md:p-6 lg:p-8 w-full animate-in fade-in duration-500",
@@ -40,10 +42,10 @@ function ShellContent({ children }: { children: React.ReactNode }) {
     )
 }
 
-export function DashboardShell({ children }: { children: React.ReactNode }) {
+export function DashboardShell({ children, operator }: { children: React.ReactNode; operator: OperatorTampil }) {
     return (
         <SidebarProvider>
-            <ShellContent>{children}</ShellContent>
+            <ShellContent operator={operator}>{children}</ShellContent>
         </SidebarProvider>
     )
 }

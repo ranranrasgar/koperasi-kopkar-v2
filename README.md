@@ -13,4 +13,7 @@ Uji kontrak: `npm test -w mobile-api` membandingkan bentuk JSON dengan `database
 Jalankan web: `npm run dev -w frontend` (port 3100), `PG_URL` dibaca dari `frontend/.env.local`.
 Impor antar file backend memakai ekstensi `.ts` supaya bisa dibundel Turbopack dan dijalankan tsx.
 Form transaksi web memanggil mesin posting lewat server actions (`frontend/src/app/actions/transaksi.ts`).
-Sampai login operator dibuat, kolom `opr` diambil dari `KOPKAR_OPR_SEMENTARA`; `KOPKAR_UJI_ROLLBACK=1` menjalankan posting lalu membatalkannya (mode uji).
+Kolom `opr` diisi nama operator yang login; `KOPKAR_UJI_ROLLBACK=1` menjalankan posting lalu membatalkannya (mode uji).
+
+Login operator (tabel `opr`): sesi cookie bertanda tangan 12 jam, wajib `SESSION_SECRET` (min. 32 karakter) di `frontend/.env.local`.
+Password awal diset admin: `npm run set-password -w frontend -- <nama>` (atau `--acak`, `--daftar`); operator wajib menggantinya saat login pertama.

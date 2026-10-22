@@ -2,8 +2,10 @@ import { SavingsSummary } from "@/components/ui/SavingsSummary"
 import { rekapSimpanan } from "@/lib/queries/simpanan"
 import { hariIni } from "@/lib/format"
 import { isTanggal, sp } from "@/lib/list"
+import { wajibLogin } from "@/lib/operator"
 
 export default async function SavingsSummaryPage(props: PageProps<"/dashboard/savings">) {
+    await wajibLogin() // layout tidak dijalankan ulang pada navigasi antarhalaman
     const s = await props.searchParams
     // Bawaan: saldo s/d hari ini.
     const endDate = isTanggal(sp(s, "endDate")) ? sp(s, "endDate") : hariIni()

@@ -1,9 +1,11 @@
 import { DashboardShell } from "@/components/layout/DashboardShell"
 import { modeUji } from "@/lib/db"
+import { wajibLogin } from "@/lib/operator"
 
-export default function Layout({ children }: { children: React.ReactNode }) {
+export default async function Layout({ children }: { children: React.ReactNode }) {
+    const o = await wajibLogin()
     return (
-        <DashboardShell>
+        <DashboardShell operator={{ nama: o.nama, namaLengkap: o.namaLengkap, grup: o.grup }}>
             {modeUji && (
                 <div role="status" className="mb-4 rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-800 dark:text-amber-300">
                     Mode uji aktif (KOPKAR_UJI_ROLLBACK=1): semua transaksi dibatalkan setelah diproses dan tidak tersimpan.

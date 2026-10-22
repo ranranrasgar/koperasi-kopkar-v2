@@ -8,7 +8,7 @@ import { postJurnalUmum } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
 import { modeUji, query, tx } from "@/lib/db"
-import { operatorAktif } from "@/lib/operator"
+import { GalatSesi, operatorAktif, wajibLogin } from "@/lib/operator"
 import { cariAnggota, type AnggotaRingkas } from "@/lib/queries/anggota"
 import { kprBerjalan, pinjamanBerjalan, type KprBerjalan, type PinjamanBerjalan } from "@/lib/queries/pinjaman"
 
@@ -62,7 +62,7 @@ async function posting(fn: (opr: string) => Promise<Exclude<Hasil, null>>): Prom
         revalidatePath("/dashboard", "layout")
         return res
     } catch (e) {
-        if (!(e instanceof InputSalah)) console.error("posting gagal:", e)
+        if (!(e instanceof InputSalah) && !(e instanceof GalatSesi)) console.error("posting gagal:", e)
         return { ok: false, error: e instanceof Error ? e.message : "Transaksi gagal" }
     }
 }
@@ -70,6 +70,7 @@ async function posting(fn: (opr: string) => Promise<Exclude<Hasil, null>>): Prom
 // ---------- pencarian dan info anggota ----------
 
 export async function cariAnggotaAction(kata: string): Promise<AnggotaRingkas[]> {
+    await wajibLogin() // sesi habis: alihkan ke login
     if (kata.trim().length < 2) return []
     return cariAnggota(kata)
 }
@@ -81,6 +82,7 @@ export interface InfoAnggota {
 }
 
 export async function infoAnggotaAction(kodeAgt: string): Promise<InfoAnggota> {
+    await wajibLogin() // sesi habis: alihkan ke login
     const [saldo, pinjaman, kpr] = await Promise.all([
         query<InfoAnggota["saldo"][number]>(
             `SELECT j.kode_simpanan, j.nama_simpanan, COALESCE(SUM(s.rp_setoran - s.rp_pengambilan), 0) AS saldo
@@ -114,6 +116,7 @@ export async function ambilSimpananAction(_: Hasil, f: FormData) { return simpan
 
 /** Pratinjau pencairan dengan rumus mesin posting yang sama (tanpa menulis ke database). */
 export async function pratinjauPinjamanAction(p: { kodeKredit: string; tglPinjaman: string; pokok: string; lama: number; persenBunga?: string }) {
+    await wajibLogin() // sesi habis: alihkan ke login
     try {
         if (!UANG.test(p.pokok) || toUnits(p.pokok) <= 0n || !Number.isInteger(p.lama) || p.lama < 1 || !TANGGAL.test(p.tglPinjaman)) return null
         if (p.persenBunga && !UANG.test(p.persenBunga)) return null
@@ -146,6 +149,7 @@ export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasi
 
 /** Angsuran berikutnya dari pinjaman tunai, dihitung dengan rumus mesin posting. */
 export async function angsuranBerikutnyaAction(noPinjaman: string) {
+    await wajibLogin() // sesi habis: alihkan ke login
     const [p] = await query<{ rp_pinjaman_pokok: string; persen_bunga: string; bunga_per: number; lama_angsuran: number; jml_cicilan: number;
         persen_adm: string; persen_provisi: string }>(
         `SELECT rp_pinjaman_pokok::text, persen_bunga::text, bunga_per, lama_angsuran, jml_cicilan, persen_adm::text, persen_provisi::text

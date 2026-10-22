@@ -4,8 +4,10 @@ import { Button } from "@/components/ui/button"
 import { ModuleTable } from "@/components/ui/ModuleTable"
 import { savingsLedgerConfig } from "@/config/modules"
 import { bukuSimpanan, jenisSimpanan } from "@/lib/queries/simpanan"
+import { wajibLogin } from "@/lib/operator"
 
 export default async function SavingsLedgerPage(props: PageProps<"/dashboard/savings/ledger">) {
+    await wajibLogin() // layout tidak dijalankan ulang pada navigasi antarhalaman
     const [data, jenis] = await Promise.all([bukuSimpanan(await props.searchParams), jenisSimpanan()])
     const config = {
         ...savingsLedgerConfig,

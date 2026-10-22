@@ -3,10 +3,12 @@ import { Users, Wallet, Receipt, Home, ChevronRight, Calendar } from "lucide-rea
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { query } from "@/lib/db"
 import { formatRupiah, formatAngka, formatTanggal } from "@/lib/format"
+import { wajibLogin } from "@/lib/operator"
 
 const NAMA_BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 
 export default async function DashboardPage() {
+    await wajibLogin() // layout tidak dijalankan ulang pada navigasi antarhalaman
     const [[stat], bulanan, terakhir] = await Promise.all([
         query<{ anggota: number; saldo: number; pinjaman: number; kpr: number }>(`
             SELECT (SELECT COUNT(*) FROM anggota WHERE aktif) AS anggota,

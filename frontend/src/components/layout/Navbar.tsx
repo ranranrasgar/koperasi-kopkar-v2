@@ -5,8 +5,19 @@ import { usePathname } from "next/navigation"
 import { useSidebar } from "./SidebarContext"
 import { Sidebar } from "./Sidebar"
 import { getMenuGroups } from "@/config/menu"
+import Link from "next/link"
+import { logoutAction } from "@/app/actions/auth"
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuLabel,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger
+} from "@/components/ui/dropdown-menu"
+import type { OperatorTampil } from "./DashboardShell"
 
-export function Navbar() {
+export function Navbar({ operator }: { operator: OperatorTampil }) {
     const pathname = usePathname()
     const { toggle } = useSidebar()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
@@ -47,16 +58,30 @@ export function Navbar() {
 
             {/* Right Profile Controls */}
             <div className="flex items-center gap-3">
-                <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-surface-variant transition-all outline-none">
-                    <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-container text-on-primary-container font-bold">
-                        A
-                    </div>
-                    <div className="hidden lg:flex flex-col items-start leading-none pr-1">
-                        <span className="text-xs font-bold text-on-surface">Administrator</span>
-                        <span className="text-[9px] uppercase tracking-wider text-on-surface-variant mt-0.5">Admin</span>
-                    </div>
-                    <span className="material-symbols-outlined text-[1.2rem] text-on-surface-variant">expand_more</span>
-                </button>
+                <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                        <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-surface-variant transition-all outline-none">
+                            <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-container text-on-primary-container font-bold">
+                                {operator.namaLengkap.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="hidden lg:flex flex-col items-start leading-none pr-1">
+                                <span className="text-xs font-bold text-on-surface">{operator.namaLengkap}</span>
+                                <span className="text-[9px] uppercase tracking-wider text-on-surface-variant mt-0.5">{operator.grup ?? operator.nama}</span>
+                            </div>
+                            <span className="material-symbols-outlined text-[1.2rem] text-on-surface-variant">expand_more</span>
+                        </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                        <DropdownMenuLabel className="text-xs">Login sebagai {operator.nama}</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                            <Link href="/ganti-password">Ganti Password</Link>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem className="text-destructive" onSelect={() => logoutAction()}>
+                            Keluar
+                        </DropdownMenuItem>
+                    </DropdownMenuContent>
+                </DropdownMenu>
             </div>
 
             {/* Mobile Drawer (Simulation) */}

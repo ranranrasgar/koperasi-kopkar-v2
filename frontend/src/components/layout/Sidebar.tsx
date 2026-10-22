@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { getMenuGroups } from "@/config/menu"
+import { logoutAction } from "@/app/actions/auth"
 
 interface SidebarProps {
     className?: string
@@ -93,6 +94,15 @@ export function Sidebar({ className, onClose }: SidebarProps) {
                         <ThemeToggle />
                     </div>
                 </div>
+                <form action={logoutAction}>
+                    <button
+                        type="submit"
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-1.5 font-label-md text-error hover:bg-error/10 transition-colors"
+                    >
+                        <span className="material-symbols-outlined text-[1rem]">logout</span>
+                        <span>Logout</span>
+                    </button>
+                </form>
             </div>
         </aside>
     )
