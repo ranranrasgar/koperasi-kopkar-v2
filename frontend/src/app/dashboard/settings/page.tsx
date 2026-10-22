@@ -1,11 +1,13 @@
 import { FormCard } from "@/components/transaksi/common"
 import { FormEdit, type FieldSpec } from "@/components/master/FormEdit"
+import { FormLogo } from "@/components/master/FormLogo"
 import { simpanPerusahaanAction } from "@/app/actions/master"
 import { query } from "@/lib/db"
+import { identitasKoperasi } from "@/lib/koperasi"
 import { wajibIzin } from "@/lib/operator"
 
 const FIELDS: FieldSpec[] = [
-    { name: "nama_perusahaan", label: "Nama Koperasi", required: true },
+    { name: "nama_perusahaan", label: "Nama Koperasi", required: true, hint: "Tampil di sidebar, halaman login, dan judul tab browser." },
     { name: "nama_manager", label: "Nama Manager / Ketua" },
     { name: "alamat_perusahaan1", label: "Alamat", wide: true },
     { name: "alamat_perusahaan2", label: "Alamat 2 / Telepon" },
@@ -22,11 +24,17 @@ const FIELDS: FieldSpec[] = [
 
 export default async function PerusahaanPage() {
     await wajibIzin("/dashboard/settings") // layout tidak dijalankan ulang pada navigasi antarhalaman
-    const [p] = await query<Record<string, string | number | null>>(`SELECT nama_perusahaan, nama_manager, alamat_perusahaan1, alamat_perusahaan2,
-        kota_perusahaan, email, http, npwp, siup, tdp, rp_adm_bank, persen_pajak_pendapatan, ket_nota FROM perusahaan ORDER BY id LIMIT 1`)
+    const [[p], k] = await Promise.all([
+        query<Record<string, string | number | null>>(`SELECT nama_perusahaan, nama_manager, alamat_perusahaan1, alamat_perusahaan2,
+            kota_perusahaan, email, http, npwp, siup, tdp, rp_adm_bank, persen_pajak_pendapatan, ket_nota FROM perusahaan ORDER BY id LIMIT 1`),
+        identitasKoperasi(),
+    ])
     return (
-        <div className="max-w-4xl">
-            <FormCard title="Pengaturan Perusahaan" description="Identitas koperasi untuk kop laporan dan nota.">
+        <div className="max-w-4xl space-y-6">
+            <FormCard title="Logo Koperasi" description="Tampil di sidebar, halaman login, dan sebagai ikon aplikasi di tab browser.">
+                <FormLogo logo={k.logo} logoSendiri={k.logoSendiri} />
+            </FormCard>
+            <FormCard title="Pengaturan Perusahaan" description="Identitas koperasi untuk kop laporan, nota, dan tampilan aplikasi.">
                 <FormEdit fields={FIELDS} nilai={p ?? {}} aksi={simpanPerusahaanAction} />
             </FormCard>
         </div>

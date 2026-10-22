@@ -4,19 +4,23 @@ import { revalidatePath } from "next/cache"
 import { modeUji, tx } from "@/lib/db"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { GalatSesi, operatorAktif } from "@/lib/operator"
+import { jenisGambar } from "@/lib/gambar"
 import { MENU } from "@/config/akses"
 
 export type HasilSimpan = { ok: true; pesan: string } | { ok: false; error: string } | null
 
 class Salah extends Error {}
 
-/** Semua tulis master dalam satu transaksi lewat tx(), sehingga ikut di-rollback di mode uji (KOPKAR_UJI_ROLLBACK). */
-async function simpan(menu: string, path: string, fn: (db: Db) => Promise<string>): Promise<HasilSimpan> {
+/**
+ * Semua tulis master dalam satu transaksi lewat tx(), sehingga ikut di-rollback di mode uji (KOPKAR_UJI_ROLLBACK).
+ * `jenis` "layout": segarkan layout di bawah `path` juga (identitas koperasi tampil di sidebar semua halaman).
+ */
+async function simpan(menu: string, path: string, fn: (db: Db) => Promise<string>, jenis?: "layout"): Promise<HasilSimpan> {
     try {
         await operatorAktif([menu])
         const pesan = await tx(fn)
         if (modeUji) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
-        revalidatePath(path)
+        revalidatePath(path, jenis)
         return { ok: true, pesan }
     } catch (e) {
         if (!(e instanceof Salah) && !(e instanceof GalatSesi)) console.error("simpan master gagal:", e)
@@ -49,7 +53,7 @@ async function akun(db: Db, f: FormData, k: string, label: string) {
 // ---------- perusahaan ----------
 
 export async function simpanPerusahaanAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan(MENU.company, "/dashboard/settings", async (db) => {
+    return simpan(MENU.company, "/", async (db) => {
         const v = [
             teks(f, "nama_perusahaan", "Nama koperasi", true, 100), teks(f, "alamat_perusahaan1", "Alamat"), teks(f, "alamat_perusahaan2", "Alamat 2 / telepon"),
             teks(f, "kota_perusahaan", "Kota"), teks(f, "email", "Email"), teks(f, "http", "Website"), teks(f, "npwp", "NPWP"),
@@ -62,7 +66,26 @@ export async function simpanPerusahaanAction(_: HasilSimpan, f: FormData): Promi
             WHERE id = (SELECT MIN(id) FROM perusahaan) RETURNING id`, v)
         if (r.length === 0) throw new Salah("Data perusahaan tidak ada")
         return "Data perusahaan disimpan"
-    })
+    }, "layout")
+}
+
+const MAKS_LOGO = 500 * 1024
+
+/** Unggah logo koperasi ke perusahaan.logo, atau hapus (aksi=hapus) supaya web memakai logo bawaan. */
+export async function simpanLogoAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
+    return simpan(MENU.company, "/", async (db) => {
+        let isi: Buffer | null = null
+        if (f.get("aksi") !== "hapus") {
+            const file = f.get("logo")
+            if (!(file instanceof File) || file.size === 0) throw new Salah("Pilih file logo dulu")
+            if (file.size > MAKS_LOGO) throw new Salah("Ukuran logo maksimal 500 KB")
+            isi = Buffer.from(await file.arrayBuffer())
+            if (!jenisGambar(isi)) throw new Salah("Logo harus berupa gambar PNG, JPG, WebP, atau GIF")
+        }
+        const { rows: r } = await db.query("UPDATE perusahaan SET logo = $1 WHERE id = (SELECT MIN(id) FROM perusahaan) RETURNING id", [isi])
+        if (r.length === 0) throw new Salah("Data perusahaan tidak ada")
+        return isi ? "Logo disimpan" : "Logo dihapus, aplikasi memakai logo bawaan"
+    }, "layout")
 }
 
 // ---------- jenis simpanan ----------

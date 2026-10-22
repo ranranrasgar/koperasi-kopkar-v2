@@ -6,14 +6,16 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { gantiPasswordAction, loginAction, logoutAction, type HasilAuth } from "@/app/actions/auth"
 
-export function AuthCard({ title, description, children }: { title: string; description: string; children: React.ReactNode }) {
+export function AuthCard({ title, description, koperasi, children }: {
+    title: string; description: string; koperasi: { nama: string; logo: string }; children: React.ReactNode
+}) {
     return (
         <div className="min-h-screen flex items-center justify-center bg-surface-low px-4">
             <div className="w-full max-w-[24rem] rounded-xl border border-outline-variant bg-background p-6 shadow-sm">
                 <div className="flex items-center gap-3 mb-6">
-                    <img src="/logo-removebg-preview.png" alt="Logo Kopkar MJS" className="h-12 w-12 object-contain" />
-                    <div>
-                        <h1 className="text-lg font-black tracking-tight">KOPKAR MJS</h1>
+                    <img src={koperasi.logo} alt={`Logo ${koperasi.nama}`} className="h-12 w-12 shrink-0 object-contain" />
+                    <div className="min-w-0">
+                        <h1 className="text-lg font-black tracking-tight break-words">{koperasi.nama}</h1>
                         <p className="text-xs text-muted-foreground">Management System</p>
                     </div>
                 </div>

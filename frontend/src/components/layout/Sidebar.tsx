@@ -16,7 +16,7 @@ interface SidebarProps {
 
 export function Sidebar({ className, onClose }: SidebarProps) {
     const pathname = usePathname()
-    const { izin } = useSidebar()
+    const { izin, koperasi } = useSidebar()
 
     const menuGroups = useMemo(() => {
         return getMenuGroups(pathname || "", izin)
@@ -27,10 +27,10 @@ export function Sidebar({ className, onClose }: SidebarProps) {
             <div className="flex flex-col gap-1 p-4">
                 <div className="mb-lg px-sm">
                     <div className="flex items-center gap-2">
-                        <img src="/logo-removebg-preview.png" alt="Logo Kopkar MJS" className="h-10 w-10 object-contain" />
-                        <div>
-                            <h1 className="font-headline-lg text-headline-lg font-black text-on-background dark:text-on-primary-container">
-                                KOPKAR MJS
+                        <img src={koperasi.logo} alt={`Logo ${koperasi.nama}`} className="h-10 w-10 shrink-0 object-contain" />
+                        <div className="min-w-0">
+                            <h1 className="font-headline-lg text-headline-lg font-black text-on-background dark:text-on-primary-container break-words">
+                                {koperasi.nama}
                             </h1>
                             <p className="font-label-md text-label-md text-on-surface-variant">Management System</p>
                         </div>

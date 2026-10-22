@@ -1,10 +1,16 @@
 import type { Metadata } from "next"
 import "./globals.css"
 import { Providers } from "@/components/Providers"
+import { identitasKoperasi } from "@/lib/koperasi"
 
-export const metadata: Metadata = {
-    title: "Koperasi Kopkar Mattel MIS",
-    description: "Management Information System untuk Koperasi Kopkar Mattel",
+// Judul tab dan ikon aplikasi mengikuti Pengaturan Perusahaan.
+export async function generateMetadata(): Promise<Metadata> {
+    const k = await identitasKoperasi()
+    return {
+        title: `${k.nama} · Management System`,
+        description: "Management Information System untuk Koperasi Kopkar Mattel",
+        icons: { icon: k.logo, apple: k.logo },
+    }
 }
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {

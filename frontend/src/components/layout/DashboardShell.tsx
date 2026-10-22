@@ -1,7 +1,7 @@
 "use client"
 import { Sidebar } from "./Sidebar"
 import { Navbar } from "./Navbar"
-import { useSidebar, SidebarProvider } from "./SidebarContext"
+import { useSidebar, SidebarProvider, type KoperasiTampil } from "./SidebarContext"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
@@ -42,9 +42,9 @@ function ShellContent({ children, operator }: { children: React.ReactNode; opera
     )
 }
 
-export function DashboardShell({ children, operator }: { children: React.ReactNode; operator: OperatorTampil }) {
+export function DashboardShell({ children, operator, koperasi }: { children: React.ReactNode; operator: OperatorTampil; koperasi: KoperasiTampil }) {
     return (
-        <SidebarProvider izin={operator.izin}>
+        <SidebarProvider izin={operator.izin} koperasi={koperasi}>
             <ShellContent operator={operator}>{children}</ShellContent>
         </SidebarProvider>
     )

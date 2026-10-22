@@ -9,11 +9,15 @@ interface SidebarContextType {
     open: () => void
     /** Menu desktop yang berizin untuk grup operator (opr_hak_akses). */
     izin: string[]
+    /** Nama dan URL logo dari Pengaturan Perusahaan. */
+    koperasi: KoperasiTampil
 }
+
+export interface KoperasiTampil { nama: string; logo: string }
 
 const SidebarContext = createContext<SidebarContextType | undefined>(undefined)
 
-export function SidebarProvider({ children, izin }: { children: React.ReactNode; izin: string[] }) {
+export function SidebarProvider({ children, izin, koperasi }: { children: React.ReactNode; izin: string[]; koperasi: KoperasiTampil }) {
     const [isOpen, setIsOpen] = useState(true)
 
     const toggle = () => setIsOpen(prev => !prev)
@@ -21,7 +25,7 @@ export function SidebarProvider({ children, izin }: { children: React.ReactNode;
     const open = () => setIsOpen(true)
 
     return (
-        <SidebarContext.Provider value={{ isOpen, toggle, close, open, izin }}>
+        <SidebarContext.Provider value={{ isOpen, toggle, close, open, izin, koperasi }}>
             {children}
         </SidebarContext.Provider>
     )
