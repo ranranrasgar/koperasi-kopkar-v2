@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useEffect } from "react"
+import React, { useActionState, useEffect, useTransition } from "react"
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -30,9 +30,16 @@ export function FormEdit({ fields, nilai, aksi, tombol = "Simpan", onSelesai, ko
     kolom?: 1 | 2 | 3
 }) {
     const [hasil, jalankan, pending] = useActionState(aksi, null)
+    const [, startTransition] = useTransition()
     useEffect(() => { if (hasil?.ok) onSelesai?.() }, [hasil, onSelesai])
+    // Tanpa form action: React 19 mengosongkan isian setelah action, juga saat validasi server menolak (sama dengan useAksiForm).
+    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        const data = new FormData(e.currentTarget)
+        startTransition(() => jalankan(data))
+    }
     return (
-        <form action={jalankan} className="space-y-4">
+        <form onSubmit={onSubmit} className="space-y-4">
             <div className={cn("grid gap-4", kolom === 2 && "sm:grid-cols-2", kolom === 3 && "sm:grid-cols-3")}>
                 {fields.map((f) => {
                     const v = nilai[f.name]
