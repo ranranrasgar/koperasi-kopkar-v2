@@ -1,5 +1,6 @@
 import "server-only"
 import type pg from "pg"
+import { connection } from "next/server"
 import { createPool, withTx, type Db } from "@kopkar/backend/src/db.ts"
 
 // Satu pool per proses; di mode dev modul dimuat ulang, jadi pool disimpan di globalThis.
@@ -15,6 +16,7 @@ const NUMERIC = 1700, INT8 = 20
  * tanggal tetap teks 'YYYY-MM-DD' (parser dari backend/src/db.ts).
  */
 export async function query<T = Record<string, unknown>>(sql: string, params: unknown[] = []): Promise<T[]> {
+    await connection() // data selalu dibaca saat request, tidak pernah saat build
     const r = await pool.query(sql, params)
     const conv = r.fields.filter((f) => f.dataTypeID === NUMERIC || f.dataTypeID === INT8).map((f) => f.name)
     if (conv.length === 0) return r.rows as T[]
@@ -24,5 +26,21 @@ export async function query<T = Record<string, unknown>>(sql: string, params: un
     }) as T[]
 }
 
-/** Transaksi untuk mesin posting: commit bila fn selesai, rollback bila melempar. */
-export const tx = <T>(fn: (db: Db) => Promise<T>) => withTx(pool, fn)
+/**
+ * Mode uji (KOPKAR_UJI_ROLLBACK=1): posting dijalankan penuh lalu selalu di-rollback, untuk mencoba
+ * form tanpa mengubah data. Nomor dari sequence tetap terpakai (sequence tidak ikut rollback).
+ */
+export const modeUji = process.env.KOPKAR_UJI_ROLLBACK === "1"
+const BATAL = Symbol("rollback-uji")
+
+/** Transaksi untuk mesin posting: commit bila fn selesai, rollback bila melempar (atau selalu, di mode uji). */
+export async function tx<T>(fn: (db: Db) => Promise<T>): Promise<T> {
+    if (!modeUji) return withTx(pool, fn)
+    let hasil: T | undefined
+    try {
+        await withTx(pool, async (db) => { hasil = await fn(db); throw BATAL })
+    } catch (e) {
+        if (e !== BATAL) throw e
+    }
+    return hasil as T
+}

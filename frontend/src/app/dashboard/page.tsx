@@ -4,8 +4,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { query } from "@/lib/db"
 import { formatRupiah, formatAngka, formatTanggal } from "@/lib/format"
 
-export const dynamic = "force-dynamic"
-
 const NAMA_BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 
 export default async function DashboardPage() {

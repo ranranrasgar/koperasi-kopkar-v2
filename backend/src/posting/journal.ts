@@ -5,6 +5,8 @@ export interface JournalLine {
     kodePerkiraan: string;
     debit?: string | number;
     kredit?: string | number;
+    /** Keterangan baris; bawaan: deskripsi jurnal. */
+    deskripsi?: string;
 }
 
 export interface JournalInput {
@@ -13,7 +15,9 @@ export interface JournalInput {
     deskripsi: string;
     opr: string;
     sumberTipe: string;
-    sumberId: number | string;
+    sumberId: number | string | null;
+    /** Awalan kolom tahun, mis. 'JU' untuk jurnal umum desktop (JU261009). */
+    tahunPrefix?: string;
     lines: JournalLine[];
 }
 
@@ -45,8 +49,8 @@ export async function postJournal(db: Db, j: JournalInput): Promise<number> {
             `INSERT INTO jurnal_umum (urutan, tanggal_jurnalumum, nomor_bukti, no_bukti_transaksi, tahun, kode_perkiraan,
                 urut, debit_jurnalumum, kredit_jurnalumum, deskripsi, opr, sumber_tipe, sumber_id, perkiraan_id, tgl_transaksi)
              VALUES ($1,$2,$3,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$2)`,
-            [urutan, j.tanggal, j.nomorBukti, yymmdd(j.tanggal), l.kodePerkiraan, urut,
-             fromUnits(toUnits(l.debit ?? 0)), fromUnits(toUnits(l.kredit ?? 0)), j.deskripsi, j.opr,
+            [urutan, j.tanggal, j.nomorBukti, (j.tahunPrefix ?? '') + yymmdd(j.tanggal), l.kodePerkiraan, urut,
+             fromUnits(toUnits(l.debit ?? 0)), fromUnits(toUnits(l.kredit ?? 0)), l.deskripsi || j.deskripsi, j.opr,
              j.sumberTipe, j.sumberId, idOf.get(l.kodePerkiraan)]);
     }
     return lines.length;

@@ -5,12 +5,14 @@ import type { PageData } from "@/config/modules"
 
 export const GRUP_PINJAMAN = ["KOPERASI", "BANK / PIHAK LAIN", "KPR"]
 
+// Semua jenis ditampilkan; hide=true (mis. seluruh jenis KPR) ditaruh di bawah dan ditandai di form.
 export const jenisKredit = (grup?: string) =>
     query<{ kode_kredit: string; nama_kredit: string; group_pinjaman: string; bunga_kredit: number; bunga_per: string;
-        mak_cicilan: number; persen_adm: number; persen_provisi: number; jatuh_tempo: number }>(
-        `SELECT kode_kredit, nama_kredit, group_pinjaman, bunga_kredit, bunga_per, mak_cicilan, persen_adm, persen_provisi, jatuh_tempo
-           FROM jenis_kredit WHERE ($1::text IS NULL OR group_pinjaman = $1) AND NOT COALESCE(hide, false)
-          ORDER BY kode_kredit`, [grup && grup !== "All" ? grup : null])
+        mak_cicilan: number; persen_adm: number; persen_provisi: number; jatuh_tempo: number; hide: boolean }>(
+        `SELECT kode_kredit, nama_kredit, group_pinjaman, bunga_kredit, bunga_per, mak_cicilan, persen_adm, persen_provisi, jatuh_tempo,
+                COALESCE(hide, false) AS hide
+           FROM jenis_kredit WHERE ($1::text IS NULL OR group_pinjaman = $1)
+          ORDER BY COALESCE(hide, false), kode_kredit`, [grup && grup !== "All" ? grup : null])
 
 export interface LaporanPinjamanRow {
     tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string

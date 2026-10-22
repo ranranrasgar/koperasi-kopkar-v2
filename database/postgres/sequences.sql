@@ -28,3 +28,10 @@ SELECT setval('seq_kpr_no', GREATEST((SELECT COALESCE(MAX(no_pinjaman_urut), 0) 
  WHERE (SELECT last_value FROM seq_kpr_no) = 1 AND NOT (SELECT is_called FROM seq_kpr_no);
 SELECT setval('seq_kpr_rincian_urut', GREATEST((SELECT COALESCE(MAX(urut), 0) FROM kpr_rincian), 1))
  WHERE (SELECT last_value FROM seq_kpr_rincian_urut) = 1 AND NOT (SELECT is_called FROM seq_kpr_rincian_urut);
+
+-- Jurnal umum (memorial) dari web: nomor JU/yymmdd/n. Desktop memakai nomor harian kecil dan
+-- beberapa nomor besar; sequence dimulai di atas nomor tertinggi yang pernah ada supaya tidak bentrok.
+CREATE SEQUENCE IF NOT EXISTS seq_jurnal_umum_no;
+SELECT setval('seq_jurnal_umum_no', GREATEST((SELECT COALESCE(MAX(substring(nomor_bukti FROM '[0-9]+$')::bigint), 0)
+    FROM jurnal_umum WHERE nomor_bukti LIKE 'JU/%'), 1))
+ WHERE (SELECT last_value FROM seq_jurnal_umum_no) = 1 AND NOT (SELECT is_called FROM seq_jurnal_umum_no);
