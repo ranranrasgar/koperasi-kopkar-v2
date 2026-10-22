@@ -3,7 +3,7 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { query } from "@/lib/db"
 import { bacaSesi, COOKIE_SESI, sidikPassword } from "@/lib/sesi"
-import { AKSES_HALAMAN, punyaIzin } from "@/config/akses"
+import { AKSES_HALAMAN, GRUP_SUPERADMIN, MENU, punyaIzin } from "@/config/akses"
 
 export interface Operator {
     id: number
@@ -14,6 +14,8 @@ export interface Operator {
     wajibGantiPassword: boolean
     /** Nama menu desktop yang berizin ('T') untuk grup operator, dari opr_hak_akses. */
     izin: string[]
+    /** Grup superadmin: semua menu berizin, termasuk Kelola Akses. */
+    superadmin: boolean
 }
 
 export interface BarisOpr {
@@ -41,10 +43,13 @@ export async function operatorSesi(): Promise<Operator | null> {
     if (!s) return null
     const o = await cariOpr({ id: s.id })
     if (!o || !oprAktif(o) || !o.password_hash || sidikPassword(o.password_hash) !== s.pv) return null
-    const izin = await query<{ menu: string }>(
-        "SELECT DISTINCT menu FROM opr_hak_akses WHERE grup_id = $1 AND akses = 'T'", [o.grup_id])
+    const superadmin = o.nama_grup === GRUP_SUPERADMIN
+    // Superadmin: semua menu yang dikenal (desktop dan web), tanpa melihat opr_hak_akses grupnya.
+    const izin = superadmin
+        ? [...new Set([...(await query<{ menu: string }>("SELECT DISTINCT menu FROM opr_hak_akses")).map((r) => r.menu), ...Object.values(MENU)])]
+        : (await query<{ menu: string }>("SELECT DISTINCT menu FROM opr_hak_akses WHERE grup_id = $1 AND akses = 'T'", [o.grup_id])).map((r) => r.menu)
     return { id: o.id, nama: o.nama, namaLengkap: o.nama_lengkap || o.nama, status: o.status, grup: o.nama_grup,
-        wajibGantiPassword: o.wajib_ganti_password, izin: izin.map((r) => r.menu) }
+        wajibGantiPassword: o.wajib_ganti_password, izin, superadmin }
 }
 
 /** Untuk halaman: alihkan ke login bila belum masuk, ke ganti password bila wajib. */

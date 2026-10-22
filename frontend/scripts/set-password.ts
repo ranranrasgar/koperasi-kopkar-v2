@@ -2,11 +2,12 @@
 //   npm run set-password -w frontend -- --daftar          daftar operator
 //   npm run set-password -w frontend -- <nama>            ketik password (tidak ditampilkan), atau kirim lewat stdin
 //   npm run set-password -w frontend -- <nama> --acak     buat password acak dan tampilkan sekali
-import crypto from "node:crypto"
+//   npm run set-password -w frontend -- <nama> --buat-superadmin
+//       buat grup superadmin (bila belum ada) dan operator <nama> di grup itu, tanpa password; lalu set password seperti biasa
 import { readFileSync } from "node:fs"
 import { createInterface } from "node:readline"
 import pg from "pg"
-import { cekPasswordBaru, hashPassword } from "../src/lib/password.ts"
+import { cekPasswordBaru, hashPassword, passwordAcak } from "../src/lib/password.ts"
 
 function pgUrl() {
     if (process.env.PG_URL) return process.env.PG_URL
@@ -31,21 +32,24 @@ function bacaRahasia(tanya: string): Promise<string> {
     })
 }
 
-function acak() {
-    const huruf = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ", angka = "23456789", semua = huruf + angka
-    const pilih = (s: string) => s[crypto.randomInt(s.length)]
-    const isi = [pilih(huruf), pilih(angka), ...Array.from({ length: 10 }, () => pilih(semua))]
-    for (let i = isi.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [isi[i], isi[j]] = [isi[j], isi[i]] }
-    return isi.join("")
-}
-
 const args = process.argv.slice(2)
 const url = pgUrl()
 if (!url) { console.error("PG_URL belum diset (env atau frontend/.env.local)"); process.exit(1) }
 const db = new pg.Client({ connectionString: url })
 await db.connect()
 try {
-    if (args.includes("--daftar") || args.length === 0) {
+    if (args.includes("--buat-superadmin")) {
+        const nama = args.find((a) => !a.startsWith("--"))
+        if (!nama || !/^[a-z0-9._-]{3,30}$/.test(nama)) throw new Error("Nama operator: 3-30 huruf kecil, angka, titik, garis bawah, atau strip")
+        await db.query("BEGIN")
+        let g = (await db.query("SELECT id FROM opr_grup WHERE nama_grup = 'superadmin'")).rows[0]
+        if (!g) g = (await db.query("INSERT INTO opr_grup (urut, nama_grup) VALUES (nextval('seq_opr_grup_urut'), 'superadmin') RETURNING id")).rows[0]
+        const ada = (await db.query("SELECT id, grup_id FROM opr WHERE lower(nama) = lower($1)", [nama])).rows[0]
+        if (ada && String(ada.grup_id) !== String(g.id)) throw new Error(`Operator ${nama} sudah ada di grup lain; pindahkan lewat halaman Operator`)
+        if (!ada) await db.query("INSERT INTO opr (nama, nama_lengkap, status, status_aktif, grup_id) VALUES ($1, 'Super Admin', 'superadmin', '', $2)", [nama, g.id])
+        await db.query("COMMIT")
+        console.log(`Operator ${nama} ada di grup superadmin. Set password: npm run set-password -w frontend -- ${nama}`)
+    } else if (args.includes("--daftar") || args.length === 0) {
         const r = await db.query(`SELECT o.nama, o.nama_lengkap, g.nama_grup, o.status_aktif, o.password_hash IS NOT NULL AS punya_password,
             o.wajib_ganti_password FROM opr o LEFT JOIN opr_grup g ON g.id = o.grup_id ORDER BY o.nama`)
         console.table(r.rows)
@@ -58,7 +62,7 @@ try {
 
         let password: string
         if (args.includes("--acak")) {
-            password = acak()
+            password = passwordAcak()
         } else {
             password = await bacaRahasia(`Password sementara untuk ${o.nama}: `)
             if (process.stdin.isTTY && (await bacaRahasia("Ulangi: ")) !== password) throw new Error("Password tidak sama")
@@ -70,6 +74,7 @@ try {
         if (args.includes("--acak")) console.log(`Password sementara: ${password}  (sampaikan langsung ke operator, jangan disimpan)`)
     }
 } catch (e) {
+    await db.query("ROLLBACK").catch(() => {})
     console.error(e instanceof Error ? e.message : e)
     process.exitCode = 1
 } finally {

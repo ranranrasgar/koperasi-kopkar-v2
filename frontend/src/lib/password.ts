@@ -25,3 +25,12 @@ export function cekPasswordBaru(password: string) {
     if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) return "Password harus berisi huruf dan angka"
     return null
 }
+
+/** Password sementara acak (12 karakter, huruf dan angka, tanpa huruf/angka yang mirip). */
+export function passwordAcak() {
+    const huruf = "abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ", angka = "23456789", semua = huruf + angka
+    const pilih = (s: string) => s[crypto.randomInt(s.length)]
+    const isi = [pilih(huruf), pilih(angka), ...Array.from({ length: 10 }, () => pilih(semua))]
+    for (let i = isi.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [isi[i], isi[j]] = [isi[j], isi[i]] }
+    return isi.join("")
+}

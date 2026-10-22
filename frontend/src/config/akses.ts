@@ -21,7 +21,12 @@ export const MENU = {
     angsurKpr: "Setoran Angsuran Pinjaman KPR",
     coa: "Data Perkiraan (COA)",
     jurnalUmum: "Jurnal Umum",
+    // Khusus web, tidak ada di desktop: hanya grup superadmin.
+    kelolaAkses: "Kelola Akses (web)",
 } as const
+
+/** Grup yang lolos semua pemeriksaan izin dan boleh mengelola hak akses serta operator. */
+export const GRUP_SUPERADMIN = "superadmin"
 
 /** Menu pencairan dan angsuran pinjaman tunai menurut jenis_kredit.group_pinjaman. */
 export const MENU_CAIR_GRUP: Record<string, string> = { "KOPERASI": MENU.cairKoperasi, "BANK / PIHAK LAIN": MENU.cairBank }
@@ -41,6 +46,8 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/accounting/coa": [MENU.coa],
     "/dashboard/accounting/journal": [MENU.jurnalUmum],
     "/dashboard/accounting/journal/new": [MENU.jurnalUmum],
+    "/dashboard/settings/akses": [MENU.kelolaAkses],
+    "/dashboard/settings/operator": [MENU.kelolaAkses],
 }
 
 /** Menu yang memakai pencarian anggota di form transaksi. */

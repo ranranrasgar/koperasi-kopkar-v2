@@ -204,6 +204,16 @@ export const allGroups: MenuGroup[] = [
         groupLabel: "Sistem & Pengaturan",
         items: [
             {
+                label: "Kelola Hak Akses",
+                icon: "admin_panel_settings",
+                href: "/dashboard/settings/akses"
+            },
+            {
+                label: "Operator",
+                icon: "manage_accounts",
+                href: "/dashboard/settings/operator"
+            },
+            {
                 label: "Pengaturan Perusahaan",
                 icon: "business",
                 href: "/dashboard/settings",

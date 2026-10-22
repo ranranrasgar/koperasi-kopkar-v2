@@ -35,3 +35,11 @@ CREATE SEQUENCE IF NOT EXISTS seq_jurnal_umum_no;
 SELECT setval('seq_jurnal_umum_no', GREATEST((SELECT COALESCE(MAX(substring(nomor_bukti FROM '[0-9]+$')::bigint), 0)
     FROM jurnal_umum WHERE nomor_bukti LIKE 'JU/%'), 1))
  WHERE (SELECT last_value FROM seq_jurnal_umum_no) = 1 AND NOT (SELECT is_called FROM seq_jurnal_umum_no);
+
+-- Pengelolaan akses dari web: urut grup operator (unik) dan urut baris hak akses.
+CREATE SEQUENCE IF NOT EXISTS seq_opr_grup_urut;
+CREATE SEQUENCE IF NOT EXISTS seq_opr_hak_akses_urut;
+SELECT setval('seq_opr_grup_urut', GREATEST((SELECT COALESCE(MAX(urut), 0) FROM opr_grup), 1))
+ WHERE (SELECT last_value FROM seq_opr_grup_urut) = 1 AND NOT (SELECT is_called FROM seq_opr_grup_urut);
+SELECT setval('seq_opr_hak_akses_urut', GREATEST((SELECT COALESCE(MAX(urut), 0) FROM opr_hak_akses), 1))
+ WHERE (SELECT last_value FROM seq_opr_hak_akses_urut) = 1 AND NOT (SELECT is_called FROM seq_opr_hak_akses_urut);
