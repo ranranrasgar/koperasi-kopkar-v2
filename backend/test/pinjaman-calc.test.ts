@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createPool } from '../src/db.js';
-import { toUnits, fromUnits } from '../src/posting/money.js';
-import { cicilan, jadwal, jatuhTempo, persenToMicro, type Terms } from '../src/posting/pinjaman-calc.js';
+import { createPool } from '../src/db.ts';
+import { toUnits, fromUnits } from '../src/posting/money.ts';
+import { cicilan, jadwal, jatuhTempo, persenToMicro, type Terms } from '../src/posting/pinjaman-calc.ts';
 
 const pool = createPool();
 test.after(() => pool.end());

@@ -1,6 +1,6 @@
-import type { Db } from '../db.js';
-import { postJournal } from './journal.js';
-import { fromUnits, toUnits } from './money.js';
+import type { Db } from '../db.ts';
+import { postJournal } from './journal.ts';
+import { fromUnits, toUnits } from './money.ts';
 
 export interface SimpananInput {
     kodeAgt: string;

@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { createPool, withTx, type Db } from '../src/db.js';
-import { toUnits } from '../src/posting/money.js';
-import { barisJurnalAngsuran, cairkanPinjaman, bayarAngsuran } from '../src/posting/pinjaman.js';
+import { createPool, withTx, type Db } from '../src/db.ts';
+import { toUnits } from '../src/posting/money.ts';
+import { barisJurnalAngsuran, cairkanPinjaman, bayarAngsuran } from '../src/posting/pinjaman.ts';
 
 const pool = createPool();
 const ROLLBACK = new Error('rollback-uji');

@@ -1,5 +1,5 @@
-import type { Db } from '../db.js';
-import { fromUnits, toUnits } from './money.js';
+import type { Db } from '../db.ts';
+import { fromUnits, toUnits } from './money.ts';
 
 export interface JournalLine {
     kodePerkiraan: string;

@@ -1,7 +1,7 @@
-import type { Db } from '../db.js';
-import { postJournal, type JournalLine } from './journal.js';
-import { fromUnits, round2, toUnits } from './money.js';
-import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from './pinjaman-calc.js';
+import type { Db } from '../db.ts';
+import { postJournal, type JournalLine } from './journal.ts';
+import { fromUnits, round2, toUnits } from './money.ts';
+import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from './pinjaman-calc.ts';
 
 export interface PencairanInput {
     kodeAgt: string;

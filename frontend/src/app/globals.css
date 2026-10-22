@@ -1,0 +1,440 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@plugin "@tailwindcss/typography";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+    --color-background: var(--background);
+    --color-foreground: var(--foreground);
+    --font-sans: var(--font-geist-sans);
+    --font-mono: var(--font-geist-mono);
+    --color-sidebar-ring: var(--sidebar-ring);
+    --color-sidebar-border: var(--sidebar-border);
+    --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+    --color-sidebar-accent: var(--sidebar-accent);
+    --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+    --color-sidebar-primary: var(--sidebar-primary);
+    --color-sidebar-foreground: var(--sidebar-foreground);
+    --color-sidebar: var(--sidebar);
+    --color-chart-5: var(--chart-5);
+    --color-chart-4: var(--chart-4);
+    --color-chart-3: var(--chart-3);
+    --color-chart-2: var(--chart-2);
+    --color-chart-1: var(--chart-1);
+    --color-ring: var(--ring);
+    --color-input: var(--input);
+    --color-border: var(--border);
+    --color-destructive: var(--destructive);
+    --color-accent-foreground: var(--accent-foreground);
+    --color-accent: var(--accent);
+    --color-muted-foreground: var(--muted-foreground);
+    --color-muted: var(--muted);
+    --color-secondary-foreground: var(--secondary-foreground);
+    --color-secondary: var(--secondary);
+    --color-primary-foreground: var(--primary-foreground);
+    --color-primary: var(--primary);
+    --color-popover-foreground: var(--popover-foreground);
+    --color-popover: var(--popover);
+    --color-card-foreground: var(--card-foreground);
+    --color-card: var(--card);
+    --radius-sm: calc(var(--radius) - 4px);
+    --radius-md: calc(var(--radius) - 2px);
+    --radius-lg: var(--radius);
+    --radius-xl: calc(var(--radius) + 4px);
+    --radius-2xl: calc(var(--radius) + 8px);
+    --radius-3xl: calc(var(--radius) + 12px);
+    --radius-4xl: calc(var(--radius) + 16px);
+    
+    /* Laravel MD3 Colors */
+    --color-surface: rgb(var(--theme-surface));
+    --color-surface-lowest: rgb(var(--theme-surface-lowest));
+    --color-surface-low: rgb(var(--theme-surface-low));
+    --color-surface-container: rgb(var(--theme-surface-container));
+    --color-surface-high: rgb(var(--theme-surface-high));
+    --color-surface-highest: rgb(var(--theme-surface-highest));
+    --color-surface-variant: rgb(var(--theme-surface-variant));
+    --color-on-surface: rgb(var(--theme-on-surface));
+    --color-on-surface-variant: rgb(var(--theme-on-surface-variant));
+    --color-on-background: rgb(var(--theme-on-background));
+    --color-outline: rgb(var(--theme-outline));
+    --color-outline-variant: rgb(var(--theme-outline-variant));
+    --color-on-primary-container: rgb(var(--theme-on-primary-container));
+    --color-error: #ba1a1a;
+    
+    --font-headline-md: var(--font-geist-sans);
+    --font-body-md: var(--font-geist-sans);
+    --font-label-md: var(--font-geist-sans);
+    --font-headline-lg: var(--font-geist-sans);
+    
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+    --spacing-xl: 48px;
+    --spacing-sm: 8px;
+    --spacing-xs: 4px;
+}
+
+:root {
+    --radius: 0.75rem;
+    /* GitHub Light Theme Palette */
+    --background: #ffffff;
+    --foreground: #24292f;
+
+    --card: #ffffff;
+    --card-foreground: #24292f;
+
+    --popover: #ffffff;
+    --popover-foreground: #24292f;
+
+    /* Primary Blue */
+    --primary: #0969da;
+    --primary-foreground: #ffffff;
+
+    /* Soft Gray Secondary */
+    --secondary: #f6f8fa;
+    --secondary-foreground: #24292f;
+
+    --muted: #f6f8fa;
+    --muted-foreground: #57606a;
+
+    /* Gray Accent */
+    --accent: #f6f8fa;
+    --accent-foreground: #24292f;
+
+    --destructive: #cf222e;
+    --destructive-foreground: #ffffff;
+
+    --border: #d0d7de;
+    --input: #d0d7de;
+    --ring: #0969da;
+
+    /* GitHub Light Theme Sidebar */
+    --sidebar: #f6f8fa;
+    --sidebar-foreground: #24292f;
+    --sidebar-primary: #0969da;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #eaeef2;
+    --sidebar-accent-foreground: #24292f;
+    --sidebar-border: #d0d7de;
+    --sidebar-ring: #0969da;
+    
+    /* Laravel MD3 Theme Variables (Light) */
+    --theme-background: 255 255 255;
+    --theme-surface: 255 255 255;
+    --theme-surface-lowest: 255 255 255;
+    --theme-surface-low: 246 248 250;
+    --theme-surface-container: 246 248 250;
+    --theme-surface-high: 234 238 242;
+    --theme-surface-highest: 234 238 242;
+    --theme-surface-variant: 234 238 242;
+    --theme-on-background: 31 35 40;
+    --theme-on-surface: 31 35 40;
+    --theme-on-surface-variant: 101 109 118;
+    --theme-primary: 6 182 212;
+    --theme-on-primary-container: 6 182 212;
+    --theme-outline: 208 215 222;
+    --theme-outline-variant: 208 215 222;
+}
+
+.dark {
+    --background: #0d1117;
+    --foreground: #c9d1d9;
+
+    --card: #0d1117;
+    --card-foreground: #c9d1d9;
+
+    --popover: #161b22;
+    --popover-foreground: #c9d1d9;
+
+    --primary: #2f81f7;
+    --primary-foreground: #ffffff;
+
+    --secondary: #21262d;
+    --secondary-foreground: #c9d1d9;
+
+    --muted: #21262d;
+    --muted-foreground: #8b949e;
+
+    --accent: #21262d;
+    --accent-foreground: #c9d1d9;
+
+    --destructive: #fa4549;
+    --destructive-foreground: #ffffff;
+
+    --border: #30363d;
+    --input: #30363d;
+    --ring: #2f81f7;
+
+    --sidebar: #010409;
+    --sidebar-foreground: #c9d1d9;
+    --sidebar-primary: #2f81f7;
+    --sidebar-primary-foreground: #ffffff;
+    --sidebar-accent: #161b22;
+    --sidebar-accent-foreground: #c9d1d9;
+    --sidebar-border: #21262d;
+    --sidebar-ring: #2f81f7;
+    
+    /* Laravel MD3 Theme Variables (Dark) */
+    --theme-background: 13 17 23;
+    --theme-surface: 13 17 23;
+    --theme-surface-lowest: 13 17 23;
+    --theme-surface-low: 22 27 34;
+    --theme-surface-container: 22 27 34;
+    --theme-surface-high: 33 38 45;
+    --theme-surface-highest: 33 38 45;
+    --theme-surface-variant: 48 54 61;
+    --theme-on-background: 230 237 243;
+    --theme-on-surface: 230 237 243;
+    --theme-on-surface-variant: 139 148 158;
+    --theme-primary: 6 182 212;
+    --theme-on-primary-container: 6 182 212;
+    --theme-outline: 48 54 61;
+    --theme-outline-variant: 48 54 61;
+}
+
+@layer base {
+    * {
+        @apply border-border outline-ring/50;
+    }
+
+    body {
+        @apply bg-background text-foreground transition-colors duration-300;
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        &::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+  
+    html {
+        scroll-behavior: smooth;
+        /* Hide scrollbar for Chrome, Safari and Opera */
+        &::-webkit-scrollbar {
+            display: none;
+        }
+        /* Hide scrollbar for IE, Edge and Firefox */
+        -ms-overflow-style: none;  /* IE and Edge */
+        scrollbar-width: none;  /* Firefox */
+    }
+}
+
+/* Custom Utilities for Premium Look */
+@layer utilities {
+    .glass {
+        @apply bg-card border border-border shadow-sm;
+    }
+
+    .dark .glass {
+        @apply bg-card border border-border shadow-md;
+    }
+
+    .card-hover {
+        @apply transition-transform duration-300 hover:scale-[1.02];
+    }
+
+    .text-gradient {
+        @apply bg-clip-text text-transparent bg-gradient-to-r from-indigo-500 to-cyan-400;
+    }
+
+    .btn-primary {
+        @apply bg-primary text-primary-foreground font-medium py-2 px-4 rounded-md hover:bg-primary/90 transition-colors duration-200;
+    }
+
+    .btn-primary:hover {
+        @apply bg-primary/80;
+    }
+
+    .scrollbar-hide::-webkit-scrollbar {
+        display: none;
+    }
+    .scrollbar-hide {
+        -ms-overflow-style: none;
+        scrollbar-width: none;
+    }
+
+    .custom-scrollbar::-webkit-scrollbar {
+        width: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+        @apply bg-slate-200 rounded-full hover:bg-slate-300;
+    }
+
+    .hover-scrollbar::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+    }
+    .hover-scrollbar::-webkit-scrollbar-track {
+        background: transparent;
+    }
+    .hover-scrollbar::-webkit-scrollbar-thumb {
+        background: transparent;
+        border-radius: 10px;
+    }
+    .hover-scrollbar:hover::-webkit-scrollbar-thumb {
+        @apply bg-foreground/20;
+    }
+    .hover-scrollbar::-webkit-scrollbar-thumb:hover {
+        @apply bg-foreground/40;
+    }
+
+    .pb-safe {
+        padding-bottom: env(safe-area-inset-bottom);
+    }
+    .pt-safe {
+        padding-top: env(safe-area-inset-top);
+    }
+    .mb-safe {
+        margin-bottom: env(safe-area-inset-bottom);
+    }
+    .mt-safe {
+        margin-top: env(safe-area-inset-top);
+    }
+    .bottom-safe {
+        bottom: env(safe-area-inset-bottom);
+    }
+}
+
+/* Fix Browser Autocomplete Styling */
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active,
+textarea:-webkit-autofill,
+textarea:-webkit-autofill:hover,
+textarea:-webkit-autofill:focus,
+textarea:-webkit-autofill:active {
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: currentColor !important;
+    transition: background-color 5000s ease-in-out 0s;
+    box-shadow: inset 0 0 20px 20px transparent !important;
+}
+
+/* Force dark text color for autofill on inputs that are in light containers */
+.bg-white input:-webkit-autofill,
+.bg-white input:-webkit-autofill:hover,
+.bg-white input:-webkit-autofill:focus,
+.bg-white input:-webkit-autofill:active {
+    -webkit-text-fill-color: #0f172a !important;
+}
+
+/* Force white text color for autofill on inputs that are in dark/transparent containers */
+input.autofill-white:-webkit-autofill,
+input.autofill-white:-webkit-autofill:hover,
+input.autofill-white:-webkit-autofill:focus,
+input.autofill-white:-webkit-autofill:active,
+input.autofill-white:-webkit-autofill-preview,
+input.autofill-white:-internal-autofill-previewed,
+input.autofill-white:-internal-autofill-selected {
+    -webkit-text-fill-color: #ffffff !important;
+    color: #ffffff !important;
+}
+
+/* TIKTOK STYLE LEADERBOARD ANIMATION */
+@keyframes hall-of-fame-slide {
+    0% { transform: translateX(-100%); opacity: 0; }
+    10% { transform: translateX(0); opacity: 1; }
+    90% { transform: translateX(0); opacity: 1; }
+    100% { transform: translateX(150%); opacity: 0; }
+}
+
+.animate-hall-of-fame {
+    animation: hall-of-fame-slide 4s ease-in-out infinite;
+}
+
+@keyframes marquee-horizontal {
+    0% { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+}
+
+.animate-marquee-horizontal {
+    animation: marquee-horizontal 240s linear infinite;
+}
+
+.pause-marquee {
+    animation-play-state: paused;
+}
+
+.hide-scrollbar::-webkit-scrollbar {
+    display: none;
+}
+.hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+@keyframes shimmer {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(100%); }
+}
+
+@keyframes confetti {
+        0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+        100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+}
+
+/* Original Indigo Theme (Default) - overrides GitHub theme when data-theme="default" is set */
+html[data-theme="default"] {
+    --radius: 0.75rem;
+    --background: oklch(0.98 0.01 240);
+    --foreground: oklch(0.2 0.04 240);
+    --card: oklch(1 0 0);
+    --card-foreground: oklch(0.2 0.04 240);
+    --popover: oklch(1 0 0);
+    --popover-foreground: oklch(0.2 0.04 240);
+    --primary: oklch(0.5 0.2 260);
+    --primary-foreground: oklch(0.98 0.01 260);
+    --secondary: oklch(0.92 0.04 240);
+    --secondary-foreground: oklch(0.4 0.15 260);
+    --muted: oklch(0.95 0.02 240);
+    --muted-foreground: oklch(0.5 0.05 240);
+    --accent: oklch(0.9 0.15 200);
+    --accent-foreground: oklch(0.3 0.1 200);
+    --destructive: oklch(0.55 0.2 25);
+    --destructive-foreground: oklch(0.98 0.01 25);
+    --border: oklch(0.9 0.02 240);
+    --input: oklch(0.9 0.02 240);
+    --ring: oklch(0.5 0.2 260 / 0.3);
+    --sidebar: oklch(0.25 0.05 260);
+    --sidebar-foreground: oklch(0.95 0.02 260);
+    --sidebar-primary: oklch(0.5 0.2 260);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.35 0.08 260);
+    --sidebar-accent-foreground: oklch(1 0 0);
+    --sidebar-border: oklch(0.35 0.05 260);
+    --sidebar-ring: oklch(0.5 0.2 260 / 0.5);
+}
+
+html[data-theme="default"].dark {
+    --background: oklch(0.18 0.04 260);
+    --foreground: oklch(0.95 0.02 260);
+    --card: oklch(0.22 0.05 260);
+    --card-foreground: oklch(0.95 0.02 260);
+    --popover: oklch(0.22 0.05 260);
+    --popover-foreground: oklch(0.95 0.02 260);
+    --primary: oklch(0.65 0.15 260);
+    --primary-foreground: oklch(0.18 0.04 260);
+    --secondary: oklch(0.28 0.06 260);
+    --secondary-foreground: oklch(0.9 0.05 260);
+    --muted: oklch(0.28 0.06 260);
+    --muted-foreground: oklch(0.7 0.05 260);
+    --accent: oklch(0.35 0.1 200);
+    --accent-foreground: oklch(0.9 0.1 200);
+    --destructive: oklch(0.5 0.18 25);
+    --destructive-foreground: oklch(1 0 0);
+    --border: oklch(0.3 0.05 260);
+    --input: oklch(0.3 0.05 260);
+    --ring: oklch(0.65 0.15 260 / 0.5);
+    --sidebar: oklch(0.25 0.05 260);
+    --sidebar-foreground: oklch(0.95 0.02 260);
+    --sidebar-primary: oklch(0.5 0.2 260);
+    --sidebar-primary-foreground: oklch(1 0 0);
+    --sidebar-accent: oklch(0.35 0.08 260);
+    --sidebar-accent-foreground: oklch(1 0 0);
+    --sidebar-border: oklch(0.35 0.05 260);
+    --sidebar-ring: oklch(0.5 0.2 260 / 0.5);
+}

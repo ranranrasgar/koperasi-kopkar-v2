@@ -1,0 +1,244 @@
+export interface MenuItem {
+    label: string
+    icon: string
+    href: string
+    active?: boolean
+    permission?: string
+    locked?: boolean
+}
+
+export interface MenuGroup {
+    groupLabel: string
+    items: MenuItem[]
+}
+
+export const allGroups: MenuGroup[] = [
+    {
+        groupLabel: "Main",
+        items: [
+            {
+                label: "Dashboard",
+                icon: "dashboard",
+                href: "/dashboard"
+            }
+        ]
+    },
+    {
+        groupLabel: "Keanggotaan",
+        items: [
+            {
+                label: "Daftar Anggota",
+                icon: "groups",
+                href: "/dashboard/members"
+            },
+            {
+                label: "Karyawan Mattel",
+                icon: "work",
+                href: "/dashboard/members/karyawan-mattel",
+                locked: true
+            },
+            {
+                label: "User Mobile",
+                icon: "smartphone",
+                href: "/dashboard/members/mobile-users",
+                locked: true
+            }
+        ]
+    },
+    {
+        groupLabel: "Simpanan",
+        items: [
+            {
+                label: "Rekap Simpanan",
+                icon: "account_balance_wallet",
+                href: "/dashboard/savings"
+            },
+            {
+                label: "Buku Simpanan",
+                icon: "menu_book",
+                href: "/dashboard/savings/ledger"
+            },
+            {
+                label: "Setoran Simpanan",
+                icon: "credit_card",
+                href: "/dashboard/savings/deposit"
+            },
+            {
+                label: "Pengambilan Simpanan",
+                icon: "call_made",
+                href: "/dashboard/savings/withdraw"
+            },
+            {
+                label: "Kartu Simpanan",
+                icon: "badge",
+                href: "/dashboard/savings/cards",
+                locked: true
+            },
+            {
+                label: "Grafik Analisa",
+                icon: "monitoring",
+                href: "/dashboard/savings/analytics",
+                locked: true
+            },
+            {
+                label: "Simpanan Berjangka",
+                icon: "calendar_month",
+                href: "/dashboard/savings/time-deposits",
+                locked: true
+            }
+        ]
+    },
+    {
+        groupLabel: "Pinjaman",
+        items: [
+            {
+                label: "Daftar Pinjaman",
+                icon: "receipt_long",
+                href: "/dashboard/loans"
+            },
+            {
+                label: "Pengajuan Kredit",
+                icon: "assignment",
+                href: "/dashboard/loans/apply",
+                locked: true
+            },
+            {
+                label: "Input Pinjaman Tunai",
+                icon: "payments",
+                href: "/dashboard/loans/create-cash"
+            },
+            {
+                label: "Input Pinjaman KPR",
+                icon: "real_estate_agent",
+                href: "/dashboard/loans/create-kpr"
+            },
+            {
+                label: "Setoran Angsuran",
+                icon: "sync",
+                href: "/dashboard/loans/payment"
+            },
+            {
+                label: "Setoran Titipan (Escrow)",
+                icon: "layers",
+                href: "/dashboard/loans/escrow",
+                locked: true
+            },
+            {
+                label: "Kredit Macet",
+                icon: "trending_down",
+                href: "/dashboard/loans/bad-debts",
+                locked: true
+            }
+        ]
+    },
+    {
+        groupLabel: "Potongan Gaji",
+        items: [
+            {
+                label: "Transaksi Potongan",
+                icon: "format_list_numbered",
+                href: "/dashboard/deductions",
+                locked: true
+            }
+        ]
+    },
+    {
+        groupLabel: "Akuntansi",
+        items: [
+            {
+                label: "Chart of Accounts (COA)",
+                icon: "account_tree",
+                href: "/dashboard/accounting/coa"
+            },
+            {
+                label: "Jurnal Umum",
+                icon: "menu_book",
+                href: "/dashboard/accounting/journal"
+            },
+            {
+                label: "Buku Kas & Bank",
+                icon: "account_balance",
+                href: "/dashboard/accounting/ledger",
+                locked: true
+            },
+            {
+                label: "Trial Balance",
+                icon: "bar_chart",
+                href: "/dashboard/accounting/trial-balance",
+                locked: true
+            },
+            {
+                label: "Laporan Keuangan",
+                icon: "summarize",
+                href: "/dashboard/accounting/reports",
+                locked: true
+            },
+            {
+                label: "Tutup Buku",
+                icon: "lock_clock",
+                href: "/dashboard/accounting/closing",
+                locked: true
+            }
+        ]
+    },
+    {
+        groupLabel: "SHU & Absensi",
+        items: [
+            {
+                label: "Sisa Hasil Usaha (SHU)",
+                icon: "emoji_events",
+                href: "/dashboard/shu",
+                locked: true
+            },
+            {
+                label: "Absensi Fingerprint",
+                icon: "fingerprint",
+                href: "/dashboard/attendance",
+                locked: true
+            }
+        ]
+    },
+    {
+        groupLabel: "Sistem & Pengaturan",
+        items: [
+            {
+                label: "Pengaturan Perusahaan",
+                icon: "business",
+                href: "/dashboard/settings",
+                locked: true
+            },
+            {
+                label: "Jenis Pinjaman",
+                icon: "sell",
+                href: "/dashboard/settings/jenis-pinjaman",
+                locked: true
+            },
+            {
+                label: "Jenis Simpanan",
+                icon: "sell",
+                href: "/dashboard/settings/jenis-simpanan",
+                locked: true
+            }
+        ]
+    }
+]
+
+export function getMenuGroups(pathname: string): MenuGroup[] {
+    const allItems = allGroups.flatMap(g => g.items)
+    const globalMatches = allItems
+        .filter(item => {
+            if (item.href === "/dashboard") return pathname === "/dashboard"
+            return pathname === item.href || pathname.startsWith(item.href + "/")
+        })
+        .sort((a, b) => b.href.length - a.href.length)
+
+    const globalBestMatch = globalMatches[0]?.href
+
+    return allGroups.map(group => ({
+        ...group,
+        items: group.items.map(item => ({
+            ...item,
+            active: globalBestMatch ? item.href === globalBestMatch : false
+        }))
+    }))
+}
