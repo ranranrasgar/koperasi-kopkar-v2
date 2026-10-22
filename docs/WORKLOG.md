@@ -8,7 +8,42 @@ Log kerja untuk agent berikutnya. **Entri terbaru di paling atas.** Tiap entri: 
 - Semua pekerjaan frontend sudah di-commit di `master` (8 commit per kelompok mulai 19dfe4a, terakhir "docs: CLAUDE.md dan WORKLOG"), belum di-push.
 - Form master dan pengajuan ikut mode uji (`tx()`). Yang belum diuji: tombol cetak.
 - Database uji terpisah tersedia: `npm run uji:reset` lalu `npm run dev:uji` (port 3101), lihat entri 2026-10-22 (larut).
-- Pusat Panduan (`/dashboard/panduan`) dan Kelola Panduan sudah ada; 9 kategori, 35 artikel terpasang di `kopkar_mjs_2000`. Belum di-commit saat entri ditulis.
+- Pusat Panduan (`/dashboard/panduan`) dan Kelola Panduan sudah ada; 9 kategori, 35 artikel terpasang di `kopkar_mjs_2000` (commit 5bf70d9).
+- Mode uji/live diatur dari **Sistem & Pengaturan → Mode Uji / Live** (admin + superadmin), bukan lagi `.env.local`. Database asli saat ini mode **Uji**.
+
+---
+
+## 2026-10-22 (larut, 3) — Saklar mode Uji / Live di pengaturan
+
+**Permintaan pengguna:** mode uji dinyalakan/dimatikan dari pengaturan, bukan `.env.local`; hanya grup admin dan superadmin.
+
+**Dibuat/diubah:**
+- Tabel `pengaturan_web` (kunci/nilai, `database/postgres/pengaturan-web.sql`), dipasang dengan `npm run pengaturan:pasang`. Skrip yang sama memberi grup `admin` izin menu `Mode Aplikasi (web)` di `opr_hak_akses`. Nilai awal diambil dari env atau `--mode=uji|live`, dan nilai yang sudah ada tidak diubah.
+- `lib/db.ts`:
+  - `modeUji` dari konstanta menjadi `async modeUji()` / `modeAplikasi()` yang membaca database setiap transaksi.
+  - `KOPKAR_UJI_ROLLBACK=1/0` di env mengunci mode (`modeUjiTerkunci`).
+  - Tabel belum ada dianggap live.
+- Semua action (`transaksi`, `master`, `pengajuan`, `panduan`) memakai `await modeUji()`.
+- Banner kuning: teks tanpa nama env, plus tautan "Ubah ke Live" bagi yang berizin.
+- Halaman `/dashboard/settings/mode` (`SaklarMode`, `actions/mode.ts`): saklar geser dua posisi dengan konfirmasi, info terakhir diubah, tabel perbedaan, dan status terkunci bila env diisi. Saklar menulis langsung (bukan `tx()`), jadi tetap tersimpan saat mode uji.
+- `frontend/.env.local`: baris `KOPKAR_UJI_ROLLBACK=1` dihapus supaya saklar berlaku. Database asli dipasang dengan mode awal Uji, jadi perilakunya sama seperti sebelumnya.
+- Panduan *Mode uji dan database uji* dan *Hak akses* diperbarui di file isi awal dan di kedua database (hanya karena `diubah_oleh = 'isi awal'`).
+
+**Verifikasi di server utama:**
+- Banner dan tautan tampil.
+- Simpan jenis simpanan → "MODE UJI, tidak tersimpan".
+- Geser ke Live: konfirmasi muncul, banner hilang tanpa restart.
+- Geser kembali ke Uji: tercatat oleh superadmin 17:38; `pengaturan_web.mode_uji = 1`.
+- Izin di database: hanya grup admin bernilai T.
+- Typecheck lolos.
+- **Tidak diuji di UI:** login sebagai operator admin (di database asli tidak ada operator admin yang punya password), dan tampilan saklar terkunci di server uji.
+
+**Insiden disk penuh (C: 0 MB):**
+- Penyebab: disk memang hampir penuh, ditambah cache Turbopack `.next/dev/cache` 2,1 GB, `.next-uji` 433 MB, dan database uji 582 MB.
+- `.next-uji` dan `.next/dev/cache` dihapus (cache, dibuat ulang); server uji dihentikan, server utama dijalankan ulang. Sisa disk sekitar 2,5 GB.
+- Satu Edit gagal (ENOSPC) tanpa merusak file.
+- Jebakan saat menghapus baris env: `Set-Content -Encoding utf8` di PowerShell 5.1 menambah BOM ke `.env.local`, sehingga `PG_URL` tidak terbaca. BOM sudah dibuang.
+- Typecheck sempat gagal karena `.next/types/routes.d.ts` usang (14:43) bertabrakan dengan `.next/dev/types`; diperbaiki dengan `npx next typegen`.
 
 ---
 

@@ -12,14 +12,14 @@ export type HasilSimpan = { ok: true; pesan: string } | { ok: false; error: stri
 class Salah extends Error {}
 
 /**
- * Semua tulis master dalam satu transaksi lewat tx(), sehingga ikut di-rollback di mode uji (KOPKAR_UJI_ROLLBACK).
+ * Semua tulis master dalam satu transaksi lewat tx(), sehingga ikut di-rollback di mode uji.
  * `jenis` "layout": segarkan layout di bawah `path` juga (identitas koperasi tampil di sidebar semua halaman).
  */
 async function simpan(menu: string, path: string, fn: (db: Db) => Promise<string>, jenis?: "layout"): Promise<HasilSimpan> {
     try {
         await operatorAktif([menu])
         const pesan = await tx(fn)
-        if (modeUji) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
+        if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
         revalidatePath(path, jenis)
         return { ok: true, pesan }
     } catch (e) {

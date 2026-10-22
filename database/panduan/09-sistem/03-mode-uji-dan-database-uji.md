@@ -16,11 +16,19 @@ Ada dua fasilitas untuk mencoba aplikasi tanpa mengubah data asli koperasi.
 
 Saat Anda menekan **Simpan**, transaksi dijalankan sungguhan (nomor bukti dibuat, jurnal dibentuk, saldo dicek), lalu **dibatalkan** sebelum tersimpan. Pesan hasilnya diawali *MODE UJI, tidak tersimpan*.
 
-Yang ikut dibatalkan: semua transaksi uang, data master (perusahaan, logo, jenis simpanan, jenis pinjaman), serta setuju/tolak pengajuan. Yang **tetap tersimpan**: perubahan hak akses, operator, dan ganti password.
+Yang ikut dibatalkan: semua transaksi uang, data master (perusahaan, logo, jenis simpanan, jenis pinjaman), setuju/tolak pengajuan, dan perubahan panduan. Yang **tetap tersimpan**: perubahan hak akses, operator, ganti password, dan saklar mode itu sendiri.
 
 Nomor urut bukti tetap terpakai walaupun transaksinya dibatalkan, jadi transaksi asli berikutnya bisa melompati beberapa nomor. Ini wajar.
 
-Cara menyalakan: di file `frontend/.env.local` isi `KOPKAR_UJI_ROLLBACK=1` (atau `0` untuk mematikan), lalu jalankan ulang server dengan `npm run dev`.
+### Menyalakan dan mematikan mode uji
+
+1. Buka **Sistem & Pengaturan → Mode Uji / Live**. Menu ini hanya tersedia untuk grup **admin** dan **superadmin**; banner kuning juga punya tautan **Ubah ke Live** bagi mereka.
+2. Geser saklar ke **Uji** atau **Live**, lalu konfirmasi.
+3. Perubahan berlaku **langsung untuk semua operator**, tanpa menjalankan ulang server. Halaman mencatat siapa dan kapan terakhir mengubah.
+
+> **Penting:** Sebelum menggeser ke **Live**, pastikan semua operator tahu bahwa transaksi berikutnya akan tersimpan permanen dan membentuk jurnal.
+
+Bila saklar tampil terkunci, mode sedang dikunci oleh baris `KOPKAR_UJI_ROLLBACK` di file `frontend/.env.local` server (`1` = uji, `0` = live). Hapus baris itu dan jalankan ulang server untuk memakai saklar. Server uji (port 3101) sengaja dikunci live.
 
 ## Database uji
 

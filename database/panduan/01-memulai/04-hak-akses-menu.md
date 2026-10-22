@@ -24,6 +24,6 @@ Contoh: kasir yang hanya diberi izin pencairan koperasi tidak akan melihat jenis
 
 ## Grup superadmin
 
-Grup **superadmin** selalu punya semua akses, termasuk menu khusus web yang tidak ada di desktop: **Kelola Hak Akses**, **Operator**, dan **Kelola Panduan**.
+Grup **superadmin** selalu punya semua akses, termasuk menu khusus web yang tidak ada di desktop: **Kelola Hak Akses**, **Operator**, **Kelola Panduan**, dan **Mode Uji / Live**. Grup **admin** juga diberi akses **Mode Uji / Live**.
 
 Jika Anda membutuhkan akses tambahan, minta ke superadmin. Perubahan hak akses berlaku langsung tanpa perlu login ulang. Cara mengaturnya dijelaskan di panduan *Mengelola hak akses grup*.

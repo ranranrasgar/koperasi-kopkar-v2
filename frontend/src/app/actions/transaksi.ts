@@ -62,7 +62,7 @@ async function posting(menu: readonly string[], fn: (o: Operator) => Promise<Exc
     try {
         const o = await operatorAktif(menu)
         const res = await fn(o)
-        if (modeUji && res.ok) return { ...res, pesan: `MODE UJI, tidak tersimpan: ${res.pesan}` }
+        if (res.ok && await modeUji()) return { ...res, pesan: `MODE UJI, tidak tersimpan: ${res.pesan}` }
         revalidatePath("/dashboard", "layout")
         return res
     } catch (e) {

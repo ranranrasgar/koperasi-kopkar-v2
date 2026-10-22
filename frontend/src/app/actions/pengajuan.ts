@@ -9,7 +9,7 @@ export type HasilPengajuan = { ok: true; pesan: string } | { ok: false; error: s
 
 /**
  * Setujui (Y) atau tolak (N) pengajuan yang masih menunggu (P). Pencairan dilakukan terpisah di form pencairan.
- * Lewat tx() supaya ikut di-rollback di mode uji (KOPKAR_UJI_ROLLBACK).
+ * Lewat tx() supaya ikut di-rollback di mode uji.
  */
 export async function putuskanPengajuanAction(id: number, setuju: boolean): Promise<HasilPengajuan> {
     try {
@@ -18,7 +18,7 @@ export async function putuskanPengajuanAction(id: number, setuju: boolean): Prom
             "UPDATE pengajuan_pinjaman SET status = $1 WHERE id = $2 AND status = 'P' RETURNING kd_anggota", [setuju ? "Y" : "N", id])).rows)
         if (r.length === 0) return { ok: false, error: "Pengajuan tidak ada atau sudah diputuskan" }
         const pesan = `Pengajuan ${r[0].kd_anggota} ${setuju ? "disetujui" : "ditolak"}`
-        if (modeUji) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
+        if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
         revalidatePath("/dashboard/loans/apply")
         return { ok: true, pesan }
     } catch (e) {

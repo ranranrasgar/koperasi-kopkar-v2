@@ -204,6 +204,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/settings"
             },
             {
+                label: "Mode Uji / Live",
+                icon: "science",
+                href: "/dashboard/settings/mode"
+            },
+            {
                 label: "Jenis Pinjaman",
                 icon: "sell",
                 href: "/dashboard/settings/jenis-pinjaman"

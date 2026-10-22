@@ -16,7 +16,7 @@ async function kelola(fn: (db: Db, opr: string) => Promise<{ pesan: string; id?:
     try {
         const o = await operatorAktif([MENU.kelolaPanduan])
         const r = await tx((db) => fn(db, o.nama))
-        if (modeUji) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
+        if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
         revalidatePath("/dashboard/panduan", "layout")
         return { ok: true, ...r }
     } catch (e) {

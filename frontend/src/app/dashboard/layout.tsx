@@ -1,11 +1,13 @@
+import Link from "next/link"
 import { DashboardShell } from "@/components/layout/DashboardShell"
-import { modeUji, serverUji } from "@/lib/db"
+import { modeAplikasi, serverUji } from "@/lib/db"
 import { identitasKoperasi } from "@/lib/koperasi"
 import { wajibLogin } from "@/lib/operator"
+import { MENU } from "@/config/akses"
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
     const o = await wajibLogin()
-    const k = await identitasKoperasi()
+    const [k, mode] = await Promise.all([identitasKoperasi(), modeAplikasi()])
     return (
         <DashboardShell operator={{ nama: o.nama, namaLengkap: o.namaLengkap, grup: o.grup, izin: o.izin }} koperasi={{ nama: k.nama, logo: k.logo }}>
             {serverUji && (
@@ -14,9 +16,12 @@ export default async function Layout({ children }: { children: React.ReactNode }
                     terpisah dari data asli. Kembalikan ke salinan baru dengan <code className="font-mono">npm run uji:reset</code>.
                 </div>
             )}
-            {modeUji && (
-                <div role="status" className="mb-4 rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-800 dark:text-amber-300">
-                    Mode uji aktif (KOPKAR_UJI_ROLLBACK=1): semua transaksi dibatalkan setelah diproses dan tidak tersimpan.
+            {mode.uji && (
+                <div role="status" className="mb-4 flex flex-wrap items-center gap-x-3 gap-y-1 rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-4 py-2 text-sm font-semibold text-amber-800 dark:text-amber-300">
+                    <span>Mode uji aktif: semua transaksi dibatalkan setelah diproses dan tidak tersimpan.</span>
+                    {o.izin.includes(MENU.modeAplikasi) && (
+                        <Link href="/dashboard/settings/mode" className="underline underline-offset-2 font-medium print:hidden">Ubah ke Live</Link>
+                    )}
                 </div>
             )}
             {children}
