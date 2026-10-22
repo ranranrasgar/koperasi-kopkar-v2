@@ -36,14 +36,12 @@ export const allGroups: MenuGroup[] = [
             {
                 label: "Karyawan Mattel",
                 icon: "work",
-                href: "/dashboard/members/karyawan-mattel",
-                locked: true
+                href: "/dashboard/members/karyawan-mattel"
             },
             {
                 label: "User Mobile",
                 icon: "smartphone",
-                href: "/dashboard/members/mobile-users",
-                locked: true
+                href: "/dashboard/members/mobile-users"
             }
         ]
     },

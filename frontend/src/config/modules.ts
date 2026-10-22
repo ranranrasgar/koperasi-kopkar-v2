@@ -143,3 +143,48 @@ export const journalConfig: ModuleConfig = {
         { key: "opr", label: "Operator", type: "string", hidden: true },
     ],
 }
+
+export const karyawanMattelConfig: ModuleConfig = {
+    title: "Karyawan Mattel",
+    description: "Data karyawan dari HR Mattel; kolom Anggota terisi bila karyawan sudah terdaftar sebagai anggota.",
+    rowKey: "id",
+    searchPlaceholder: "NIK, nama, departemen, atau seksi",
+    filters: [
+        { key: "anggota", label: "Keanggotaan", type: "select", options: [{ label: "Sudah anggota", value: "ya" }, { label: "Belum anggota", value: "tidak" }] },
+    ],
+    columns: [
+        { key: "nik", label: "NIK", type: "string", sortable: true, mono: true },
+        { key: "nama", label: "Nama", type: "string", sortable: true },
+        { key: "deptname", label: "Departemen", type: "string", sortable: true },
+        { key: "sectname", label: "Seksi", type: "string", sortable: true },
+        { key: "grade", label: "Grade", type: "string", sortable: true },
+        { key: "joindate", label: "Tgl Masuk", type: "date", sortable: true },
+        { key: "tgl_lahir", label: "Tgl Lahir", type: "date", hidden: true },
+        { key: "no_rek", label: "No. Rekening", type: "string", hidden: true },
+        { key: "emphone", label: "Telepon", type: "string", hidden: true },
+        { key: "plant", label: "Plant", type: "string", hidden: true },
+        { key: "kode_agt", label: "Anggota", type: "string", mono: true },
+    ],
+}
+
+export const userMobileConfig: ModuleConfig = {
+    title: "User Mobile",
+    description: "Akun aplikasi Android anggota (tabel app_user).",
+    rowKey: "id",
+    searchPlaceholder: "Username, kode anggota, nama, atau email",
+    filters: [
+        { key: "status", label: "Status", type: "select", options: [{ label: "Aktif", value: "true" }, { label: "Tidak aktif", value: "false" }] },
+    ],
+    columns: [
+        { key: "username", label: "Username", type: "string", sortable: true },
+        { key: "kode_agt", label: "Kode Anggota", type: "string", sortable: true, mono: true },
+        { key: "nama", label: "Nama", type: "string", sortable: true },
+        { key: "nik", label: "KPK", type: "string", hidden: true },
+        { key: "email", label: "Email", type: "string" },
+        { key: "status", label: "Status", type: "badge", sortable: true,
+            badgeMap: { "true": { label: "Aktif", color: "green" }, "false": { label: "Tidak aktif", color: "gray" } } },
+        { key: "punya_token", label: "Notifikasi", type: "boolean", hidden: true },
+        { key: "dibuat", label: "Dibuat", type: "date", sortable: true },
+        { key: "diubah", label: "Diubah", type: "date", hidden: true },
+    ],
+}
