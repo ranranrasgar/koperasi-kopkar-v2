@@ -151,26 +151,22 @@ export const allGroups: MenuGroup[] = [
             {
                 label: "Buku Kas & Bank",
                 icon: "account_balance",
-                href: "/dashboard/accounting/ledger",
-                locked: true
+                href: "/dashboard/accounting/ledger"
             },
             {
                 label: "Trial Balance",
                 icon: "bar_chart",
-                href: "/dashboard/accounting/trial-balance",
-                locked: true
+                href: "/dashboard/accounting/trial-balance"
             },
             {
                 label: "Laporan Keuangan",
                 icon: "summarize",
-                href: "/dashboard/accounting/reports",
-                locked: true
+                href: "/dashboard/accounting/reports"
             },
             {
                 label: "Tutup Buku",
                 icon: "lock_clock",
-                href: "/dashboard/accounting/closing",
-                locked: true
+                href: "/dashboard/accounting/closing"
             }
         ]
     },
@@ -180,14 +176,12 @@ export const allGroups: MenuGroup[] = [
             {
                 label: "Sisa Hasil Usaha (SHU)",
                 icon: "emoji_events",
-                href: "/dashboard/shu",
-                locked: true
+                href: "/dashboard/shu"
             },
             {
                 label: "Absensi Fingerprint",
                 icon: "fingerprint",
-                href: "/dashboard/attendance",
-                locked: true
+                href: "/dashboard/attendance"
             }
         ]
     },

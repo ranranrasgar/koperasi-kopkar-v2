@@ -1,0 +1,87 @@
+import "server-only"
+import { query } from "@/lib/db"
+
+/*
+ * Model saldo desktop (diverifikasi terhadap data 2024 dan 2025): tutup buku tahun Y membuat jurnal TBT dengan
+ * dua bagian, yaitu penutupan rugi-laba bertanggal Y-12-31 dan saldo pembuka tahun Y+1 bertanggal Y+1-01-01 yang mengulang
+ * saldo semua akun. Karena itu saldo pada tanggal D = saldo pembuka TBT terakhir (tanggal O <= D) + jurnal lain sejak O.
+ * Baris saldo pembuka tidak pernah dihitung sebagai mutasi.
+ */
+const PEMBUKA = "(j.nomor_bukti LIKE 'TBT/%' AND j.tanggal_jurnalumum = date_trunc('year', j.tanggal_jurnalumum)::date)"
+
+export interface SaldoAkun {
+    kode_perkiraan: string; nama_perkiraan: string; d_k: string; kode_klasifikasi: number | null; nama_klasifikasi: string | null
+    awal: number; debit: number; kredit: number; akhir: number  // semua bertanda debit - kredit
+}
+
+/** Tanggal saldo pembuka TBT terakhir yang <= tanggal, atau null (data sebelum tutup buku pertama). */
+async function pembukaTerakhir(tanggal: string) {
+    const [r] = await query<{ o: string | null }>(
+        `SELECT MAX(j.tanggal_jurnalumum)::text AS o FROM jurnal_umum j WHERE ${PEMBUKA} AND j.tanggal_jurnalumum <= $1`, [tanggal])
+    return r?.o ?? null
+}
+
+/**
+ * Saldo awal (pada `dari`), mutasi debit/kredit dalam [dari, sampai], dan saldo akhir per akun.
+ * `tanpaTutupBuku`: abaikan semua baris TBT di mutasi (untuk rugi-laba, supaya penutupan 31-12 tidak menolkan pendapatan/biaya).
+ */
+export async function saldoPerAkun(dari: string, sampai: string, opsi: { tanpaTutupBuku?: boolean } = {}): Promise<SaldoAkun[]> {
+    const o = await pembukaTerakhir(dari)
+    const awal = o
+        ? `(${PEMBUKA} AND j.tanggal_jurnalumum = $3) OR (NOT ${PEMBUKA} AND j.tanggal_jurnalumum >= $3 AND j.tanggal_jurnalumum < $1)`
+        : `(NOT ${PEMBUKA} AND j.tanggal_jurnalumum < $1)`
+    const mutasi = `NOT ${PEMBUKA} AND j.tanggal_jurnalumum BETWEEN $1 AND $2${opsi.tanpaTutupBuku ? " AND j.nomor_bukti NOT LIKE 'TBT/%'" : ""}`
+    return query<SaldoAkun>(`
+        WITH s AS (
+            SELECT j.kode_perkiraan,
+                   SUM(CASE WHEN ${awal} THEN j.debit_jurnalumum - j.kredit_jurnalumum ELSE 0 END) AS awal,
+                   SUM(CASE WHEN ${mutasi} THEN j.debit_jurnalumum ELSE 0 END) AS debit,
+                   SUM(CASE WHEN ${mutasi} THEN j.kredit_jurnalumum ELSE 0 END) AS kredit
+              FROM jurnal_umum j
+             WHERE j.tanggal_jurnalumum <= $2 ${o ? "AND j.tanggal_jurnalumum >= $3" : ""}
+             GROUP BY j.kode_perkiraan)
+        SELECT COALESCE(p.kode_perkiraan, s.kode_perkiraan) AS kode_perkiraan,
+               COALESCE(p.nama_perkiraan, '(akun tidak ada di COA)') AS nama_perkiraan, COALESCE(p.d_k, 'D') AS d_k,
+               p.kode_klasifikasi, k.nama_klasifikasi,
+               COALESCE(s.awal, 0) AS awal, COALESCE(s.debit, 0) AS debit, COALESCE(s.kredit, 0) AS kredit,
+               COALESCE(s.awal, 0) + COALESCE(s.debit, 0) - COALESCE(s.kredit, 0) AS akhir
+          FROM s FULL JOIN perkiraan p ON p.kode_perkiraan = s.kode_perkiraan
+          LEFT JOIN klasifikasi_perkiraan k ON k.kode_klasifikasi = p.kode_klasifikasi
+         ORDER BY 1`, o ? [dari, sampai, o] : [dari, sampai])
+}
+
+export interface BarisBukuBesar {
+    tanggal_jurnalumum: string; nomor_bukti: string; deskripsi: string | null; debit: number; kredit: number; saldo: number; opr: string | null
+}
+
+/** Buku besar satu akun dengan saldo berjalan (bertanda debit - kredit). */
+export async function bukuBesar(kode: string, dari: string, sampai: string) {
+    const o = await pembukaTerakhir(dari)
+    const [awal] = await query<{ s: number }>(`
+        SELECT COALESCE(SUM(j.debit_jurnalumum - j.kredit_jurnalumum), 0) AS s FROM jurnal_umum j
+         WHERE j.kode_perkiraan = $1 AND (${o
+            ? `(${PEMBUKA} AND j.tanggal_jurnalumum = $3) OR (NOT ${PEMBUKA} AND j.tanggal_jurnalumum >= $3 AND j.tanggal_jurnalumum < $2)`
+            : `NOT ${PEMBUKA} AND j.tanggal_jurnalumum < $2`})`, o ? [kode, dari, o] : [kode, dari])
+    const baris = await query<BarisBukuBesar>(`
+        SELECT j.tanggal_jurnalumum, j.nomor_bukti, j.deskripsi, j.debit_jurnalumum AS debit, j.kredit_jurnalumum AS kredit, j.opr,
+               $4::numeric + SUM(j.debit_jurnalumum - j.kredit_jurnalumum) OVER (ORDER BY j.tanggal_jurnalumum, j.urutan) AS saldo
+          FROM jurnal_umum j
+         WHERE j.kode_perkiraan = $1 AND j.tanggal_jurnalumum BETWEEN $2 AND $3 AND NOT ${PEMBUKA}
+         ORDER BY j.tanggal_jurnalumum, j.urutan LIMIT 5000`, [kode, dari, sampai, awal.s])
+    // Total dihitung terpisah supaya tetap benar bila baris dibatasi 5.000.
+    const [tot] = await query<{ debit: number; kredit: number }>(`
+        SELECT COALESCE(SUM(j.debit_jurnalumum), 0) AS debit, COALESCE(SUM(j.kredit_jurnalumum), 0) AS kredit FROM jurnal_umum j
+         WHERE j.kode_perkiraan = $1 AND j.tanggal_jurnalumum BETWEEN $2 AND $3 AND NOT ${PEMBUKA}`, [kode, dari, sampai])
+    return { awal: awal.s, baris, debit: tot.debit, kredit: tot.kredit }
+}
+
+export interface TutupBuku { nomor_bukti: string; tanggal: string; bagian: string; baris: number; debit: number; kredit: number; opr: string | null }
+
+/** Riwayat tutup buku tahunan (jurnal TBT): bagian penutupan 31-12 dan saldo pembuka 01-01. */
+export const riwayatTutupBuku = () =>
+    query<TutupBuku>(`
+        SELECT j.nomor_bukti, j.tanggal_jurnalumum AS tanggal,
+               CASE WHEN ${PEMBUKA} THEN 'Saldo pembuka' ELSE 'Penutupan rugi-laba' END AS bagian,
+               COUNT(*) AS baris, SUM(j.debit_jurnalumum) AS debit, SUM(j.kredit_jurnalumum) AS kredit, MIN(j.opr) AS opr
+          FROM jurnal_umum j WHERE j.nomor_bukti LIKE 'TBT/%'
+         GROUP BY 1, 2, 3 ORDER BY 2 DESC, 3`)
