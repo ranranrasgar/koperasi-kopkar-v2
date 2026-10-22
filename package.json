@@ -4,6 +4,6 @@
     "type": "module",
     "workspaces": ["backend", "mobile-api", "frontend"],
     "scripts": {
-        "test": "npm run test -w backend"
+        "test": "npm run test -w backend && npm run test -w mobile-api"
     }
 }
