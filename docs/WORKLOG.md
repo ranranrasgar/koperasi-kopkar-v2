@@ -2,14 +2,55 @@
 
 Log kerja untuk agent berikutnya. **Entri terbaru di paling atas.** Tiap entri: apa yang dikerjakan, cara verifikasi dan hasilnya, apa yang tersisa, jebakan yang ditemukan. Jangan menghapus entri lama.
 
-## Status ringkas (perbarui setiap sesi)
-- Backend (mesin posting) + mobile-api: selesai dan lolos uji (14 + 3).
-- Frontend: semua item menu sudah punya halaman (tidak ada lagi `locked`). Halaman absensi hanya placeholder (data tidak dimigrasi).
-- Semua pekerjaan frontend sudah di-commit di `master` (8 commit per kelompok mulai 19dfe4a, terakhir "docs: CLAUDE.md dan WORKLOG"), belum di-push.
-- Form master dan pengajuan ikut mode uji (`tx()`). Yang belum diuji: tombol cetak.
-- Database uji terpisah tersedia: `npm run uji:reset` lalu `npm run dev:uji` (port 3101), lihat entri 2026-10-22 (larut).
-- Pusat Panduan (`/dashboard/panduan`) dan Kelola Panduan sudah ada; 9 kategori, 35 artikel terpasang di `kopkar_mjs_2000` (commit 5bf70d9).
-- Mode uji/live diatur dari **Sistem & Pengaturan → Mode Uji / Live** (admin + superadmin), bukan lagi `.env.local`. Database asli saat ini mode **Uji**.
+## Status ringkas dan serah terima (perbarui setiap sesi)
+
+Terakhir diperbarui 22 Oktober 2026 malam. Agent baru: baca bagian ini dulu, lalu entri terbaru di bawah bila butuh rincian.
+
+### Keadaan repo
+- Branch `master`, working tree bersih.
+- **Tidak ada remote git** (belum di-push ke mana pun). Semua commit hanya ada di `C:\laragon\www\NextJS\Koperasi-Kopkar-v2`. Untuk dikerjakan dari komputer lain, pengguna perlu menambah remote dan push lebih dulu.
+- Commit sesi 22 Oktober (lama → baru):
+  - 19dfe4a..72b7d8a: halaman per kelompok, perbaikan mode uji form master/pengajuan, dokumentasi
+  - 378887f: tombol outline tema gelap
+  - 35a651e: COA pohon dengan saldo per tanggal; filter D/K memakai C
+  - e4d5746: jurnal per bukti, debit dulu
+  - c836a62: nama dan logo koperasi dari Pengaturan Perusahaan
+  - 7e684ce: database uji dan server uji
+  - 5bf70d9: Pusat Panduan
+  - 473161d: saklar Mode Uji / Live
+
+### Yang sudah jadi
+- Backend (mesin posting) + mobile-api: lolos uji (14 + 3).
+- Frontend:
+  - Semua menu punya halaman. Absensi hanya placeholder.
+  - Laporan akuntansi cocok dengan tutup buku desktop 2024-2025.
+  - Semua halaman render tanpa galat (diuji dengan sesi superadmin).
+- Mode uji/live diatur dari **Sistem & Pengaturan → Mode Uji / Live** (admin + superadmin), bukan `.env.local`. **Database asli saat ini mode Uji.**
+- Pusat Panduan `/dashboard/panduan` + Kelola Panduan; 35 artikel terpasang di `kopkar_mjs_2000`.
+- Database uji `kopkar_mjs_2000_uji` (`npm run uji:reset`, server `npm run dev:uji` port 3101).
+
+### Keadaan lingkungan saat serah terima
+- `frontend/.env.local` berisi `PG_URL` dan `SESSION_SECRET` saja. Jangan tambah `KOPKAR_UJI_ROLLBACK` (akan mengunci saklar mode).
+- Server utama port 3100 dan server uji 3101 dijalankan dari sesi Claude sebelumnya. Bila sesi itu ditutup, keduanya mati; jalankan `npm run dev` (dan `npm run dev:uji` bila perlu) dari folder proyek.
+- **Disk C: hampir penuh** (sisa ±2,4 GB setelah dibersihkan; sempat 0 MB). Cache `.next/dev/cache` tumbuh sampai 2 GB+, `.next-uji` ±430 MB, database uji ±600 MB. Cek ruang disk sebelum `uji:reset` atau `dev:uji`.
+- Database uji disalin **sebelum** saklar mode dibuat, jadi belum punya tabel `pengaturan_web` (tidak masalah: server uji dikunci live). Jalankan `npm run uji:reset` untuk salinan terbaru.
+
+### Belum selesai / belum diuji
+- Tombol cetak (`TombolCetak`) belum diuji manual.
+- Login sebagai operator grup admin untuk saklar mode belum diuji di UI (operator admin di database asli belum punya password; izinnya sudah dicek di database).
+- Tutup buku dari web hanya pratinjau; posting tetap di desktop sampai lulus uji paritas.
+- Kop laporan (`components/laporan/Periode.tsx`, `KopLaporan`) masih menulis nama koperasi tetap, belum dari Pengaturan Perusahaan.
+- Data asal: 4 bukti desktop dengan kode akun `0` membuat jurnal tidak seimbang (BB/250814/002, BB/250901/002, BB/251222/002, BB/260211/005); tanggal salah ketik SMPM-0502-256909 (2505-02-06) dan ANGS-CR-0424-120612 (2027-03-27). Perlu dibetulkan akuntan.
+- Tabel `jenis_macet` kosong, jadi kolom kolektibilitas Kredit Macet tidak tampil.
+- `npm audit`: `next` 16.2.10 punya celah kritis *Proxy bypass* (Turbopack). Halaman dan actions tetap cek sesi di server, tetapi sebaiknya `next` dinaikkan versinya.
+- Saat aturan transaksi berubah, perbarui artikel di `database/panduan` (dan di database bila belum disunting admin).
+
+### Jebakan yang sudah ditemui
+- PowerShell 5.1 `Set-Content -Encoding utf8` menambah BOM. Di `.env.local` ini membuat `PG_URL` tidak terbaca; tulis dengan `[IO.File]::WriteAllText` atau Write tool.
+- Typecheck gagal *"does not satisfy the constraint AppRoutes"*: `.next/types` usang bertabrakan dengan `.next/dev/types`. Perbaiki dengan `npx next typegen` di `frontend`.
+- Git Bash mengubah argumen yang diawali `/` (misal `/dashboard/...`) menjadi path Windows; jalankan skrip seperti itu dari PowerShell.
+- Uji halaman di balik login tanpa password: buat cookie sesi bertanda tangan dari `SESSION_SECRET` untuk operator superadmin. Format ada di `lib/sesi.ts`: `pv` = sha256(password_hash) base64url 16 karakter; nama cookie `kopkar_sesi`, atau `kopkar_sesi_uji` di server uji.
+- Server action menulis lewat `tx()` supaya ikut mode uji. Yang sengaja tidak memakai `tx()`: akses/operator, ganti password, dan saklar mode.
 
 ---
 
