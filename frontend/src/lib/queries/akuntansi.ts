@@ -10,7 +10,7 @@ export async function daftarCoa(s: SearchParams) {
         where.push(`(c.kode_perkiraan ILIKE ${kw} OR c.nama_perkiraan ILIKE ${kw})`)
     }
     const dk = sp(s, "d_k")
-    if (dk === "D" || dk === "K") where.push(`c.d_k = ${p(dk)}`)
+    if (dk === "D" || dk === "C") where.push(`c.d_k = ${p(dk)}`)
     const base = `
         SELECT c.id, c.kode_perkiraan, c.nama_perkiraan, c.d_k, c.rp_saldo_awal, c.tgl_saldo_awal, c.keterangan,
                i.kode_perkiraan || ' ' || i.nama_perkiraan AS nama_induk
@@ -40,6 +40,12 @@ export async function daftarJurnal(s: SearchParams) {
     const sortable = Object.fromEntries(["tanggal_jurnalumum", "nomor_bukti", "kode_perkiraan", "debit_jurnalumum", "kredit_jurnalumum"].map((k) => [k, k]))
     return paged({ base, values, searchParams: s, sortable, defaultSort: "tanggal_jurnalumum DESC, urutan DESC", pageSize: 50 })
 }
+
+export interface AkunPohon { id: number; parent_id: number | null; kode_perkiraan: string; nama_perkiraan: string; d_k: string; keterangan: string | null }
+
+/** Semua akun COA dengan induknya, untuk tampilan pohon (3 tingkat, akun induk tidak pernah dijurnal). */
+export const pohonCoa = () =>
+    query<AkunPohon>("SELECT id, parent_id, kode_perkiraan, nama_perkiraan, d_k, keterangan FROM perkiraan ORDER BY kode_perkiraan")
 
 export interface Akun { id: number; kode_perkiraan: string; nama_perkiraan: string }
 

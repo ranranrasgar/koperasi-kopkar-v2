@@ -100,7 +100,7 @@ export const coaConfig: ModuleConfig = {
     rowKey: "kode_perkiraan",
     searchPlaceholder: "Kode atau nama akun",
     filters: [
-        { key: "d_k", label: "Saldo Normal", type: "select", options: [{ label: "Debet (D)", value: "D" }, { label: "Kredit (K)", value: "K" }] },
+        { key: "d_k", label: "Saldo Normal", type: "select", options: [{ label: "Debet (D)", value: "D" }, { label: "Kredit (C)", value: "C" }] },
     ],
     columns: [
         { key: "kode_perkiraan", label: "Kode Akun", type: "string", sortable: true, mono: true },
