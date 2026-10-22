@@ -1,0 +1,34 @@
+import { FormCard } from "@/components/transaksi/common"
+import { FormEdit, type FieldSpec } from "@/components/master/FormEdit"
+import { simpanPerusahaanAction } from "@/app/actions/master"
+import { query } from "@/lib/db"
+import { wajibIzin } from "@/lib/operator"
+
+const FIELDS: FieldSpec[] = [
+    { name: "nama_perusahaan", label: "Nama Koperasi", required: true },
+    { name: "nama_manager", label: "Nama Manager / Ketua" },
+    { name: "alamat_perusahaan1", label: "Alamat", wide: true },
+    { name: "alamat_perusahaan2", label: "Alamat 2 / Telepon" },
+    { name: "kota_perusahaan", label: "Kota" },
+    { name: "email", label: "Email" },
+    { name: "http", label: "Website" },
+    { name: "npwp", label: "NPWP" },
+    { name: "siup", label: "SIUP" },
+    { name: "tdp", label: "TDP" },
+    { name: "rp_adm_bank", label: "Biaya Adm Bank (Rp)", type: "number" },
+    { name: "persen_pajak_pendapatan", label: "Pajak Pendapatan (%)", type: "number" },
+    { name: "ket_nota", label: "Keterangan Nota", type: "textarea", wide: true },
+]
+
+export default async function PerusahaanPage() {
+    await wajibIzin("/dashboard/settings") // layout tidak dijalankan ulang pada navigasi antarhalaman
+    const [p] = await query<Record<string, string | number | null>>(`SELECT nama_perusahaan, nama_manager, alamat_perusahaan1, alamat_perusahaan2,
+        kota_perusahaan, email, http, npwp, siup, tdp, rp_adm_bank, persen_pajak_pendapatan, ket_nota FROM perusahaan ORDER BY id LIMIT 1`)
+    return (
+        <div className="max-w-4xl">
+            <FormCard title="Pengaturan Perusahaan" description="Identitas koperasi untuk kop laporan dan nota.">
+                <FormEdit fields={FIELDS} nilai={p ?? {}} aksi={simpanPerusahaanAction} />
+            </FormCard>
+        </div>
+    )
+}

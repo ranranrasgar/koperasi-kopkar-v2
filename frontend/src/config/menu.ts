@@ -201,20 +201,17 @@ export const allGroups: MenuGroup[] = [
             {
                 label: "Pengaturan Perusahaan",
                 icon: "business",
-                href: "/dashboard/settings",
-                locked: true
+                href: "/dashboard/settings"
             },
             {
                 label: "Jenis Pinjaman",
                 icon: "sell",
-                href: "/dashboard/settings/jenis-pinjaman",
-                locked: true
+                href: "/dashboard/settings/jenis-pinjaman"
             },
             {
                 label: "Jenis Simpanan",
                 icon: "sell",
-                href: "/dashboard/settings/jenis-simpanan",
-                locked: true
+                href: "/dashboard/settings/jenis-simpanan"
             }
         ]
     }
