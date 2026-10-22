@@ -8,7 +8,8 @@ import { postJurnalUmum } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
 import { modeUji, query, tx } from "@/lib/db"
-import { GalatSesi, operatorAktif, wajibLogin } from "@/lib/operator"
+import { GalatSesi, operatorAktif, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
+import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
 import { cariAnggota, type AnggotaRingkas } from "@/lib/queries/anggota"
 import { kprBerjalan, pinjamanBerjalan, type KprBerjalan, type PinjamanBerjalan } from "@/lib/queries/pinjaman"
 
@@ -53,11 +54,14 @@ function bulat(f: FormData, k: string, label: string) {
 }
 const rp = (v: string | bigint) => Number(typeof v === "bigint" ? fromUnits(v) : v)
 
-/** Jalankan posting dalam satu transaksi; pesan galat mesin posting diteruskan ke kasir. */
-async function posting(fn: (opr: string) => Promise<Exclude<Hasil, null>>): Promise<Hasil> {
+/**
+ * Jalankan posting dalam satu transaksi; pesan galat mesin posting diteruskan ke kasir.
+ * `menu`: menu desktop yang mengizinkan aksi ini (cukup salah satu); pemeriksaan per grup pinjaman di dalam fn.
+ */
+async function posting(menu: readonly string[], fn: (o: Operator) => Promise<Exclude<Hasil, null>>): Promise<Hasil> {
     try {
-        const { nama } = await operatorAktif()
-        const res = await fn(nama)
+        const o = await operatorAktif(menu)
+        const res = await fn(o)
         if (modeUji && res.ok) return { ...res, pesan: `MODE UJI, tidak tersimpan: ${res.pesan}` }
         revalidatePath("/dashboard", "layout")
         return res
@@ -70,7 +74,8 @@ async function posting(fn: (opr: string) => Promise<Exclude<Hasil, null>>): Prom
 // ---------- pencarian dan info anggota ----------
 
 export async function cariAnggotaAction(kata: string): Promise<AnggotaRingkas[]> {
-    await wajibLogin() // sesi habis: alihkan ke login
+    const o = await wajibLogin() // sesi habis: alihkan ke login
+    if (!punyaIzin(o.izin, MENU_TRANSAKSI)) return []
     if (kata.trim().length < 2) return []
     return cariAnggota(kata)
 }
@@ -82,7 +87,8 @@ export interface InfoAnggota {
 }
 
 export async function infoAnggotaAction(kodeAgt: string): Promise<InfoAnggota> {
-    await wajibLogin() // sesi habis: alihkan ke login
+    const o = await wajibLogin() // sesi habis: alihkan ke login
+    if (!punyaIzin(o.izin, MENU_TRANSAKSI)) return { saldo: [], pinjaman: [], kpr: [] }
     const [saldo, pinjaman, kpr] = await Promise.all([
         query<InfoAnggota["saldo"][number]>(
             `SELECT j.kode_simpanan, j.nama_simpanan, COALESCE(SUM(s.rp_setoran - s.rp_pengambilan), 0) AS saldo
@@ -98,7 +104,7 @@ export async function infoAnggotaAction(kodeAgt: string): Promise<InfoAnggota> {
 // ---------- simpanan ----------
 
 async function simpanan(tipe: "setor" | "ambil", f: FormData): Promise<Hasil> {
-    return posting(async (opr) => {
+    return posting([tipe === "setor" ? MENU.setoranSimpanan : MENU.pencairanSimpanan], async ({ nama: opr }) => {
         const input = {
             kodeAgt: teks(f, "kodeAgt"), jenisSimpanan: teks(f, "jenisSimpanan"), tanggal: tanggal(f),
             jumlah: uang(f, "jumlah", "Jumlah"), kasPerkiraanId: teks(f, "kas"), opr, deskripsi: teks(f, "deskripsi", false) || null,
@@ -116,7 +122,8 @@ export async function ambilSimpananAction(_: Hasil, f: FormData) { return simpan
 
 /** Pratinjau pencairan dengan rumus mesin posting yang sama (tanpa menulis ke database). */
 export async function pratinjauPinjamanAction(p: { kodeKredit: string; tglPinjaman: string; pokok: string; lama: number; persenBunga?: string }) {
-    await wajibLogin() // sesi habis: alihkan ke login
+    const o = await wajibLogin() // sesi habis: alihkan ke login
+    if (!punyaIzin(o.izin, [MENU.cairKoperasi, MENU.cairBank])) return null
     try {
         if (!UANG.test(p.pokok) || toUnits(p.pokok) <= 0n || !Number.isInteger(p.lama) || p.lama < 1 || !TANGGAL.test(p.tglPinjaman)) return null
         if (p.persenBunga && !UANG.test(p.persenBunga)) return null
@@ -135,7 +142,12 @@ export async function pratinjauPinjamanAction(p: { kodeKredit: string; tglPinjam
 }
 
 export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting(async (opr) => {
+    return posting([MENU.cairKoperasi, MENU.cairBank], async (o) => {
+        const opr = o.nama
+        const [jk] = await query<{ group_pinjaman: string }>("SELECT group_pinjaman FROM jenis_kredit WHERE kode_kredit = $1", [teks(f, "kodeKredit")])
+        if (!jk) throw new InputSalah("Jenis kredit tidak ada")
+        if (!MENU_CAIR_GRUP[jk.group_pinjaman]) throw new InputSalah(`Jenis kredit grup ${jk.group_pinjaman} dicairkan lewat form KPR`)
+        wajibMenu(o, [MENU_CAIR_GRUP[jk.group_pinjaman]])
         const r = await tx((db) => cairkanPinjaman(db, {
             kodeAgt: teks(f, "kodeAgt"), kodeKredit: teks(f, "kodeKredit"), tglPinjaman: tanggal(f),
             pokok: uang(f, "pokok", "Pokok pinjaman"), lama: bulat(f, "lama", "Lama angsuran"), kasPerkiraanId: teks(f, "kas"), opr,
@@ -149,7 +161,8 @@ export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasi
 
 /** Angsuran berikutnya dari pinjaman tunai, dihitung dengan rumus mesin posting. */
 export async function angsuranBerikutnyaAction(noPinjaman: string) {
-    await wajibLogin() // sesi habis: alihkan ke login
+    const o = await wajibLogin() // sesi habis: alihkan ke login
+    if (!punyaIzin(o.izin, [MENU.angsurKoperasi, MENU.angsurBank])) return null
     const [p] = await query<{ rp_pinjaman_pokok: string; persen_bunga: string; bunga_per: number; lama_angsuran: number; jml_cicilan: number;
         persen_adm: string; persen_provisi: string }>(
         `SELECT rp_pinjaman_pokok::text, persen_bunga::text, bunga_per, lama_angsuran, jml_cicilan, persen_adm::text, persen_provisi::text
@@ -162,7 +175,11 @@ export async function angsuranBerikutnyaAction(noPinjaman: string) {
 }
 
 export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting(async (opr) => {
+    return posting([MENU.angsurKoperasi, MENU.angsurBank], async (o) => {
+        const opr = o.nama
+        const [jk] = await query<{ group_pinjaman: string }>(
+            "SELECT jk.group_pinjaman FROM pinjaman_tunai p JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id WHERE p.no_pinjaman = $1", [teks(f, "noPinjaman")])
+        if (jk) wajibMenu(o, [MENU_ANGSUR_GRUP[jk.group_pinjaman] ?? MENU.angsurKoperasi])
         const override = {
             jasa: uangOpsional(f, "jasa", "Jasa"), adm: uangOpsional(f, "adm", "Adm"), provisi: uangOpsional(f, "provisi", "Provisi"),
         }
@@ -180,7 +197,7 @@ export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil>
 // ---------- KPR ----------
 
 export async function cairkanKprAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting(async (opr) => {
+    return posting([MENU.cairKpr], async ({ nama: opr }) => {
         const r = await tx((db) => cairkanKpr(db, {
             kodeAgt: teks(f, "kodeAgt"), kodeKredit: teks(f, "kodeKredit"), tglPinjaman: tanggal(f),
             pokok: uang(f, "pokok", "Pokok KPR"), lama: bulat(f, "lama", "Lama angsuran"), kasPerkiraanId: teks(f, "kas"), opr,
@@ -192,7 +209,7 @@ export async function cairkanKprAction(_: Hasil, f: FormData): Promise<Hasil> {
 }
 
 export async function bayarAngsuranKprAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting(async (opr) => {
+    return posting([MENU.angsurKpr], async ({ nama: opr }) => {
         const r = await tx((db) => bayarAngsuranKpr(db, {
             noPinjaman: teks(f, "noPinjaman"), tanggal: tanggal(f), kasPerkiraanId: teks(f, "kas"), opr,
             jumlah: uangOpsional(f, "jumlah", "Jumlah"),
@@ -205,7 +222,7 @@ export async function bayarAngsuranKprAction(_: Hasil, f: FormData): Promise<Has
 // ---------- jurnal umum ----------
 
 export async function jurnalUmumAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting(async (opr) => {
+    return posting([MENU.jurnalUmum], async ({ nama: opr }) => {
         const akun = f.getAll("akun").map(String), debit = f.getAll("debit").map(String), kredit = f.getAll("kredit").map(String)
         const ket = f.getAll("ketBaris").map(String)
         const lines = akun.map((a, i) => {

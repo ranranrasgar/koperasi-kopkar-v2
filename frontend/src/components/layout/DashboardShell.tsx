@@ -5,7 +5,7 @@ import { useSidebar, SidebarProvider } from "./SidebarContext"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
-export interface OperatorTampil { nama: string; namaLengkap: string; grup: string | null }
+export interface OperatorTampil { nama: string; namaLengkap: string; grup: string | null; izin: string[] }
 
 function ShellContent({ children, operator }: { children: React.ReactNode; operator: OperatorTampil }) {
     const { isOpen } = useSidebar()
@@ -44,7 +44,7 @@ function ShellContent({ children, operator }: { children: React.ReactNode; opera
 
 export function DashboardShell({ children, operator }: { children: React.ReactNode; operator: OperatorTampil }) {
     return (
-        <SidebarProvider>
+        <SidebarProvider izin={operator.izin}>
             <ShellContent operator={operator}>{children}</ShellContent>
         </SidebarProvider>
     )

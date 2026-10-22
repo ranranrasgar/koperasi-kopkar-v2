@@ -1,3 +1,5 @@
+import { bolehHalaman } from "./akses"
+
 export interface MenuItem {
     label: string
     icon: string
@@ -223,8 +225,12 @@ export const allGroups: MenuGroup[] = [
     }
 ]
 
-export function getMenuGroups(pathname: string): MenuGroup[] {
-    const allItems = allGroups.flatMap(g => g.items)
+/** Menu untuk operator: item yang tidak diizinkan grupnya (opr_hak_akses) disembunyikan. */
+export function getMenuGroups(pathname: string, izin: readonly string[]): MenuGroup[] {
+    const groups = allGroups
+        .map(group => ({ ...group, items: group.items.filter(item => item.locked || bolehHalaman(item.href, izin)) }))
+        .filter(group => group.items.length > 0)
+    const allItems = groups.flatMap(g => g.items)
     const globalMatches = allItems
         .filter(item => {
             if (item.href === "/dashboard") return pathname === "/dashboard"
@@ -234,7 +240,7 @@ export function getMenuGroups(pathname: string): MenuGroup[] {
 
     const globalBestMatch = globalMatches[0]?.href
 
-    return allGroups.map(group => ({
+    return groups.map(group => ({
         ...group,
         items: group.items.map(item => ({
             ...item,

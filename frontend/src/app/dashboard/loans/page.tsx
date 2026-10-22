@@ -1,10 +1,10 @@
 import { LoansDashboard } from "@/components/ui/LoansDashboard"
 import { jenisKredit, KOLOM_CARI, laporanPinjaman } from "@/lib/queries/pinjaman"
 import { sp } from "@/lib/list"
-import { wajibLogin } from "@/lib/operator"
+import { wajibIzin } from "@/lib/operator"
 
 export default async function LoansPage(props: PageProps<"/dashboard/loans">) {
-    await wajibLogin() // layout tidak dijalankan ulang pada navigasi antarhalaman
+    await wajibIzin("/dashboard/loans") // layout tidak dijalankan ulang pada navigasi antarhalaman
     const s = await props.searchParams
     const [data, jenis] = await Promise.all([laporanPinjaman(s), jenisKredit()])
     // Nilai bawaan sama dengan yang dipakai laporanPinjaman: grup KOPERASI, bulan dan tahun berjalan.

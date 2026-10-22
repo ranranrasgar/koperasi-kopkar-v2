@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { getMenuGroups } from "@/config/menu"
+import { useSidebar } from "./SidebarContext"
 import { logoutAction } from "@/app/actions/auth"
 
 interface SidebarProps {
@@ -15,10 +16,11 @@ interface SidebarProps {
 
 export function Sidebar({ className, onClose }: SidebarProps) {
     const pathname = usePathname()
+    const { izin } = useSidebar()
 
     const menuGroups = useMemo(() => {
-        return getMenuGroups(pathname || "")
-    }, [pathname])
+        return getMenuGroups(pathname || "", izin)
+    }, [pathname, izin])
 
     return (
         <aside className={cn("fixed left-0 top-0 h-screen w-64 bg-background z-50 flex flex-col justify-between overflow-y-auto transition-transform duration-300 md:translate-x-0 border-r border-outline-variant", className)}>

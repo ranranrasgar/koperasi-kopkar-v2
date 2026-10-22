@@ -19,7 +19,7 @@ import type { OperatorTampil } from "./DashboardShell"
 
 export function Navbar({ operator }: { operator: OperatorTampil }) {
     const pathname = usePathname()
-    const { toggle } = useSidebar()
+    const { toggle, izin } = useSidebar()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     const [isMounted, setIsMounted] = useState(false)
 
@@ -27,7 +27,7 @@ export function Navbar({ operator }: { operator: OperatorTampil }) {
         setIsMounted(true)
     }, [])
 
-    const menuGroups = getMenuGroups(pathname || "")
+    const menuGroups = getMenuGroups(pathname || "", izin)
     const activeItem = menuGroups.flatMap(g => g.items).find(item => item.active)
 
     return (

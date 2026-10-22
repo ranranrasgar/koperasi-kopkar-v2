@@ -4,12 +4,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { query } from "@/lib/db"
 import { formatRupiah, formatAngka, formatTanggal } from "@/lib/format"
 import { wajibLogin } from "@/lib/operator"
+import { bolehHalaman, MENU } from "@/config/akses"
+import { sp } from "@/lib/list"
 
 const NAMA_BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 
-export default async function DashboardPage() {
-    await wajibLogin() // layout tidak dijalankan ulang pada navigasi antarhalaman
-    const [[stat], bulanan, terakhir] = await Promise.all([
+export default async function DashboardPage(props: PageProps<"/dashboard">) {
+    const o = await wajibLogin() // layout tidak dijalankan ulang pada navigasi antarhalaman
+    const ditolak = sp(await props.searchParams, "akses") === "ditolak"
+    // Halaman awal untuk semua operator; ringkasan angka hanya untuk grup dengan menu desktop "Dashboard".
+    const lihat = o.izin.includes(MENU.dashboard)
+    const [[stat], bulanan, terakhir] = !lihat ? [[{ anggota: 0, saldo: 0, pinjaman: 0, kpr: 0 }], [], []] : await Promise.all([
         query<{ anggota: number; saldo: number; pinjaman: number; kpr: number }>(`
             SELECT (SELECT COUNT(*) FROM anggota WHERE aktif) AS anggota,
                    (SELECT COALESCE(SUM(rp_setoran - rp_pengambilan), 0) FROM simpanan) AS saldo,
@@ -41,71 +46,82 @@ export default async function DashboardPage() {
         { href: "/dashboard/loans/create-cash", label: "Pencairan Pinjaman Tunai", ket: "Input pencairan kredit baru" },
         { href: "/dashboard/loans/payment", label: "Setoran Angsuran", ket: "Angsuran pinjaman tunai dan KPR" },
         { href: "/dashboard/accounting/journal/new", label: "Jurnal Umum", ket: "Input jurnal memorial" },
-    ]
+    ].filter((m) => bolehHalaman(m.href, o.izin))
 
     return (
         <div className="space-y-6">
             <div className="flex flex-col gap-1">
                 <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Dashboard Ringkasan</h1>
-                <p className="text-sm text-muted-foreground">Panel administrasi Koperasi Kopkar Mattel MJS 2000.</p>
+                <p className="text-sm text-muted-foreground">Panel administrasi Koperasi Kopkar Mattel MJS 2000. Login sebagai {o.namaLengkap} (grup {o.grup ?? "-"}).</p>
             </div>
 
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                {kartu.map((k) => (
-                    <Card key={k.judul} className="shadow-sm border">
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{k.judul}</CardTitle>
-                            <div className={`h-8 w-8 rounded-full flex items-center justify-center ${k.warna}`}>
-                                <k.icon className="h-4 w-4" />
-                            </div>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-xl font-black tabular-nums whitespace-nowrap">{k.nilai}</div>
-                            <p className="text-xs text-muted-foreground mt-1">{k.ket}</p>
-                        </CardContent>
-                    </Card>
-                ))}
-            </div>
+            {ditolak && (
+                <div role="alert" className="rounded-md border border-red-300 bg-red-50 dark:bg-red-500/10 px-4 py-2 text-sm text-red-700 dark:text-red-400">
+                    Grup {o.grup ?? "-"} tidak punya akses ke halaman yang dibuka.
+                </div>
+            )}
+
+            {lihat && (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                    {kartu.map((k) => (
+                        <Card key={k.judul} className="shadow-sm border">
+                            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                <CardTitle className="text-xs font-bold uppercase tracking-wider text-muted-foreground">{k.judul}</CardTitle>
+                                <div className={`h-8 w-8 rounded-full flex items-center justify-center ${k.warna}`}>
+                                    <k.icon className="h-4 w-4" />
+                                </div>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="text-xl font-black tabular-nums whitespace-nowrap">{k.nilai}</div>
+                                <p className="text-xs text-muted-foreground mt-1">{k.ket}</p>
+                            </CardContent>
+                        </Card>
+                    ))}
+                </div>
+            )}
 
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-7">
-                <Card className="shadow-sm border lg:col-span-4">
-                    <CardHeader>
-                        <CardTitle className="text-base font-extrabold text-foreground flex items-center gap-1.5">
-                            <Calendar className="h-4 w-4 text-primary" /> Setoran dan Pengambilan Simpanan
-                        </CardTitle>
-                        <CardDescription>Enam bulan terakhir, semua jenis simpanan.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4 pt-2">
-                        {bulanan.map((b) => {
-                            const [y, m] = b.bln.split("-").map(Number)
-                            return (
-                                <div key={b.bln} className="space-y-1">
-                                    <div className="flex items-center justify-between text-xs font-semibold">
-                                        <span className="text-foreground">{NAMA_BULAN[m - 1]} {y}</span>
-                                        <span className="text-muted-foreground">
-                                            <span className="text-green-600 dark:text-green-400">{formatRupiah(b.setor)}</span>
-                                            {" / "}
-                                            <span className="text-error">{formatRupiah(b.ambil)}</span>
-                                        </span>
+                {lihat && (
+                    <Card className="shadow-sm border lg:col-span-4">
+                        <CardHeader>
+                            <CardTitle className="text-base font-extrabold text-foreground flex items-center gap-1.5">
+                                <Calendar className="h-4 w-4 text-primary" /> Setoran dan Pengambilan Simpanan
+                            </CardTitle>
+                            <CardDescription>Enam bulan terakhir, semua jenis simpanan.</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4 pt-2">
+                            {bulanan.map((b) => {
+                                const [y, m] = b.bln.split("-").map(Number)
+                                return (
+                                    <div key={b.bln} className="space-y-1">
+                                        <div className="flex items-center justify-between text-xs font-semibold">
+                                            <span className="text-foreground">{NAMA_BULAN[m - 1]} {y}</span>
+                                            <span className="text-muted-foreground">
+                                                <span className="text-green-600 dark:text-green-400">{formatRupiah(b.setor)}</span>
+                                                {" / "}
+                                                <span className="text-error">{formatRupiah(b.ambil)}</span>
+                                            </span>
+                                        </div>
+                                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                                            <div className="bg-green-600 h-full rounded-full" style={{ width: `${(b.setor / maks) * 100}%` }} />
+                                        </div>
+                                        <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
+                                            <div className="bg-error h-full rounded-full" style={{ width: `${(b.ambil / maks) * 100}%` }} />
+                                        </div>
                                     </div>
-                                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                                        <div className="bg-green-600 h-full rounded-full" style={{ width: `${(b.setor / maks) * 100}%` }} />
-                                    </div>
-                                    <div className="w-full bg-muted rounded-full h-2 overflow-hidden">
-                                        <div className="bg-error h-full rounded-full" style={{ width: `${(b.ambil / maks) * 100}%` }} />
-                                    </div>
-                                </div>
-                            )
-                        })}
-                    </CardContent>
-                </Card>
+                                )
+                            })}
+                        </CardContent>
+                    </Card>
+                )}
 
-                <Card className="shadow-sm border lg:col-span-3">
+                <Card className={`shadow-sm border ${lihat ? "lg:col-span-3" : "lg:col-span-4"}`}>
                     <CardHeader>
                         <CardTitle className="text-base font-extrabold text-foreground">Akses Menu Cepat</CardTitle>
                         <CardDescription>Transaksi harian kasir.</CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-3">
+                        {menuCepat.length === 0 && <p className="text-sm text-muted-foreground">Grup ini tidak punya menu transaksi di web.</p>}
                         {menuCepat.map((m) => (
                             <Link key={m.href} href={m.href}
                                 className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/40 transition-colors text-xs font-semibold group">
@@ -120,37 +136,39 @@ export default async function DashboardPage() {
                 </Card>
             </div>
 
-            <Card className="shadow-sm border">
-                <CardHeader>
-                    <CardTitle className="text-base font-extrabold text-foreground">Transaksi Simpanan Terakhir</CardTitle>
-                </CardHeader>
-                <CardContent className="p-0 overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b bg-muted/40 text-muted-foreground text-left">
-                                <th className="px-4 py-2.5">Tanggal</th>
-                                <th className="px-4 py-2.5">No. Bukti</th>
-                                <th className="px-4 py-2.5">Anggota</th>
-                                <th className="px-4 py-2.5">Jenis</th>
-                                <th className="px-4 py-2.5 text-right">Setoran</th>
-                                <th className="px-4 py-2.5 text-right">Pengambilan</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {terakhir.map((t) => (
-                                <tr key={t.no_bukti} className="border-b last:border-0">
-                                    <td className="px-4 py-2.5 whitespace-nowrap">{formatTanggal(t.tgl_transaksi)}</td>
-                                    <td className="px-4 py-2.5 font-mono text-xs">{t.no_bukti}</td>
-                                    <td className="px-4 py-2.5">{t.nama}</td>
-                                    <td className="px-4 py-2.5">{t.nama_simpanan ?? "-"}</td>
-                                    <td className="px-4 py-2.5 text-right tabular-nums">{formatRupiah(t.rp_setoran)}</td>
-                                    <td className="px-4 py-2.5 text-right tabular-nums">{formatRupiah(t.rp_pengambilan)}</td>
+            {lihat && (
+                <Card className="shadow-sm border">
+                    <CardHeader>
+                        <CardTitle className="text-base font-extrabold text-foreground">Transaksi Simpanan Terakhir</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-0 overflow-x-auto">
+                        <table className="w-full text-sm">
+                            <thead>
+                                <tr className="border-b bg-muted/40 text-muted-foreground text-left">
+                                    <th className="px-4 py-2.5">Tanggal</th>
+                                    <th className="px-4 py-2.5">No. Bukti</th>
+                                    <th className="px-4 py-2.5">Anggota</th>
+                                    <th className="px-4 py-2.5">Jenis</th>
+                                    <th className="px-4 py-2.5 text-right">Setoran</th>
+                                    <th className="px-4 py-2.5 text-right">Pengambilan</th>
                                 </tr>
-                            ))}
-                        </tbody>
-                    </table>
-                </CardContent>
-            </Card>
+                            </thead>
+                            <tbody>
+                                {terakhir.map((t) => (
+                                    <tr key={t.no_bukti} className="border-b last:border-0">
+                                        <td className="px-4 py-2.5 whitespace-nowrap">{formatTanggal(t.tgl_transaksi)}</td>
+                                        <td className="px-4 py-2.5 font-mono text-xs">{t.no_bukti}</td>
+                                        <td className="px-4 py-2.5">{t.nama}</td>
+                                        <td className="px-4 py-2.5">{t.nama_simpanan ?? "-"}</td>
+                                        <td className="px-4 py-2.5 text-right tabular-nums">{formatRupiah(t.rp_setoran)}</td>
+                                        <td className="px-4 py-2.5 text-right tabular-nums">{formatRupiah(t.rp_pengambilan)}</td>
+                                    </tr>
+                                ))}
+                            </tbody>
+                        </table>
+                    </CardContent>
+                </Card>
+            )}
         </div>
     )
 }

@@ -130,11 +130,11 @@ function AngsuranKpr({ info, akunKas, hariIni, onSelesai }: { info: InfoAnggota;
     )
 }
 
-export function AngsuranForm({ akunKas, hariIni }: { akunKas: Akun[]; hariIni: string }) {
+export function AngsuranForm({ akunKas, hariIni, izin }: { akunKas: Akun[]; hariIni: string; izin: { tunai: boolean; kpr: boolean } }) {
     const [anggota, setAnggota] = useState<AnggotaRingkas | null>(null)
     const [info, setInfo] = useState<InfoAnggota | null>(null)
     const [versi, setVersi] = useState(0)
-    const [tab, setTab] = useState("tunai")
+    const [tab, setTab] = useState(izin.tunai ? "tunai" : "kpr")
     // Muat ulang daftar pinjaman setelah angsuran tersimpan (referensi stabil supaya efek anak tidak berulang).
     const selesai = useCallback(() => setVersi((v) => v + 1), [])
 
@@ -144,10 +144,10 @@ export function AngsuranForm({ akunKas, hariIni }: { akunKas: Akun[]; hariIni: s
         infoAnggotaAction(anggota.kode_agt).then((i) => {
             if (batal) return
             setInfo(i)
-            if (versi === 0 && i.pinjaman.length === 0 && i.kpr.length > 0) setTab("kpr")
+            if (versi === 0 && izin.kpr && i.pinjaman.length === 0 && i.kpr.length > 0) setTab("kpr")
         })
         return () => { batal = true }
-    }, [anggota, versi])
+    }, [anggota, versi, izin.kpr])
 
     return (
         <div className="max-w-4xl space-y-6">
@@ -159,8 +159,8 @@ export function AngsuranForm({ akunKas, hariIni }: { akunKas: Akun[]; hariIni: s
                     {info && (
                         <Tabs value={tab} onValueChange={setTab}>
                             <TabsList>
-                                <TabsTrigger value="tunai">Pinjaman Tunai ({info.pinjaman.length})</TabsTrigger>
-                                <TabsTrigger value="kpr">KPR ({info.kpr.length})</TabsTrigger>
+                                <TabsTrigger value="tunai" disabled={!izin.tunai}>Pinjaman Tunai ({info.pinjaman.length})</TabsTrigger>
+                                <TabsTrigger value="kpr" disabled={!izin.kpr}>KPR ({info.kpr.length})</TabsTrigger>
                             </TabsList>
                             <TabsContent value="tunai" className="pt-4">
                                 <AngsuranTunai info={info} akunKas={akunKas} hariIni={hariIni} onSelesai={selesai} />

@@ -17,3 +17,4 @@ Kolom `opr` diisi nama operator yang login; `KOPKAR_UJI_ROLLBACK=1` menjalankan 
 
 Login operator (tabel `opr`): sesi cookie bertanda tangan 12 jam, wajib `SESSION_SECRET` (min. 32 karakter) di `frontend/.env.local`.
 Password awal diset admin: `npm run set-password -w frontend -- <nama>` (atau `--acak`, `--daftar`); operator wajib menggantinya saat login pertama.
+Hak akses: `opr_hak_akses` per grup (akses T) dengan nama menu desktop; peta halaman web ke menu desktop ada di `frontend/src/config/akses.ts`.
