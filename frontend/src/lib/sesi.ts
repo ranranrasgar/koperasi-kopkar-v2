@@ -3,7 +3,9 @@ import crypto from "node:crypto"
 // Sesi operator: cookie bertanda tangan HMAC-SHA256, tanpa tabel sesi. Dipakai juga oleh proxy.ts,
 // jadi modul ini tidak boleh mengimpor database.
 
-export const COOKIE_SESI = "kopkar_sesi"
+// Cookie tidak dibedakan per port: server uji (npm run dev:uji) memakai nama sendiri supaya login di sana
+// tidak menimpa sesi server utama di localhost yang sama.
+export const COOKIE_SESI = process.env.KOPKAR_SERVER_UJI ? "kopkar_sesi_uji" : "kopkar_sesi"
 export const LAMA_SESI_DETIK = 12 * 60 * 60
 
 export interface Sesi {

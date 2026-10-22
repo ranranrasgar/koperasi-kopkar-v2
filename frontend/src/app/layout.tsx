@@ -2,12 +2,13 @@ import type { Metadata } from "next"
 import "./globals.css"
 import { Providers } from "@/components/Providers"
 import { identitasKoperasi } from "@/lib/koperasi"
+import { serverUji } from "@/lib/db"
 
 // Judul tab dan ikon aplikasi mengikuti Pengaturan Perusahaan.
 export async function generateMetadata(): Promise<Metadata> {
     const k = await identitasKoperasi()
     return {
-        title: `${k.nama} · Management System`,
+        title: `${serverUji ? "[UJI] " : ""}${k.nama} · Management System`,
         description: "Management Information System untuk Koperasi Kopkar Mattel",
         icons: { icon: k.logo, apple: k.logo },
     }

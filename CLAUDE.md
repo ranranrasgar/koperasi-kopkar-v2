@@ -12,7 +12,9 @@ Koperasi Kopkar MJS 2000, v2: npm workspaces monorepo di atas PostgreSQL (hasil 
 ## Perintah
 - Uji backend + mobile-api: `PG_URL=postgres://postgres:@127.0.0.1:5432/kopkar_mjs_2000 npm test` (root). Satu workspace: `npm test -w backend`. Satu file: `cd backend && PG_URL=... npx tsx --test test/simpanan.test.ts`.
 - Typecheck frontend: `npm run typecheck -w frontend`. Tidak ada lint script dan tidak ada uji frontend.
-- Web: `npm run dev -w frontend` (port 3100; `PG_URL`, `SESSION_SECRET`, `KOPKAR_UJI_ROLLBACK` dari `frontend/.env.local`, gitignored). Jangan menjalankan dua dev server: port 3100 sering sudah dipakai.
+- Web: `npm run dev` (root) atau `npm run dev -w frontend` (port 3100; `PG_URL`, `SESSION_SECRET`, `KOPKAR_UJI_ROLLBACK` dari `frontend/.env.local`, gitignored). Jangan menjalankan dua dev server utama: port 3100 sering sudah dipakai.
+- Mode uji (`KOPKAR_UJI_ROLLBACK=1`): setiap simpan dijalankan lalu langsung di-rollback (`tx()` di `lib/db.ts`), cocok untuk cek validasi satu transaksi. Kelola akses, operator, dan ganti password tidak ikut rollback.
+- Database uji untuk menguji alur antar halaman (data benar-benar tersimpan): `npm run uji:reset` menyalin `kopkar_mjs_2000` ke `kopkar_mjs_2000_uji` (pg_dump/pg_restore, ±30 detik, sumber hanya dibaca), lalu `npm run dev:uji` menjalankan server kedua di port 3101 ke database uji (tanpa rollback, folder build `.next-uji`, `tsconfig.uji.json`, cookie `kopkar_sesi_uji`, banner ungu dan judul "[UJI]"). Bisa berjalan bersamaan dengan server utama; `uji:reset` boleh dijalankan saat server uji hidup.
 - API mobile: `PG_URL=... npm start -w mobile-api` (port 8099, `/v1/Api.php?apicall=...`).
 - Migrasi MySQL ke PostgreSQL: lihat `database/postgres/README.md` (jangan `--reset` pada database yang dipakai).
 - Password operator: `npm run set-password -w frontend -- <nama>` (`--acak`, `--daftar`, `--buat-superadmin`). Mengubah database; jalankan hanya atas permintaan pengguna.

@@ -31,6 +31,9 @@ export async function query<T = Record<string, unknown>>(sql: string, params: un
  * form tanpa mengubah data. Nomor dari sequence tetap terpakai (sequence tidak ikut rollback).
  */
 export const modeUji = process.env.KOPKAR_UJI_ROLLBACK === "1"
+
+/** Nama database uji bila web dijalankan lewat npm run dev:uji (data tersimpan, tapi di salinan database), selain itu null. */
+export const serverUji = process.env.KOPKAR_SERVER_UJI || null
 const BATAL = Symbol("rollback-uji")
 
 /** Transaksi untuk mesin posting: commit bila fn selesai, rollback bila melempar (atau selalu, di mode uji). */

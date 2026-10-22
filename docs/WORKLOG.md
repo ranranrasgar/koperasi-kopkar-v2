@@ -7,8 +7,27 @@ Log kerja untuk agent berikutnya. **Entri terbaru di paling atas.** Tiap entri: 
 - Frontend: semua item menu sudah punya halaman (tidak ada lagi `locked`). Halaman absensi hanya placeholder (data tidak dimigrasi).
 - Semua pekerjaan frontend sudah di-commit di `master` (8 commit per kelompok mulai 19dfe4a, terakhir "docs: CLAUDE.md dan WORKLOG"), belum di-push.
 - Form master dan pengajuan ikut mode uji (`tx()`). Yang belum diuji: tombol cetak.
+- Database uji terpisah tersedia: `npm run uji:reset` lalu `npm run dev:uji` (port 3101), lihat entri 2026-10-22 (larut).
 
 ---
+
+## 2026-10-22 (larut) — Database uji dan server uji terpisah
+
+**Kebutuhan.** Mode uji (rollback per simpan) tidak bisa dipakai menelusuri alur antar halaman (pencairan pinjaman -> daftar pinjaman -> jurnal -> buku besar -> neraca), karena data tidak pernah tersimpan.
+
+**Dibuat:**
+- `database/postgres/uji-reset.mjs` (`npm run uji:reset`): DROP ... WITH (FORCE) lalu CREATE `<db>_uji`, pg_dump format direktori paralel, lalu pg_restore, lalu cocokkan jumlah baris 6 tabel. Nama tujuan wajib berakhiran `_uji`, di server yang sama. pg_dump dicari di `KOPKAR_PG_BIN`, Laragon (`C:/laragon/bin/postgresql/*/bin`), lalu PATH, dengan versi mayor sama dengan server. `CREATE DATABASE ... TEMPLATE` tidak dipakai karena butuh nol koneksi ke database asli.
+- `frontend/scripts/dev-uji.mjs` (`npm run dev:uji`): next dev port 3101 dengan env `PG_URL` ke database uji (process.env mengalahkan .env.local), `KOPKAR_UJI_ROLLBACK=0`, `KOPKAR_SERVER_UJI`, dan `KOPKAR_DIST_DIR=.next-uji`.
+- `next.config.ts`: `distDir` dan `typescript.tsconfigPath` dari env. Ini perlu karena `.next/dev/lock` menolak dev server kedua, dan tanpa tsconfig terpisah Next menulis ulang `tsconfig.json`.
+- `lib/db.ts` `serverUji`; banner ungu di layout dashboard; judul tab diawali "[UJI]"; `lib/sesi.ts` nama cookie `kopkar_sesi_uji` di server uji (cookie tidak dibedakan per port).
+- Script root `dev`, `dev:uji`, `uji:reset`; `.next-uji` di .gitignore.
+
+**Verifikasi:**
+- `uji:reset`: 29 detik, 6 tabel cocok (jurnal_umum 1.124.000).
+- Server 3100 dan 3101 berjalan bersamaan.
+- Ubah nama koperasi di 3101: tersimpan di `kopkar_mjs_2000_uji` saja, database asli dan server 3100 tetap "KOP - KAR MJS".
+- `uji:reset` saat server uji hidup: server tetap jalan, log tanpa galat, data kembali seperti asli.
+- `tsconfig.json` tidak berubah saat dev:uji dijalankan. Typecheck lolos.
 
 ## 2026-10-22 (malam) — Verifikasi laporan akuntansi terhadap tutup buku desktop
 

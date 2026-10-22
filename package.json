@@ -4,6 +4,9 @@
     "type": "module",
     "workspaces": ["backend", "mobile-api", "frontend"],
     "scripts": {
+        "dev": "npm run dev -w frontend",
+        "dev:uji": "npm run dev:uji -w frontend",
+        "uji:reset": "node database/postgres/uji-reset.mjs",
         "test": "npm run test -w backend && npm run test -w mobile-api"
     }
 }
