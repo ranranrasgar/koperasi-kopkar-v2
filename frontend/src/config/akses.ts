@@ -54,6 +54,8 @@ export const MENU = {
     absensi: "Absensi Karyawan",
     // Khusus web, tidak ada di desktop: hanya grup superadmin.
     kelolaAkses: "Kelola Akses (web)",
+    // Khusus web; superadmin, atau grup yang diberi izin lewat Kelola Hak Akses.
+    kelolaPanduan: "Kelola Panduan (web)",
 } as const
 
 /** Grup yang lolos semua pemeriksaan izin dan boleh mengelola hak akses serta operator. */
@@ -97,6 +99,8 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/attendance": [MENU.absensi],
     "/dashboard/settings/akses": [MENU.kelolaAkses],
     "/dashboard/settings/operator": [MENU.kelolaAkses],
+    // Pusat Panduan (/dashboard/panduan) sengaja tanpa entri: semua operator boleh membaca.
+    "/dashboard/panduan/kelola": [MENU.kelolaPanduan],
 }
 
 /** Menu yang memakai pencarian anggota di form transaksi. */

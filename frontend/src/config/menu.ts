@@ -212,6 +212,21 @@ export const allGroups: MenuGroup[] = [
                 label: "Jenis Simpanan",
                 icon: "sell",
                 href: "/dashboard/settings/jenis-simpanan"
+            },
+            {
+                label: "Kelola Panduan",
+                icon: "edit_note",
+                href: "/dashboard/panduan/kelola"
+            }
+        ]
+    },
+    {
+        groupLabel: "Bantuan",
+        items: [
+            {
+                label: "Pusat Panduan",
+                icon: "menu_book",
+                href: "/dashboard/panduan"
             }
         ]
     }

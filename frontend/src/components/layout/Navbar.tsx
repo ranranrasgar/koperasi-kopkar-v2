@@ -58,6 +58,13 @@ export function Navbar({ operator }: { operator: OperatorTampil }) {
 
             {/* Right Profile Controls */}
             <div className="flex items-center gap-3">
+                {/* Bantuan: buka panduan yang terkait dengan halaman ini (atau Pusat Panduan bila belum ada). */}
+                {!pathname.startsWith("/dashboard/panduan") && (
+                    <Link href={`/dashboard/panduan?untuk=${encodeURIComponent(pathname)}`} title="Panduan halaman ini" aria-label="Panduan halaman ini"
+                        className="flex h-9 w-9 items-center justify-center rounded-full text-on-surface-variant hover:bg-surface-variant hover:text-on-surface transition-colors print:hidden">
+                        <span className="material-symbols-outlined text-[1.35rem]">help</span>
+                    </Link>
+                )}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
                         <button className="flex items-center gap-2 px-3 py-1.5 rounded-full hover:bg-surface-variant transition-all outline-none">

@@ -8,6 +8,53 @@ Log kerja untuk agent berikutnya. **Entri terbaru di paling atas.** Tiap entri: 
 - Semua pekerjaan frontend sudah di-commit di `master` (8 commit per kelompok mulai 19dfe4a, terakhir "docs: CLAUDE.md dan WORKLOG"), belum di-push.
 - Form master dan pengajuan ikut mode uji (`tx()`). Yang belum diuji: tombol cetak.
 - Database uji terpisah tersedia: `npm run uji:reset` lalu `npm run dev:uji` (port 3101), lihat entri 2026-10-22 (larut).
+- Pusat Panduan (`/dashboard/panduan`) dan Kelola Panduan sudah ada; 9 kategori, 35 artikel terpasang di `kopkar_mjs_2000`. Belum di-commit saat entri ditulis.
+
+---
+
+## 2026-10-22 (larut, 2) — Pusat Panduan dan kelola panduan
+
+**Dibuat:**
+- **Tabel** `panduan_kategori` dan `panduan` (`database/postgres/panduan.sql`), dipasang `npm run panduan:pasang` (`panduan-pasang.mjs`). Isi awal ditulis sebagai Markdown di `database/panduan/` (frontmatter `judul`, `ringkasan`, `menu`; urutan dari awalan angka nama file).
+- **Halaman baca** `(baca)/page.tsx` dan `(baca)/[slug]/page.tsx` di `app/dashboard/panduan`, gaya pusat bantuan:
+  - navigasi kiri per kategori (lipat di bawah 1280 px)
+  - indeks dengan pencarian (`?q=`, judul/ringkasan/isi dengan cuplikan)
+  - artikel dengan daftar isi "Di halaman ini", tombol ke halaman terkait, cetak, dan Sebelumnya/Berikutnya
+- **Kelola** `/dashboard/panduan/kelola` (+ `artikel/baru`, `artikel/[id]`):
+  - CRUD artikel dan kategori; terbit/draf
+  - editor dengan toolbar format dan tab Pratinjau
+  - `actions/panduan.ts` lewat `tx()`, jadi ikut mode uji
+- **Izin**: menu web `Kelola Panduan (web)` (`MENU.kelolaPanduan`); superadmin otomatis, grup lain lewat matriks hak akses. Membaca terbuka untuk semua operator yang login.
+- **Tombol "?" di navbar**: `/dashboard/panduan?untuk=<path>` → artikel dengan `href_menu` cocok persis, atau halaman induk terpanjang. `/dashboard` hanya cocok persis.
+- **Render Markdown**: `react-markdown@10.1.0` + `remark-gfm@4.0.1` (`components/panduan/IsiPanduan.tsx`). HTML mentah tidak dirender. Kotak `> **Penting:**` merah, `> **Catatan:**`/`> **Tips:**` biru.
+
+**Isi panduan diverifikasi ke kode/data.** Angka contoh pinjaman dihitung dengan `pinjaman-calc.ts`; nomor bukti, pesan galat, dan aturan dari mesin posting dan actions. Klaim yang ternyata salah saat dicek dan sudah dibetulkan:
+- produk *hide* tetap muncul di form pencairan (bertanda *[disembunyikan]*)
+- form simpanan tidak menampilkan pinjaman berjalan
+- tombol mata di tabel membuka dialog Detail
+- Kredit Macet mencakup KPR
+- pencarian Daftar Pinjaman memakai pilihan kolom
+
+Arti kolom SHU Jasa Uang/Barang tidak bisa dipastikan dari kode web (hasil hitung desktop), jadi ditulis netral.
+
+**Verifikasi** (server uji 3101, lalu database asli):
+- Tombol "?" dari 7 halaman mengarah ke artikel yang benar, termasuk `/journal/new` → jurnal-umum. Pertama kali escrow salah ke Daftar pinjaman, lalu artikel titipan dan kredit macet dipisah.
+- Pencarian: "pengambilan" 8 hasil, "provisi" 7 hasil. Slug tidak ada → 404; id tidak ada → 404.
+- Editor (artikel 104):
+  - slug otomatis; toolbar; pratinjau sama dengan halaman baca
+  - simpan baru → dialihkan ke halaman ubah dengan pesan
+  - sembunyikan → pembaca 404 dan hilang dari navigasi
+  - hapus artikel
+  - kategori baru (slug `&` → `dan`); hapus kategori berisi artikel ditolak; hapus kategori kosong
+  - slug ganda dan slug tidak valid ditolak, isian tetap
+- Bug toolbar ditemukan saat uji dan diperbaiki: blok yang disisipkan saat placeholder tabel masih terpilih memotong baris tabel. Sekarang blok disisipkan di akhir baris kursor.
+- Operator grup Pengawas (password acak sementara hanya di database uji, lalu `uji:reset`): bisa membaca, tidak melihat tautan kelola/Ubah, ketiga halaman kelola → `/dashboard?akses=ditolak`.
+- Mode gelap dicek. Typecheck lolos.
+- Database asli: halaman menampilkan petunjuk "belum dipasang" sebelum `panduan:pasang`, lalu terisi 35 artikel.
+
+**Catatan:**
+- `npm audit`: 5 temuan bawaan (next, postcss, sharp, typography), bukan dari paket Markdown. `next` punya celah kritis "Proxy bypass" pada Turbopack; halaman dan actions tetap memeriksa sesi ulang di server.
+- Isi panduan perlu diperbarui saat aturan transaksi berubah; artikel ada di `database/panduan` (bawaan) dan di database (suntingan admin).
 
 ---
 
