@@ -71,20 +71,17 @@ export const allGroups: MenuGroup[] = [
             {
                 label: "Kartu Simpanan",
                 icon: "badge",
-                href: "/dashboard/savings/cards",
-                locked: true
+                href: "/dashboard/savings/cards"
             },
             {
                 label: "Grafik Analisa",
                 icon: "monitoring",
-                href: "/dashboard/savings/analytics",
-                locked: true
+                href: "/dashboard/savings/analytics"
             },
             {
                 label: "Simpanan Berjangka",
                 icon: "calendar_month",
-                href: "/dashboard/savings/time-deposits",
-                locked: true
+                href: "/dashboard/savings/time-deposits"
             }
         ]
     },

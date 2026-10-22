@@ -12,9 +12,10 @@ interface Props {
     jenis: { kode_simpanan: string; nama_simpanan: string }[]
     akunKas: Akun[]
     hariIni: string
+    jenisAwal?: string
 }
 
-export function SimpananForm({ tipe, jenis, akunKas, hariIni }: Props) {
+export function SimpananForm({ tipe, jenis, akunKas, hariIni, jenisAwal }: Props) {
     const { hasil, onSubmit, pending } = useAksiForm(tipe === "setor" ? setorSimpananAction : ambilSimpananAction)
     const [anggota, setAnggota] = useState<AnggotaRingkas | null>(null)
     const [info, setInfo] = useState<InfoAnggota | null>(null)
@@ -47,7 +48,7 @@ export function SimpananForm({ tipe, jenis, akunKas, hariIni }: Props) {
                         </Field>
                         <div className="grid gap-4 sm:grid-cols-2">
                             <Field label="Jenis Simpanan" htmlFor="jenisSimpanan">
-                                <select id="jenisSimpanan" name="jenisSimpanan" required className={selectClass} defaultValue="03">
+                                <select id="jenisSimpanan" name="jenisSimpanan" required className={selectClass} defaultValue={jenis.some((j) => j.kode_simpanan === jenisAwal) ? jenisAwal : "03"}>
                                     {jenis.map((j) => <option key={j.kode_simpanan} value={j.kode_simpanan}>{j.nama_simpanan}</option>)}
                                 </select>
                             </Field>
