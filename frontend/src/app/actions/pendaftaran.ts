@@ -12,7 +12,7 @@ export type HasilPendaftaran = { ok: true; pesan: string } | { ok: false; error:
 const MENU_USER = [MENU.user, MENU.requestUser] as const
 
 /** Hapus akun yang sudah terhubung ke anggota hanya boleh oleh superadmin atau grup admin. */
-export const bolehHapusAkunAnggota = (o: Pick<Operator, "superadmin" | "grup">) => o.superadmin || (o.grup ?? "").trim().toLowerCase() === "admin"
+const bolehHapusAkunAnggota = (o: Pick<Operator, "superadmin" | "grup">) => o.superadmin || (o.grup ?? "").trim().toLowerCase() === "admin"
 
 /**
  * Setujui atau tolak pendaftaran akun baru dari aplikasi anggota. Lewat tx() supaya ikut di-rollback di mode uji.
