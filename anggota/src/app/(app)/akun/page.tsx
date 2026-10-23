@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
-import { BookOpen, KeyRound, LogOut, Mail, MessageSquare } from "lucide-react"
+import { BookOpen, KeyRound, Mail, MessageSquare } from "lucide-react"
 import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
-import { keluarAction } from "@/app/actions/auth"
 import { FotoProfil } from "@/components/FotoProfil"
 import { PilihTema } from "@/components/PilihTema"
+import { TombolKeluar } from "@/components/TombolKeluar"
 import { Baris, BarisTautan, Blok, Kartu } from "@/components/ui"
 import { wajibMasuk } from "@/lib/anggota"
 import { pool } from "@/lib/db"
@@ -59,12 +59,7 @@ export default async function AkunPage() {
                     Data diri, keanggotaan, dan rekening Anda tidak ditampilkan di aplikasi ini demi privasi. Hubungi pengurus koperasi bila perlu melihat atau memperbaikinya.
                 </p>
 
-                <form action={keluarAction} className="mt-6">
-                    <button className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-garis bg-permukaan font-semibold text-keluar hover:bg-keluar-lembut">
-                        <LogOut size={19} strokeWidth={1.75} />
-                        Keluar
-                    </button>
-                </form>
+                <TombolKeluar />
             </div>
         </main>
     )

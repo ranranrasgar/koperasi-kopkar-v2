@@ -42,21 +42,15 @@ export default async function SimpananPage(props: PageProps<"/simpanan">) {
                     <Kartu className="divide-y divide-garis">
                         {daftar.map((s) => {
                             const Ikon = ikonJenis(s.nama)
-                            const porsi = total > 0 ? Math.max(0, Math.min(100, (s.saldo / total) * 100)) : 0
                             return (
-                                <Link key={s.kode} href={`/simpanan/${s.kode}`} className="block px-5 py-3.5 transition-colors active:bg-garis/40">
-                                    <div className="flex items-center gap-3">
-                                        <span className="grid size-10 shrink-0 place-items-center rounded-full bg-utama-lembut text-utama"><Ikon size={19} strokeWidth={1.75} /></span>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="truncate text-[0.9375rem] font-medium">{s.nama}</p>
-                                            <p className="text-xs text-redup">{porsi.toLocaleString("id-ID", { maximumFractionDigits: 0 })}% dari total · Lihat mutasi</p>
-                                        </div>
-                                        <p className="angka shrink-0 text-[0.9375rem] font-semibold">{rupiah(s.saldo)}</p>
-                                        <ChevronRight size={18} className="shrink-0 text-redup" />
+                                <Link key={s.kode} href={`/simpanan/${s.kode}`} className="flex items-center gap-3 px-5 py-3.5 transition-colors active:bg-garis/40">
+                                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-utama-lembut text-utama"><Ikon size={19} strokeWidth={1.75} /></span>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="truncate text-[0.9375rem] font-medium">{s.nama}</p>
+                                        <p className="text-xs text-redup">Lihat mutasi</p>
                                     </div>
-                                    <div className="ml-[3.25rem] mt-2.5 h-1 overflow-hidden rounded-full bg-garis" aria-hidden="true">
-                                        <div className="h-full rounded-full bg-utama" style={{ width: `${porsi}%` }} />
-                                    </div>
+                                    <p className="angka shrink-0 text-[0.9375rem] font-semibold">{rupiah(s.saldo)}</p>
+                                    <ChevronRight size={18} className="shrink-0 text-redup" />
                                 </Link>
                             )
                         })}

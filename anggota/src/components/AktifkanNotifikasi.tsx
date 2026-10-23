@@ -1,93 +1,84 @@
 "use client"
 
 import { useEffect, useState, useTransition } from "react"
-import { BellRing } from "lucide-react"
-import { aktifkanPushAction, kirimUjiPushAction, matikanPushAction, statusPushAction } from "@/app/actions/push"
+import { BellOff, BellRing } from "lucide-react"
+import { kirimUjiPushAction } from "@/app/actions/push"
+import { daftarkanPerangkat, mendukungPush } from "@/lib/push-klien"
 
-type Keadaan = "memeriksa" | "takdidukung" | "ditolak" | "mati" | "aktif"
-
-function kunciKeBytes(b64: string) {
-    const pad = "=".repeat((4 - (b64.length % 4)) % 4)
-    const bin = atob((b64 + pad).replace(/-/g, "+").replace(/_/g, "/"))
-    return Uint8Array.from(bin, (c) => c.charCodeAt(0))
-}
+type Keadaan = "memeriksa" | "aktif" | "belumDitanya" | "ditolak" | "pasangDulu" | "tidakTampil"
 
 /**
- * Izin dan langganan Web Push (PRD F13). Izin hanya diminta saat tombol diketuk, bukan otomatis, karena browser
- * menolak permintaan tanpa tindakan pengguna. iOS: hanya bila aplikasi sudah dipasang ke layar utama (iOS 16.4+).
+ * Cadangan untuk NotifikasiOtomatis, tampil di halaman Notifikasi hanya bila perlu: izin masih belum diberikan
+ * (satu tombol "Izinkan"), izin diblokir (petunjuk), atau iPhone yang belum memasang aplikasi ke layar utama.
+ * Selain itu tidak tampil: notifikasi diaktifkan otomatis, tanpa tombol aktif/nonaktif.
+ * percobaan: tombol "Kirim percobaan" khusus pengembangan; halaman memberi false di production.
  */
-/** percobaan: tombol "Kirim percobaan" hanya untuk pengembangan; halaman memberi false di production. */
 export function AktifkanNotifikasi({ kunciPublik, percobaan = false }: { kunciPublik: string | null; percobaan?: boolean }) {
     const [keadaan, setKeadaan] = useState<Keadaan>("memeriksa")
     const [pesan, setPesan] = useState<string | null>(null)
     const [sibuk, mulai] = useTransition()
 
     useEffect(() => {
-        let batal = false
-        ;(async () => {
-            if (!kunciPublik || !("serviceWorker" in navigator) || !("PushManager" in window) || !("Notification" in window)) return !batal && setKeadaan("takdidukung")
-            if (Notification.permission === "denied") return !batal && setKeadaan("ditolak")
-            const reg = await navigator.serviceWorker.getRegistration()
-            const sub = await reg?.pushManager.getSubscription()
-            const terdaftar = sub ? await statusPushAction(sub.endpoint) : false
-            if (!batal) setKeadaan(terdaftar ? "aktif" : "mati")
-        })().catch(() => !batal && setKeadaan("takdidukung"))
-        return () => { batal = true }
+        if (!kunciPublik) return setKeadaan("tidakTampil")
+        if (!mendukungPush()) {
+            const ios = /iphone|ipad|ipod/i.test(navigator.userAgent)
+            const terpasang = window.matchMedia("(display-mode: standalone)").matches || (navigator as Navigator & { standalone?: boolean }).standalone === true
+            return setKeadaan(ios && !terpasang ? "pasangDulu" : "tidakTampil")
+        }
+        setKeadaan(Notification.permission === "granted" ? "aktif" : Notification.permission === "denied" ? "ditolak" : "belumDitanya")
     }, [kunciPublik])
 
-    if (keadaan === "memeriksa") return null
-
-    const aktifkan = () => mulai(async () => {
+    const izinkan = () => mulai(async () => {
         setPesan(null)
         try {
-            if ((await Notification.requestPermission()) !== "granted") { setKeadaan("ditolak"); return }
-            const reg = await navigator.serviceWorker.ready
-            const sub = (await reg.pushManager.getSubscription())
-                ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: kunciKeBytes(kunciPublik!) })
-            const h = await aktifkanPushAction(sub.toJSON())
-            if (h.ok) setKeadaan("aktif"); else setPesan(h.error)
+            const izin = await Notification.requestPermission()
+            if (izin === "granted") {
+                await daftarkanPerangkat(kunciPublik!, true)
+                setKeadaan("aktif")
+            } else if (izin === "denied") setKeadaan("ditolak")
         } catch {
             setPesan("Notifikasi tidak bisa diaktifkan di perangkat ini.")
         }
-    })
-    const matikan = () => mulai(async () => {
-        setPesan(null)
-        const sub = await (await navigator.serviceWorker.ready).pushManager.getSubscription()
-        if (sub) { await matikanPushAction(sub.endpoint); await sub.unsubscribe() }
-        setKeadaan("mati")
     })
     const coba = () => mulai(async () => {
         const h = await kirimUjiPushAction()
         setPesan(h.ok ? "Notifikasi percobaan dikirim." : h.error)
     })
 
-    const tombol = "h-10 rounded-xl px-4 text-sm font-semibold disabled:opacity-60"
+    if (keadaan === "memeriksa" || keadaan === "tidakTampil") return null
+    if (keadaan === "aktif") {
+        if (!percobaan) return null
+        return (
+            <div className="mb-4 flex items-center gap-3 text-sm text-redup">
+                <BellRing size={16} /> Notifikasi aktif (mode pengembangan).
+                <button type="button" onClick={coba} disabled={sibuk} className="h-9 rounded-lg border border-garis px-3 font-semibold text-teks disabled:opacity-60">Kirim percobaan</button>
+                {pesan && <span role="status">{pesan}</span>}
+            </div>
+        )
+    }
+
+    const Ikon = keadaan === "ditolak" ? BellOff : BellRing
     return (
-        <section className="mb-5 flex gap-3 rounded-[var(--radius-kartu)] border border-garis bg-permukaan p-4">
-            <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-utama-lembut text-utama">
-                <BellRing size={20} strokeWidth={1.75} />
-            </span>
+        <section className="mb-5 flex gap-3 rounded-2xl bg-utama-lembut p-4">
+            <span className="grid size-10 shrink-0 place-items-center rounded-full bg-permukaan text-utama"><Ikon size={20} strokeWidth={1.75} /></span>
             <div className="min-w-0 flex-1">
-                <p className="font-semibold">Notifikasi di perangkat ini</p>
-                {keadaan === "takdidukung" && (
-                    <p className="mt-0.5 text-sm leading-relaxed text-redup">Perangkat atau browser ini belum mendukung notifikasi. Di iPhone, pasang aplikasi ke layar utama lebih dulu (iOS 16.4 ke atas).</p>
-                )}
-                {keadaan === "ditolak" && (
-                    <p className="mt-0.5 text-sm leading-relaxed text-redup">Notifikasi diblokir. Izinkan lewat pengaturan situs di browser, lalu muat ulang halaman ini.</p>
-                )}
-                {keadaan === "mati" && (
+                {keadaan === "belumDitanya" && (
                     <>
-                        <p className="mt-0.5 text-sm leading-relaxed text-redup">Dapatkan kabar saat pengajuan kredit Anda diputuskan atau ada pengumuman koperasi.</p>
-                        <button type="button" onClick={aktifkan} disabled={sibuk} className={`${tombol} mt-3 bg-utama text-pada-utama hover:bg-utama-tekan`}>Aktifkan notifikasi</button>
+                        <p className="font-semibold">Terima kabar dari koperasi</p>
+                        <p className="mt-0.5 text-sm leading-relaxed text-redup">Izinkan notifikasi untuk keputusan pengajuan, balasan pesan, dan pengumuman, bahkan saat aplikasi ditutup.</p>
+                        <button type="button" onClick={izinkan} disabled={sibuk} className="mt-3 h-10 rounded-xl bg-utama px-4 text-sm font-semibold text-pada-utama hover:bg-utama-tekan disabled:opacity-60">Izinkan notifikasi</button>
                     </>
                 )}
-                {keadaan === "aktif" && (
+                {keadaan === "ditolak" && (
                     <>
-                        <p className="mt-0.5 text-sm leading-relaxed text-redup">Aktif. Perangkat ini akan menerima kabar dari koperasi.</p>
-                        <div className="mt-3 flex flex-wrap gap-2">
-                            {percobaan && <button type="button" onClick={coba} disabled={sibuk} className={`${tombol} border border-garis hover:bg-latar`}>Kirim percobaan</button>}
-                            <button type="button" onClick={matikan} disabled={sibuk} className={`${tombol} text-redup hover:bg-latar`}>Matikan</button>
-                        </div>
+                        <p className="font-semibold">Notifikasi diblokir</p>
+                        <p className="mt-0.5 text-sm leading-relaxed text-redup">Izinkan notifikasi untuk situs ini lewat pengaturan browser atau pengaturan aplikasi di HP, lalu buka ulang aplikasi.</p>
+                    </>
+                )}
+                {keadaan === "pasangDulu" && (
+                    <>
+                        <p className="font-semibold">Pasang aplikasi untuk menerima notifikasi</p>
+                        <p className="mt-0.5 text-sm leading-relaxed text-redup">Di iPhone, notifikasi hanya bisa diterima setelah aplikasi dipasang ke layar utama (Bagikan, lalu Tambah ke Layar Utama).</p>
                     </>
                 )}
                 {pesan && <p role="status" className="mt-2 text-sm text-redup">{pesan}</p>}

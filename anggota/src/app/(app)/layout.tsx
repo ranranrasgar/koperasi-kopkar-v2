@@ -1,5 +1,7 @@
+import { kunciPublikPush } from "@kopkar/backend/src/anggota/push.ts"
 import { AppBar } from "@/components/AppBar"
 import { Navigasi } from "@/components/Navigasi"
+import { NotifikasiOtomatis } from "@/components/NotifikasiOtomatis"
 import { wajibMasuk } from "@/lib/anggota"
 import { infoFoto } from "@/lib/foto"
 import { statusAppBar } from "@/lib/status-appbar"
@@ -15,6 +17,7 @@ export default async function AplikasiLayout({ children }: Readonly<{ children: 
                 {children}
             </div>
             <Navigasi />
+            {a.anggotaId !== null && <NotifikasiOtomatis kunciPublik={kunciPublikPush()} />}
         </>
     )
 }
