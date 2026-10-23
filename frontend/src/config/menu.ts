@@ -94,6 +94,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/loans"
             },
             {
+                label: "Cari Pinjaman",
+                icon: "manage_search",
+                href: "/dashboard/loans/cari"
+            },
+            {
                 label: "Pengajuan Kredit",
                 icon: "assignment",
                 href: "/dashboard/loans/apply"

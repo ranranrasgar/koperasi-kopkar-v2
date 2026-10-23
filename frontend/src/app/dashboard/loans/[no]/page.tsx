@@ -2,6 +2,8 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
+import { MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
+import { AKSES_HALAMAN } from "@/config/akses"
 import { wajibIzin } from "@/lib/operator"
 import { detailPinjaman, type BarisBayar } from "@/lib/queries/pinjaman-detail"
 import { cn } from "@/lib/utils"
@@ -26,13 +28,19 @@ const Isi = ({ label, children, tebal }: { label: string; children: React.ReactN
 )
 
 export default async function DetailPinjamanPage(props: { params: Promise<{ no: string }>; searchParams: Promise<{ tab?: string }> }) {
-    await wajibIzin("/dashboard/loans") // izin sama dengan Daftar Pinjaman; layout tidak dijalankan ulang pada navigasi antarhalaman
+    const o = await wajibIzin("/dashboard/loans/cari") // layout tidak dijalankan ulang pada navigasi antarhalaman
     const { no: mentah } = await props.params
     const no = decodeURIComponent(mentah)
     if (!/^[A-Za-z0-9._\-/ ]{3,25}$/.test(no)) notFound()
     const d = await detailPinjaman(no)
     if (!d) notFound()
     const { ringkas: r, info, jadwal, bayar } = d
+    // Boleh dilihat bila operator menangani pinjaman grup ini (menu laporan, pencairan, angsuran, tunggakan, atau pengajuan); tanpa harus berizin Daftar Pinjaman.
+    const menuGrup = MENU_DETAIL_PINJAMAN_GRUP[info.group_pinjaman ?? ""] ?? []
+    if (!menuGrup.some((m) => o.izin.includes(m))) {
+        return <p className="rounded-md border p-6 text-sm text-muted-foreground">Anda tidak punya akses ke pinjaman grup {info.group_pinjaman ?? "ini"}.</p>
+    }
+    const bolehDaftar = (AKSES_HALAMAN["/dashboard/loans"] ?? []).some((m) => o.izin.includes(m))
     const tab = (await props.searchParams).tab === "pembayaran" ? "pembayaran" : "jadwal"
 
     // Aturan terlambat sama dengan Daftar Pinjaman: bulan jatuh tempo sudah berakhir (potongan gaji dibukukan akhir bulan).
@@ -63,8 +71,8 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
 
     return (
         <div className="space-y-4">
-            <Link href="/dashboard/loans" className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
-                <ChevronLeft className="h-4 w-4" /> Daftar Pinjaman
+            <Link href={bolehDaftar ? "/dashboard/loans" : "/dashboard/loans/cari"} className="inline-flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground">
+                <ChevronLeft className="h-4 w-4" /> {bolehDaftar ? "Daftar Pinjaman" : "Cari Pinjaman"}
             </Link>
 
             <div className="flex flex-wrap items-center gap-3">

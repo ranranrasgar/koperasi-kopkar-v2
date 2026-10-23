@@ -72,6 +72,14 @@ export const GRUP_SUPERADMIN = "superadmin"
 /** Menu pencairan dan angsuran pinjaman tunai menurut jenis_kredit.group_pinjaman. */
 export const MENU_CAIR_GRUP: Record<string, string> = { "KOPERASI": MENU.cairKoperasi, "BANK / PIHAK LAIN": MENU.cairBank }
 export const MENU_ANGSUR_GRUP: Record<string, string> = { "KOPERASI": MENU.angsurKoperasi, "BANK / PIHAK LAIN": MENU.angsurBank }
+/**
+ * Detail satu pinjaman (jadwal angsuran dan riwayat pembayaran) boleh dilihat operator yang menangani pinjaman grup itu lewat menu mana pun
+ * (laporan, pencairan, angsuran, tunggakan, pengajuan), tanpa harus berizin Daftar Pinjaman.
+ */
+export const MENU_DETAIL_PINJAMAN_GRUP: Record<string, string[]> = {
+    "KOPERASI": [MENU.lapPinjamanKoperasi, MENU.cairKoperasi, MENU.angsurKoperasi, MENU.lapTunggakanKoperasi, MENU.pengajuan],
+    "BANK / PIHAK LAIN": [MENU.lapPinjamanBank, MENU.cairBank, MENU.angsurBank, MENU.lapTunggakanBank],
+}
 
 /** Halaman web -> menu desktop yang mengizinkannya. Halaman tanpa entri tidak dibatasi (dashboard). */
 export const AKSES_HALAMAN: Record<string, string[]> = {
@@ -81,6 +89,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/savings/deposit": [MENU.setoranSimpanan],
     "/dashboard/savings/withdraw": [MENU.pencairanSimpanan],
     "/dashboard/loans": [MENU.lapPinjamanKoperasi, MENU.lapPinjamanBank, MENU.lapPinjamanKpr],
+    "/dashboard/loans/cari": [...new Set(Object.values(MENU_DETAIL_PINJAMAN_GRUP).flat())],
     "/dashboard/loans/create-cash": [MENU.cairKoperasi, MENU.cairBank],
     "/dashboard/loans/create-kpr": [MENU.cairKpr],
     "/dashboard/loans/payment": [MENU.angsurKoperasi, MENU.angsurBank, MENU.angsurKpr],
