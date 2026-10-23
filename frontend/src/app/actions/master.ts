@@ -69,6 +69,23 @@ export async function simpanPerusahaanAction(_: HasilSimpan, f: FormData): Promi
     }, "layout")
 }
 
+/**
+ * Nomor WhatsApp koperasi untuk tombol "Hubungi kami" di aplikasi anggota (pengaturan_web.wa_kontak). Disimpan sebagai angka
+ * berawalan 62; kosong = tombol tidak tampil.
+ */
+export async function simpanKontakWaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
+    return simpan(MENU.company, "/dashboard/settings", async (db) => {
+        const mentah = teks(f, "wa_kontak", "Nomor WhatsApp", false, 30)
+        if (mentah && !/^[0-9+\s().-]+$/.test(mentah)) throw new Salah("Nomor WhatsApp hanya boleh angka")
+        const nomor = mentah.replace(/\D/g, "").replace(/^0/, "62")
+        if (nomor && (nomor.length < 9 || nomor.length > 15)) throw new Salah("Nomor WhatsApp tidak valid (contoh: 081234567890)")
+        if (!nomor) await db.query("DELETE FROM pengaturan_web WHERE kunci = 'wa_kontak'")
+        else await db.query(`INSERT INTO pengaturan_web (kunci, nilai, diubah_pada) VALUES ('wa_kontak', $1, now())
+            ON CONFLICT (kunci) DO UPDATE SET nilai = EXCLUDED.nilai, diubah_pada = now()`, [nomor])
+        return nomor ? "Nomor WhatsApp disimpan" : "Nomor WhatsApp dihapus"
+    })
+}
+
 const MAKS_LOGO = 500 * 1024
 
 /** Unggah logo koperasi ke perusahaan.logo, atau hapus (aksi=hapus) supaya web memakai logo bawaan. */

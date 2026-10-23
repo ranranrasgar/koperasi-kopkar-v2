@@ -54,6 +54,8 @@ Teks dekoratif tanpa data di layout (jangan ditiru sebagai fitur): "+2.4% bulan 
 4. Bila bukan anggota: NIK harus ada di `karyawan_mattel`, selain itu → *"NIK tidak terdaftar di database karyawan Mattel"*. Bila karyawan Mattel → akun dibuat dengan `KODE_AGT = NIK` (belum jadi anggota; kode lama: "ToDo: pendaftaran anggota otomatis").
 5. Password disimpan bcrypt. Jawaban keamanan disimpan apa adanya di MySQL.
 6. Catatan: aplikasi hanya memeriksa password ×2 sama; tidak ada aturan panjang password saat daftar.
+7. Daftar login lewat google -> melengkapi form pendafatarn jika sudah berhasil 
+nunggu admin approve -> masuk sebagai anggota.
 
 **Lupa password**, dua jalur:
 - **Email** (`isuserexist&username=&email=`): username + email cocok → kirim tautan `reset-password.php?user=…&token=…` (token reset bertanda tangan, 30 menit) lewat Gmail SMTP. Halaman reset: password **minimal 6 karakter** + konfirmasi.

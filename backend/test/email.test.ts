@@ -120,7 +120,7 @@ test('verifikasi email: kode benar mengaktifkan akun pendaftaran; salah, kedaluw
         if (!baru.ok) return;
         assert.equal((await periksaKodeVerifikasi(db, userId, baru.kode === benar ? salah : benar)).ok, false);
         const ok = await periksaKodeVerifikasi(db, userId, baru.kode);
-        assert.deepEqual(ok, { ok: true, aktivasi: true });
+        assert.deepEqual(ok, { ok: true, aktivasi: true, menungguAdmin: false });
         st = await statusEmail(db, userId);
         assert.deepEqual([st.terverifikasi, st.menungguAktivasi], [true, false]);
         assert.equal((await masukAnggota(pakai, 'uji_verif_pwa', 'Rahasia123')).ok, true);

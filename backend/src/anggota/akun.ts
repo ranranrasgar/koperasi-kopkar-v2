@@ -42,6 +42,8 @@ export interface AkunAnggota {
     email: string | null;
     foto: string | null;
     akun_aktif: boolean;
+    /** Pendaftaran baru yang belum disetujui admin koperasi. */
+    menunggu_admin: boolean;
     anggota_id: string | null;
     kode_agt: string;
     nama: string | null;
@@ -55,7 +57,7 @@ export interface AkunAnggota {
  */
 export async function cariAkun(db: pg.Pool | pg.PoolClient, by: { id?: string | number; username?: string }) {
     const r = await db.query<AkunAnggota>(
-        `SELECT u.id::text user_id, u.username, u.password_hash, u.email, u.foto, u.status akun_aktif,
+        `SELECT u.id::text user_id, u.username, u.password_hash, u.email, u.foto, u.status akun_aktif, u.menunggu_admin,
                 u.anggota_id::text anggota_id, u.kode_agt, a.nama, a.nik, a.aktif anggota_aktif
            FROM app_user u LEFT JOIN anggota a ON a.id = u.anggota_id
           WHERE ${by.id !== undefined ? 'u.id = $1' : 'lower(trim(u.username)) = lower(trim($1))'}`, [by.id ?? by.username]);
@@ -128,36 +130,36 @@ export async function daftarAkun(db: pg.PoolClient, i: IsianDaftar, google?: { s
     if ((await db.query('SELECT 1 FROM app_user WHERE lower(trim(email)) = $1 LIMIT 1', [email])).rowCount) return gagal('Email ini sudah dipakai akun lain, gunakan email lain.');
 
     const passwordHash = await hashPasswordAnggota(i.password), jawabanHash = await hashJawaban(i.jawaban);
-    const kolom = `(username, password_hash, kode_agt, nikk, status, created_at, updated_at, id_pertanyaan, pertanyaan_id, jawaban_hash, anggota_id, karyawan_mattel_id, email)`;
+    const kolom = `(username, password_hash, kode_agt, nikk, status, created_at, updated_at, id_pertanyaan, pertanyaan_id, jawaban_hash, anggota_id, karyawan_mattel_id, email, menunggu_admin)`;
     if (anggota) {
         if (!anggota.aktif) return gagal('Keanggotaan dengan NIK ini tidak aktif. Hubungi pengurus koperasi.');
-        const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, $10, now(), now(), $5, $6, $7, $8, NULL, $9) RETURNING id`,
-            [username, passwordHash, anggota.kode_agt, nik, tanya.urut, tanya.id, jawabanHash, anggota.id, email, !!google])).rows[0].id);
-        if (google) return { ok: true, pesan: 'Akun dibuat dan aktif.', userId: id, ...(await tautkanGoogle(db, id, email, google.sub)) };
+        const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, false, now(), now(), $5, $6, $7, $8, NULL, $9, true) RETURNING id`,
+            [username, passwordHash, anggota.kode_agt, nik, tanya.urut, tanya.id, jawabanHash, anggota.id, email])).rows[0].id);
+        if (google) return { ok: true, pesan: 'Pendaftaran diterima. Akun Anda aktif setelah diverifikasi admin koperasi.', userId: id, ...(await tautkanGoogle(db, id, email, google.sub)) };
         await kirimKodeVerifikasi(db, id, email, username, { aktivasi: true, abaikanJeda: true });
-        return { ok: true, pesan: 'Kode verifikasi dikirim ke email Anda. Masukkan kode itu untuk mengaktifkan akun.', userId: id };
+        return { ok: true, pesan: 'Kode verifikasi dikirim ke email Anda. Masukkan kode itu; setelah itu pendaftaran Anda menunggu verifikasi admin koperasi.', userId: id };
     }
     const karyawan = (await db.query<{ id: string }>('SELECT id::text FROM karyawan_mattel WHERE nik = $1 LIMIT 1', [nik])).rows[0];
     if (!karyawan) return gagal('NIK tidak terdaftar di data karyawan Mattel');
-    const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, $10, now(), now(), $5, $6, $7, NULL, $8, $9) RETURNING id`,
-        [username, passwordHash, nik, nik, tanya.urut, tanya.id, jawabanHash, karyawan.id, email, !!google])).rows[0].id);
-    if (google) return { ok: true, pesan: 'Akun dibuat dan aktif. Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.', userId: id, ...(await tautkanGoogle(db, id, email, google.sub)) };
+    const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, false, now(), now(), $5, $6, $7, NULL, $8, $9, true) RETURNING id`,
+        [username, passwordHash, nik, nik, tanya.urut, tanya.id, jawabanHash, karyawan.id, email])).rows[0].id);
+    if (google) return { ok: true, pesan: 'Pendaftaran diterima. Akun Anda aktif setelah diverifikasi admin koperasi. Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.', userId: id, ...(await tautkanGoogle(db, id, email, google.sub)) };
     await kirimKodeVerifikasi(db, id, email, username, { aktivasi: true, abaikanJeda: true });
-    return { ok: true, pesan: 'Kode verifikasi dikirim ke email Anda. Setelah akun aktif, Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.', userId: id };
+    return { ok: true, pesan: 'Kode verifikasi dikirim ke email Anda. Setelah diverifikasi admin, Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.', userId: id };
 }
 
 // ---------- Masuk / daftar dengan Google ----------
 
 /**
  * Hubungkan akun dengan identitas Google (sub) dan catat emailnya terverifikasi: Google sudah membuktikan kepemilikan email,
- * jadi akun pendaftaran langsung aktif tanpa kode 6 angka.
+ * jadi tidak perlu kode 6 angka (akun tetap menunggu persetujuan admin).
  */
 async function tautkanGoogle(db: pg.PoolClient | pg.Pool, userId: number, email: string, sub: string) {
     await db.query(
         `INSERT INTO app_user_email_verif (app_user_id, email, aktivasi, terverifikasi_pada) VALUES ($1, $2, false, now())
          ON CONFLICT (app_user_id) DO UPDATE SET email = EXCLUDED.email, kode_hash = NULL, percobaan = 0, terverifikasi_pada = now()`, [userId, email]);
     await db.query('INSERT INTO app_user_google (app_user_id, sub, email) VALUES ($1, $2, $3) ON CONFLICT (app_user_id) DO UPDATE SET sub = EXCLUDED.sub, email = EXCLUDED.email', [userId, sub, email]);
-    return { aktif: true };
+    return { aktif: false };
 }
 
 /**
@@ -177,6 +179,45 @@ export async function cariAkunGoogle(db: pg.Pool | pg.PoolClient, sub: string, e
     if (!b) return null;
     await db.query('INSERT INTO app_user_google (app_user_id, sub, email) VALUES ($1, $2, $3)', [b.id, sub, email]);
     return Number(b.id);
+}
+
+// ---------- Persetujuan pendaftaran oleh admin ----------
+
+export interface PendaftaranBaru {
+    id: number; username: string; email: string | null; nik: string | null; nama: string | null; anggota: boolean;
+    email_terverifikasi: boolean; google: boolean; dibuat: string;
+}
+
+/** Pendaftaran yang menunggu persetujuan admin. Yang emailnya belum terverifikasi tetap tampil (ditandai), tapi tidak bisa disetujui. */
+export async function daftarMenungguAdmin(db: pg.Pool | pg.PoolClient): Promise<PendaftaranBaru[]> {
+    const r = await db.query(
+        `SELECT u.id::text, u.username, u.email, u.nikk nik, coalesce(a.nama, k.nama) nama, (u.anggota_id IS NOT NULL) anggota,
+                coalesce(v.terverifikasi_pada IS NOT NULL AND v.email = lower(trim(u.email)), false) email_terverifikasi,
+                (g.app_user_id IS NOT NULL) google, to_char(u.created_at, 'YYYY-MM-DD HH24:MI') dibuat
+           FROM app_user u
+           LEFT JOIN anggota a ON a.id = u.anggota_id
+           LEFT JOIN karyawan_mattel k ON k.id = u.karyawan_mattel_id
+           LEFT JOIN app_user_email_verif v ON v.app_user_id = u.id
+           LEFT JOIN app_user_google g ON g.app_user_id = u.id
+          WHERE u.menunggu_admin AND NOT u.status ORDER BY u.created_at, u.id`);
+    return r.rows.map((x) => ({ ...x, id: Number(x.id) })) as PendaftaranBaru[];
+}
+
+export type HasilPutusan = { ok: true; pesan: string; email: string | null; username: string } | { ok: false; error: string };
+
+/**
+ * Setujui (akun aktif) atau tolak (akun tetap nonaktif) pendaftaran yang menunggu. Penyetujuan mensyaratkan email
+ * terverifikasi, supaya pemberitahuan dan lupa password tidak jatuh ke alamat yang belum terbukti milik pendaftar.
+ */
+export async function putuskanPendaftaran(db: pg.PoolClient, userId: number, setuju: boolean): Promise<HasilPutusan> {
+    const u = (await db.query<{ username: string; email: string | null; verif: boolean }>(
+        `SELECT u.username, u.email, coalesce(v.terverifikasi_pada IS NOT NULL AND v.email = lower(trim(u.email)), false) verif
+           FROM app_user u LEFT JOIN app_user_email_verif v ON v.app_user_id = u.id
+          WHERE u.id = $1 AND u.menunggu_admin AND NOT u.status FOR UPDATE OF u`, [userId])).rows[0];
+    if (!u) return { ok: false, error: 'Pendaftaran tidak ada atau sudah diputuskan' };
+    if (setuju && !u.verif) return { ok: false, error: 'Email pendaftar belum diverifikasi. Tunggu pendaftar memasukkan kode verifikasi.' };
+    await db.query('UPDATE app_user SET status = $2, menunggu_admin = false, updated_at = now() WHERE id = $1', [userId, setuju]);
+    return { ok: true, pesan: `Pendaftaran ${u.username} ${setuju ? 'disetujui' : 'ditolak'}`, email: u.email, username: u.username };
 }
 
 // ---------- Lupa password lewat pertanyaan keamanan ----------
@@ -255,7 +296,7 @@ export async function akunUntukResetEmail(db: pg.Pool | pg.PoolClient, username:
 
 export type HasilMasuk =
     | { ok: true; akun: AkunAnggota }
-    | { ok: false; alasan: 'salah' | 'akun_nonaktif' | 'anggota_nonaktif'; userId?: number };
+    | { ok: false; alasan: 'salah' | 'akun_nonaktif' | 'anggota_nonaktif'; userId?: number; menungguAdmin?: boolean };
 
 /**
  * Login anggota. Urutan sama dengan server lama: akun ada, akun aktif, password cocok, anggota aktif.
@@ -266,7 +307,7 @@ export async function masukAnggota(db: pg.Pool, username: string, password: stri
     const akun = await cariAkun(db, { username });
     const { cocok, md5 } = await cocokPasswordAnggota(password, akun?.password_hash ?? HASH_SEMU);
     if (!akun || !cocok) return { ok: false, alasan: 'salah' };
-    if (!akun.akun_aktif) return { ok: false, alasan: 'akun_nonaktif', userId: Number(akun.user_id) };
+    if (!akun.akun_aktif) return { ok: false, alasan: 'akun_nonaktif', userId: Number(akun.user_id), menungguAdmin: !!akun.menunggu_admin };
     if (akun.anggota_id && !akun.anggota_aktif) return { ok: false, alasan: 'anggota_nonaktif' };
     if (md5) {
         const baru = await hashPasswordAnggota(password);

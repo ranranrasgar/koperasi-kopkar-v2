@@ -30,6 +30,7 @@ export async function GET(req: NextRequest) {
     const userId = await cariAkunGoogle(pool, profil.sub, profil.email)
     if (userId) {
         const a = await cariAkun(pool, { id: userId })
+        if (a?.menunggu_admin && !a.akun_aktif) redirect("/daftar/diterima")
         if (!a || !a.akun_aktif || !a.password_hash || (a.anggota_id && !a.anggota_aktif)) redirect("/masuk?galat=nonaktif")
         jar.set(COOKIE_SESI, buatSesi({ u: userId, pv: sidikPassword(a.password_hash) }), kue(LAMA_SESI_DETIK))
         redirect("/beranda")

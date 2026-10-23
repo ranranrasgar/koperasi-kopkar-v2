@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import {
-    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
+    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, putuskanPendaftaran, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
     hashJawaban, hashPasswordAnggota, masukAnggota, pertanyaanUntuk, resetLewatJawaban,
 } from '../src/anggota/akun.ts';
 
@@ -52,7 +52,7 @@ test('login anggota: MD5 cocok diganti bcrypt, salah dan nonaktif ditolak', asyn
         assert.equal((await masukAnggota(p, u.username, 'uji-lama-1')).ok, true);
 
         await db.query('UPDATE app_user SET status = false WHERE id = $1', [u.id]);
-        assert.deepEqual(await masukAnggota(p, u.username, 'uji-lama-1'), { ok: false, alasan: 'akun_nonaktif', userId: Number(u.id) });
+        assert.deepEqual(await masukAnggota(p, u.username, 'uji-lama-1'), { ok: false, alasan: 'akun_nonaktif', userId: Number(u.id), menungguAdmin: false });
         await db.query('UPDATE app_user SET status = true WHERE id = $1', [u.id]);
         await db.query('UPDATE anggota SET aktif = false WHERE id = (SELECT anggota_id FROM app_user WHERE id = $1)', [u.id]);
         assert.deepEqual(await masukAnggota(p, u.username, 'uji-lama-1'), { ok: false, alasan: 'anggota_nonaktif' });
@@ -154,7 +154,7 @@ test('lupa password lewat jawaban, ganti password, dan email unik', async () => 
     });
 });
 
-test('daftar lewat Google: akun langsung aktif, email terverifikasi, tanpa kode; masuk berikutnya lewat sub', async () => {
+test('daftar lewat Google: email terverifikasi tanpa kode, akun menunggu admin; setujui atau tolak; masuk lewat sub', async () => {
     await inTx(async (db) => {
         const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
         const a = (await db.query(`SELECT a.id, a.nik FROM anggota a WHERE a.aktif AND length(a.nik) = 6
@@ -167,13 +167,31 @@ test('daftar lewat Google: akun langsung aktif, email terverifikasi, tanpa kode;
         const r = await daftarAkun(db, isi, { sub: 'sub-uji-1' });
         assert.equal(r.ok, true);
         const u = await cariAkun(db, { username: 'uji_google_pwa' });
-        assert.equal(u?.akun_aktif, true, 'aktif tanpa kode verifikasi');
+        assert.equal(u?.akun_aktif, false, 'belum aktif: menunggu persetujuan admin');
+        assert.equal(u?.menunggu_admin, true);
         assert.equal(u?.email, 'uji.google.pwa@contoh.id');
         assert.equal((await db.query(`SELECT count(*)::int n FROM email_antrean WHERE jenis = 'verifikasi' AND ke = 'uji.google.pwa@contoh.id'`)).rows[0].n, 0);
         assert.ok((await db.query('SELECT terverifikasi_pada FROM app_user_email_verif WHERE app_user_id = $1', [u!.user_id])).rows[0].terverifikasi_pada);
 
         assert.equal(await cariAkunGoogle(db, 'sub-uji-1', 'apa-saja@contoh.id'), Number(u!.user_id), 'ditemukan lewat sub');
         assert.equal(await cariAkunGoogle(db, 'sub-lain', 'Uji.Google.PWA@contoh.id'), null, 'akun sudah tertaut ke Google lain: tidak diambil alih lewat email');
+
+        // Login ditolak dengan penanda menunggu admin; muncul di daftar persetujuan.
+        const p = sebagaiPool(db);
+        const masuk = await masukAnggota(p, 'uji_google_pwa', 'Rahasia123');
+        assert.deepEqual(masuk, { ok: false, alasan: 'akun_nonaktif', userId: Number(u!.user_id), menungguAdmin: true });
+        const antre = (await daftarMenungguAdmin(db)).find((x) => x.id === Number(u!.user_id));
+        assert.equal(antre?.email_terverifikasi, true);
+        assert.equal(antre?.google, true);
+        assert.equal(antre?.anggota, true);
+
+        // Setujui: aktif dan keluar dari daftar. Keputusan kedua ditolak (sudah diputuskan).
+        const ok = await putuskanPendaftaran(db, Number(u!.user_id), true);
+        assert.equal(ok.ok, true);
+        assert.equal((await cariAkun(db, { username: 'uji_google_pwa' }))?.akun_aktif, true);
+        assert.equal((await masukAnggota(p, 'uji_google_pwa', 'Rahasia123')).ok, true);
+        assert.equal((await daftarMenungguAdmin(db)).some((x) => x.id === Number(u!.user_id)), false);
+        assert.equal((await putuskanPendaftaran(db, Number(u!.user_id), false)).ok, false);
     });
 });
 
@@ -186,5 +204,24 @@ test('cari akun Google: email sama hanya cocok bila email akun terverifikasi', a
         await db.query(`INSERT INTO app_user_email_verif (app_user_id, email, terverifikasi_pada) VALUES ($1, 'uji.tautan@contoh.id', now())`, [u.id]);
         assert.equal(await cariAkunGoogle(db, 'sub-uji-2', 'Uji.Tautan@contoh.id'), Number(u.id), 'email terverifikasi: ditautkan');
         assert.equal(await cariAkunGoogle(db, 'sub-uji-2', 'lain@contoh.id'), Number(u.id), 'berikutnya lewat sub');
+    });
+});
+
+test('pendaftaran dengan kode email: email belum terverifikasi tidak bisa disetujui; tolak membiarkan akun nonaktif', async () => {
+    await inTx(async (db) => {
+        const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
+        const a = (await db.query(`SELECT a.id, a.nik FROM anggota a WHERE a.aktif AND length(a.nik) = 6
+            AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt)
+            AND (SELECT count(*) FROM anggota b WHERE b.nik = a.nik) = 1 LIMIT 1`)).rows[0];
+        const r = await daftarAkun(db, { username: 'uji_kode_pwa', password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik,
+            email: 'uji.kode.pwa@contoh.id', pertanyaanId: tanya, jawaban: 'Kucing' });
+        assert.equal(r.ok, true);
+        const id = Number((r as { userId: number }).userId);
+        assert.equal((await putuskanPendaftaran(db, id, true)).ok, false, 'email belum terverifikasi');
+        const tolak = await putuskanPendaftaran(db, id, false);
+        assert.equal(tolak.ok, true);
+        const u = await cariAkun(db, { id });
+        assert.equal(u?.akun_aktif, false);
+        assert.equal(u?.menunggu_admin, false);
     });
 });

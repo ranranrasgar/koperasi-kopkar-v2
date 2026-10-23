@@ -1,7 +1,7 @@
 import { FormCard } from "@/components/transaksi/common"
 import { FormEdit, type FieldSpec } from "@/components/master/FormEdit"
 import { FormLogo } from "@/components/master/FormLogo"
-import { simpanPerusahaanAction } from "@/app/actions/master"
+import { simpanKontakWaAction, simpanPerusahaanAction } from "@/app/actions/master"
 import { query } from "@/lib/db"
 import { identitasKoperasi } from "@/lib/koperasi"
 import { wajibIzin } from "@/lib/operator"
@@ -24,15 +24,20 @@ const FIELDS: FieldSpec[] = [
 
 export default async function PerusahaanPage() {
     await wajibIzin("/dashboard/settings") // layout tidak dijalankan ulang pada navigasi antarhalaman
-    const [[p], k] = await Promise.all([
+    const [[p], k, [wa]] = await Promise.all([
         query<Record<string, string | number | null>>(`SELECT nama_perusahaan, nama_manager, alamat_perusahaan1, alamat_perusahaan2,
             kota_perusahaan, email, http, npwp, siup, tdp, rp_adm_bank, persen_pajak_pendapatan, ket_nota FROM perusahaan ORDER BY id LIMIT 1`),
         identitasKoperasi(),
+        query<{ nilai: string }>("SELECT nilai FROM pengaturan_web WHERE kunci = 'wa_kontak'").catch(() => []),
     ])
     return (
         <div className="max-w-4xl space-y-6">
             <FormCard title="Logo Koperasi" description="Tampil di sidebar, halaman login, dan sebagai ikon aplikasi di tab browser.">
                 <FormLogo logo={k.logo} logoSendiri={k.logoSendiri} />
+            </FormCard>
+            <FormCard title="Kontak WhatsApp" description="Tombol Hubungi kami di aplikasi anggota (mis. halaman pendaftaran menunggu verifikasi) membuka chat ke nomor ini.">
+                <FormEdit fields={[{ name: "wa_kontak", label: "Nomor WhatsApp", hint: "Contoh: 081234567890. Kosongkan untuk menyembunyikan tombol." }]}
+                    nilai={{ wa_kontak: wa?.nilai ?? "" }} aksi={simpanKontakWaAction} kolom={1} />
             </FormCard>
             <FormCard title="Pengaturan Perusahaan" description="Identitas koperasi untuk kop laporan, nota, dan tampilan aplikasi.">
                 <FormEdit fields={FIELDS} nilai={p ?? {}} aksi={simpanPerusahaanAction} />

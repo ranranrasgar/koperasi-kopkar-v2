@@ -11,6 +11,8 @@ export const googleAktif = () => !!process.env.GOOGLE_CLIENT_ID && !!process.env
 
 export const COOKIE_GOOGLE_OAUTH = "google_oauth"
 export const COOKIE_GOOGLE_DAFTAR = "google_daftar"
+/** Nama dan foto pendaftar untuk halaman "pendaftaran diterima" (cookie bertanda tangan, 1 hari). */
+export const COOKIE_DAFTAR_DITERIMA = "daftar_diterima"
 
 export interface ProfilGoogle { sub: string; email: string; nama: string; foto: string }
 

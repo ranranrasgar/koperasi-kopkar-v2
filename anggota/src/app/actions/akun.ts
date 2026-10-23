@@ -10,8 +10,9 @@ import { anggotaSesi } from "@/lib/anggota"
 import { cobaLagi, pesanTunggu } from "@/lib/batas"
 import { pool } from "@/lib/db"
 import { alamatAplikasi, kirimEmail, kirimSekarang } from "@/lib/email"
-import { COOKIE_GOOGLE_DAFTAR, simpanFotoGoogle } from "@/lib/google"
-import { bacaToken, bacaTokenReset, buatSesi, buatTokenReset, buatTokenVerifikasi, COOKIE_SESI, LAMA_SESI_DETIK, sidikPassword } from "@/lib/sesi"
+import { COOKIE_DAFTAR_DITERIMA, COOKIE_GOOGLE_DAFTAR, simpanFotoGoogle } from "@/lib/google"
+import { beritahuPendaftaranBaru } from "@/lib/pendaftaran"
+import { bacaToken, bacaTokenReset, buatSesi, buatToken, buatTokenReset, buatTokenVerifikasi, COOKIE_SESI, LAMA_SESI_DETIK, sidikPassword } from "@/lib/sesi"
 import { kirimKodeVerifikasi } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
 import { withTx } from "@kopkar/backend/src/db.ts"
 
@@ -171,8 +172,10 @@ export async function daftarGoogleAction(_: Hasil, f: FormData): Promise<Hasil> 
     if (!hasil.ok || !hasil.userId) return hasil
     jar.delete(COOKIE_GOOGLE_DAFTAR)
     if (g.foto) await simpanFotoGoogle(hasil.userId, g.foto)
-    const akun = await cariAkun(pool, { id: hasil.userId })
-    if (!akun?.password_hash) return hasil
-    await pasangSesi(hasil.userId, akun.password_hash)
-    redirect("/beranda")
+    await beritahuPendaftaranBaru(hasil.userId)
+    // Akun belum aktif: admin koperasi harus memverifikasi dulu, jadi tidak ada sesi; tampilkan halaman "diterima".
+    jar.set(COOKIE_DAFTAR_DITERIMA, buatToken("daftar-diterima", { nama: g.nama, email: g.email, foto: g.foto }, 24 * 60 * 60), {
+        httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: 24 * 60 * 60,
+    })
+    redirect("/daftar/diterima")
 }

@@ -56,7 +56,7 @@ export async function kirimKodeVerifikasi(db: Db, userId: number, email: string,
     return { ok: true as const };
 }
 
-export type HasilPeriksa = { ok: true; aktivasi: boolean } | { ok: false; error: string };
+export type HasilPeriksa = { ok: true; aktivasi: boolean; menungguAdmin?: boolean } | { ok: false; error: string };
 
 /** Periksa kode yang diketik. Berhasil: email tercatat terverifikasi dan, untuk akun pendaftaran, akun diaktifkan. */
 export async function periksaKodeVerifikasi(db: Db, userId: number, kode: string): Promise<HasilPeriksa> {
@@ -77,8 +77,13 @@ export async function periksaKodeVerifikasi(db: Db, userId: number, kode: string
         return { ok: false, error: n >= MAKS_SALAH ? 'Terlalu banyak kode salah. Minta kode baru.' : `Kode salah. Sisa percobaan: ${MAKS_SALAH - n}.` };
     }
     await db.query('UPDATE app_user_email_verif SET terverifikasi_pada = now(), kode_hash = NULL, percobaan = 0 WHERE app_user_id = $1', [userId]);
-    if (r.aktivasi) await db.query('UPDATE app_user SET status = true, updated_at = now() WHERE id = $1', [userId]);
-    return { ok: true, aktivasi: !!r.aktivasi };
+    // Pendaftaran baru menunggu persetujuan admin (menunggu_admin); akun lama yang hanya memverifikasi email langsung aktif.
+    let menungguAdmin = false;
+    if (r.aktivasi) {
+        menungguAdmin = !!(await db.query('SELECT menunggu_admin FROM app_user WHERE id = $1', [userId])).rows[0]?.menunggu_admin;
+        if (!menungguAdmin) await db.query('UPDATE app_user SET status = true, updated_at = now() WHERE id = $1', [userId]);
+    }
+    return { ok: true, aktivasi: !!r.aktivasi, menungguAdmin };
 }
 
 export interface StatusEmail { email: string | null; terverifikasi: boolean; menungguAktivasi: boolean }

@@ -1,11 +1,13 @@
 "use server"
 
 import { headers } from "next/headers"
+import { redirect } from "next/navigation"
 import { cariAkun } from "@kopkar/backend/src/anggota/akun.ts"
 import { kirimKodeVerifikasi, periksaKodeVerifikasi, statusEmail } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
 import { cobaLagi, pesanTunggu } from "@/lib/batas"
 import { pool } from "@/lib/db"
 import { kirimSekarang } from "@/lib/email"
+import { beritahuPendaftaranBaru } from "@/lib/pendaftaran"
 import { bacaTokenVerifikasi } from "@/lib/sesi"
 
 export type HasilVerifikasi = { ok: true; pesan: string; aktivasi: boolean } | { ok: false; error: string } | null
@@ -27,6 +29,11 @@ export async function verifikasiKodeAction(_: HasilVerifikasi, f: FormData): Pro
     if (tunggu) return { ok: false, error: pesanTunggu(tunggu) }
     const r = await periksaKodeVerifikasi(pool, t.u, teks(f, "kode"))
     if (!r.ok) return r
+    // Pendaftaran baru: email sudah terbukti, tinggal menunggu persetujuan admin koperasi.
+    if (r.menungguAdmin) {
+        await beritahuPendaftaranBaru(t.u)
+        redirect("/daftar/diterima")
+    }
     return { ok: true, aktivasi: r.aktivasi, pesan: r.aktivasi ? "Email terverifikasi dan akun Anda sudah aktif. Silakan masuk." : "Email terverifikasi. Anda akan menerima notifikasi lewat email ini." }
 }
 

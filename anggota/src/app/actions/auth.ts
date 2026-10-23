@@ -36,6 +36,9 @@ export async function masukAction(_: HasilAuth, f: FormData): Promise<HasilAuth>
         if (hasil.alasan === "akun_nonaktif" && hasil.userId && (await statusEmail(pool, hasil.userId)).menungguAktivasi) {
             return { error: "Email Anda belum diverifikasi. Masukkan kode verifikasi yang dikirim ke email Anda untuk mengaktifkan akun.", username, verifikasi: buatTokenVerifikasi(hasil.userId) }
         }
+        if (hasil.alasan === "akun_nonaktif" && hasil.menungguAdmin) {
+            return { error: "Pendaftaran Anda sedang menunggu verifikasi admin koperasi. Anda akan mendapat email begitu akun disetujui.", username }
+        }
         return { error: "Akun Anda tidak aktif. Hubungi pengurus koperasi.", username }
     }
     gagal.delete(k)

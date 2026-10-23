@@ -157,3 +157,7 @@ CREATE TABLE IF NOT EXISTS app_user_google (
     email varchar(150) NOT NULL,
     dibuat_pada timestamptz NOT NULL DEFAULT now()
 );
+
+-- Pendaftaran baru dari aplikasi anggota menunggu persetujuan admin: akun status false + menunggu_admin true sampai
+-- admin menyetujui (Anggota, Pendaftaran Baru) atau menolak.
+ALTER TABLE app_user ADD COLUMN IF NOT EXISTS menunggu_admin boolean NOT NULL DEFAULT false;

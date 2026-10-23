@@ -9,6 +9,9 @@ interface Db { query: (sql: string, params?: unknown[]) => Promise<{ rows: any[]
 /** Nama menu hak akses; harus sama dengan MENU.pengajuan di frontend/src/config/akses.ts. */
 export const MENU_PENGAJUAN = 'Pengajuan Pinjaman';
 
+/** Harus sama dengan MENU.requestUser di frontend/src/config/akses.ts. */
+export const MENU_REQUEST_USER = 'Request User && Anggota Baru';
+
 export interface NotifAdmin { id: number; judul: string; isi: string; url: string; waktu: string; baru: boolean }
 
 /** Operator o (grup g) berhak atas notifikasi n: grup superadmin, atau grup yang berizin menu notifikasi itu. */
