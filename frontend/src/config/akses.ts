@@ -60,6 +60,8 @@ export const MENU = {
     modeAplikasi: "Mode Aplikasi (web)",
     // Khusus web; superadmin, atau grup yang diberi izin lewat Kelola Hak Akses (kirim pengumuman/promo ke HP anggota).
     kirimNotifikasi: "Kirim Notifikasi (web)",
+    // Khusus web; himbauan dan promo yang tampil di Beranda aplikasi anggota.
+    kelolaPengumuman: "Kelola Himbauan & Promo (web)",
 } as const
 
 /** Grup yang lolos semua pemeriksaan izin dan boleh mengelola hak akses serta operator. */
@@ -107,6 +109,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/panduan/kelola": [MENU.kelolaPanduan],
     "/dashboard/settings/mode": [MENU.modeAplikasi],
     "/dashboard/notifikasi": [MENU.kirimNotifikasi],
+    "/dashboard/himbauan": [MENU.kelolaPengumuman],
 }
 
 /** Menu yang memakai pencarian anggota di form transaksi. */

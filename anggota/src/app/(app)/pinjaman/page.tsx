@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
-import { Kartu, Kemajuan, Kepala, Kosong } from "@/components/ui"
+import { BarisTautan, Kartu, Kemajuan, Kepala, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
-import { pinjamanAktif, type PinjamanAktif } from "@/lib/data"
+import { pinjamanAktif, pinjamanLunas, type PinjamanAktif } from "@/lib/data"
 import { rupiah, tanggal } from "@/lib/format"
 
 export const metadata: Metadata = { title: "Pinjaman" }
@@ -39,7 +39,7 @@ function KartuPinjaman({ p }: { p: PinjamanAktif }) {
 
 export default async function PinjamanPage() {
     const a = await wajibAnggota()
-    const daftar = await pinjamanAktif(a.anggotaId)
+    const [daftar, lunas] = await Promise.all([pinjamanAktif(a.anggotaId), pinjamanLunas(a.anggotaId)])
     const tunai = daftar.filter((p) => p.jenis === "tunai"), kpr = daftar.filter((p) => p.jenis === "kpr")
     const sisaTunai = tunai.reduce((t, p) => t + p.sisa, 0), sisaKpr = kpr.reduce((t, p) => t + p.sisa, 0)
 
@@ -62,7 +62,7 @@ export default async function PinjamanPage() {
                 </Kartu>
 
                 {daftar.length === 0 && (
-                    <Kartu className="mt-7"><Kosong judul="Tidak ada pinjaman berjalan" isi="Pinjaman yang sudah lunas tidak ditampilkan." /></Kartu>
+                    <Kartu className="mt-7"><Kosong judul="Tidak ada pinjaman berjalan" isi={lunas.length ? "Pinjaman yang sudah lunas ada di bagian bawah." : undefined} /></Kartu>
                 )}
                 {tunai.length > 0 && (
                     <>
@@ -74,6 +74,17 @@ export default async function PinjamanPage() {
                     <>
                         <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">KPR</h2>
                         <Kartu className="divide-y divide-garis overflow-hidden">{kpr.map((p) => <KartuPinjaman key={p.id} p={p} />)}</Kartu>
+                    </>
+                )}
+                {lunas.length > 0 && (
+                    <>
+                        <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Sudah lunas</h2>
+                        <Kartu className="divide-y divide-garis overflow-hidden">
+                            {lunas.map((p) => (
+                                <BarisTautan key={`${p.jenis}-${p.id}`} href={`/pinjaman/${p.jenis}/${p.id}`} judul={p.nama_kredit ?? "Pinjaman"}
+                                    sub={`${p.no_pinjaman} · ${tanggal(p.tgl_pinjaman)}`} nilai={rupiah(p.pokok)} nilaiSub={`${p.lama_angsuran} bulan`} />
+                            ))}
+                        </Kartu>
                     </>
                 )}
             </div>

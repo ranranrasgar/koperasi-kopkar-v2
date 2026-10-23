@@ -1,11 +1,11 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Bell, CalendarDays, ChevronRight, Coins, Megaphone, ReceiptText, Wallet, type LucideIcon } from "lucide-react"
+import { Bell, CalendarDays, ChevronRight, Coins, Megaphone, ReceiptText, Tag, Wallet, type LucideIcon } from "lucide-react"
 import { AjakanPasang } from "@/components/AjakanPasang"
 import { KartuSaldo } from "@/components/KartuSaldo"
 import { BarisTautan, JudulBagian, Kartu, Kemajuan } from "@/components/ui"
 import { wajibMasuk } from "@/lib/anggota"
-import { himbauan, pinjamanAktif, potonganBulanIni, profil, saldoSimpanan, shu, tahunShu } from "@/lib/data"
+import { himbauan, pinjamanAktif, potonganBulanIni, profil, promo, saldoSimpanan, shu, tahunShu } from "@/lib/data"
 import { bulanIni, rupiah, tanggal } from "@/lib/format"
 import { namaKoperasi } from "@/lib/koperasi"
 
@@ -55,8 +55,8 @@ export default async function BerandaPage() {
     }
 
     const id = a.anggotaId
-    const [simpanan, pinjaman, potongan, data, tahun, info] = await Promise.all([
-        saldoSimpanan(id), pinjamanAktif(id), potonganBulanIni(id), profil(id), tahunShu(), himbauan(),
+    const [simpanan, pinjaman, potongan, data, tahun, info, daftarPromo] = await Promise.all([
+        saldoSimpanan(id), pinjamanAktif(id), potonganBulanIni(id), profil(id), tahunShu(), himbauan(), promo(),
     ])
     const shuTerakhir = tahun[0] ? await shu(id, tahun[0]) : null
     const totalSimpanan = simpanan.filter((s) => s.kode !== "01").reduce((t, s) => t + s.saldo, 0)
@@ -90,6 +90,16 @@ export default async function BerandaPage() {
                     </div>
                 </Kartu>
             )}
+
+            {daftarPromo.filter((p) => p.judul || p.isi).map((p) => (
+                <Kartu key={p.id} className="mt-3 flex gap-3 p-4">
+                    <Tag size={20} strokeWidth={1.75} className="mt-0.5 shrink-0 text-utama" />
+                    <div className="min-w-0">
+                        <p className="font-semibold">{p.judul}</p>
+                        <p className="mt-1 whitespace-pre-line text-sm leading-relaxed text-redup">{p.isi}</p>
+                    </div>
+                </Kartu>
+            ))}
 
             <JudulBagian>Bulan ini</JudulBagian>
             <Kartu className="divide-y divide-garis overflow-hidden">

@@ -38,7 +38,10 @@ export async function mutasiSimpanan(anggotaId: number, kode: string, batas: num
                    SUM(rp_setoran - rp_pengambilan) OVER (ORDER BY tgl_transaksi, urut, id) saldo
               FROM simpanan WHERE anggota_id = $1 AND jenis_simpanan_id = $2) m
           ORDER BY tgl_transaksi DESC, urut DESC, id DESC LIMIT $3`, [anggotaId, jenis.id, batas])
-    return { nama: jenis.nama, baris, total: baris[0]?.total ?? 0 }
+    const [jml] = await query<{ setoran: number; penarikan: number }>(
+        `SELECT COALESCE(SUM(rp_setoran), 0) setoran, COALESCE(SUM(rp_pengambilan), 0) penarikan
+           FROM simpanan WHERE anggota_id = $1 AND jenis_simpanan_id = $2`, [anggotaId, jenis.id])
+    return { nama: jenis.nama, baris, total: baris[0]?.total ?? 0, setoran: jml.setoran, penarikan: jml.penarikan }
 }
 
 export interface PinjamanAktif {
@@ -66,6 +69,26 @@ export async function pinjamanAktif(anggotaId: number) {
            LEFT JOIN kpr_rincian_tagih t ON t.kpr_id = k.id AND t.angsuran_ke = k.jml_cicilan + 1
           WHERE k.anggota_id = $1
           ORDER BY 1 DESC, 4 DESC`, [anggotaId])
+}
+
+export interface PinjamanLunas {
+    jenis: "tunai" | "kpr"; id: number; no_pinjaman: string; tgl_pinjaman: string; nama_kredit: string | null; pokok: number; lama_angsuran: number
+}
+
+/** Pinjaman tunai dan KPR yang sudah lunas (sisa pokok sampai SISA_LUNAS), terbaru dulu, maksimal 30. */
+export async function pinjamanLunas(anggotaId: number) {
+    return query<PinjamanLunas>(
+        `SELECT * FROM (
+            SELECT 'tunai' jenis, p.id, p.no_pinjaman, p.tgl_pinjaman, jk.nama_kredit, p.rp_pinjaman_pokok pokok, p.lama_angsuran
+              FROM pinjaman_tunai p LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
+             WHERE p.anggota_id = $1
+               AND COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = p.id), 0) <= ${SISA_LUNAS}
+            UNION ALL
+            SELECT 'kpr', k.id, k.no_pinjaman, k.tgl_pinjaman, jk.nama_kredit, k.rp_pinjaman_pokok, k.lama_angsuran
+              FROM kpr k LEFT JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id
+             WHERE k.anggota_id = $1
+               AND COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM kpr_rincian WHERE kpr_id = k.id), 0) <= ${SISA_LUNAS}
+         ) x ORDER BY tgl_pinjaman DESC, id DESC LIMIT 30`, [anggotaId])
 }
 
 export interface JadwalAngsuran {

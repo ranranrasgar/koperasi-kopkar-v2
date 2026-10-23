@@ -224,6 +224,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/notifikasi"
             },
             {
+                label: "Himbauan & Promo",
+                icon: "local_offer",
+                href: "/dashboard/himbauan"
+            },
+            {
                 label: "Kelola Panduan",
                 icon: "edit_note",
                 href: "/dashboard/panduan/kelola"

@@ -25,7 +25,17 @@ export default async function MutasiSimpananPage(props: PageProps<"/simpanan/[ko
                 <Kartu className="p-5">
                     <p className="text-sm text-redup">Saldo saat ini</p>
                     <p className="angka mt-1 text-[1.75rem] font-bold leading-tight tracking-tight">{rupiah(saldo)}</p>
-                    <p className="mt-1 text-xs text-redup">{m.total} transaksi</p>
+                    <dl className="mt-4 grid grid-cols-2 gap-3 border-t border-garis pt-3">
+                        <div>
+                            <dt className="text-xs text-redup">Total setoran</dt>
+                            <dd className="angka text-[0.9375rem] font-semibold">{rupiah(m.setoran)}</dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs text-redup">Total penarikan</dt>
+                            <dd className="angka text-[0.9375rem] font-semibold">{rupiah(m.penarikan)}</dd>
+                        </div>
+                    </dl>
+                    <p className="mt-3 text-xs text-redup">{m.total.toLocaleString("id-ID")} transaksi</p>
                 </Kartu>
 
                 <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Mutasi terbaru</h2>
@@ -38,6 +48,7 @@ export default async function MutasiSimpananPage(props: PageProps<"/simpanan/[ko
                                 <div className="min-w-0">
                                     <p className="text-[0.9375rem] font-medium">{r.rp_setoran > 0 ? "Setoran" : "Penarikan"}</p>
                                     <p className="truncate text-xs text-redup">{tanggal(r.tgl_transaksi)} · {r.no_bukti}</p>
+                                    {r.deskripsi?.trim() && <p className="mt-0.5 line-clamp-2 text-xs text-redup">{r.deskripsi.trim()}</p>}
                                 </div>
                                 <div className="shrink-0 whitespace-nowrap text-right">
                                     <Arus n={r.rp_setoran > 0 ? r.rp_setoran : -r.rp_pengambilan} />

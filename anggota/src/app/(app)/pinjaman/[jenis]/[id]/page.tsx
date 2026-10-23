@@ -19,6 +19,9 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
     if (!r) notFound()
     const { pinjaman: p, jadwal, bayar } = r
     const sisaJadwal = jadwal.filter((j) => !j.lunas)
+    const berikut = sisaJadwal[0]
+    const sisaJasa = sisaJadwal.reduce((t, j) => t + j.jasa, 0)
+    const lunas = p.sisa <= 100
     const tabKelas = (aktif: boolean) =>
         `flex h-10 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition-colors ${aktif ? "bg-permukaan text-teks shadow-sm" : "text-redup"}`
 
@@ -27,7 +30,7 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
             <Kepala judul={p.nama_kredit ?? "Pinjaman"} sub={p.no_pinjaman} kembali="/pinjaman" />
             <div className="px-5">
                 <Kartu className="p-5">
-                    <p className="text-sm text-redup">Sisa pokok</p>
+                    <p className="text-sm text-redup">{lunas ? "Pinjaman lunas" : "Sisa pokok"}</p>
                     <p className="angka mt-1 text-[1.75rem] font-bold leading-tight tracking-tight">{rupiah(p.sisa)}</p>
                     <div className="mt-4 flex items-center gap-3">
                         <Kemajuan ke={p.jml_cicilan} dari={p.lama_angsuran} />
@@ -37,7 +40,9 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
                         <Baris label="Pokok pinjaman" nilai={rupiah(p.pokok)} />
                         <Baris label="Tanggal pinjaman" nilai={tanggal(p.tgl_pinjaman)} />
                         {p.persen_bunga !== null && <Baris label="Jasa" nilai={`${p.persen_bunga.toLocaleString("id-ID")}%`} />}
-                        <Baris label="Sisa angsuran" nilai={`${sisaJadwal.length} kali`} />
+                        <Baris label="Sisa angsuran" nilai={lunas ? "Lunas" : `${sisaJadwal.length} kali`} />
+                        {!lunas && berikut && <Baris label="Angsuran berikutnya" nilai={`${rupiah(berikut.total)} · ${tanggal(berikut.tanggal_angsuran)}`} />}
+                        {!lunas && sisaJasa > 0 && <Baris label="Sisa jasa" nilai={rupiah(sisaJasa)} />}
                     </dl>
                 </Kartu>
 
