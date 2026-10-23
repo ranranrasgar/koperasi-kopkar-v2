@@ -34,6 +34,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/members"
             },
             {
+                label: "Pesan Anggota",
+                icon: "forum",
+                href: "/dashboard/pesan"
+            },
+            {
                 label: "Karyawan Mattel",
                 icon: "work",
                 href: "/dashboard/members/karyawan-mattel"
@@ -217,11 +222,6 @@ export const allGroups: MenuGroup[] = [
                 label: "Jenis Simpanan",
                 icon: "sell",
                 href: "/dashboard/settings/jenis-simpanan"
-            },
-            {
-                label: "Pesan Anggota",
-                icon: "forum",
-                href: "/dashboard/pesan"
             },
             {
                 label: "Kirim Notifikasi",

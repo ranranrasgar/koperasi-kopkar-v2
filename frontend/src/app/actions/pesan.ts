@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { aturSelesai, balasPesanAdmin, kabariAnggotaBalasan, PesanSalah } from "@kopkar/backend/src/anggota/pesan.ts"
+import { aturSelesai, balasPesanAdmin, hitungBelumDibaca, kabariAnggotaBalasan, PesanSalah } from "@kopkar/backend/src/anggota/pesan.ts"
 import { adaLanggananOpr, hapusLanggananOpr, langgananValid, simpanLanggananOpr } from "@kopkar/backend/src/anggota/push.ts"
 import { MENU } from "@/config/akses"
 import { modeUji, pool, tx } from "@/lib/db"
@@ -71,5 +71,15 @@ export async function statusPushOprAction(endpoint: string): Promise<boolean> {
         return await adaLanggananOpr(pool, o.id, String(endpoint))
     } catch {
         return false
+    }
+}
+
+/** Jumlah percakapan yang menunggu operator (untuk lonceng di navbar); 0 bila sesi habis atau tidak berizin. */
+export async function jumlahPesanBaruAction(): Promise<number> {
+    try {
+        await operatorAktif([MENU.pesanAnggota])
+        return await hitungBelumDibaca(pool, "admin")
+    } catch {
+        return 0
     }
 }

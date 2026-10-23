@@ -1,7 +1,8 @@
 import Link from "next/link"
 import { Users, Wallet, Receipt, Home, ChevronRight, Calendar } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { query } from "@/lib/db"
+import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
+import { pool, query } from "@/lib/db"
 import { formatRupiah, formatAngka, formatTanggal } from "@/lib/format"
 import { wajibLogin } from "@/lib/operator"
 import { bolehHalaman, MENU } from "@/config/akses"
@@ -32,6 +33,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
              WHERE s.tgl_transaksi <= current_date
              ORDER BY s.tgl_transaksi DESC, s.urut DESC LIMIT 6`),
     ])
+    const pesanBaru = o.izin.includes(MENU.pesanAnggota) ? await hitungBelumDibaca(pool, "admin") : 0
     const maks = Math.max(1, ...bulanan.map((b) => Math.max(b.setor, b.ambil)))
 
     const kartu = [
@@ -54,6 +56,13 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 <h1 className="text-2xl font-extrabold tracking-tight text-foreground">Dashboard Ringkasan</h1>
                 <p className="text-sm text-muted-foreground">Panel administrasi Koperasi Kopkar Mattel MJS 2000. Login sebagai {o.namaLengkap} (grup {o.grup ?? "-"}).</p>
             </div>
+
+            {pesanBaru > 0 && (
+                <Link href="/dashboard/pesan" className="flex items-center justify-between gap-3 rounded-md border border-blue-300 bg-blue-50 px-4 py-3 text-sm font-semibold text-blue-800 hover:bg-blue-100 dark:border-blue-500/40 dark:bg-blue-500/10 dark:text-blue-300">
+                    <span>{pesanBaru} pesan anggota menunggu dibaca atau dibalas</span>
+                    <ChevronRight className="h-4 w-4 shrink-0" />
+                </Link>
+            )}
 
             {ditolak && (
                 <div role="alert" className="rounded-md border border-red-300 bg-red-50 dark:bg-red-500/10 px-4 py-2 text-sm text-red-700 dark:text-red-400">

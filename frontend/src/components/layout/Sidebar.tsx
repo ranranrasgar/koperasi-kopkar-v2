@@ -16,7 +16,7 @@ interface SidebarProps {
 
 export function Sidebar({ className, onClose }: SidebarProps) {
     const pathname = usePathname()
-    const { izin, koperasi } = useSidebar()
+    const { izin, koperasi, lencana } = useSidebar()
 
     const menuGroups = useMemo(() => {
         return getMenuGroups(pathname || "", izin)
@@ -76,6 +76,12 @@ export function Sidebar({ className, onClose }: SidebarProps) {
                                             >
                                                 <span className="material-symbols-outlined text-[1rem]">{item.icon}</span>
                                                 {item.label}
+                                                {(lencana[item.href] ?? 0) > 0 && (
+                                                    <span aria-label={`${lencana[item.href]} belum dibaca`}
+                                                        className="ml-auto rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">
+                                                        {lencana[item.href] > 99 ? "99+" : lencana[item.href]}
+                                                    </span>
+                                                )}
                                             </Link>
                                         )
                                     })}

@@ -42,9 +42,9 @@ function ShellContent({ children, operator }: { children: React.ReactNode; opera
     )
 }
 
-export function DashboardShell({ children, operator, koperasi }: { children: React.ReactNode; operator: OperatorTampil; koperasi: KoperasiTampil }) {
+export function DashboardShell({ children, operator, koperasi, lencana = {} }: { children: React.ReactNode; operator: OperatorTampil; koperasi: KoperasiTampil; lencana?: Record<string, number> }) {
     return (
-        <SidebarProvider izin={operator.izin} koperasi={koperasi}>
+        <SidebarProvider izin={operator.izin} koperasi={koperasi} lencana={lencana}>
             <ShellContent operator={operator}>{children}</ShellContent>
         </SidebarProvider>
     )
