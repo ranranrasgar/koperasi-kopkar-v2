@@ -93,7 +93,7 @@ export function cekUsernameBaru(u: string) {
 
 export interface IsianDaftar { username: string; password: string; ulangi: string; nik: string; email: string; pertanyaanId: number; jawaban: string }
 /** userId: akun yang baru dibuat (pendaftaran), belum aktif sampai email diverifikasi. */
-export type HasilAkun = { ok: true; pesan: string; userId?: number } | { ok: false; error: string };
+export type HasilAkun = { ok: true; pesan: string; userId?: number; aktif?: boolean } | { ok: false; error: string };
 
 /**
  * Buat akun aplikasi anggota. Urutan sama dengan server lama: username/anggota sudah punya akun, NIK 6 karakter,
@@ -101,7 +101,7 @@ export type HasilAkun = { ok: true; pesan: string; userId?: number } | { ok: fal
  * Tambahan: aturan password K6, jawaban wajib, anggota yang dipakai harus aktif, email wajib dan unik. Akun dibuat TIDAK aktif
  * (status false) dan baru aktif setelah email diverifikasi dengan kode 6 angka yang dikirim ke email itu. Jalankan di dalam transaksi.
  */
-export async function daftarAkun(db: pg.PoolClient, i: IsianDaftar): Promise<HasilAkun> {
+export async function daftarAkun(db: pg.PoolClient, i: IsianDaftar, google?: { sub: string }): Promise<HasilAkun> {
     const gagal = (error: string): HasilAkun => ({ ok: false, error });
     const username = i.username.trim(), nik = i.nik.trim();
     const salahU = cekUsernameBaru(username);
@@ -131,17 +131,52 @@ export async function daftarAkun(db: pg.PoolClient, i: IsianDaftar): Promise<Has
     const kolom = `(username, password_hash, kode_agt, nikk, status, created_at, updated_at, id_pertanyaan, pertanyaan_id, jawaban_hash, anggota_id, karyawan_mattel_id, email)`;
     if (anggota) {
         if (!anggota.aktif) return gagal('Keanggotaan dengan NIK ini tidak aktif. Hubungi pengurus koperasi.');
-        const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, false, now(), now(), $5, $6, $7, $8, NULL, $9) RETURNING id`,
-            [username, passwordHash, anggota.kode_agt, nik, tanya.urut, tanya.id, jawabanHash, anggota.id, email])).rows[0].id);
+        const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, $10, now(), now(), $5, $6, $7, $8, NULL, $9) RETURNING id`,
+            [username, passwordHash, anggota.kode_agt, nik, tanya.urut, tanya.id, jawabanHash, anggota.id, email, !!google])).rows[0].id);
+        if (google) return { ok: true, pesan: 'Akun dibuat dan aktif.', userId: id, ...(await tautkanGoogle(db, id, email, google.sub)) };
         await kirimKodeVerifikasi(db, id, email, username, { aktivasi: true, abaikanJeda: true });
         return { ok: true, pesan: 'Kode verifikasi dikirim ke email Anda. Masukkan kode itu untuk mengaktifkan akun.', userId: id };
     }
     const karyawan = (await db.query<{ id: string }>('SELECT id::text FROM karyawan_mattel WHERE nik = $1 LIMIT 1', [nik])).rows[0];
     if (!karyawan) return gagal('NIK tidak terdaftar di data karyawan Mattel');
-    const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, false, now(), now(), $5, $6, $7, NULL, $8, $9) RETURNING id`,
-        [username, passwordHash, nik, nik, tanya.urut, tanya.id, jawabanHash, karyawan.id, email])).rows[0].id);
+    const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, $10, now(), now(), $5, $6, $7, NULL, $8, $9) RETURNING id`,
+        [username, passwordHash, nik, nik, tanya.urut, tanya.id, jawabanHash, karyawan.id, email, !!google])).rows[0].id);
+    if (google) return { ok: true, pesan: 'Akun dibuat dan aktif. Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.', userId: id, ...(await tautkanGoogle(db, id, email, google.sub)) };
     await kirimKodeVerifikasi(db, id, email, username, { aktivasi: true, abaikanJeda: true });
     return { ok: true, pesan: 'Kode verifikasi dikirim ke email Anda. Setelah akun aktif, Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.', userId: id };
+}
+
+// ---------- Masuk / daftar dengan Google ----------
+
+/**
+ * Hubungkan akun dengan identitas Google (sub) dan catat emailnya terverifikasi: Google sudah membuktikan kepemilikan email,
+ * jadi akun pendaftaran langsung aktif tanpa kode 6 angka.
+ */
+async function tautkanGoogle(db: pg.PoolClient | pg.Pool, userId: number, email: string, sub: string) {
+    await db.query(
+        `INSERT INTO app_user_email_verif (app_user_id, email, aktivasi, terverifikasi_pada) VALUES ($1, $2, false, now())
+         ON CONFLICT (app_user_id) DO UPDATE SET email = EXCLUDED.email, kode_hash = NULL, percobaan = 0, terverifikasi_pada = now()`, [userId, email]);
+    await db.query('INSERT INTO app_user_google (app_user_id, sub, email) VALUES ($1, $2, $3) ON CONFLICT (app_user_id) DO UPDATE SET sub = EXCLUDED.sub, email = EXCLUDED.email', [userId, sub, email]);
+    return { aktif: true };
+}
+
+/**
+ * Akun untuk identitas Google. Pertama lewat sub yang sudah tertaut; kedua lewat email yang sama dengan email akun
+ * HANYA bila email akun itu sudah terverifikasi (kode 6 angka atau Google), supaya email lama yang belum terbukti
+ * miliknya tidak bisa dipakai mengambil alih akun. Mengembalikan null bila tidak ada.
+ */
+export async function cariAkunGoogle(db: pg.Pool | pg.PoolClient, sub: string, emailGoogle: string): Promise<number | null> {
+    const email = emailGoogle.trim().toLowerCase();
+    const a = (await db.query<{ app_user_id: string }>('SELECT app_user_id::text FROM app_user_google WHERE sub = $1', [sub])).rows[0];
+    if (a) return Number(a.app_user_id);
+    const b = (await db.query<{ id: string }>(
+        `SELECT u.id::text FROM app_user u JOIN app_user_email_verif v ON v.app_user_id = u.id
+          WHERE lower(trim(u.email)) = $1 AND v.email = $1 AND v.terverifikasi_pada IS NOT NULL
+            AND NOT EXISTS (SELECT 1 FROM app_user_google g WHERE g.app_user_id = u.id)
+          ORDER BY u.id LIMIT 1`, [email])).rows[0];
+    if (!b) return null;
+    await db.query('INSERT INTO app_user_google (app_user_id, sub, email) VALUES ($1, $2, $3)', [b.id, sub, email]);
+    return Number(b.id);
 }
 
 // ---------- Lupa password lewat pertanyaan keamanan ----------

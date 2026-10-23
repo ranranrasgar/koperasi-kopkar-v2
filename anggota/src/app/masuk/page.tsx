@@ -4,12 +4,19 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { anggotaSesi } from "@/lib/anggota"
 import { namaKoperasi } from "@/lib/koperasi"
+import { TombolGoogle } from "@/components/TombolGoogle"
 import { FormMasuk } from "./FormMasuk"
 
 export const metadata: Metadata = { title: "Masuk" }
 
-export default async function MasukPage() {
+const GALAT: Record<string, string> = {
+    google: "Masuk dengan Google gagal atau dibatalkan. Coba lagi.",
+    nonaktif: "Akun Anda tidak aktif. Hubungi pengurus koperasi.",
+}
+
+export default async function MasukPage({ searchParams }: { searchParams: Promise<{ galat?: string }> }) {
     if (await anggotaSesi()) redirect("/beranda")
+    const galat = GALAT[(await searchParams).galat ?? ""]
     const nama = await namaKoperasi()
     return (
         <main className="mx-auto flex min-h-dvh w-full max-w-md flex-col px-6 pb-8 pt-[max(3rem,env(safe-area-inset-top))]">
@@ -28,7 +35,10 @@ export default async function MasukPage() {
                 </p>
             </div>
 
+            {galat && <p role="alert" className="mt-6 rounded-xl bg-keluar-lembut px-4 py-3 text-sm font-medium text-keluar">{galat}</p>}
+
             <FormMasuk />
+            <TombolGoogle />
 
             <p className="mt-auto pt-10 text-center text-sm text-redup">
                 Belum punya akun? <Link href="/daftar" className="font-semibold text-utama">Daftar</Link>

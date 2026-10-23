@@ -149,3 +149,11 @@ CREATE TABLE IF NOT EXISTS app_user_email_verif (
     aktivasi boolean NOT NULL DEFAULT false,
     terverifikasi_pada timestamptz
 );
+
+-- Identitas Google akun (masuk/daftar dengan Google). sub = ID tetap akun Google; email Google dari Google sudah terverifikasi.
+CREATE TABLE IF NOT EXISTS app_user_google (
+    app_user_id bigint PRIMARY KEY REFERENCES app_user(id) ON DELETE CASCADE,
+    sub varchar(64) NOT NULL UNIQUE,
+    email varchar(150) NOT NULL,
+    dibuat_pada timestamptz NOT NULL DEFAULT now()
+);

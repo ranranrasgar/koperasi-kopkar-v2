@@ -10,7 +10,8 @@ import { anggotaSesi } from "@/lib/anggota"
 import { cobaLagi, pesanTunggu } from "@/lib/batas"
 import { pool } from "@/lib/db"
 import { alamatAplikasi, kirimEmail, kirimSekarang } from "@/lib/email"
-import { bacaTokenReset, buatSesi, buatTokenReset, buatTokenVerifikasi, COOKIE_SESI, LAMA_SESI_DETIK, sidikPassword } from "@/lib/sesi"
+import { COOKIE_GOOGLE_DAFTAR, simpanFotoGoogle } from "@/lib/google"
+import { bacaToken, bacaTokenReset, buatSesi, buatTokenReset, buatTokenVerifikasi, COOKIE_SESI, LAMA_SESI_DETIK, sidikPassword } from "@/lib/sesi"
 import { kirimKodeVerifikasi } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
 import { withTx } from "@kopkar/backend/src/db.ts"
 
@@ -148,4 +149,30 @@ export async function gantiPasswordAction(_: Hasil, f: FormData): Promise<Hasil>
     if (!r.ok) return r
     await pasangSesi(a.userId, r.hash) // perangkat ini tetap masuk; sesi di perangkat lain berakhir
     return { ok: true, pesan: "Password berhasil diganti." }
+}
+
+/** Lengkapi pendaftaran setelah login Google: NIK, username, password, pertanyaan keamanan. Email dari Google (sudah terverifikasi). */
+export async function daftarGoogleAction(_: Hasil, f: FormData): Promise<Hasil> {
+    const jar = await cookies()
+    const g = bacaToken("google-daftar", jar.get(COOKIE_GOOGLE_DAFTAR)?.value)
+    if (!g) return { ok: false, error: "Sesi Google berakhir. Mulai lagi dengan tombol Lanjut dengan Google." }
+    const tunggu = cobaLagi(`daftar:${await ip()}`, 10, 60 * MENIT)
+    if (tunggu) return { ok: false, error: pesanTunggu(tunggu) }
+    let hasil
+    try {
+        hasil = await withTx(pool, (db) => daftarAkun(db, {
+            username: teks(f, "username"), password: teks(f, "password"), ulangi: teks(f, "ulangi"), nik: teks(f, "nik"),
+            email: g.email, pertanyaanId: Number(teks(f, "pertanyaan")) || 0, jawaban: teks(f, "jawaban"),
+        }, { sub: g.sub }))
+    } catch (e) {
+        console.error("daftar akun Google gagal:", e)
+        return { ok: false, error: "Pendaftaran gagal. Coba lagi beberapa saat lagi." }
+    }
+    if (!hasil.ok || !hasil.userId) return hasil
+    jar.delete(COOKIE_GOOGLE_DAFTAR)
+    if (g.foto) await simpanFotoGoogle(hasil.userId, g.foto)
+    const akun = await cariAkun(pool, { id: hasil.userId })
+    if (!akun?.password_hash) return hasil
+    await pasangSesi(hasil.userId, akun.password_hash)
+    redirect("/beranda")
 }

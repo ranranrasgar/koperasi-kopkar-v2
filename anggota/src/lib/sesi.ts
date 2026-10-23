@@ -96,3 +96,23 @@ export function bacaTokenVerifikasi(nilai: string | undefined): Sesi | null {
         return null
     }
 }
+
+// Token bertanda tangan serbaguna (mis. keadaan OAuth Google dan data pendaftaran Google). Awalan jenis memisahkannya
+// dari cookie sesi, token reset dan token verifikasi.
+export function buatToken(jenis: string, isi: Record<string, string>, detik: number) {
+    const data = Buffer.from(JSON.stringify({ ...isi, exp: Math.floor(Date.now() / 1000) + detik })).toString("base64url")
+    return `${data}.${tanda(`${jenis}:${data}`)}`
+}
+
+export function bacaToken(jenis: string, nilai: string | undefined): Record<string, string> | null {
+    const [data, sig] = (nilai ?? "").split(".")
+    if (!data || !sig) return null
+    const harap = Buffer.from(tanda(`${jenis}:${data}`)), dapat = Buffer.from(sig)
+    if (harap.length !== dapat.length || !crypto.timingSafeEqual(harap, dapat)) return null
+    try {
+        const { exp, ...isi } = JSON.parse(Buffer.from(data, "base64url").toString()) as Record<string, string> & { exp: number }
+        return typeof exp === "number" && exp > Math.floor(Date.now() / 1000) ? isi : null
+    } catch {
+        return null
+    }
+}

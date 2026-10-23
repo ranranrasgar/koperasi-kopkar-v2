@@ -50,6 +50,11 @@ export function FormMasuk() {
                 {proses && <LoaderCircle size={18} className="animate-spin" />}
                 {proses ? "Memeriksa…" : "Masuk"}
             </button>
+
+            <Link href="/daftar"
+                className="flex h-13 w-full items-center justify-center rounded-xl border border-utama text-base font-semibold text-utama transition active:scale-[0.99]">
+                Daftar akun baru
+            </Link>
         </form>
     )
 }

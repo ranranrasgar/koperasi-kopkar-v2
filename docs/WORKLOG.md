@@ -273,6 +273,16 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ---
 
+## 2026-10-23 — Masuk dan daftar dengan Google (PWA anggota)
+
+- Tombol **Lanjut dengan Google** di `/masuk` dan `/daftar` (muncul bila `GOOGLE_CLIENT_ID` dan `GOOGLE_CLIENT_SECRET` ada di `anggota/.env.local`). Alur OIDC kode otorisasi + PKCE di `anggota/src/lib/google.ts`, rute `app/auth/google` (mulai) dan `app/auth/google/callback`.
+- Alamat balik: `GOOGLE_REDIRECT_URI` bila berupa alamat lengkap, selain itu dari host permintaan (`http://localhost:3201/auth/google/callback` di server uji). Alamat yang sama harus terdaftar di Google Console (uji `:3201`, dev `:3200`, dan produksi).
+- Sudah tertaut (`app_user_google.sub`) atau email Google sama dengan email akun **yang terverifikasi** (`cariAkunGoogle`): langsung masuk. Selain itu data Google (cookie bertanda tangan 30 menit) dibawa ke `/daftar/google`: nama, email, foto terisi; pengguna mengisi NIK Mattel, username, password, pertanyaan keamanan. Akun langsung aktif (email dari Google dianggap terverifikasi, tanpa kode 6 angka); foto Google disalin ke `app_user_foto`.
+- Tabel baru `app_user_google` di `anggota-web.sql`: jalankan `npm run anggota:pasang` di database produksi sebelum dipakai (di database uji sudah dipasang). Tes baru di `backend/test/anggota-akun.test.ts`.
+- Email lama yang belum terverifikasi sengaja tidak ditautkan otomatis (mencegah pengambilalihan akun); anggota itu masuk dengan username/password dan memverifikasi email di menu Akun.
+
+---
+
 ## 2026-10-22 (larut, 3) — Saklar mode Uji / Live di pengaturan
 
 **Permintaan pengguna:** mode uji dinyalakan/dimatikan dari pengaturan, bukan `.env.local`; hanya grup admin dan superadmin.
