@@ -9,7 +9,9 @@ import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
 import { PilihBaris } from "@/components/ui/PilihBaris"
 import type { PageData } from "@/config/modules"
-import { formatAngka } from "@/lib/format"
+import { formatAngka, formatTanggal } from "@/lib/format"
+import { dataCetakAction } from "@/app/actions/cetak"
+import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 
 type Totals = {
     Setoran_Pokok: number; Ambil_Pokok: number; Saldo_Pokok: number
@@ -32,6 +34,41 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
     const sortBy = searchParams.get("sortBy") ?? "NAMA"
     const sortOrder = searchParams.get("sortOrder") ?? "asc"
     const hideZero = searchParams.get("hideZero") !== "0"
+
+    // Cetak = dokumen sendiri berisi SEMUA anggota sesuai pencarian (bukan hanya halaman ini), per jenis simpanan, dengan baris total.
+    const [mencetak, setMencetak] = useState(false)
+    const cetak = async () => {
+        setMencetak(true)
+        try {
+            const r = await dataCetakAction(pathname, { ...Object.fromEntries(searchParams.entries()), endDate })
+            if ("error" in r) { alert(r.error); return }
+            const items = (r.items as unknown as Row[]).filter((x) => !hideZero || x.Saldo_Total !== 0)
+            const kolom: KolomTabel[] = [
+                { label: "Kode", mono: true }, { label: "KPK", mono: true }, { label: "Nama" }, { label: "Staff", tengah: true },
+                ...JENIS.flatMap((j) => [{ label: "Setoran", kanan: true }, { label: "Ambil", kanan: true }, { label: "Saldo", kanan: true }] as KolomTabel[]),
+                { label: "Grand Total", kanan: true },
+            ]
+            const baris = items.map((x) => [
+                x.kode_agt, x.nik ?? "-", x.nama, x.status_staff ?? "-",
+                ...JENIS.flatMap((j) => [formatAngka(x[`Setoran_${j}`]), formatAngka(x[`Ambil_${j}`]), formatAngka(x[`Saldo_${j}`])]), formatAngka(x.Saldo_Total),
+            ])
+            const g = r.ekstra as Totals | undefined
+            const jumlah = (k: keyof Totals) => formatAngka(items.reduce((t, x) => t + (Number(x[k]) || 0), 0))
+            const total = ["", "", `Total (${items.length.toLocaleString("id-ID")} anggota)`, "",
+                ...JENIS.flatMap((j) => [jumlah(`Setoran_${j}`), jumlah(`Ambil_${j}`), jumlah(`Saldo_${j}`)]), jumlah("Saldo_Total")]
+            void g
+            const subjudul = [`Saldo s/d ${formatTanggal(endDate, "long")}`, searchParams.get("search") ? `Pencarian: ${searchParams.get("search")}` : "", hideZero ? "Saldo nol disembunyikan" : ""].filter(Boolean).join(" · ")
+            const galat = await bukaCetak({
+                judul: "Rekap Simpanan Anggota", subjudul,
+                isi: tabelHtml(kolom, baris, items.length < r.total && !hideZero ? r.total : items.length, {
+                    kelompok: [{ label: "Anggota", lebar: 4 }, ...JENIS.map((j) => ({ label: `Simpanan ${j}`, lebar: 3 })), { label: "Total", lebar: 1 }], total,
+                }),
+            })
+            if (galat) alert(galat)
+        } finally {
+            setMencetak(false)
+        }
+    }
 
     const update = (updates: Record<string, string | number | null>) => {
         const params = new URLSearchParams(searchParams.toString())
@@ -86,8 +123,8 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
                     <p className="text-sm text-muted-foreground">Setoran, pengambilan, dan saldo per jenis simpanan untuk anggota aktif.</p>
                 </div>
                 <div className="flex gap-2 print:hidden">
-                    <Button variant="outline" onClick={() => window.print()}>
-                        <Printer className="mr-2 h-4 w-4" /> Cetak
+                    <Button variant="outline" onClick={cetak} disabled={mencetak}>
+                        {mencetak ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />} Cetak
                     </Button>
                 </div>
             </div>

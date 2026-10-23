@@ -65,7 +65,8 @@ export default async function KartuSimpananPage(props: PageProps<"/dashboard/sav
 
             {kode && !kartu && <p className="text-sm text-muted-foreground">Anggota {kode} tidak ditemukan.</p>}
             {kartu && (
-                <div className="space-y-4">
+                <div className="space-y-4" data-area-cetak data-judul-cetak="Kartu Simpanan"
+                    data-subjudul-cetak={`${kartu.anggota.nama} (${kartu.anggota.kode_agt}) · periode ${dari === "1900-01-01" ? "awal" : formatTanggal(dari)} s/d ${formatTanggal(sampai)}`}>
                     <div>
                         <h2 className="text-xl font-bold">{kartu.anggota.nama}</h2>
                         <p className="text-sm text-muted-foreground">

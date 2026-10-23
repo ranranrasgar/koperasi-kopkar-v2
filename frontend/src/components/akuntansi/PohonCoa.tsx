@@ -159,6 +159,30 @@ export function PohonCoa({ baris, per, dari }: { baris: BarisPohon[]; per: strin
                     </tbody>
                 </table>
             </div>
+            {/* Bahan cetak: SELURUH pohon (terbuka semua) sebagai tabel bertingkat, tidak tampil di layar. */}
+            <div hidden data-area-cetak data-judul-cetak="Bagan Akun (COA)" data-subjudul-cetak={`Saldo per ${per}, di sisi normal akun (D = debit, C = kredit)`}>
+                <table>
+                    <thead><tr><th>Nama Akun</th><th>Kode</th><th className="tengah">D/K</th><th className="kanan">Saldo</th></tr></thead>
+                    <tbody>
+                        {urutanLengkap(akar).map((s) => (
+                            <tr key={s.id}>
+                                <td style={{ paddingLeft: `${5 + s.tingkat * 14}px`, fontWeight: s.anak.length ? 700 : 400 }}>{s.nama_perkiraan}</td>
+                                <td className="mono">{s.kode_perkiraan}</td>
+                                <td className="tengah">{s.d_k}</td>
+                                <td className="kanan">{Math.abs(s.total) >= 0.5 ? formatAngka(tampilSaldo(s)) : "-"}</td>
+                            </tr>
+                        ))}
+                    </tbody>
+                </table>
+            </div>
         </div>
     )
+}
+
+/** Semua simpul pohon berurutan (induk lalu anak-anaknya), tanpa melihat posisi buka/tutup. */
+function urutanLengkap(akar: { anak: unknown[] }[]): Simpul[] {
+    const hasil: Simpul[] = []
+    const jalan = (daftar: Simpul[]) => { for (const s of daftar) { hasil.push(s); jalan(s.anak) } }
+    jalan(akar as Simpul[])
+    return hasil
 }

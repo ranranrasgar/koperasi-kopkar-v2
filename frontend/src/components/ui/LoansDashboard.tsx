@@ -6,6 +6,8 @@ import type { PageData } from "@/config/modules"
 import { formatRupiah, formatTanggal, formatAngka } from "@/lib/format"
 import { PilihBaris } from "@/components/ui/PilihBaris"
 import { MAKS_SEMUA } from "@/lib/halaman"
+import { dataCetakAction } from "@/app/actions/cetak"
+import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 
 interface Row {
     tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string
@@ -62,8 +64,31 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
 
     const formatIDR = (val: number) => formatRupiah(val)
 
-    const handlePrint = () => {
-        window.print()
+    // Cetak = dokumen sendiri berisi SEMUA pinjaman sesuai filter yang sedang diterapkan (bukan hanya halaman ini), dengan kop dan total.
+    const handlePrint = async () => {
+        const r = await dataCetakAction(pathname, Object.fromEntries(new URLSearchParams(window.location.search)))
+        if ("error" in r) { alert(r.error); return }
+        const items = r.items as unknown as typeof rows
+        const kolom: KolomTabel[] = [
+            { label: "Tgl Pinjaman" }, { label: "No Pinjaman", mono: true }, { label: "Nama" },
+            { label: "Plafond Pokok", kanan: true }, { label: "Provisi", kanan: true }, { label: "Total Plafond", kanan: true }, { label: "Total Jasa", kanan: true },
+            { label: "Angs / Bulan", kanan: true }, { label: "Lama", tengah: true }, { label: "Cicilan", tengah: true }, { label: "Sisa", tengah: true },
+            { label: "Tunggak", tengah: true }, { label: "Bayar Pokok", kanan: true }, { label: "Bayar Bunga", kanan: true },
+        ]
+        const baris = items.map((x) => [
+            formatTanggal(x.tgl_pinjaman), x.no_pinjaman, `${x.nama} (${x.nik ?? "-"} | ${x.kode_agt})`,
+            formatAngka(x.rp_pinjaman_pokok), formatAngka(x.rp_provisi), formatAngka(x.temp_total_plafond), formatAngka(x.temp_total_jasa),
+            formatAngka(x.temp_angs_per_bulan), String(x.lama_angsuran), String(x.jml_cicilan), String(x.sisa_cicilan),
+            String(x.jml_tunggakan ?? 0), formatAngka(x.bayar_pokok), formatAngka(x.bayar_bunga),
+        ])
+        const jml = (f: (x: (typeof items)[number]) => number) => formatAngka(items.reduce((t, x) => t + (Number(f(x)) || 0), 0))
+        const total = ["", "", `Total (${items.length.toLocaleString("id-ID")} pinjaman)`, jml((x) => x.rp_pinjaman_pokok), jml((x) => x.rp_provisi), jml((x) => x.temp_total_plafond),
+            jml((x) => x.temp_total_jasa), jml((x) => x.temp_angs_per_bulan), "", "", "", "", jml((x) => x.bayar_pokok), jml((x) => x.bayar_bunga)]
+        const bulan = filter.bulan ? new Date(2000, filter.bulan - 1, 1).toLocaleString("id-ID", { month: "long" }) : "Semua bulan"
+        const subjudul = [`Grup ${filter.grup}`, filter.kredit !== "All" ? `Jenis ${filter.kredit}` : "", `${bulan} ${filter.tahun}`, filter.aktif === "T" ? "Anggota non-aktif" : "Anggota aktif",
+            statusLunasOptions[filter.lunas] && filter.lunas ? `Status ${statusLunasOptions[filter.lunas]}` : "", filter.keyword ? `Pencarian ${(searchByOptions[filter.searchBy] ?? "")}: ${filter.keyword}` : ""].filter(Boolean).join(" · ")
+        const galat = await bukaCetak({ judul: "Daftar Pinjaman", subjudul, isi: tabelHtml(kolom, baris, r.total, { total }) })
+        if (galat) alert(galat)
     }
 
     return (

@@ -43,6 +43,7 @@ export default async function KreditMacetPage(props: PageProps<"/dashboard/loans
                 </label>
             </FormPeriode>
             {grupBoleh.length === 0 && <p className="mt-4 text-sm text-muted-foreground">Grup Anda tidak punya akses ke laporan tunggakan.</p>}
+            <div data-area-cetak data-judul-cetak="Kredit Macet / Tunggakan" data-subjudul-cetak={`Per ${formatTanggal(per, "long")}${grup ? ` · Grup ${grup}` : ""}`}>
             <div className="mt-4 text-sm">
                 <b>{data.length}</b> pinjaman menunggak, total <b className="tabular-nums">Rp {formatAngka(total)}</b> per {formatTanggal(per, "long")}.
                 {macet.length === 0 && <span className="text-muted-foreground"> Kolektibilitas belum diatur (tabel jenis macet kosong).</span>}
@@ -79,6 +80,7 @@ export default async function KreditMacetPage(props: PageProps<"/dashboard/loans
                         ))}
                     </tbody>
                 </table>
+            </div>
             </div>
             {o.izin.includes(MENU.angsurKoperasi) && (
                 <p className="mt-3 text-xs text-muted-foreground print:hidden">Pembayaran tunggakan dicatat di <Link href="/dashboard/loans/payment" className="text-primary hover:underline">Setoran Angsuran</Link>.</p>

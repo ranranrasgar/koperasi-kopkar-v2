@@ -197,6 +197,22 @@
         @apply border-border outline-ring/50;
     }
 
+    /* Daftar pilihan <select> bawaan browser: warna mengikuti tema (di mode gelap tulisan tidak boleh terang di latar terang). */
+    select {
+        color-scheme: light;
+    }
+    .dark select {
+        color-scheme: dark;
+    }
+    select option,
+    select optgroup {
+        background-color: var(--popover);
+        color: var(--popover-foreground);
+    }
+    select option:disabled {
+        color: var(--muted-foreground);
+    }
+
     body {
         @apply bg-background text-foreground transition-colors duration-300;
         /* Hide scrollbar for Chrome, Safari and Opera */

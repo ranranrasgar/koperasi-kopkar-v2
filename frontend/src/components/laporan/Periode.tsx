@@ -1,3 +1,4 @@
+import { identitasKoperasi } from "@/lib/koperasi"
 import { Input } from "@/components/ui/input"
 import { TombolCetak } from "@/components/ui/TombolCetak"
 
@@ -24,10 +25,12 @@ export function FormPeriode({ dari, sampai, satuTanggal, children }: {
     )
 }
 
-export function KopLaporan({ judul, periode }: { judul: string; periode: string }) {
+/** Judul laporan di layar (penanda untuk cetak: judul dan periode dipakai dokumen cetak, blok ini sendiri tidak ikut tercetak). */
+export async function KopLaporan({ judul, periode }: { judul: string; periode: string }) {
+    const { nama } = await identitasKoperasi()
     return (
-        <div className="text-center mb-4">
-            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Koperasi Karyawan Mattel MJS 2000</div>
+        <div className="text-center mb-4" data-kop-laporan data-judul={judul} data-periode={periode} data-tanpa-cetak>
+            <div className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">{nama}</div>
             <h2 className="text-lg font-bold">{judul}</h2>
             <div className="text-sm text-muted-foreground">{periode}</div>
         </div>

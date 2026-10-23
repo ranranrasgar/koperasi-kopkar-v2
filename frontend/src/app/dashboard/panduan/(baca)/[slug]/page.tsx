@@ -55,10 +55,12 @@ export default async function ArtikelPanduanPage(props: PageProps<"/dashboard/pa
                             <span className="material-symbols-outlined text-[18px]" aria-hidden>edit</span> Ubah
                         </Link>
                     )}
-                    <TombolCetak />
+                    <TombolCetak orientasi="potret" />
                 </div>
 
-                <IsiPanduan isi={a.isi} className="mt-4" />
+                <div data-area-cetak data-judul-cetak={a.judul} data-subjudul-cetak={a.kategori_nama}>
+                    <IsiPanduan isi={a.isi} className="mt-4" />
+                </div>
 
                 <nav aria-label="Artikel lain" className="mt-12 grid gap-3 sm:grid-cols-2 border-t pt-6 print:hidden">
                     {sebelum ? (

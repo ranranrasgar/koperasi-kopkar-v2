@@ -58,7 +58,7 @@ export default async function ShuPage(props: PageProps<"/dashboard/shu">) {
                             <button type="submit" className="h-9 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold">Tampilkan</button>
                             <TombolCetak />
                         </form>
-                        <div className="mt-3 overflow-x-auto rounded-md border">
+                        <div className="mt-3 overflow-x-auto rounded-md border" data-area-cetak data-judul-cetak="SHU per Anggota" data-subjudul-cetak={`Tutup buku ${formatTanggal(tgl)}`}>
                             <table className="w-full text-sm">
                                 <thead className="bg-muted text-muted-foreground text-xs">
                                     <tr>

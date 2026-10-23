@@ -273,6 +273,18 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ---
 
+## 2026-10-24 — Dokumen cetak per laporan dan perbaikan daftar pilihan (combo)
+
+- **Combo**: `globals.css` kini memberi warna tema pada `select option` (di mode gelap tulisan sebelumnya terang di latar terang). Berlaku untuk semua `<select>` bawaan.
+- **Mesin cetak** (`frontend/src/lib/cetak-klien.ts`, `app/actions/cetak.ts`): tombol Cetak membuka **jendela dokumen sendiri** (bukan `window.print()` halaman): kop surat dari Pengaturan Perusahaan (nama, alamat, alamat 2/telepon, kota, email, website, logo), judul + keterangan filter, isi, nama pencetak + waktu, nomor halaman. Pratinjau di jendela itu sama dengan hasil cetak; ada tombol Potret / Lanskap / Cetak.
+- **Orientasi otomatis**: lebar alami tabel diukur (sel tanpa pecah baris); ≤ 700 px = potret, selain itu lanskap. Bila masih lebih lebar, isi diperkecil (skala minimum 0,62, lalu diperkecil lagi hanya bila masih terpotong) sehingga tidak ada kolom yang terpotong.
+- **Dua cara isi**: (1) daftar bertabel mencetak SEMUA baris sesuai filter dan urutan lewat `dataCetakAction` (maks. 5.000 baris; `DAFTAR` di `cetak.ts` memetakan alamat halaman ke query): Daftar Anggota, Karyawan Mattel, User Mobile, Jurnal Umum, Buku Simpanan, Daftar Pinjaman (dengan total), Rekap Simpanan (kepala berkelompok, dengan total). (2) halaman laporan lain menyalin isi halaman yang dibersihkan dari form/tombol: area diambil dari induk blok `KopLaporan` (Buku Kas/Besar, Neraca Saldo, Neraca, Rugi Laba, Potongan Gaji) atau elemen `data-area-cetak` (+ `data-judul-cetak`, `data-subjudul-cetak`): Kartu Simpanan, Tunggakan, SHU per Anggota, Bagan Akun COA (blok tersembunyi berisi seluruh pohon), artikel Panduan.
+- `KopLaporan` memakai nama koperasi dari Pengaturan (sebelumnya teks tetap) dan bertanda `data-tanpa-cetak` karena kop dan judul dibuat dokumen cetak.
+- **Belum diuji di halaman admin sungguhan** (butuh login): mesinnya diuji dengan dokumen contoh di browser (tabel sempit = potret 100%, 13 kolom = lanskap 96%, tanpa terpotong). Periksa tiap laporan sekali.
+- Jebakan: kolom tabel ber-`width:%` membuat ukuran alami salah ukur (kolom No. memakai `1px`).
+
+---
+
 ## 2026-10-23 — Masuk dan daftar dengan Google (PWA anggota)
 
 - Tombol **Lanjut dengan Google** di `/masuk` dan `/daftar` (muncul bila `GOOGLE_CLIENT_ID` dan `GOOGLE_CLIENT_SECRET` ada di `anggota/.env.local`). Alur OIDC kode otorisasi + PKCE di `anggota/src/lib/google.ts`, rute `app/auth/google` (mulai) dan `app/auth/google/callback`.

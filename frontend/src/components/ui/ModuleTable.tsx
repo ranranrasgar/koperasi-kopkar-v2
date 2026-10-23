@@ -16,6 +16,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { ColumnConfig, FilterConfig, ModuleConfig, PageData } from "@/config/modules"
 import { formatRupiah, formatAngka, formatTanggal } from "@/lib/format"
+import { dataCetakAction } from "@/app/actions/cetak"
+import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 
 type Row = Record<string, unknown>
 
@@ -86,6 +88,36 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: Mod
         updateParams({ sortBy: key, sortOrder: nextOrder })
     }
 
+    // Cetak = dokumen sendiri berisi SEMUA baris sesuai filter dan urutan (bukan hanya halaman yang tampil), dengan kop surat koperasi.
+    const [mencetak, setMencetak] = useState(false)
+    const handleCetak = async () => {
+        setMencetak(true)
+        try {
+            const r = await dataCetakAction(pathname, Object.fromEntries(searchParams?.entries() ?? []))
+            if ("error" in r) { alert(r.error); return }
+            const kolom: KolomTabel[] = activeColumns.map((c) => ({ label: c.label, kanan: c.type === "currency" || c.type === "number", mono: c.mono }))
+            const baris = r.items.map((item) => activeColumns.map((col) => {
+                const v = item[col.key]
+                if (v === null || v === undefined || v === "") return ""
+                if (col.type === "badge" && col.badgeMap) return col.badgeMap[String(v)]?.label ?? String(v)
+                if (col.type === "date") return formatTanggal(String(v), "2-digit")
+                return formatValue(v, col.type)
+            }))
+            const subjudul = [
+                searchParams?.get("search") ? `Pencarian: ${searchParams.get("search")}` : "",
+                ...(config.filters ?? []).map((f) => {
+                    const nilai = searchParams?.get(f.key)
+                    if (!nilai) return ""
+                    return `${f.label}: ${f.options?.find((o) => o.value === nilai)?.label ?? nilai}`
+                }),
+            ].filter(Boolean).join(" · ")
+            const galat = await bukaCetak({ judul: config.title, subjudul: subjudul || undefined, isi: tabelHtml(kolom, baris, r.total) })
+            if (galat) alert(galat)
+        } finally {
+            setMencetak(false)
+        }
+    }
+
     const handleExport = () => {
         if (data.items.length === 0) return
         const headers = activeColumns.map((c) => `"${c.label}"`).join(",")
@@ -140,8 +172,8 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: Mod
                     <p className="text-sm text-muted-foreground">{config.description}</p>
                 </div>
                 <div className="flex items-center gap-2 shrink-0 print:hidden">
-                    <Button onClick={() => window.print()} variant="outline" size="sm" className="h-9 font-medium shadow-sm">
-                        <Printer className="mr-1.5 h-4 w-4" /> Cetak
+                    <Button onClick={handleCetak} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={mencetak || data.items.length === 0}>
+                        {mencetak ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Printer className="mr-1.5 h-4 w-4" />} Cetak
                     </Button>
                     <Button onClick={handleExport} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={data.items.length === 0}>
                         <Download className="mr-1.5 h-4 w-4" /> Ekspor
