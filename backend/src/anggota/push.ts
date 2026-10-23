@@ -1,4 +1,5 @@
 import webpush from 'web-push';
+import { tautkanGambar } from './gambar.ts';
 
 // Web Push untuk PWA anggota (keputusan K8): standar W3C + VAPID, tanpa Firebase/pihak ketiga. Notifikasi sampai ke
 // layar HP walau aplikasi ditutup karena yang menerimanya service worker (anggota/public/sw.js).
@@ -9,7 +10,8 @@ interface Db { query: (sql: string, params?: unknown[]) => Promise<{ rows: any[]
 
 export interface LanggananPush { endpoint: string; keys: { p256dh: string; auth: string } }
 /** url: halaman tujuan saat notifikasi diketuk; bila kosong, halaman detail pesan (/notifikasi/<id>). */
-export interface IsiNotifikasi { judul: string; isi: string; url?: string; catat?: boolean }
+/** gambarId: gambar dari simpanGambar; tampil di detail notifikasi dan sebagai gambar besar di push. */
+export interface IsiNotifikasi { judul: string; isi: string; url?: string; catat?: boolean; gambarId?: number }
 export interface HasilKirim { penerima: number; perangkat: number; dikirim: number; gagal: number }
 
 export const kunciPublikPush = () => process.env.VAPID_PUBLIC_KEY || null;
@@ -104,6 +106,13 @@ async function dorongKePerangkat(db: Db, anggotaIds: number[], buatMuatan: (angg
     return { perangkat: rows.length, dikirim, gagal };
 }
 
+/** Alamat gambar relatif; service worker melengkapinya dengan alamat situs PWA. */
+async function jalurGambar(db: Db, gambarId?: number) {
+    if (!gambarId) return undefined;
+    const r = await db.query('SELECT token FROM pengumuman_gambar WHERE id = $1', [gambarId]);
+    return r.rows[0] ? `/gambar/${r.rows[0].token}` : undefined;
+}
+
 /**
  * Kirim ke satu anggota: tercatat di riwayat (kecuali catat=false, untuk notifikasi percobaan) lalu di-push ke semua
  * perangkatnya. Kegagalan push tidak melempar galat; riwayat tetap tersimpan.
@@ -114,9 +123,11 @@ export async function kirimNotifikasi(db: Db, anggotaId: number, n: IsiNotifikas
         const r = await catatRiwayat(db, n, 'a.id = $3', [anggotaId]);
         if (r.length === 0) return { penerima: 0, perangkat: 0, dikirim: 0, gagal: 0 };
         id = r[0].id;
+        if (n.gambarId) await tautkanGambar(db, 'notifikasi', Number(id), n.gambarId);
     }
     const url = n.url ?? (id ? `/notifikasi/${id}` : '/notifikasi');
-    const h = await dorongKePerangkat(db, [anggotaId], () => JSON.stringify({ judul: n.judul, isi: n.isi, url }));
+    const gambar = await jalurGambar(db, n.gambarId);
+    const h = await dorongKePerangkat(db, [anggotaId], () => JSON.stringify({ judul: n.judul, isi: n.isi, url, gambar }));
     return { penerima: 1, ...h };
 }
 
@@ -124,8 +135,14 @@ export async function kirimNotifikasi(db: Db, anggotaId: number, n: IsiNotifikas
 export async function kirimKeSemuaAnggota(db: Db, n: IsiNotifikasi): Promise<HasilKirim> {
     const baris = await catatRiwayat(db, n, 'a.aktif', []);
     const idPesan = new Map(baris.map((b) => [Number(b.anggota_id), b.id]));
+    if (n.gambarId && baris.length) {
+        await db.query(
+            `INSERT INTO pengumuman_gambar_ref (jenis, ref_id, gambar_id) SELECT 'notifikasi', unnest($1::bigint[]), $2`,
+            [baris.map((b) => Number(b.id)), n.gambarId]);
+    }
+    const gambar = await jalurGambar(db, n.gambarId);
     const h = await dorongKePerangkat(db, [...idPesan.keys()], (aid) => JSON.stringify({
-        judul: n.judul, isi: n.isi, url: n.url ?? `/notifikasi/${idPesan.get(aid)}`,
+        judul: n.judul, isi: n.isi, url: n.url ?? `/notifikasi/${idPesan.get(aid)}`, gambar,
     }));
     return { penerima: baris.length, ...h };
 }

@@ -1,6 +1,7 @@
 import "server-only"
+import { tokenGambar } from "@kopkar/backend/src/anggota/gambar.ts"
 import * as bersama from "@kopkar/backend/src/anggota/queries.ts"
-import { poolAngka, query } from "@/lib/db"
+import { pool, poolAngka, query } from "@/lib/db"
 
 // Data untuk halaman PWA. Setiap fungsi menerima anggotaId dari sesi (lib/anggota.ts), tidak pernah dari URL,
 // dan rincian pinjaman selalu dicek pemiliknya (id pinjaman + anggota_id). Relasi lewat id/FK.
@@ -201,6 +202,27 @@ export const daftarNotifikasi = (anggotaId: number, batas: number) =>
 export async function detailNotifikasi(anggotaId: number, id: number) {
     const [n] = await query<NotifikasiBaris>(`SELECT ${KOLOM_NOTIF} FROM log_notifikasi WHERE id = $1 AND anggota_id = $2`, [id, anggotaId])
     return n ?? null
+}
+
+export interface Slide { kunci: string; jenis: "himbauan" | "promo"; judul: string; isi: string; gambar: string | null }
+
+/** Himbauan dan promo yang aktif untuk slide Beranda: himbauan dulu, masing-masing terbaru lebih dulu. */
+export async function slidePengumuman(): Promise<Slide[]> {
+    const [h, p] = await Promise.all([
+        query<{ id: number; judul: string | null; isi: string | null }>("SELECT id, judul_himbauan judul, isi_himbauan isi FROM himbauan WHERE status = true ORDER BY id DESC"),
+        query<{ id: number; judul: string | null; isi: string | null }>("SELECT id, judul, isi FROM promo WHERE status = true ORDER BY id DESC"),
+    ])
+    const [gh, gp] = await Promise.all([tokenGambar(pool, "himbauan", h.map((x) => x.id)), tokenGambar(pool, "promo", p.map((x) => x.id))])
+    const buat = (jenis: Slide["jenis"], rows: typeof h, g: Map<number, string>): Slide[] =>
+        rows.filter((x) => x.judul?.trim() || x.isi?.trim()).map((x) => ({
+            kunci: `${jenis}-${x.id}`, jenis, judul: x.judul?.trim() ?? "", isi: x.isi?.trim() ?? "", gambar: g.get(x.id) ?? null,
+        }))
+    return [...buat("himbauan", h, gh), ...buat("promo", p, gp)]
+}
+
+/** Token gambar satu notifikasi, atau null. */
+export async function gambarNotifikasi(id: number) {
+    return (await tokenGambar(pool, "notifikasi", [id])).get(id) ?? null
 }
 
 export interface Himbauan { id: number; judul_himbauan: string | null; isi_himbauan: string | null }

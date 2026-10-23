@@ -5,6 +5,7 @@ import { kirimNotifikasiAction } from "@/app/actions/notifikasi"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import type { AnggotaRingkas } from "@/lib/queries/anggota"
+import { PilihGambar } from "./PilihGambar"
 import { AnggotaPicker, Field, HasilTransaksi, SubmitButton, useAksiForm } from "@/components/transaksi/common"
 
 export function KirimNotifikasi({ anggotaAktif, maksJudul, maksIsi }: { anggotaAktif: number; maksJudul: number; maksIsi: number }) {
@@ -30,6 +31,9 @@ export function KirimNotifikasi({ anggotaAktif, maksJudul, maksIsi }: { anggotaA
             </Field>
             <Field label="Isi pesan" htmlFor="isi" hint={`${isi.length}/${maksIsi}. Anggota yang mengetuk notifikasi akan membuka pesan lengkap ini di aplikasi.`}>
                 <Textarea id="isi" name="isi" rows={5} maxLength={maksIsi} required value={isi} onChange={(e) => setIsi(e.target.value)} />
+            </Field>
+            <Field label="Gambar (opsional)" hint="Dikecilkan otomatis. Tampil di isi pesan dan sebagai gambar besar di notifikasi HP.">
+                <PilihGambar />
             </Field>
             <HasilTransaksi hasil={hasil} />
             <SubmitButton pending={pending} disabled={sasaran === "satu" && !anggota}>Kirim notifikasi</SubmitButton>

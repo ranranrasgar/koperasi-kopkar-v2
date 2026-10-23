@@ -70,6 +70,8 @@ self.addEventListener('push', (event) => {
         body: d.isi || '',
         icon: '/ikon/ikon-192.png',
         badge: '/ikon/favicon-32.png',
+        // Gambar besar (Android/Windows); alamat relatif dilengkapi alamat situs ini, hanya jalur /gambar/ yang dipakai.
+        image: typeof d.gambar === 'string' && d.gambar.startsWith('/gambar/') ? new URL(d.gambar, self.location.origin).href : undefined,
         data: { url: typeof d.url === 'string' && d.url.startsWith('/') ? d.url : '/notifikasi' },
     }));
 });

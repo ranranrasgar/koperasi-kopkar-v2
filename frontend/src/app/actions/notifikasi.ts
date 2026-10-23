@@ -1,6 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { MAKS_GAMBAR, simpanGambar } from "@kopkar/backend/src/anggota/gambar.ts"
 import { kirimKeSemuaAnggota, kirimNotifikasi, MAKS_ISI, MAKS_JUDUL, ringkasanPush } from "@kopkar/backend/src/anggota/push.ts"
 import { MENU } from "@/config/akses"
 import { modeUji, pool, query } from "@/lib/db"
@@ -29,15 +30,20 @@ export async function kirimNotifikasiAction(_: Hasil, f: FormData): Promise<Hasi
             anggotaId = a.id
         }
 
+        const berkas = f.get("gambar")
+        const adaGambar = berkas instanceof File && berkas.size > 0
+        if (adaGambar && berkas.size > MAKS_GAMBAR) return { ok: false, error: "Gambar terlalu besar setelah dikecilkan (maksimal 400 KB)" }
+
         if (await modeUji()) {
             const r = await ringkasanPush(pool)
             return { ok: true, pesan: `MODE UJI, tidak terkirim: pesan akan diterima ${sasaran === "satu" ? "1 anggota" : `${r.anggotaAktif} anggota`}` }
         }
-        const h = anggotaId ? await kirimNotifikasi(pool, anggotaId, { judul, isi }) : await kirimKeSemuaAnggota(pool, { judul, isi })
+        const gambarId = adaGambar ? (await simpanGambar(pool, new Uint8Array(await berkas.arrayBuffer()))).id : undefined
+        const h = anggotaId ? await kirimNotifikasi(pool, anggotaId, { judul, isi, gambarId }) : await kirimKeSemuaAnggota(pool, { judul, isi, gambarId })
         revalidatePath("/dashboard/notifikasi")
         return {
             ok: true, pesan: `Pesan tercatat untuk ${h.penerima} anggota`,
-            rincian: { "Perangkat terdaftar": h.perangkat, "Push terkirim": h.dikirim, "Push gagal": h.gagal },
+            rincian: { "Perangkat terdaftar": String(h.perangkat), "Push terkirim": String(h.dikirim), "Push gagal": String(h.gagal) },
         }
     } catch (e) {
         if (!(e instanceof GalatSesi)) console.error("kirim notifikasi gagal:", e)

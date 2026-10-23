@@ -7,9 +7,10 @@ import { aturStatusPengumumanAction, hapusPengumumanAction, simpanPengumumanActi
 import type { Hasil } from "@/app/actions/transaksi"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import { PilihGambar } from "./PilihGambar"
 import { Field, HasilTransaksi, SubmitButton, useAksiForm } from "@/components/transaksi/common"
 
-export interface Pengumuman { id: number; judul: string; isi: string; aktif: boolean }
+export interface Pengumuman { id: number; judul: string; isi: string; aktif: boolean; gambar: string | null }
 
 const MAKS = 255
 
@@ -30,6 +31,9 @@ function FormPengumuman({ jenis, awal, onSelesai }: { jenis: JenisPengumuman; aw
             </Field>
             <Field label="Isi" htmlFor={`isi-${jenis}`} hint={`${isi.length}/${MAKS}`}>
                 <Textarea id={`isi-${jenis}`} name="isi" rows={3} maxLength={MAKS} required value={isi} onChange={(e) => setIsi(e.target.value)} />
+            </Field>
+            <Field label="Gambar (opsional)" hint="Dikecilkan otomatis sebelum diunggah.">
+                <PilihGambar gambarAda={awal?.gambar} />
             </Field>
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                 <label className="flex items-center gap-2"><input type="checkbox" name="aktif" defaultChecked={awal?.aktif ?? true} /> Tampilkan di aplikasi anggota</label>
@@ -66,6 +70,10 @@ export function KelolaPengumuman({ jenis, nama, daftar }: { jenis: JenisPengumum
                 <ul className="divide-y rounded-lg border">
                     {daftar.map((d) => (
                         <li key={d.id} className="flex items-start gap-3 p-3">
+                            {d.gambar && (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={`/dashboard/gambar/${d.gambar}`} alt="" className="h-14 w-20 shrink-0 rounded border object-cover" />
+                            )}
                             <div className="min-w-0 flex-1">
                                 <div className="flex items-center gap-2">
                                     <span className="font-semibold text-sm">{d.judul}</span>
