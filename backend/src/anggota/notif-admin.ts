@@ -1,3 +1,4 @@
+import { antreEmailBanyak } from '../email/antrean.ts';
 import { kirimKeOperator } from './push.ts';
 
 // Notifikasi sistem untuk operator (tabel notif_admin, anggota-web.sql): mis. pengajuan kredit baru dari anggota.
@@ -20,7 +21,19 @@ const AKTIF = `n.dibuat_pada > now() - interval '30 days'`;
  */
 export async function beritahuAdmin(db: Db, n: { menu: string; judul: string; isi: string; url: string }) {
     await db.query('INSERT INTO notif_admin (menu, judul, isi, url) VALUES ($1, $2, $3, $4)', [n.menu, n.judul.slice(0, 80), n.isi.slice(0, 300), n.url]);
+    await emailKePengurus(db, n).catch((e) => console.error('antre email pengurus gagal:', (e as Error).message));
     return kirimKeOperator(db, n.menu, { judul: n.judul.slice(0, 60), isi: n.isi.slice(0, 140), url: n.url });
+}
+
+/**
+ * Email ke pengurus: tabel operator tidak punya kolom email, jadi alamat penerima dari env EMAIL_NOTIF_ADMIN (dipisah
+ * koma), tautan dari ADMIN_URL. Kosong = tidak ada email ke pengurus (lonceng dan push admin tetap jalan).
+ */
+async function emailKePengurus(db: Db, n: { judul: string; isi: string; url: string }) {
+    const alamat = (process.env.EMAIL_NOTIF_ADMIN ?? '').split(/[,;\s]+/).filter(Boolean);
+    if (alamat.length === 0) return;
+    const dasar = (process.env.ADMIN_URL ?? '').replace(/\/+$/, '');
+    await antreEmailBanyak(db, alamat.map((ke) => ({ jenis: 'pengajuan_admin', ke, judul: n.judul, teks: n.isi, tautan: dasar ? `${dasar}${n.url}` : null })));
 }
 
 export async function notifAdminUntukOperator(db: Db, oprId: number): Promise<NotifAdmin[]> {

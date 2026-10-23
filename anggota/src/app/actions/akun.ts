@@ -9,8 +9,9 @@ import {
 import { anggotaSesi } from "@/lib/anggota"
 import { cobaLagi, pesanTunggu } from "@/lib/batas"
 import { pool } from "@/lib/db"
-import { alamatAplikasi, kirimEmail } from "@/lib/email"
-import { bacaTokenReset, buatSesi, buatTokenReset, COOKIE_SESI, LAMA_SESI_DETIK, sidikPassword } from "@/lib/sesi"
+import { alamatAplikasi, kirimEmail, kirimSekarang } from "@/lib/email"
+import { bacaTokenReset, buatSesi, buatTokenReset, buatTokenVerifikasi, COOKIE_SESI, LAMA_SESI_DETIK, sidikPassword } from "@/lib/sesi"
+import { kirimKodeVerifikasi } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
 import { withTx } from "@kopkar/backend/src/db.ts"
 
 // Akun anggota sendiri: daftar, lupa password, ganti password/email. Tidak lewat mode uji (sama seperti ganti
@@ -36,15 +37,22 @@ async function pasangSesi(userId: number, passwordHash: string) {
 export async function daftarAction(_: Hasil, f: FormData): Promise<Hasil> {
     const tunggu = cobaLagi(`daftar:${await ip()}`, 10, 60 * MENIT)
     if (tunggu) return { ok: false, error: pesanTunggu(tunggu) }
+    let hasil
     try {
-        return await withTx(pool, (db) => daftarAkun(db, {
+        hasil = await withTx(pool, (db) => daftarAkun(db, {
             username: teks(f, "username"), password: teks(f, "password"), ulangi: teks(f, "ulangi"), nik: teks(f, "nik"),
-            pertanyaanId: Number(teks(f, "pertanyaan")) || 0, jawaban: teks(f, "jawaban"),
+            email: teks(f, "email"), pertanyaanId: Number(teks(f, "pertanyaan")) || 0, jawaban: teks(f, "jawaban"),
         }))
     } catch (e) {
         console.error("daftar akun gagal:", e)
         return { ok: false, error: "Pendaftaran gagal. Coba lagi beberapa saat lagi." }
     }
+    // Akun dibuat belum aktif; kode verifikasi sudah masuk antrean email. Lanjut ke halaman verifikasi.
+    if (hasil.ok && hasil.userId) {
+        void kirimSekarang()
+        redirect(`/verifikasi-email?u=${buatTokenVerifikasi(hasil.userId)}`)
+    }
+    return hasil
 }
 
 /** Langkah 1 lupa password lewat pertanyaan: tampilkan pertanyaan (username fiktif tetap mendapat pertanyaan). */
@@ -98,22 +106,37 @@ export async function aturPasswordTokenAction(_: Hasil, f: FormData): Promise<Ha
     return { ok: true, pesan: "Password berhasil diganti. Silakan masuk dengan password baru." }
 }
 
-/** Simpan email (wajib isi email setelah masuk, dan ganti email dari menu Akun). */
+/**
+ * Simpan email (wajib isi setelah masuk, dan ganti email dari menu Akun), lalu kirim kode verifikasi ke email baru.
+ * Notifikasi lewat email hanya dikirim ke email yang sudah terverifikasi; verifikasi boleh dilewati sementara.
+ */
 export async function emailAction(_: Hasil, f: FormData): Promise<Hasil> {
     const a = await anggotaSesi()
     if (!a) redirect("/masuk")
     const r = await aturEmail(pool, a.userId, teks(f, "email"))
     if (!r.ok) return r
     const email = teks(f, "email").trim().toLowerCase()
-    await kirimEmail({ ke: email, judul: "Email aplikasi anggota diperbarui",
-        teks: `Halo ${a.nama},\n\nEmail ini sekarang terhubung dengan akun aplikasi anggota (${a.username}).` })
     if (a.email && a.email.trim().toLowerCase() !== email) {
         await kirimEmail({ ke: a.email, judul: "Email aplikasi anggota diganti",
             teks: `Email akun ${a.username} diganti ke ${email}. Hubungi pengurus koperasi bila ini bukan Anda.` })
     }
-    const tujuan = teks(f, "tujuan")
-    if (tujuan === "/beranda") redirect("/beranda")
-    return { ok: true, pesan: "Email tersimpan." }
+    const k = await kirimKodeVerifikasi(pool, a.userId, email, a.nama || a.username)
+    if (!k.ok && /sudah terverifikasi/.test(k.error)) return { ok: true, pesan: "Email tersimpan dan sudah terverifikasi." }
+    void kirimSekarang()
+    // Bila kode baru saja dikirim (jeda 60 detik), tetap ke halaman verifikasi: kode sebelumnya masih berlaku.
+    redirect(`/verifikasi-email?u=${buatTokenVerifikasi(a.userId)}&lanjut=${encodeURIComponent(teks(f, "tujuan") === "/beranda" ? "/beranda" : "/akun")}`)
+}
+
+/** Minta kode verifikasi untuk email yang sudah tersimpan tetapi belum terverifikasi (tombol di Akun > Email). */
+export async function mintaVerifikasiEmailAction() {
+    const a = await anggotaSesi()
+    if (!a || !a.email) redirect("/masuk")
+    const tunggu = cobaLagi(`minta-verif:${a.userId}`, 6, 60 * MENIT)
+    if (!tunggu) {
+        const k = await kirimKodeVerifikasi(pool, a.userId, a.email, a.nama || a.username)
+        if (k.ok) void kirimSekarang()
+    }
+    redirect(`/verifikasi-email?u=${buatTokenVerifikasi(a.userId)}&lanjut=${encodeURIComponent("/akun")}`)
 }
 
 export async function gantiPasswordAction(_: Hasil, f: FormData): Promise<Hasil> {

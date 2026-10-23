@@ -30,6 +30,7 @@ export async function putuskanPengajuanAction(id: number, setuju: boolean): Prom
                 judul: setuju ? "Pengajuan kredit disetujui" : "Pengajuan kredit ditolak",
                 isi: `Pengajuan ${nama} Rp ${rp} (${r[0].lama_angsuran} bulan) ${setuju ? "disetujui. Pencairan diproses oleh koperasi." : "tidak disetujui. Hubungi pengurus koperasi untuk keterangan."}`,
                 url: "/ajukan",
+                jenisEmail: "status_pengajuan",
             }).catch((e) => console.error("kirim notifikasi pengajuan gagal:", e))
         }
         return { ok: true, pesan }

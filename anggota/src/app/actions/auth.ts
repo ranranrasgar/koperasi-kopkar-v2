@@ -4,9 +4,10 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { masukAnggota } from "@kopkar/backend/src/anggota/akun.ts"
 import { pool } from "@/lib/db"
-import { buatSesi, COOKIE_SESI, LAMA_SESI_DETIK, sidikPassword } from "@/lib/sesi"
+import { buatSesi, buatTokenVerifikasi, COOKIE_SESI, LAMA_SESI_DETIK, sidikPassword } from "@/lib/sesi"
+import { statusEmail } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
 
-export type HasilAuth = { error: string; username?: string } | null
+export type HasilAuth = { error: string; username?: string; verifikasi?: string } | null
 
 // Penguncian sementara setelah gagal berturut-turut, per username (memori proses), seperti login operator admin.
 const MAKS_GAGAL = 5
@@ -30,6 +31,10 @@ export async function masukAction(_: HasilAuth, f: FormData): Promise<HasilAuth>
         if (hasil.alasan === "salah") {
             gagal.set(k, { n: (g && g.sampai > Date.now() ? g.n : 0) + 1, sampai: Date.now() + KUNCI_MS })
             return { error: "Username atau password salah", username }
+        }
+        // Akun pendaftaran yang emailnya belum diverifikasi: arahkan ke halaman kode (password sudah benar di titik ini).
+        if (hasil.alasan === "akun_nonaktif" && hasil.userId && (await statusEmail(pool, hasil.userId)).menungguAktivasi) {
+            return { error: "Email Anda belum diverifikasi. Masukkan kode verifikasi yang dikirim ke email Anda untuk mengaktifkan akun.", username, verifikasi: buatTokenVerifikasi(hasil.userId) }
         }
         return { error: "Akun Anda tidak aktif. Hubungi pengurus koperasi.", username }
     }

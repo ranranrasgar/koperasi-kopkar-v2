@@ -80,7 +80,7 @@ export async function balasPesanAdmin(db: Db, b: { percakapanId: number; oprNama
 
 /** Riwayat notifikasi anggota + push ke HP-nya; ketukan membuka percakapan. */
 export async function kabariAnggotaBalasan(db: Db, r: { percakapanId: number; anggotaId: number; subjek: string; isi: string }) {
-    return kirimNotifikasi(db, r.anggotaId, { judul: 'Balasan dari koperasi', isi: `${r.subjek}: ${r.isi}`.slice(0, 500), url: `/pesan/${r.percakapanId}` });
+    return kirimNotifikasi(db, r.anggotaId, { judul: 'Balasan dari koperasi', isi: `${r.subjek}: ${r.isi}`.slice(0, 500), url: `/pesan/${r.percakapanId}`, email: false });
 }
 
 export async function aturSelesai(db: Db, percakapanId: number, selesai: boolean) {

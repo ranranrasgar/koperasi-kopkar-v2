@@ -38,7 +38,10 @@ export function FormMasuk() {
             </div>
 
             {hasil?.error && (
-                <p role="alert" className="rounded-xl bg-keluar-lembut px-4 py-3 text-sm font-medium text-keluar">{hasil.error}</p>
+                <div role="alert" className="rounded-xl bg-keluar-lembut px-4 py-3 text-sm font-medium text-keluar">
+                    <p>{hasil.error}</p>
+                    {hasil.verifikasi && <Link href={`/verifikasi-email?u=${hasil.verifikasi}`} className="mt-2 inline-block font-semibold underline">Verifikasi email sekarang</Link>}
+                </div>
             )}
 
             <button type="submit" disabled={proses}

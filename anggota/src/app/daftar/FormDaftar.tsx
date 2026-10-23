@@ -18,6 +18,8 @@ export function FormDaftar({ pertanyaan }: { pertanyaan: { id: number; pertanyaa
     return (
         <form onSubmit={tanpaReset(kirim)} className="space-y-5">
             <Kolom label="NIK karyawan" name="nik" inputMode="numeric" maxLength={6} autoComplete="off" required catatan="6 digit, sesuai data karyawan." />
+            <Kolom label="Email" name="email" type="email" inputMode="email" autoComplete="email" autoCapitalize="none" maxLength={100} required
+                catatan="Kode verifikasi dikirim ke email ini. Dipakai juga untuk notifikasi dan lupa password." />
             <Kolom label="Username" name="username" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false}
                 maxLength={50} required catatan="Dipakai untuk masuk. 3 sampai 50 karakter." />
             <KolomPassword label="Password" name="password" autoComplete="new-password" required catatan={ATURAN_PASSWORD} />

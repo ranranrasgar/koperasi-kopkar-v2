@@ -71,3 +71,28 @@ export function bacaTokenReset(nilai: string | undefined): Sesi | null {
         return null
     }
 }
+
+// Token halaman verifikasi email (60 menit): dari pendaftaran, percobaan masuk akun yang belum aktif, atau perubahan email.
+// Awalan berbeda dari cookie sesi dan token reset, jadi tidak bisa dipakai sebagai keduanya. Hanya memuat id akun;
+// kodenya sendiri (6 angka dari email) yang membuktikan kepemilikan email.
+const LAMA_VERIFIKASI_DETIK = 60 * 60
+const tandaVerifikasi = (data: string) => tanda(`verifikasi:${data}`)
+
+export function buatTokenVerifikasi(u: number) {
+    const data = Buffer.from(JSON.stringify({ u, pv: "-", exp: Math.floor(Date.now() / 1000) + LAMA_VERIFIKASI_DETIK })).toString("base64url")
+    return `${data}.${tandaVerifikasi(data)}`
+}
+
+export function bacaTokenVerifikasi(nilai: string | undefined): Sesi | null {
+    const [data, sig] = (nilai ?? "").split(".")
+    if (!data || !sig) return null
+    const harap = Buffer.from(tandaVerifikasi(data)), dapat = Buffer.from(sig)
+    if (harap.length !== dapat.length || !crypto.timingSafeEqual(harap, dapat)) return null
+    try {
+        const s = JSON.parse(Buffer.from(data, "base64url").toString()) as Sesi
+        if (typeof s.u !== "number" || typeof s.exp !== "number") return null
+        return s.exp > Math.floor(Date.now() / 1000) ? s : null
+    } catch {
+        return null
+    }
+}

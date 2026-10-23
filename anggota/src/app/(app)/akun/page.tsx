@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import { BadgeCheck, Bell, BookOpen, Coins, FilePen, KeyRound, Mail, MessageSquare, ReceiptText, Wallet } from "lucide-react"
 import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
+import { statusEmail } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
 import { FotoProfil } from "@/components/FotoProfil"
 import { PilihTema } from "@/components/PilihTema"
 import { TombolKeluar } from "@/components/TombolKeluar"
@@ -15,9 +16,10 @@ export const metadata: Metadata = { title: "Akun" }
 // dan saldo sengaja tidak ditampilkan di sini (privasi, mis. HP yang dipinjam); dikelola pengurus di admin.
 export default async function AkunPage() {
     const a = await wajibMasuk()
-    const [foto, balasanBaru] = await Promise.all([
+    const [foto, balasanBaru, stEmail] = await Promise.all([
         infoFoto(a.userId),
         a.anggotaId !== null ? hitungBelumDibaca(pool, "anggota", a.anggotaId) : 0,
+        statusEmail(pool, a.userId),
     ])
     const inisial = a.nama.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join("").toUpperCase()
     const anggota = a.anggotaId !== null
@@ -60,7 +62,8 @@ export default async function AkunPage() {
 
                 <h2 className={judul}>Keamanan dan bantuan</h2>
                 <Kartu className="divide-y divide-garis">
-                    <BarisTautan href="/akun/email" ikon={Mail} judul="Email" sub={a.email ?? "Belum diisi"} />
+                    <BarisTautan href="/akun/email" ikon={Mail} judul="Email" sub={a.email ? `${a.email} · ${stEmail.terverifikasi ? "terverifikasi" : "belum diverifikasi"}` : "Belum diisi"}
+                        lencana={a.email && !stEmail.terverifikasi ? "Verifikasi" : undefined} />
                     <BarisTautan href="/akun/password" ikon={KeyRound} judul="Ganti password" sub="Perangkat lain akan keluar dari akun ini" />
                     <BarisTautan href="/selamat-datang" ikon={BookOpen} judul="Panduan penggunaan" sub="Kenali isi dan fitur aplikasi" />
                 </Kartu>

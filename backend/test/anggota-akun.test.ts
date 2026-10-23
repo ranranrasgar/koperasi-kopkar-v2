@@ -52,7 +52,7 @@ test('login anggota: MD5 cocok diganti bcrypt, salah dan nonaktif ditolak', asyn
         assert.equal((await masukAnggota(p, u.username, 'uji-lama-1')).ok, true);
 
         await db.query('UPDATE app_user SET status = false WHERE id = $1', [u.id]);
-        assert.deepEqual(await masukAnggota(p, u.username, 'uji-lama-1'), { ok: false, alasan: 'akun_nonaktif' });
+        assert.deepEqual(await masukAnggota(p, u.username, 'uji-lama-1'), { ok: false, alasan: 'akun_nonaktif', userId: Number(u.id) });
         await db.query('UPDATE app_user SET status = true WHERE id = $1', [u.id]);
         await db.query('UPDATE anggota SET aktif = false WHERE id = (SELECT anggota_id FROM app_user WHERE id = $1)', [u.id]);
         assert.deepEqual(await masukAnggota(p, u.username, 'uji-lama-1'), { ok: false, alasan: 'anggota_nonaktif' });
@@ -82,7 +82,7 @@ test('daftar akun: aturan server lama + password K6, anggota dan karyawan Mattel
             AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt)
             AND (SELECT count(*) FROM anggota b WHERE b.nik = a.nik) = 1 LIMIT 1`)).rows[0];
         const isi = (x: object = {}) => ({ username: 'uji_daftar_pwa', password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik,
-            pertanyaanId: tanya, jawaban: 'Kucing', ...x });
+            email: 'uji.daftar.pwa@contoh.id', pertanyaanId: tanya, jawaban: 'Kucing', ...x });
         const tolak = async (x: object, pesan: RegExp) => {
             const r = await daftarAkun(db, isi(x));
             assert.equal(r.ok, false, JSON.stringify(x));
@@ -95,6 +95,8 @@ test('daftar akun: aturan server lama + password K6, anggota dan karyawan Mattel
         await tolak({ ulangi: 'Rahasia124' }, /sama persis/);
         await tolak({ password: 'pendek1', ulangi: 'pendek1' }, /minimal 8/);
         await tolak({ jawaban: ' ' }, /Jawaban/);
+        await tolak({ email: 'bukan-email' }, /Alamat email tidak valid/);
+        await tolak({ email: '' }, /Alamat email tidak valid/);
         await tolak({ nik: '12345' }, /NIK tidak valid/);
         await tolak({ nik: '999999' }, /tidak terdaftar di data karyawan/);
 
@@ -103,13 +105,17 @@ test('daftar akun: aturan server lama + password K6, anggota dan karyawan Mattel
         const u = await cariAkun(db, { username: 'UJI_DAFTAR_PWA' });
         assert.equal(u?.anggota_id, String(a.id));
         assert.equal(u?.kode_agt, a.kode_agt);
+        assert.equal(u?.akun_aktif, false, 'akun baru belum aktif sampai email diverifikasi');
+        assert.equal(u?.email, 'uji.daftar.pwa@contoh.id');
+        assert.equal((await db.query(`SELECT count(*)::int n FROM email_antrean WHERE jenis = 'verifikasi' AND ke = 'uji.daftar.pwa@contoh.id'`)).rows[0].n, 1);
         assert.match(u!.password_hash!, /^\$2y\$/);
         await tolak({ username: 'uji_lain_pwa' }, /sudah terdaftar/); // anggota yang sama
 
         // Karyawan Mattel yang belum anggota: akun tanpa keanggotaan, kode_agt = NIK.
         const k = (await db.query(`SELECT k.nik FROM karyawan_mattel k WHERE length(k.nik) = 6
             AND NOT EXISTS (SELECT 1 FROM anggota a WHERE a.nik = k.nik) AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.kode_agt = k.nik) LIMIT 1`)).rows[0];
-        const r2 = await daftarAkun(db, isi({ username: 'uji_karyawan_pwa', nik: k.nik }));
+        await tolak({ username: 'uji_karyawan_pwa', nik: k.nik }, /Email ini sudah dipakai/); // email sama dengan akun lain
+        const r2 = await daftarAkun(db, isi({ username: 'uji_karyawan_pwa', nik: k.nik, email: 'uji.karyawan.pwa@contoh.id' }));
         assert.equal(r2.ok, true);
         const u2 = await cariAkun(db, { username: 'uji_karyawan_pwa' });
         assert.equal(u2?.anggota_id, null);

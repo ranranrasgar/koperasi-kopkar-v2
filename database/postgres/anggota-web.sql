@@ -116,3 +116,36 @@ CREATE TABLE IF NOT EXISTS app_user_intro (
     app_user_id bigint PRIMARY KEY REFERENCES app_user(id) ON DELETE CASCADE,
     dilihat_pada timestamptz NOT NULL DEFAULT now()
 );
+
+-- Antrean email keluar: notifikasi (himbauan, promo, pengajuan, keputusan) dan email sistem (kode verifikasi, reset).
+-- Dikirim bertahap oleh pekerja di server (backend/src/email/pekerja.ts) supaya siaran ke ribuan anggota tidak
+-- membebani halaman admin atau akun SMTP. status 'dicatat' = SMTP belum diatur, hanya dicatat di log.
+CREATE TABLE IF NOT EXISTS email_antrean (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    jenis varchar(30) NOT NULL,
+    ke varchar(150) NOT NULL,
+    judul varchar(200) NOT NULL,
+    teks text NOT NULL,
+    tautan varchar(300),
+    status varchar(10) NOT NULL DEFAULT 'menunggu' CHECK (status IN ('menunggu', 'terkirim', 'gagal', 'dicatat')),
+    percobaan integer NOT NULL DEFAULT 0,
+    galat text,
+    dibuat_pada timestamptz NOT NULL DEFAULT now(),
+    dikirim_pada timestamptz,
+    coba_lagi_pada timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_email_antrean_status ON email_antrean (status, coba_lagi_pada);
+
+-- Verifikasi kepemilikan email per akun. Kode 6 angka (disimpan sebagai hash), berlaku 15 menit, maks. 5 salah.
+-- aktivasi = akun dibuat lewat pendaftaran dan baru aktif (app_user.status) setelah email terverifikasi.
+-- Email notifikasi hanya dikirim ke email yang terverifikasi dan masih sama dengan app_user.email.
+CREATE TABLE IF NOT EXISTS app_user_email_verif (
+    app_user_id bigint PRIMARY KEY REFERENCES app_user(id) ON DELETE CASCADE,
+    email varchar(150) NOT NULL,
+    kode_hash varchar(64),
+    kedaluwarsa timestamptz,
+    percobaan integer NOT NULL DEFAULT 0,
+    terakhir_kirim timestamptz,
+    aktivasi boolean NOT NULL DEFAULT false,
+    terverifikasi_pada timestamptz
+);

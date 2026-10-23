@@ -51,7 +51,7 @@ test('kirimNotifikasi: tercatat di riwayat anggota, judul dipotong 50, catat=fal
         const { userId, anggotaId } = await akunAnggota(db);
         await simpanLangganan(db, userId, sub('p2'));
         const h = await kirimNotifikasi(db, anggotaId, { judul: 'J'.repeat(80), isi: 'Isi pesan' });
-        assert.deepEqual(h, { penerima: 1, perangkat: 0, dikirim: 0, gagal: 0 }); // VAPID tidak diset
+        assert.deepEqual(h, { penerima: 1, perangkat: 0, dikirim: 0, gagal: 0, email: 0 }); // VAPID tidak diset; tanpa email terverifikasi
         const r = await db.query('SELECT title, pesan, anggota_id FROM log_notifikasi WHERE pesan = $1', ['Isi pesan']);
         assert.equal(r.rows.length, 1);
         assert.equal(r.rows[0].title.length, 50);

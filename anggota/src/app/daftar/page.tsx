@@ -13,7 +13,7 @@ export default async function DaftarPage() {
     const pertanyaan = await query<{ id: number; pertanyaan: string }>("SELECT id, pertanyaan FROM pertanyaan ORDER BY urut")
     return (
         <HalamanAuth judul="Daftar akun" kembali="/masuk"
-            sub="Untuk anggota koperasi dan karyawan Mattel. Daftar dengan NIK karyawan Anda."
+            sub="Untuk anggota koperasi dan karyawan Mattel. Daftar dengan NIK karyawan Anda dan email aktif; akun aktif setelah email diverifikasi."
             kaki={<>Sudah punya akun? <Link href="/masuk" className="font-semibold text-utama">Masuk</Link></>}>
             <FormDaftar pertanyaan={pertanyaan} />
         </HalamanAuth>

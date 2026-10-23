@@ -3,6 +3,8 @@ import type { NextConfig } from "next"
 const nextConfig: NextConfig = {
     // Aturan anggota di workspace backend ditulis dalam TypeScript tanpa build terpisah.
     transpilePackages: ["@kopkar/backend"],
+    // Pustaka email dimuat langsung oleh Node, tidak di-bundle.
+    serverExternalPackages: ["nodemailer"],
     // Server uji (scripts/dev-uji.mjs) memakai folder build dan tsconfig sendiri, sama seperti frontend/.
     distDir: process.env.KOPKAR_DIST_DIR || ".next",
     typescript: { tsconfigPath: process.env.KOPKAR_DIST_DIR ? "tsconfig.uji.json" : "tsconfig.json" },

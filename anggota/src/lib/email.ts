@@ -1,21 +1,30 @@
 import "server-only"
 import { headers } from "next/headers"
+import { antreEmail, prosesAntrean, smtpSiap } from "@kopkar/backend/src/email/antrean.ts"
+import { pool } from "@/lib/db"
 
-// Pengiriman email (reset password, notifikasi email diganti). Akun SMTP koperasi belum ada (keputusan K9), jadi
-// untuk sementara email TIDAK dikirim: isinya ditulis ke log server supaya alur bisa diuji. Setelah akun siap:
-// pasang pustaka SMTP (mis. nodemailer), isi SMTP_HOST/SMTP_PORT/SMTP_USER/SMTP_PASS/SMTP_FROM di anggota/.env.local,
-// lalu ganti bagian "belum dikirim" di bawah. Kredensial hanya di env server, tidak di kode.
+// Email dari aplikasi anggota (reset password, email diganti) masuk ke antrean email bersama (tabel email_antrean),
+// sama seperti notifikasi, lalu langsung diproses supaya cepat sampai. Pengiriman sungguhan memakai SMTP dari env
+// (SMTP_HOST, SMTP_PORT, SMTP_SECURE, SMTP_USER, SMTP_PASS, SMTP_FROM); tanpa itu email hanya dicatat di log server.
 
-export interface Email { ke: string; judul: string; teks: string }
+export interface Email { ke: string; judul: string; teks: string; tautan?: string }
 
-export const emailSiap = () => false
+export const emailSiap = smtpSiap
 
-export async function kirimEmail(e: Email): Promise<{ terkirim: boolean }> {
-    if (!emailSiap()) {
-        console.info(`[email belum dikirim: SMTP belum diatur] ke=${e.ke} judul="${e.judul}"\n${e.teks}`)
+/** Proses antrean sekarang (tanpa menunggu pekerja 20 detik). Tidak pernah melempar galat. */
+export async function kirimSekarang() {
+    try {
+        const h = await prosesAntrean(pool, { batas: 5 })
+        return { terkirim: h.terkirim > 0 }
+    } catch (e) {
+        console.error("proses antrean email gagal:", (e as Error).message)
         return { terkirim: false }
     }
-    throw new Error("Pengiriman SMTP belum dipasang")
+}
+
+export async function kirimEmail(e: Email): Promise<{ terkirim: boolean }> {
+    await antreEmail(pool, { jenis: "sistem", ke: e.ke, judul: e.judul, teks: e.teks, tautan: e.tautan ?? null })
+    return kirimSekarang()
 }
 
 /**

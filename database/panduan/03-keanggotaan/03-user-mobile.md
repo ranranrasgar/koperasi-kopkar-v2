@@ -19,6 +19,7 @@ Anggota bisa memakai **aplikasi Android** koperasi untuk melihat saldo simpanan,
 - Akun yang sama dipakai di aplikasi Android lama dan aplikasi anggota baru (di browser HP). Username tidak membedakan huruf besar/kecil.
 - Pengajuan kredit dari kedua aplikasi masuk ke **Pinjaman → Pengajuan Kredit**.
 - Password diatur oleh anggota sendiri dan **tidak bisa diubah dari web admin**. Anggota yang lupa password bisa membuat password baru di aplikasi anggota baru lewat **Lupa password** (pertanyaan keamanan, atau email bila sudah diisi).
-- Anggota dan karyawan Mattel bisa mendaftar akun sendiri di aplikasi anggota baru dengan NIK karyawan. Karyawan yang belum menjadi anggota hanya melihat petunjuk untuk mendaftar sebagai anggota.
+- Anggota dan karyawan Mattel bisa mendaftar akun sendiri di aplikasi anggota baru dengan NIK karyawan (harus terdaftar sebagai anggota atau di data karyawan Mattel) dan email aktif. Akun baru **aktif setelah email diverifikasi** dengan kode 6 angka yang dikirim ke email itu (berlaku 15 menit). Karyawan yang belum menjadi anggota hanya melihat petunjuk untuk mendaftar sebagai anggota.
 - Setelah masuk ke aplikasi anggota baru, akun tanpa email wajib mengisi email lebih dulu. Satu email hanya untuk satu akun.
+- Notifikasi (himbauan, promo, keputusan pengajuan) juga dikirim ke email anggota, **hanya bila email sudah diverifikasi**; pesan chat tidak dikirim lewat email. Akun lama yang emailnya belum diverifikasi dapat memverifikasinya di Akun > Email.
 - Halaman ini bersifat baca.

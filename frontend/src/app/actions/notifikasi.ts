@@ -39,11 +39,11 @@ export async function kirimNotifikasiAction(_: Hasil, f: FormData): Promise<Hasi
             return { ok: true, pesan: `MODE UJI, tidak terkirim: pesan akan diterima ${sasaran === "satu" ? "1 anggota" : `${r.anggotaAktif} anggota`}` }
         }
         const gambarId = adaGambar ? (await simpanGambar(pool, new Uint8Array(await berkas.arrayBuffer()))).id : undefined
-        const h = anggotaId ? await kirimNotifikasi(pool, anggotaId, { judul, isi, gambarId }) : await kirimKeSemuaAnggota(pool, { judul, isi, gambarId })
+        const h = anggotaId ? await kirimNotifikasi(pool, anggotaId, { judul, isi, gambarId, jenisEmail: "pengumuman" }) : await kirimKeSemuaAnggota(pool, { judul, isi, gambarId, jenisEmail: "pengumuman" })
         revalidatePath("/dashboard/notifikasi")
         return {
             ok: true, pesan: `Pesan tercatat untuk ${h.penerima} anggota`,
-            rincian: { "Perangkat terdaftar": String(h.perangkat), "Push terkirim": String(h.dikirim), "Push gagal": String(h.gagal) },
+            rincian: { "Perangkat terdaftar": String(h.perangkat), "Push terkirim": String(h.dikirim), "Push gagal": String(h.gagal), "Email diantrekan": String(h.email) },
         }
     } catch (e) {
         if (!(e instanceof GalatSesi)) console.error("kirim notifikasi gagal:", e)

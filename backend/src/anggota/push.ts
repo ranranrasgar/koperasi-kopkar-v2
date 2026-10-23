@@ -1,5 +1,7 @@
 import webpush from 'web-push';
+import { antreEmailBanyak } from '../email/antrean.ts';
 import { tautkanGambar } from './gambar.ts';
+import { penerimaEmailAnggota } from './verifikasi-email.ts';
 
 // Web Push untuk PWA anggota (keputusan K8): standar W3C + VAPID, tanpa Firebase/pihak ketiga. Notifikasi sampai ke
 // layar HP walau aplikasi ditutup karena yang menerimanya service worker (anggota/public/sw.js).
@@ -11,8 +13,14 @@ interface Db { query: (sql: string, params?: unknown[]) => Promise<{ rows: any[]
 export interface LanggananPush { endpoint: string; keys: { p256dh: string; auth: string } }
 /** url: halaman tujuan saat notifikasi diketuk; bila kosong, halaman detail pesan (/notifikasi/<id>). */
 /** gambarId: gambar dari simpanGambar; tampil di detail notifikasi dan sebagai gambar besar di push. */
-export interface IsiNotifikasi { judul: string; isi: string; url?: string; catat?: boolean; gambarId?: number }
-export interface HasilKirim { penerima: number; perangkat: number; dikirim: number; gagal: number }
+export interface IsiNotifikasi {
+    judul: string; isi: string; url?: string; catat?: boolean; gambarId?: number
+    /** Kirim juga lewat email ke anggota yang emailnya terverifikasi (bawaan ya). Pesan chat memakai false. */
+    email?: boolean
+    /** Kategori email di antrean: himbauan, promo, status_pengajuan, dst. */
+    jenisEmail?: string
+}
+export interface HasilKirim { penerima: number; perangkat: number; dikirim: number; gagal: number; email: number }
 
 export const kunciPublikPush = () => process.env.VAPID_PUBLIC_KEY || null;
 export const MAKS_JUDUL = 50;
@@ -165,6 +173,27 @@ export async function kirimKeOperator(db: Db, menu: string, n: { judul: string; 
     }
 }
 
+/**
+ * Antrekan email notifikasi ke anggota yang emailnya terverifikasi (satu email per alamat). Tidak mengirim notifikasi percobaan
+ * (catat=false) atau pesan chat (email=false). Tidak pernah melempar galat: gagal berarti tidak ada email, bukan notifikasi gagal.
+ */
+async function emailKeAnggota(db: Db, anggotaIds: number[], n: IsiNotifikasi): Promise<number> {
+    if (n.email === false || n.catat === false) return 0;
+    try {
+        const penerima = await penerimaEmailAnggota(db, anggotaIds);
+        if (penerima.length === 0) return 0;
+        const dasar = (process.env.ANGGOTA_URL ?? '').replace(/\/+$/, '');
+        const tautan = dasar ? `${dasar}${n.url ?? '/notifikasi'}` : null;
+        return await antreEmailBanyak(db, penerima.map((p) => ({
+            jenis: n.jenisEmail ?? 'notifikasi', ke: p.email, judul: n.judul, tautan,
+            teks: `Yth. ${p.nama || 'anggota'},\n\n${n.isi}`,
+        })));
+    } catch (e) {
+        console.error('antre email notifikasi gagal:', (e as Error).message);
+        return 0;
+    }
+}
+
 /** Alamat gambar relatif; service worker melengkapinya dengan alamat situs PWA. */
 async function jalurGambar(db: Db, gambarId?: number) {
     if (!gambarId) return undefined;
@@ -180,14 +209,14 @@ export async function kirimNotifikasi(db: Db, anggotaId: number, n: IsiNotifikas
     let id: string | null = null;
     if (n.catat !== false) {
         const r = await catatRiwayat(db, n, 'a.id = $3', [anggotaId]);
-        if (r.length === 0) return { penerima: 0, perangkat: 0, dikirim: 0, gagal: 0 };
+        if (r.length === 0) return { penerima: 0, perangkat: 0, dikirim: 0, gagal: 0, email: 0 };
         id = r[0].id;
         if (n.gambarId) await tautkanGambar(db, 'notifikasi', Number(id), n.gambarId);
     }
     const url = n.url ?? (id ? `/notifikasi/${id}` : '/notifikasi');
     const gambar = await jalurGambar(db, n.gambarId);
     const h = await dorongKePerangkat(db, [anggotaId], () => JSON.stringify({ judul: n.judul, isi: n.isi, url, gambar }));
-    return { penerima: 1, ...h };
+    return { penerima: 1, ...h, email: await emailKeAnggota(db, [anggotaId], n) };
 }
 
 /**
@@ -207,5 +236,5 @@ export async function kirimKeSemuaAnggota(db: Db, n: IsiNotifikasi, opsi: { stat
     const h = await dorongKePerangkat(db, [...idPesan.keys()], (aid) => JSON.stringify({
         judul: n.judul, isi: n.isi, url: n.url ?? `/notifikasi/${idPesan.get(aid)}`, gambar,
     }));
-    return { penerima: baris.length, ...h };
+    return { penerima: baris.length, ...h, email: await emailKeAnggota(db, [...idPesan.keys()], n) };
 }

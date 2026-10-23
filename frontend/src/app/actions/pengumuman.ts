@@ -101,8 +101,8 @@ export async function simpanPengumumanAction(_: Hasil, f: FormData): Promise<Has
             kabar: kirim ? async () => {
                 const bagian: string[] = []
                 if (sasaran.anggota) {
-                    const h = await kirimKeSemuaAnggota(pool, { judul: judul.slice(0, 50), isi, url: "/beranda", gambarId: gambarId ?? undefined }, { statusStaff: sasaran.statusStaff })
-                    bagian.push(`${h.penerima} anggota (push ke ${h.dikirim} perangkat)`)
+                    const h = await kirimKeSemuaAnggota(pool, { judul: judul.slice(0, 50), isi, url: "/beranda", gambarId: gambarId ?? undefined, jenisEmail: jenis }, { statusStaff: sasaran.statusStaff })
+                    bagian.push(`${h.penerima} anggota (push ke ${h.dikirim} perangkat, ${h.email} email diantrekan)`)
                 }
                 if (sasaran.internal) {
                     const h = await kirimKeOperatorGrup(pool, sasaran.grupIds, { judul: judul.slice(0, 60), isi: isi.slice(0, 140), url: "/dashboard/pengumuman" })

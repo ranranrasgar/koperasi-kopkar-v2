@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { kirimKodeVerifikasi } from './verifikasi-email.ts';
 import { promisify } from 'node:util';
 import bcrypt from 'bcryptjs';
 import type pg from 'pg';
@@ -90,19 +91,24 @@ export function cekUsernameBaru(u: string) {
     return null;
 }
 
-export interface IsianDaftar { username: string; password: string; ulangi: string; nik: string; pertanyaanId: number; jawaban: string }
-export type HasilAkun = { ok: true; pesan: string } | { ok: false; error: string };
+export interface IsianDaftar { username: string; password: string; ulangi: string; nik: string; email: string; pertanyaanId: number; jawaban: string }
+/** userId: akun yang baru dibuat (pendaftaran), belum aktif sampai email diverifikasi. */
+export type HasilAkun = { ok: true; pesan: string; userId?: number } | { ok: false; error: string };
 
 /**
  * Buat akun aplikasi anggota. Urutan sama dengan server lama: username/anggota sudah punya akun, NIK 6 karakter,
  * NIK anggota (akun untuk anggota itu), selain itu NIK karyawan Mattel (akun tanpa keanggotaan, keputusan K5).
- * Tambahan: aturan password K6, jawaban wajib, anggota yang dipakai harus aktif. Jalankan di dalam transaksi.
+ * Tambahan: aturan password K6, jawaban wajib, anggota yang dipakai harus aktif, email wajib dan unik. Akun dibuat TIDAK aktif
+ * (status false) dan baru aktif setelah email diverifikasi dengan kode 6 angka yang dikirim ke email itu. Jalankan di dalam transaksi.
  */
 export async function daftarAkun(db: pg.PoolClient, i: IsianDaftar): Promise<HasilAkun> {
     const gagal = (error: string): HasilAkun => ({ ok: false, error });
     const username = i.username.trim(), nik = i.nik.trim();
     const salahU = cekUsernameBaru(username);
     if (salahU) return gagal(salahU);
+    const email = i.email.trim().toLowerCase();
+    const salahE = cekEmail(email);
+    if (salahE) return gagal(salahE);
     if (i.password !== i.ulangi) return gagal('Ulangi password dengan sama persis');
     const salahP = cekPasswordBaruAnggota(i.password);
     if (salahP) return gagal(salahP);
@@ -119,20 +125,23 @@ export async function daftarAkun(db: pg.PoolClient, i: IsianDaftar): Promise<Has
         [username, anggota?.id ?? null, anggota?.kode_agt ?? nik])).rowCount;
     if (ada) return gagal('Username atau NIK sudah terdaftar');
     if (nik.length !== 6) return gagal('NIK tidak valid (6 karakter)');
+    if ((await db.query('SELECT 1 FROM app_user WHERE lower(trim(email)) = $1 LIMIT 1', [email])).rowCount) return gagal('Email ini sudah dipakai akun lain, gunakan email lain.');
 
     const passwordHash = await hashPasswordAnggota(i.password), jawabanHash = await hashJawaban(i.jawaban);
-    const kolom = `(username, password_hash, kode_agt, nikk, status, created_at, updated_at, id_pertanyaan, pertanyaan_id, jawaban_hash, anggota_id, karyawan_mattel_id)`;
+    const kolom = `(username, password_hash, kode_agt, nikk, status, created_at, updated_at, id_pertanyaan, pertanyaan_id, jawaban_hash, anggota_id, karyawan_mattel_id, email)`;
     if (anggota) {
         if (!anggota.aktif) return gagal('Keanggotaan dengan NIK ini tidak aktif. Hubungi pengurus koperasi.');
-        await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, true, now(), now(), $5, $6, $7, $8, NULL)`,
-            [username, passwordHash, anggota.kode_agt, nik, tanya.urut, tanya.id, jawabanHash, anggota.id]);
-        return { ok: true, pesan: 'Akun berhasil dibuat. Silakan masuk.' };
+        const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, false, now(), now(), $5, $6, $7, $8, NULL, $9) RETURNING id`,
+            [username, passwordHash, anggota.kode_agt, nik, tanya.urut, tanya.id, jawabanHash, anggota.id, email])).rows[0].id);
+        await kirimKodeVerifikasi(db, id, email, username, { aktivasi: true, abaikanJeda: true });
+        return { ok: true, pesan: 'Kode verifikasi dikirim ke email Anda. Masukkan kode itu untuk mengaktifkan akun.', userId: id };
     }
     const karyawan = (await db.query<{ id: string }>('SELECT id::text FROM karyawan_mattel WHERE nik = $1 LIMIT 1', [nik])).rows[0];
     if (!karyawan) return gagal('NIK tidak terdaftar di data karyawan Mattel');
-    await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, true, now(), now(), $5, $6, $7, NULL, $8)`,
-        [username, passwordHash, nik, nik, tanya.urut, tanya.id, jawabanHash, karyawan.id]);
-    return { ok: true, pesan: 'Akun berhasil dibuat. Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.' };
+    const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, false, now(), now(), $5, $6, $7, NULL, $8, $9) RETURNING id`,
+        [username, passwordHash, nik, nik, tanya.urut, tanya.id, jawabanHash, karyawan.id, email])).rows[0].id);
+    await kirimKodeVerifikasi(db, id, email, username, { aktivasi: true, abaikanJeda: true });
+    return { ok: true, pesan: 'Kode verifikasi dikirim ke email Anda. Setelah akun aktif, Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.', userId: id };
 }
 
 // ---------- Lupa password lewat pertanyaan keamanan ----------
@@ -211,7 +220,7 @@ export async function akunUntukResetEmail(db: pg.Pool | pg.PoolClient, username:
 
 export type HasilMasuk =
     | { ok: true; akun: AkunAnggota }
-    | { ok: false; alasan: 'salah' | 'akun_nonaktif' | 'anggota_nonaktif' };
+    | { ok: false; alasan: 'salah' | 'akun_nonaktif' | 'anggota_nonaktif'; userId?: number };
 
 /**
  * Login anggota. Urutan sama dengan server lama: akun ada, akun aktif, password cocok, anggota aktif.
@@ -222,7 +231,7 @@ export async function masukAnggota(db: pg.Pool, username: string, password: stri
     const akun = await cariAkun(db, { username });
     const { cocok, md5 } = await cocokPasswordAnggota(password, akun?.password_hash ?? HASH_SEMU);
     if (!akun || !cocok) return { ok: false, alasan: 'salah' };
-    if (!akun.akun_aktif) return { ok: false, alasan: 'akun_nonaktif' };
+    if (!akun.akun_aktif) return { ok: false, alasan: 'akun_nonaktif', userId: Number(akun.user_id) };
     if (akun.anggota_id && !akun.anggota_aktif) return { ok: false, alasan: 'anggota_nonaktif' };
     if (md5) {
         const baru = await hashPasswordAnggota(password);
