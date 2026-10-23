@@ -2,26 +2,35 @@
 
 Aplikasi anggota dan admin mengirim email lewat antrean (`email_antrean`) memakai SMTP dari env. Tanpa SMTP, email **hanya dicatat di log server** (termasuk kode verifikasi), jadi tidak ada yang terkirim.
 
-## 0. Email domain di Jagoan Hosting (dipakai koperasi)
+## 0. Email domain di Jagoan Hosting "Mail Business" (dipakai koperasi)
 
-Domain `kopkarmjsmattel.com` memakai "Mail Business" Jagoan Hosting dengan kotak `support@kopkarmjsmattel.com`. Server emailnya berada di `solodns.jagoanhosting.com` (MX domain menunjuk ke hosting sendiri, bukan Titan/Google). **Pakai nama server itu sebagai SMTP_HOST**: sertifikat TLS server hanya berlaku untuk `solodns.jagoanhosting.com`, jadi `mail.kopkarmjsmattel.com` akan ditolak dengan galat sertifikat. Port 465, 587, dan 25 terbuka.
+Domain `kopkarmjsmattel.com` memakai produk **Mail Business** Jagoan Hosting (kotak `support@kopkarmjsmattel.com`). Kotaknya berada di platform **emailarray** (webmail Group-Office, server qmail `smtp8.emailarray.com`), **bukan** di server cPanel `solodns.jagoanhosting.com` yang kebetulan menjawab untuk domain; login ke server cPanel itu selalu `535 Incorrect authentication data`. Host yang benar:
 
 ```
-SMTP_HOST=solodns.jagoanhosting.com
-SMTP_PORT=465
-SMTP_SECURE=1
+SMTP_HOST=smtp.emailarray.com
+SMTP_PORT=587
+SMTP_SECURE=0
 SMTP_USER=support@kopkarmjsmattel.com
-SMTP_PASS=<sandi kotak email>
+SMTP_PASS=<sandi kotak email, yang sama dengan login webmail>
 SMTP_FROM=Kopkar MJS <support@kopkarmjsmattel.com>
 EMAIL_MAKS_PER_JAM=100
 ```
 
-- Sandi kotak email diatur di panel Jagoan Hosting: Manage Emails, ikon pensil (ubah) pada baris kotak email. **Masukkan ke aplikasi dengan `npm run email:sandi`**: perintah ini menanyakan sandi (tidak tampil di layar), menulisnya ke `anggota/.env.local` dan `frontend/.env.local` sekaligus dengan tanda kutip yang benar, lalu langsung memeriksa login SMTP. Jangan mengirim sandi lewat chat.
-- Server email ini Exim (cPanel): login `PLAIN`/`LOGIN` setelah TLS, username **alamat email lengkap**. Galat `535 Incorrect authentication data` berarti sandi tidak cocok dengan sandi kotak email yang berlaku (uji di webmail dengan sandi yang sama).
-- Batas kirim hosting bersama biasanya per jam (angkanya berbeda per paket; tanyakan atau lihat di panel). Atur `EMAIL_MAKS_PER_JAM` (dan `EMAIL_MAKS_PER_HARI`) sedikit di bawah batas itu: email biasa (siaran, notifikasi) ditahan di antrean sampai kuota ada lagi, sedangkan kode verifikasi dan reset password tidak ikut dibatasi dan didahulukan.
-- Cadangan bila 465 bermasalah: `SMTP_PORT=587` dan `SMTP_SECURE=0`.
-- Pasang/cek SPF dan DKIM domain di panel DNS hosting supaya email tidak masuk spam.
-- Uji: `npm run email:uji -- alamat@penerima.com`.
+Sertifikat `*.emailarray.com` valid; login `LOGIN/PLAIN` setelah STARTTLS (587) atau port 465 dengan `SMTP_SECURE=1`. Sandi dimasukkan dengan `npm run email:sandi` (menulis ke `anggota/.env.local` dan `frontend/.env.local` sekaligus lalu menguji login). Uji kirim: `npm run email:uji -- alamat@penerima.com`.
+
+### Wajib: SPF (dan sebaiknya DKIM) di DNS domain
+
+Tanpa itu, Gmail **menolak** email dari `@kopkarmjsmattel.com` (`550 5.7.26 ... sender is unauthenticated ... SPF [kopkarmjsmattel.com] with ip: [65.39.216.67] = did not pass`), walau SMTP menerimanya. Domain belum punya record SPF sama sekali. DNS domain dikelola di Jagoan Hosting (ns1/ns2.jagoanhosting.com): menu Domain, kopkarmjsmattel.com, kelola DNS, tambah record:
+
+| Tipe | Host | Isi |
+| --- | --- | --- |
+| TXT | `@` | `v=spf1 ip4:65.39.216.1/25 ip4:69.28.212.192/27 ip4:69.90.179.1/28 ip4:69.172.250.0/24 ip4:66.179.84.0/24 ~all` |
+
+(Rentang IP itu dipakai SPF `jagoanhosting.com` sendiri untuk server emailarray; cocokkan dengan petunjuk di halaman "Informasi" produk Mail Business bila ada versi yang lebih baru. SPF lulus saja sudah cukup bagi Gmail; DKIM tambahan, bila panel Mail Business menyediakan kunci DKIM, meningkatkan keterkiraman.) Perubahan DNS bisa butuh beberapa menit sampai sejam. Uji ulang dengan `npm run email:uji` ke alamat Gmail; folder spam juga diperiksa.
+
+Catatan: MX domain saat ini menunjuk ke `kopkarmjsmattel.com` (server web), bukan emailarray. Itu hanya memengaruhi **menerima** email ke `support@...` (mis. balasan); mengirim tidak terpengaruh. Untuk menerima, pasang MX sesuai petunjuk produk Mail Business.
+
+- Batas kirim: atur `EMAIL_MAKS_PER_JAM` (dan `EMAIL_MAKS_PER_HARI`) di bawah batas paket (tanyakan ke Jagoan Hosting). Email biasa (siaran, notifikasi) ditahan sampai kuota ada; kode verifikasi dan reset password tidak dibatasi dan didahulukan.
 
 ## 1. Gmail (alternatif)
 
