@@ -76,7 +76,8 @@ export function Pengantar() {
                 ))}
             </div>
 
-            <div className="px-5">
+            {/* Menempel di dasar layar supaya Mulai/Lanjut tetap terlihat di layar pendek. */}
+            <div className="sticky bottom-0 bg-latar px-5 pt-3">
                 <div className="mb-5 flex justify-center gap-1.5">
                     {HALAMAN.map((h, i) => (
                         <button key={h.judul} type="button" onClick={() => ke(i)} aria-label={`Halaman ${i + 1}`} aria-current={i === aktif} className="grid size-5 place-items-center">
