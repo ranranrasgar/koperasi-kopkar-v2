@@ -20,7 +20,7 @@ Prasyarat: Node 20+, dependensi proyek (`npm install`), PostgreSQL 14 atau lebih
 
 > **Driver MySQL**: `migrate.mjs` dan `reconcile.mjs` memakai paket `mariadb`, yang tidak tercantum di `package.json`. Bila muncul `Cannot find package 'mariadb'`, pasang tanpa mengubah `package.json`: `npm install --no-save mariadb`.
 
-> **Menimpa database yang sudah dipakai aplikasi baru**: `--reset` menghapus tabel hasil migrasi, termasuk operator dan grup yang dibuat aplikasi baru (mis. grup `superadmin` dan operator berpassword). Sebelum menjalankan ulang, ekspor baris `opr` (beserta `password_hash`) dan `opr_grup` yang tidak ada di MySQL, lalu buat ulang setelah migrasi. Tabel web (`anggota-web.sql`, `pengaturan-web.sql`, panduan) tidak terhapus, tetapi jalankan ulang `npm run anggota:pasang`, `pengaturan:pasang`, dan `panduan:pasang` untuk memastikan kolom dan izin terpasang.
+> **Menimpa database yang sudah dipakai aplikasi baru**: `--reset` menghapus tabel hasil migrasi, termasuk operator dan grup yang dibuat aplikasi baru (mis. grup `superadmin` dan operator berpassword). Sebelum menjalankan ulang, ekspor baris `opr` (beserta `password_hash`) dan `opr_grup` yang tidak ada di MySQL, lalu buat ulang setelah migrasi. Tabel web (`anggota-web.sql`, `pengaturan-web.sql`, panduan) tidak terhapus, tetapi **foreign key-nya ke tabel yang dibuat ulang ikut hilang** (DROP ... CASCADE); `npm run anggota:pasang` memasangnya lagi (cek dulu dengan `npm run anggota:pasang -- --periksa`). Jalankan ulang `npm run anggota:pasang`, `pengaturan:pasang`, dan `panduan:pasang` untuk memastikan kolom dan izin terpasang.
 
 ```bash
 createdb kopkar
