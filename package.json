@@ -11,7 +11,8 @@
         "uji:reset": "node database/postgres/uji-reset.mjs",
         "panduan:pasang": "node database/postgres/panduan-pasang.mjs",
         "pengaturan:pasang": "node database/postgres/pengaturan-pasang.mjs",
-        "anggota:pasang": "node database/postgres/anggota-pasang.mjs",
+        "email:uji": "node backend/scripts/email-uji.mjs",
+    "anggota:pasang": "node database/postgres/anggota-pasang.mjs",
         "test": "npm run test -w backend && npm run test -w mobile-api"
     }
 }
