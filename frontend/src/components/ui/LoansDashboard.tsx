@@ -230,7 +230,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                             <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-blue-500/40" />Jatuh tempo hari ini</span>
                             <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-red-500/40" />Sudah jatuh tempo (tunggak)</span>
                             <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-surface-variant" />Pinjaman lunas</span>
-                            <span>* Lunas menurut cicilan, tetapi saldo buku pinjaman masih tersisa (diselesaikan di luar angsuran, mis. top-up atau pelunasan lewat potongan)</span>
+                            <span>* Lunas menurut cicilan, tetapi saldo buku pinjaman masih tersisa (diselesaikan di luar angsuran koperasi: top-up atau pelunasan langsung ke bank, dibereskan lewat jurnal balik)</span>
                         </div>
                         </>
                     )}
