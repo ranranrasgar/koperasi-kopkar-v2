@@ -43,26 +43,22 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
             const r = await dataCetakAction(pathname, { ...Object.fromEntries(searchParams.entries()), endDate })
             if ("error" in r) { alert(r.error); return }
             const items = (r.items as unknown as Row[]).filter((x) => !hideZero || x.Saldo_Total !== 0)
+            // Hanya saldo per jenis simpanan (tanpa setoran dan pengambilan) supaya muat selembar kertas lanskap.
             const kolom: KolomTabel[] = [
                 { label: "Kode", mono: true }, { label: "KPK", mono: true }, { label: "Nama" }, { label: "Staff", tengah: true },
-                ...JENIS.flatMap((j) => [{ label: "Setoran", kanan: true }, { label: "Ambil", kanan: true }, { label: "Saldo", kanan: true }] as KolomTabel[]),
-                { label: "Grand Total", kanan: true },
+                ...JENIS.map((j) => ({ label: j, kanan: true }) as KolomTabel),
+                { label: "Total", kanan: true },
             ]
             const baris = items.map((x) => [
                 x.kode_agt, x.nik ?? "-", x.nama, x.status_staff ?? "-",
-                ...JENIS.flatMap((j) => [formatAngka(x[`Setoran_${j}`]), formatAngka(x[`Ambil_${j}`]), formatAngka(x[`Saldo_${j}`])]), formatAngka(x.Saldo_Total),
+                ...JENIS.map((j) => formatAngka(x[`Saldo_${j}`])), formatAngka(x.Saldo_Total),
             ])
-            const g = r.ekstra as Totals | undefined
             const jumlah = (k: keyof Totals) => formatAngka(items.reduce((t, x) => t + (Number(x[k]) || 0), 0))
-            const total = ["", "", `Total (${items.length.toLocaleString("id-ID")} anggota)`, "",
-                ...JENIS.flatMap((j) => [jumlah(`Setoran_${j}`), jumlah(`Ambil_${j}`), jumlah(`Saldo_${j}`)]), jumlah("Saldo_Total")]
-            void g
-            const subjudul = [`Saldo s/d ${formatTanggal(endDate, "long")}`, searchParams.get("search") ? `Pencarian: ${searchParams.get("search")}` : "", hideZero ? "Saldo nol disembunyikan" : ""].filter(Boolean).join(" · ")
+            const total = ["", "", `Total (${items.length.toLocaleString("id-ID")} anggota)`, "", ...JENIS.map((j) => jumlah(`Saldo_${j}`)), jumlah("Saldo_Total")]
+            const subjudul = [`Saldo simpanan s/d ${formatTanggal(endDate, "long")}`, searchParams.get("search") ? `Pencarian: ${searchParams.get("search")}` : "", hideZero ? "Saldo nol disembunyikan" : ""].filter(Boolean).join(" · ")
             const galat = await bukaCetak({
-                judul: "Rekap Simpanan Anggota", subjudul,
-                isi: tabelHtml(kolom, baris, items.length < r.total && !hideZero ? r.total : items.length, {
-                    kelompok: [{ label: "Anggota", lebar: 4 }, ...JENIS.map((j) => ({ label: `Simpanan ${j}`, lebar: 3 })), { label: "Total", lebar: 1 }], total,
-                }),
+                judul: "Rekap Simpanan Anggota", subjudul, orientasi: "lanskap",
+                isi: tabelHtml(kolom, baris, items.length < r.total && !hideZero ? r.total : items.length, { total }),
             })
             if (galat) alert(galat)
         } finally {
