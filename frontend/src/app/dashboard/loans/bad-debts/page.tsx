@@ -76,7 +76,9 @@ export default async function KreditMacetPage(props: PageProps<"/dashboard/loans
                     <tbody>
                         {data.map((t) => (
                             <tr key={`${t.jenis}-${t.no_pinjaman}`} className="border-t">
-                                <td className="px-3 py-2 font-mono text-xs">{t.no_pinjaman}</td>
+                                <td className="px-3 py-2 font-mono text-xs">{t.jenis === "tunai"
+                                    ? <Link href={`/dashboard/loans/${encodeURIComponent(t.no_pinjaman)}`} className="text-primary hover:underline" title="Lihat jadwal angsuran dan riwayat pembayaran">{t.no_pinjaman}</Link>
+                                    : t.no_pinjaman}</td>
                                 <td className="px-3 py-2">
                                     <div className="font-medium">{t.nama}{!t.aktif && <span className="ml-1 text-xs text-muted-foreground">(non-aktif)</span>}</div>
                                     <div className="text-[11px] text-muted-foreground font-mono">{t.kode_agt} | {t.nik ?? "-"}</div>

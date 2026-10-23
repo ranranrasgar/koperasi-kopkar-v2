@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 import type { PageData } from "@/config/modules"
 import { formatRupiah, formatTanggal, formatAngka } from "@/lib/format"
+import Link from "next/link"
 import { Paginasi } from "@/components/ui/Paginasi"
 import { PilihKolom } from "@/components/ui/PilihKolom"
 import { useKolomTersimpan } from "@/lib/kolom-tersimpan"
@@ -246,7 +247,10 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                                                 <td className="p-3 align-top text-center text-sm text-on-surface-variant">{(page - 1) * pageSize + idx + 1}</td>
                                                 {kolomTampil.map((k) => (
                                                     <td key={k.judul} className={`px-3 py-2 align-top text-sm ${k.kanan ? "text-right" : k.tengah ? "text-center" : ""} ${k.mono ? "font-mono" : ""} ${k.tebal ? "font-bold" : ""} ${k.warna ?? ""}`}>
-                                                        {k.judul === "Nama Anggota"
+                                                        {k.judul === "No.Pinjaman"
+                                                            ? <Link href={`/dashboard/loans/${encodeURIComponent(row.no_pinjaman)}`} title="Lihat jadwal angsuran dan riwayat pembayaran"
+                                                                className="text-primary underline-offset-2 hover:underline">{row.no_pinjaman}</Link>
+                                                            : k.judul === "Nama Anggota"
                                                             ? <>{row.nama}<div className="text-[11px] font-normal text-on-surface-variant mt-0.5 font-mono">{row.nik ?? "-"} | {row.kode_agt}</div></>
                                                             : k.teks(row)}
                                                     </td>
