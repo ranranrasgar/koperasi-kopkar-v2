@@ -147,53 +147,53 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                 </div>
             </div>
 
-            {/* Filter: satu baris, rata kiri, seperti halaman daftar lainnya */}
-            <div className="mb-lg rounded-lg border border-outline-variant bg-surface-container-lowest p-3 print:hidden">
-                <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2">
-                    <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={searchBy} onChange={(e) => setSearchBy(Number(e.target.value))} aria-label="Cari berdasarkan">
-                        {searchByOptions.map((opt, idx) => (
-                            <option key={idx} value={idx}>{opt}</option>
-                        ))}
-                    </select>
-                    <div className="relative w-full md:w-[240px]">
-                        <span className="material-symbols-outlined pointer-events-none absolute left-2.5 top-2 text-[18px] text-on-surface-variant">search</span>
-                        <input type="search" className="w-full pl-9 pr-3 h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Kata kunci..." value={keyword} onChange={(e) => setKeyword(e.target.value)} />
-                    </div>
-                    <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={selectedGroupPinjaman} aria-label="Grup pinjaman"
-                        onChange={(e) => { setSelectedGroupPinjaman(e.target.value); setSelectedKredit("All") }}>
-                        <option value="All">Semua Grup</option>
-                        <option value="KOPERASI">KOPERASI</option>
-                        <option value="BANK / PIHAK LAIN">BANK / PIHAK LAIN</option>
-                        <option value="KPR">KPR</option>
-                    </select>
-                    <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={selectedKredit} onChange={(e) => setSelectedKredit(e.target.value)} aria-label="Jenis kredit">
-                        <option value="All">Semua Jenis</option>
-                        {jenisGrup.map((jk) => (
-                            <option key={jk.kode_kredit} value={jk.kode_kredit}>{jk.nama_kredit}</option>
-                        ))}
-                    </select>
-                    <div className="flex h-9 items-center gap-3 rounded-md border border-outline-variant bg-background px-3" role="radiogroup" aria-label="Status pinjaman">
-                        {statusLunasOptions.map((opt, idx) => (
-                            <label key={idx} className="flex cursor-pointer items-center gap-1.5 text-sm text-on-surface">
-                                <input type="radio" name="statusLunas" checked={statusLunas === idx} onChange={() => setStatusLunas(idx)} />
-                                {opt}
-                            </label>
-                        ))}
-                    </div>
-                    <label className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-outline-variant bg-background px-3 text-sm text-on-surface">
-                        <input type="checkbox" checked={isAktif === "Y"} onChange={(e) => setIsAktif(e.target.checked ? "Y" : "S")} />
-                        Anggota aktif
-                    </label>
-                    <button type="submit" disabled={isLoading}
-                        className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-70">
-                        <span className={`material-symbols-outlined text-[18px] ${isLoading ? "animate-spin" : ""}`}>{isLoading ? "refresh" : "filter_alt"}</span>
-                        Terapkan
-                    </button>
-                </form>
-            </div>
 
             {/* Data Table */}
             <div className="bg-surface rounded-xl border border-outline-variant shadow-xs overflow-hidden print:hidden">
+                {/* Filter: satu baris, rata kiri, di dalam kartu tabel seperti halaman daftar lainnya */}
+                <div className="border-b border-outline-variant bg-surface-container-lowest p-3 print:hidden">
+                    <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2">
+                        <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={searchBy} onChange={(e) => setSearchBy(Number(e.target.value))} aria-label="Cari berdasarkan">
+                            {searchByOptions.map((opt, idx) => (
+                                <option key={idx} value={idx}>{opt}</option>
+                            ))}
+                        </select>
+                        <div className="relative w-full md:w-[240px]">
+                            <span className="material-symbols-outlined pointer-events-none absolute left-2.5 top-2 text-[18px] text-on-surface-variant">search</span>
+                            <input type="search" className="w-full pl-9 pr-3 h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Kata kunci..." value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+                        </div>
+                        <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={selectedGroupPinjaman} aria-label="Grup pinjaman"
+                            onChange={(e) => { setSelectedGroupPinjaman(e.target.value); setSelectedKredit("All") }}>
+                            <option value="All">Semua Grup</option>
+                            <option value="KOPERASI">KOPERASI</option>
+                            <option value="BANK / PIHAK LAIN">BANK / PIHAK LAIN</option>
+                            <option value="KPR">KPR</option>
+                        </select>
+                        <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={selectedKredit} onChange={(e) => setSelectedKredit(e.target.value)} aria-label="Jenis kredit">
+                            <option value="All">Semua Jenis</option>
+                            {jenisGrup.map((jk) => (
+                                <option key={jk.kode_kredit} value={jk.kode_kredit}>{jk.nama_kredit}</option>
+                            ))}
+                        </select>
+                        <div className="flex h-9 items-center gap-3 rounded-md border border-outline-variant bg-background px-3" role="radiogroup" aria-label="Status pinjaman">
+                            {statusLunasOptions.map((opt, idx) => (
+                                <label key={idx} className="flex cursor-pointer items-center gap-1.5 text-sm text-on-surface">
+                                    <input type="radio" name="statusLunas" checked={statusLunas === idx} onChange={() => setStatusLunas(idx)} />
+                                    {opt}
+                                </label>
+                            ))}
+                        </div>
+                        <label className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-outline-variant bg-background px-3 text-sm text-on-surface">
+                            <input type="checkbox" checked={isAktif === "Y"} onChange={(e) => setIsAktif(e.target.checked ? "Y" : "S")} />
+                            Anggota aktif
+                        </label>
+                        <button type="submit" disabled={isLoading}
+                            className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-70">
+                            <span className={`material-symbols-outlined text-[18px] ${isLoading ? "animate-spin" : ""}`}>{isLoading ? "refresh" : "filter_alt"}</span>
+                            Terapkan
+                        </button>
+                    </form>
+                </div>
                 {/* Halaman (atas) */}
                 {!isLoading && <Paginasi page={page} totalPages={totalPages} pageSize={pageSize} total={totalRecords} onHalaman={(p) => go(p)} onBaris={(v) => go(1, v)}
                     className="border-b border-outline-variant bg-surface-container-lowest"
