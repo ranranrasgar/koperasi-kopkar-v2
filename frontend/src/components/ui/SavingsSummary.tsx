@@ -85,7 +85,7 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
     }, Object.fromEntries(Object.keys(grandTotal).map((k) => [k, 0])) as Totals)
 
     const SortableHeader = ({ column, label, align = "left" }: { column: string; label: string; align?: "left" | "right" }) => (
-        <th className={`border p-2 font-semibold ${align === "right" ? "text-right" : "text-left"}`}>
+        <th className={`px-3 py-2 text-xs font-semibold ${align === "right" ? "text-right" : "text-left"} ${label === "SETOR" || label === "JUMLAH SALDO" ? "border-l" : ""}`}>
             <div
                 className={`flex items-center gap-1 cursor-pointer hover:text-foreground transition-colors select-none ${align === "right" ? "justify-end" : "justify-start"}`}
                 onClick={() => handleSort(column)}
@@ -97,67 +97,61 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
     )
 
     const TotalRow = ({ label, t }: { label: string; t: Totals }) => (
-        <tr className="bg-muted font-semibold">
-            <td className="border p-3 text-center"></td>
-            <td colSpan={3} className="border p-3 text-right">{label}</td>
+        <tr className="bg-muted font-semibold border-t">
+            <td className="px-3 py-2 text-center"></td>
+            <td colSpan={3} className="px-3 py-2 text-right">{label}</td>
             {JENIS.map((j) => (
                 <React.Fragment key={j}>
-                    <td className="border p-2 text-right">{formatAngka(t[`Setoran_${j}`])}</td>
-                    <td className="border p-2 text-right">{formatAngka(t[`Ambil_${j}`])}</td>
-                    <td className="border p-2 text-right bg-muted/50">{formatAngka(t[`Saldo_${j}`])}</td>
+                    <td className="px-3 py-2 text-right border-l">{formatAngka(t[`Setoran_${j}`])}</td>
+                    <td className="px-3 py-2 text-right">{formatAngka(t[`Ambil_${j}`])}</td>
+                    <td className="px-3 py-2 text-right bg-muted/50">{formatAngka(t[`Saldo_${j}`])}</td>
                 </React.Fragment>
             ))}
-            <td className="border p-2 text-right bg-muted/80">{formatAngka(t.Saldo_Total)}</td>
+            <td className="px-3 py-2 text-right bg-muted/80 border-l">{formatAngka(t.Saldo_Total)}</td>
         </tr>
     )
 
     return (
-        <div className="max-w-full overflow-x-hidden space-y-6">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold tracking-tight">Rekap Simpanan Anggota</h1>
+        <div className="max-w-full space-y-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-2xl font-semibold tracking-tight text-foreground">Rekap Simpanan Anggota</h1>
                     <p className="text-sm text-muted-foreground">Setoran, pengambilan, dan saldo per jenis simpanan untuk anggota aktif.</p>
                 </div>
-                <div className="flex gap-2 print:hidden">
-                    <Button variant="outline" onClick={cetak} disabled={mencetak}>
-                        {mencetak ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Printer className="mr-2 h-4 w-4" />} Cetak
+                <div className="flex items-center gap-2 shrink-0 print:hidden">
+                    <Button onClick={cetak} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={mencetak}>
+                        {mencetak ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Printer className="mr-1.5 h-4 w-4" />} Cetak
                     </Button>
                 </div>
             </div>
 
-            <Card className="rounded-md border shadow-sm flex flex-col py-0 gap-0 overflow-clip">
-                <div className="p-4 border-b bg-muted/10 print:hidden">
-                    <form className="flex flex-wrap gap-4 items-end" onSubmit={(e) => { e.preventDefault(); update({ search }) }}>
-                        <div className="space-y-1">
-                            <Label htmlFor="endDate">S/d Tanggal</Label>
-                            <Input id="endDate" type="date" value={endDate} onChange={(e) => update({ endDate: e.target.value })} className="w-[160px]" />
-                        </div>
-                        <div className="space-y-1 flex-1 min-w-[200px]">
-                            <Label htmlFor="cari">No. KPK/Nama</Label>
-                            <div className="relative">
-                                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                                <Input id="cari" placeholder="Cari..." value={search} onChange={(e) => setSearch(e.target.value)} className="pl-8" />
-                            </div>
-                        </div>
-                        <div className="space-y-1">
-                            <Label htmlFor="staff">Status Staff</Label>
-                            <select id="staff" className="h-9 w-[150px] border border-input rounded-md px-3 text-sm bg-background"
-                                value={searchParams.get("status_staff") ?? "ALL"} onChange={(e) => update({ status_staff: e.target.value === "ALL" ? null : e.target.value })}>
-                                <option value="ALL">Semua</option>
-                                <option value="Staff">Staff</option>
-                                <option value="No Staff">Non Staff</option>
-                            </select>
-                        </div>
-                        <label className="flex items-center space-x-2 h-9 border rounded-md px-3 border-input bg-background text-sm cursor-pointer">
-                            <input type="checkbox" checked={hideZero} onChange={(e) => update({ hideZero: e.target.checked ? null : "0" })} className="w-4 h-4" />
-                            <span>Sembunyikan Saldo 0</span>
-                        </label>
-                        <Button type="submit" disabled={loading}>
-                            {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : null}
-                            Cari
-                        </Button>
-                    </form>
-                </div>
+            <Card className="bg-background border border-outline-variant shadow-sm rounded-lg overflow-clip flex flex-col py-0 gap-0">
+                {/* Toolbar satu baris, rata kiri, sama dengan tabel daftar lainnya */}
+                <form className="p-3 border-b flex flex-wrap items-center gap-2 bg-background print:hidden" onSubmit={(e) => { e.preventDefault(); update({ search }) }}>
+                    <div className="relative w-full md:w-[260px]">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <input id="cari" type="search" aria-label="Cari KPK atau nama" placeholder="KPK atau nama" value={search} onChange={(e) => setSearch(e.target.value)}
+                            className="w-full pl-9 pr-3 h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    </div>
+                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground" htmlFor="endDate">
+                        S/d tanggal
+                        <input id="endDate" type="date" value={endDate} onChange={(e) => update({ endDate: e.target.value })} className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500" />
+                    </label>
+                    <select id="staff" aria-label="Status staff" className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-foreground focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        value={searchParams.get("status_staff") ?? "ALL"} onChange={(e) => update({ status_staff: e.target.value === "ALL" ? null : e.target.value })}>
+                        <option value="ALL">Semua Staff</option>
+                        <option value="Staff">Staff</option>
+                        <option value="No Staff">Non Staff</option>
+                    </select>
+                    <label className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-outline-variant bg-background px-3 text-sm">
+                        <input type="checkbox" checked={hideZero} onChange={(e) => update({ hideZero: e.target.checked ? null : "0" })} />
+                        Sembunyikan saldo 0
+                    </label>
+                    <Button type="submit" size="sm" className="h-9" disabled={loading}>
+                        {loading ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Search className="mr-1.5 h-4 w-4" />}
+                        Cari
+                    </Button>
+                </form>
 
                 <div className="overflow-x-auto relative">
                     {loading && (
@@ -168,15 +162,15 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
                     <table className="w-full text-sm">
                         <thead className="bg-muted/70 text-muted-foreground sticky top-0 z-10">
                             <tr>
-                                <th rowSpan={2} className="border p-2 text-center font-semibold w-12">No.</th>
-                                <th colSpan={3} className="border p-2 text-center border-b-2 font-semibold">Anggota</th>
-                                {JENIS.map((j) => <th key={j} colSpan={3} className="border p-2 text-center border-b-2 font-semibold">Simpanan {j}</th>)}
-                                <th className="border p-2 text-center border-b-2 font-semibold">Grand Total</th>
+                                <th rowSpan={2} className="px-3 py-2 text-center text-xs font-semibold w-12">No.</th>
+                                <th colSpan={3} className="px-3 py-2 text-center text-xs border-b font-semibold">Anggota</th>
+                                {JENIS.map((j) => <th key={j} colSpan={3} className="px-3 py-2 text-center text-xs border-b border-l font-semibold">Simpanan {j}</th>)}
+                                <th className="px-3 py-2 text-center text-xs border-b border-l font-semibold">Grand Total</th>
                             </tr>
                             <tr className="text-sm uppercase bg-muted/90 text-zinc-600 dark:text-zinc-400">
                                 <SortableHeader column="KPK" label="KPK" />
                                 <SortableHeader column="NAMA" label="NAMA" />
-                                <th className="border p-2 text-left font-semibold">STAFF</th>
+                                <th className="px-3 py-2 text-left text-xs font-semibold">STAFF</th>
                                 {JENIS.map((j) => (
                                     <React.Fragment key={j}>
                                         <SortableHeader column={`Setoran_${j}`} label="SETOR" align="right" />
@@ -196,28 +190,28 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
                                 </tr>
                             ) : data.items.map((row, idx) => (
                                 <tr key={row.kode_agt} className="hover:bg-muted/30 border-b bg-background transition-colors">
-                                    <td className="border-x p-2 text-center text-muted-foreground">{(data.page - 1) * data.pageSize + idx + 1}</td>
-                                    <td className="border-x p-2">{row.nik}</td>
-                                    <td className="border-x p-2">
+                                    <td className="px-3 py-2 text-center text-muted-foreground">{(data.page - 1) * data.pageSize + idx + 1}</td>
+                                    <td className="px-3 py-2">{row.nik}</td>
+                                    <td className="px-3 py-2">
                                         <div className="font-medium">{row.nama}</div>
                                         <div className="text-[11px] text-muted-foreground">{row.kode_agt}</div>
                                     </td>
-                                    <td className="border-x p-2 text-xs">{row.status_staff}</td>
+                                    <td className="px-3 py-2 text-xs">{row.status_staff}</td>
                                     {JENIS.map((j) => (
                                         <React.Fragment key={j}>
-                                            <td className="border-x p-2 text-right">{formatAngka(row[`Setoran_${j}`])}</td>
-                                            <td className="border-x p-2 text-right">{formatAngka(row[`Ambil_${j}`])}</td>
-                                            <td className="border-x p-2 text-right bg-muted/10">{formatAngka(row[`Saldo_${j}`])}</td>
+                                            <td className="px-3 py-2 text-right border-l">{formatAngka(row[`Setoran_${j}`])}</td>
+                                            <td className="px-3 py-2 text-right">{formatAngka(row[`Ambil_${j}`])}</td>
+                                            <td className="px-3 py-2 text-right bg-muted/10">{formatAngka(row[`Saldo_${j}`])}</td>
                                         </React.Fragment>
                                     ))}
-                                    <td className="border-x p-2 text-right font-semibold bg-muted/20">{formatAngka(row.Saldo_Total)}</td>
+                                    <td className="px-3 py-2 text-right font-semibold bg-muted/20 border-l">{formatAngka(row.Saldo_Total)}</td>
                                 </tr>
                             ))}
                         </tbody>
                         {data.items.length > 0 && (
-                            <tfoot className="bg-muted/80 font-bold">
-                                <TotalRow label="SUBTOTAL HALAMAN INI:" t={pageTotals} />
-                                <TotalRow label="TOTAL SEMUA DATA:" t={grandTotal} />
+                            <tfoot className="bg-muted/80 font-bold border-t-2">
+                                <TotalRow label="Subtotal halaman ini" t={pageTotals} />
+                                <TotalRow label="Total seluruh data" t={grandTotal} />
                             </tfoot>
                         )}
                     </table>
