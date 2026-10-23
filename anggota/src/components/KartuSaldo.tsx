@@ -1,21 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
 import { Eye, EyeOff } from "lucide-react"
-
-const KUNCI = "kopkar-sembunyi-saldo"
+import { useSembunyiSaldo } from "./useSembunyiSaldo"
 
 /** Kartu utama beranda. Nominal bisa disembunyikan (mis. saat HP dilihat orang lain); pilihan diingat di perangkat ini. */
 export function KartuSaldo({ simpanan, pinjaman, plafon }: { simpanan: string; pinjaman: string; plafon: string }) {
-    const [sembunyi, setSembunyi] = useState(false)
-    useEffect(() => {
-        try { setSembunyi(localStorage.getItem(KUNCI) === "1") } catch { /* penyimpanan diblokir: tampilkan */ }
-    }, [])
-    const ubah = () => {
-        setSembunyi(!sembunyi)
-        try { localStorage.setItem(KUNCI, sembunyi ? "0" : "1") } catch { /* abaikan */ }
-    }
-    const tampil = (v: string) => (sembunyi ? "Rp ••••••" : v)
+    const { sembunyi, ubah, tampil } = useSembunyiSaldo()
 
     return (
         <section className="hero rounded-[var(--radius-kartu)] p-5">

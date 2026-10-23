@@ -29,3 +29,16 @@ export function bulanIni() {
 export function hariIni() {
     return new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jakarta" }).format(new Date())
 }
+
+/** Nominal ringkas untuk label grafik: "29,27jt", "1,2M", "850rb". */
+export function ringkasRupiah(n: number) {
+    const v = Math.abs(n)
+    const pecah = (x: number) => x.toLocaleString("id-ID", { maximumFractionDigits: 2 })
+    const teks = v >= 1e9 ? `${pecah(v / 1e9)}M` : v >= 1e6 ? `${pecah(v / 1e6)}jt` : v >= 1e3 ? `${pecah(v / 1e3)}rb` : String(Math.round(v))
+    return `${n < 0 ? "-" : ""}${teks}`
+}
+
+/** Selisih hari (b - a) untuk dua tanggal 'YYYY-MM-DD'. */
+export function selisihHari(a: string, b: string) {
+    return Math.round((Date.parse(`${b.slice(0, 10)}T00:00:00Z`) - Date.parse(`${a.slice(0, 10)}T00:00:00Z`)) / 86400000)
+}

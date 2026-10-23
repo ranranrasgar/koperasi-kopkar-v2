@@ -7,7 +7,7 @@
 @theme {
     --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
 
-    --color-latar: oklch(0.975 0.004 145);
+    --color-latar: oklch(1 0 0);
     --color-permukaan: oklch(1 0 0);
     --color-garis: oklch(0.91 0.006 145);
     --color-teks: oklch(0.22 0.015 160);

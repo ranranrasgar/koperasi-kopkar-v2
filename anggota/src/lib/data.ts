@@ -50,9 +50,33 @@ export async function mutasiSimpanan(anggotaId: number, kode: string, batas: num
     return { nama: jenis.nama, baris, total: baris[0]?.total ?? 0, setoran: jml.setoran, penarikan: jml.penarikan }
 }
 
+export interface TitikTren { bulan: string; saldo: number }
+
+/** Saldo semua simpanan pada akhir tiap bulan, untuk grafik tren (bulan berjalan = saldo saat ini). */
+export async function trenSimpanan(anggotaId: number, jumlahBulan = 6) {
+    return query<TitikTren>(
+        `SELECT to_char(m, 'YYYY-MM') bulan,
+                COALESCE((SELECT SUM(rp_setoran - rp_pengambilan) FROM simpanan
+                           WHERE anggota_id = $1 AND tgl_transaksi < (m + interval '1 month')::date AND tgl_transaksi <= current_date), 0) saldo
+           FROM generate_series(date_trunc('month', current_date) - ($2::int - 1) * interval '1 month', date_trunc('month', current_date), interval '1 month') m
+          ORDER BY 1`, [anggotaId, jumlahBulan])
+}
+
+export interface MutasiTerakhir { id: number; tgl_transaksi: string; no_bukti: string; jenis: string; kode: string; rp_setoran: number; rp_pengambilan: number }
+
+/** Mutasi simpanan terbaru lintas jenis (atau satu jenis bila kode diberikan). */
+export async function mutasiSimpananTerakhir(anggotaId: number, kode: string | null, batas: number) {
+    return query<MutasiTerakhir>(
+        `SELECT s.id, s.tgl_transaksi, s.no_bukti, js.nama_simpanan jenis, js.kode_simpanan kode, s.rp_setoran, s.rp_pengambilan
+           FROM simpanan s JOIN jenis_simpanan js ON js.id = s.jenis_simpanan_id
+          WHERE s.anggota_id = $1 AND ($2::text IS NULL OR js.kode_simpanan = $2)
+          ORDER BY s.tgl_transaksi DESC, s.urut DESC, s.id DESC LIMIT $3`, [anggotaId, kode, batas])
+}
+
 export interface PinjamanAktif {
     jenis: "tunai" | "kpr"; id: number; no_pinjaman: string; tgl_pinjaman: string; nama_kredit: string | null; grup: string
     pokok: number; lama_angsuran: number; jml_cicilan: number; sisa: number; angsuran: number | null; jatuh_tempo: string | null
+    persen_bunga: number | null; selesai: string | null
 }
 
 /** Pinjaman tunai dan KPR yang masih bersisa, dengan angsuran berikutnya. */
@@ -60,7 +84,8 @@ export async function pinjamanAktif(anggotaId: number) {
     return query<PinjamanAktif>(
         `SELECT 'tunai' jenis, p.id, p.no_pinjaman, p.tgl_pinjaman, jk.nama_kredit, COALESCE(jk.group_pinjaman, 'KOPERASI') grup,
                 p.rp_pinjaman_pokok pokok, p.lama_angsuran, p.jml_cicilan, r.sisa,
-                t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi angsuran, t.tanggal_angsuran jatuh_tempo
+                t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi angsuran, t.tanggal_angsuran jatuh_tempo,
+                jk.bunga_kredit persen_bunga, (SELECT max(x.tanggal_angsuran) FROM pinjaman_tunai_rincian_tagih x WHERE x.pinjaman_tunai_id = p.id) selesai
            FROM pinjaman_tunai p
            LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
            JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) sisa FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = p.id) r ON r.sisa > ${SISA_LUNAS} AND p.jml_cicilan < p.lama_angsuran
@@ -68,7 +93,8 @@ export async function pinjamanAktif(anggotaId: number) {
           WHERE p.anggota_id = $1
          UNION ALL
          SELECT 'kpr', k.id, k.no_pinjaman, k.tgl_pinjaman, jk.nama_kredit, 'KPR', k.rp_pinjaman_pokok, k.lama_angsuran, k.jml_cicilan, r.sisa,
-                LEAST(k.rp_angsuran_per_bulan, r.sisa), t.tanggal_angsuran
+                LEAST(k.rp_angsuran_per_bulan, r.sisa), t.tanggal_angsuran,
+                jk.bunga_kredit, (SELECT max(x.tanggal_angsuran) FROM kpr_rincian_tagih x WHERE x.kpr_id = k.id)
            FROM kpr k
            LEFT JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id
            JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) sisa FROM kpr_rincian WHERE kpr_id = k.id) r ON r.sisa > ${SISA_LUNAS} AND k.jml_cicilan < k.lama_angsuran

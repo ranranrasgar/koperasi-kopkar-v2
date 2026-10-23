@@ -28,14 +28,14 @@ export const viewport: Viewport = {
     viewportFit: "cover",
     themeColor: [
         // Harus sama dengan --color-latar di globals.css (oklch dikonversi ke hex) supaya bilah status menyatu.
-        { media: "(prefers-color-scheme: light)", color: "#f5f7f5" },
+        { media: "(prefers-color-scheme: light)", color: "#ffffff" },
         { media: "(prefers-color-scheme: dark)", color: "#0c110e" },
     ],
 }
 
 // Dijalankan sebelum halaman tampil: pasang data-tema dari pilihan pengguna dan samakan warna bilah status.
 // window.kopkarTema dipakai pilihan tema di Akun. Warna harus sama dengan viewport.themeColor di atas.
-const SKRIP_TEMA = `(function(){var W={terang:"#f5f7f5",gelap:"#0c110e"};
+const SKRIP_TEMA = `(function(){var W={terang:"#ffffff",gelap:"#0c110e"};
 function pasang(t){var h=document.documentElement;
 if(t==="terang"||t==="gelap")h.dataset.tema=t;else delete h.dataset.tema;
 document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){
