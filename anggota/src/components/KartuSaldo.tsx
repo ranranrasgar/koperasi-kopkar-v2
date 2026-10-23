@@ -18,22 +18,22 @@ export function KartuSaldo({ simpanan, pinjaman, plafon }: { simpanan: string; p
     const tampil = (v: string) => (sembunyi ? "Rp ••••••" : v)
 
     return (
-        <section className="rounded-[var(--radius-kartu)] bg-utama p-5 text-pada-utama">
+        <section className="hero rounded-[var(--radius-kartu)] p-5">
             <div className="flex items-center justify-between">
-                <p className="text-sm font-medium opacity-85">Total simpanan</p>
-                <button type="button" onClick={ubah} className="-m-2 grid size-10 place-items-center rounded-full opacity-85 hover:opacity-100"
+                <p className="text-xs font-semibold uppercase tracking-[0.12em] opacity-80">Total simpanan</p>
+                <button type="button" onClick={ubah} className="-m-2 grid size-10 place-items-center rounded-full opacity-80 hover:opacity-100"
                     aria-label={sembunyi ? "Tampilkan nominal" : "Sembunyikan nominal"} aria-pressed={sembunyi}>
                     {sembunyi ? <EyeOff size={19} strokeWidth={1.75} /> : <Eye size={19} strokeWidth={1.75} />}
                 </button>
             </div>
-            <p className="angka mt-1 text-[2rem] font-bold leading-tight tracking-tight">{tampil(simpanan)}</p>
-            <p className="mt-0.5 text-xs opacity-75">Tidak termasuk simpanan pokok</p>
-            <dl className="mt-5 grid grid-cols-2 gap-4 border-t border-pada-utama/20 pt-4">
-                <div>
+            <p className="angka mt-2 text-[2rem] font-bold leading-tight tracking-tight">{tampil(simpanan)}</p>
+            <p className="mt-0.5 text-xs opacity-75">Akumulasi simpanan wajib, sukarela, dan lainnya (tanpa simpanan pokok)</p>
+            <dl className="mt-5 grid grid-cols-2 divide-x divide-white/15 rounded-2xl bg-white/10 py-3">
+                <div className="px-4">
                     <dt className="text-xs opacity-75">Sisa pinjaman</dt>
                     <dd className="angka mt-0.5 font-semibold">{tampil(pinjaman)}</dd>
                 </div>
-                <div>
+                <div className="px-4">
                     <dt className="text-xs opacity-75">Plafon kredit</dt>
                     <dd className="angka mt-0.5 font-semibold">{tampil(plafon)}</dd>
                 </div>

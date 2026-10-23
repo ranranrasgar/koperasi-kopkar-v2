@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { ChevronRight } from "lucide-react"
-import { BarisTautan, Kartu, Kemajuan, Kepala, Kosong } from "@/components/ui"
+import { BarisTautan, Kartu, Kemajuan, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { pinjamanAktif, pinjamanLunas, type PinjamanAktif } from "@/lib/data"
 import { rupiah, tanggal } from "@/lib/format"
@@ -45,8 +45,7 @@ export default async function PinjamanPage() {
 
     return (
         <main>
-            <Kepala judul="Pinjaman" />
-            <div className="px-5">
+            <div className="px-5 pt-2">
                 {/* KPR ditampilkan terpisah dari pinjaman tunai (keputusan K3), hanya bila ada. */}
                 <Kartu className={`grid divide-x divide-garis ${kpr.length ? "grid-cols-2" : "grid-cols-1"}`}>
                     <div className="p-4">

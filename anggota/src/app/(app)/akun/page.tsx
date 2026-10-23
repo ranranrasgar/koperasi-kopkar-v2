@@ -4,7 +4,7 @@ import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
 import { keluarAction } from "@/app/actions/auth"
 import { FotoProfil } from "@/components/FotoProfil"
 import { PilihTema } from "@/components/PilihTema"
-import { Baris, BarisTautan, Kartu, Kepala } from "@/components/ui"
+import { Baris, BarisTautan, Kartu } from "@/components/ui"
 import { wajibMasuk } from "@/lib/anggota"
 import { pool } from "@/lib/db"
 import { infoFoto } from "@/lib/foto"
@@ -23,8 +23,7 @@ export default async function AkunPage() {
 
     return (
         <main>
-            <Kepala judul="Akun" />
-            <div className="px-5">
+            <div className="px-5 pt-2">
                 <Kartu className="flex items-center gap-4 p-5">
                     <FotoProfil inisial={inisial} versi={foto.versi} bisaUnggah={foto.terpasang} />
                     <div className="min-w-0">

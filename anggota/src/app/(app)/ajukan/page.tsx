@@ -1,6 +1,6 @@
 import type { Metadata } from "next"
 import { jenisKreditUntuk, pengajuanSaya } from "@kopkar/backend/src/anggota/pengajuan.ts"
-import { Kartu, Kepala, Kosong } from "@/components/ui"
+import { Kartu, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { poolAngka } from "@/lib/db"
 import { profil } from "@/lib/data"
@@ -25,7 +25,7 @@ export default async function AjukanPage() {
 
     return (
         <main>
-            <Kepala judul="Ajukan pinjaman" sub="Diproses oleh pengurus koperasi" />
+            <p className="px-5 pb-1 pt-1 text-sm text-redup">Diproses oleh pengurus koperasi.</p>
             <div className="px-5">
                 {jenis.length === 0
                     ? <Kartu><Kosong judul="Belum ada jenis pinjaman" isi="Saat ini belum ada jenis pinjaman yang bisa diajukan lewat aplikasi." /></Kartu>

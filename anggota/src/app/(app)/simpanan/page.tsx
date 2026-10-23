@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { BarisTautan, Kartu, Kepala, Kosong } from "@/components/ui"
+import { BarisTautan, Kartu, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { saldoSimpanan } from "@/lib/data"
 import { rupiah } from "@/lib/format"
@@ -13,8 +13,7 @@ export default async function SimpananPage() {
 
     return (
         <main>
-            <Kepala judul="Simpanan" />
-            <div className="px-5">
+            <div className="px-5 pt-2">
                 <Kartu className="p-5">
                     <p className="text-sm text-redup">Total semua simpanan</p>
                     <p className="angka mt-1 text-[1.75rem] font-bold leading-tight tracking-tight">{rupiah(total)}</p>
