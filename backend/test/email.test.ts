@@ -209,3 +209,24 @@ test('pengajuan baru: email ke alamat pengurus dari env EMAIL_NOTIF_ADMIN', asyn
         delete process.env.ADMIN_URL;
     }
 });
+
+test('kuota kirim per jam: email biasa dibatasi, verifikasi tidak', async () => {
+    process.env.EMAIL_MAKS_PER_JAM = '2';
+    try {
+        await inTx(async (db) => {
+            await bersihkan(db);
+            await antreEmailBanyak(db, ['e1', 'e2', 'e3', 'e4'].map((x) => ({ jenis: 'uji', ke: `${x}@contoh.id`, judul: x, teks: 'isi' })));
+            await antreEmail(db, { jenis: 'verifikasi', ke: 'otp@contoh.id', judul: 'Kode', teks: 'Kode verifikasi Anda: 123456' });
+            const h1 = await prosesAntrean(db, { batas: 20 });
+            assert.equal(h1.terkirim, 3); // 1 verifikasi + 2 sesuai kuota
+            assert.equal((await db.query(`SELECT status FROM email_antrean WHERE ke = 'otp@contoh.id'`)).rows[0].status, 'terkirim');
+            const h2 = await prosesAntrean(db, { batas: 20 });
+            assert.equal(h2.terkirim, 0); // kuota jam habis
+            assert.equal(h2.sisa, 2);
+            await antreEmail(db, { jenis: 'verifikasi', ke: 'otp2@contoh.id', judul: 'Kode', teks: 'Kode verifikasi Anda: 654321' });
+            assert.equal((await prosesAntrean(db, { batas: 20 })).terkirim, 1); // verifikasi tetap lolos walau kuota habis
+        });
+    } finally {
+        delete process.env.EMAIL_MAKS_PER_JAM;
+    }
+});

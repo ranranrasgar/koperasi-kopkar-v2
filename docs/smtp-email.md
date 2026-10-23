@@ -2,7 +2,27 @@
 
 Aplikasi anggota dan admin mengirim email lewat antrean (`email_antrean`) memakai SMTP dari env. Tanpa SMTP, email **hanya dicatat di log server** (termasuk kode verifikasi), jadi tidak ada yang terkirim.
 
-## 1. Gmail (cara tercepat)
+## 0. Email domain di Jagoan Hosting (dipakai koperasi)
+
+Domain `kopkarmjsmattel.com` memakai "Mail Business" Jagoan Hosting dengan kotak `support@kopkarmjsmattel.com`. Server emailnya berada di `solodns.jagoanhosting.com` (MX domain menunjuk ke hosting sendiri, bukan Titan/Google). **Pakai nama server itu sebagai SMTP_HOST**: sertifikat TLS server hanya berlaku untuk `solodns.jagoanhosting.com`, jadi `mail.kopkarmjsmattel.com` akan ditolak dengan galat sertifikat. Port 465, 587, dan 25 terbuka.
+
+```
+SMTP_HOST=solodns.jagoanhosting.com
+SMTP_PORT=465
+SMTP_SECURE=1
+SMTP_USER=support@kopkarmjsmattel.com
+SMTP_PASS=<sandi kotak email>
+SMTP_FROM=Kopkar MJS <support@kopkarmjsmattel.com>
+EMAIL_MAKS_PER_JAM=100
+```
+
+- Sandi kotak email diatur di panel Jagoan Hosting: Manage Emails, ikon pensil (ubah) pada baris kotak email. Isi `SMTP_PASS` langsung di `.env.local`, jangan dikirim lewat chat.
+- Batas kirim hosting bersama biasanya per jam (angkanya berbeda per paket; tanyakan atau lihat di panel). Atur `EMAIL_MAKS_PER_JAM` (dan `EMAIL_MAKS_PER_HARI`) sedikit di bawah batas itu: email biasa (siaran, notifikasi) ditahan di antrean sampai kuota ada lagi, sedangkan kode verifikasi dan reset password tidak ikut dibatasi dan didahulukan.
+- Cadangan bila 465 bermasalah: `SMTP_PORT=587` dan `SMTP_SECURE=0`.
+- Pasang/cek SPF dan DKIM domain di panel DNS hosting supaya email tidak masuk spam.
+- Uji: `npm run email:uji -- alamat@penerima.com`.
+
+## 1. Gmail (alternatif)
 
 1. Pakai akun Google khusus pengirim (mis. satu akun Gmail koperasi), jangan akun pribadi.
 2. Aktifkan **Verifikasi 2 langkah**: Akun Google, Keamanan, Verifikasi 2 langkah (`myaccount.google.com/security`).

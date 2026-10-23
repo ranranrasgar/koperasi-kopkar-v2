@@ -7,6 +7,8 @@ import { htmlEmail, teksEmail } from './templat.ts';
 //
 // Env: SMTP_HOST, SMTP_PORT (587), SMTP_SECURE ('1' = TLS langsung, otomatis untuk port 465), SMTP_USER, SMTP_PASS,
 // SMTP_FROM (mis. "Kopkar MJS <no-reply@kopkarmjsmattel.com>"). EMAIL_UJI_JSON=1 hanya untuk uji otomatis (tidak mengirim).
+// Kuota (hosting bersama biasanya membatasi per jam, Gmail per hari): EMAIL_MAKS_PER_JAM dan EMAIL_MAKS_PER_HARI (kosong = tanpa batas).
+// Email verifikasi dan sistem (kode, reset password) tidak ikut dibatasi dan didahulukan.
 
 interface Db { query: (sql: string, params?: unknown[]) => Promise<{ rows: any[]; rowCount?: number | null }> }
 
@@ -15,6 +17,7 @@ export interface EmailKeluar { jenis: string; ke: string; judul: string; teks: s
 const MAKS_PERCOBAAN = 3;
 /** Jenis yang isinya (mis. kode verifikasi) ikut ditulis ke log saat SMTP belum diatur, untuk pengujian di komputer pengembang. */
 const JENIS_LOG_PENUH = new Set(['verifikasi', 'sistem']);
+const JENIS_PRIORITAS = ['verifikasi', 'sistem'];
 
 // Server uji (KOPKAR_SERVER_UJI, salinan data asli dengan alamat email anggota sungguhan) tidak pernah mengirim email
 // sungguhan, walau SMTP diisi di .env.local bersama; email hanya dicatat. EMAIL_UJI_KIRIM=1 mengizinkan (hati-hati).
@@ -67,11 +70,27 @@ const tidur = (ms: number) => new Promise((r) => setTimeout(r, ms));
  * jadi beberapa proses (aplikasi anggota dan admin) tidak mengirim email yang sama. Gagal diulang maksimal 3 kali
  * dengan jeda bertambah, lalu berstatus 'gagal'. jedaMs = jeda antar email (laju kirim).
  */
+/** Sisa kuota kirim untuk email biasa (bukan verifikasi/sistem) menurut EMAIL_MAKS_PER_JAM / EMAIL_MAKS_PER_HARI. */
+export async function sisaKuota(db: Db): Promise<number> {
+    const jam = Number(process.env.EMAIL_MAKS_PER_JAM) || 0, hari = Number(process.env.EMAIL_MAKS_PER_HARI) || 0;
+    if (!jam && !hari) return Infinity;
+    const r = (await db.query(
+        `SELECT count(*) FILTER (WHERE dikirim_pada > now() - interval '1 hour')::int jam, count(*)::int hari
+           FROM email_antrean WHERE status = 'terkirim' AND dikirim_pada > now() - interval '1 day' AND jenis <> ALL($1::text[])`, [JENIS_PRIORITAS])).rows[0];
+    return Math.max(0, Math.min(jam ? jam - r.jam : Infinity, hari ? hari - r.hari : Infinity));
+}
+
 export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: number } = {}): Promise<HasilProses> {
-    const diambil = (await db.query(
+    const batas = opsi.batas ?? 20;
+    const ambil = async (prioritas: boolean, limit: number) => limit <= 0 ? [] : (await db.query(
         `UPDATE email_antrean SET percobaan = percobaan + 1, coba_lagi_pada = now() + interval '5 minutes'
-          WHERE id IN (SELECT id FROM email_antrean WHERE status = 'menunggu' AND coba_lagi_pada <= now() ORDER BY id LIMIT $1 FOR UPDATE SKIP LOCKED)
-          RETURNING id, jenis, ke, judul, teks, tautan, percobaan`, [opsi.batas ?? 20])).rows;
+          WHERE id IN (SELECT id FROM email_antrean WHERE status = 'menunggu' AND coba_lagi_pada <= now()
+                          AND (jenis = ANY($2::text[])) = $3 ORDER BY id LIMIT $1 FOR UPDATE SKIP LOCKED)
+          RETURNING id, jenis, ke, judul, teks, tautan, percobaan`, [limit, JENIS_PRIORITAS, prioritas])).rows;
+    // Verifikasi/sistem didahulukan dan tidak kena kuota; email biasa hanya sebanyak sisa kuota.
+    const penting = await ambil(true, batas);
+    const biasa = await ambil(false, Math.min(batas - penting.length, await sisaKuota(db)));
+    const diambil = [...penting, ...biasa];
     const hasil: HasilProses = { terkirim: 0, gagal: 0, dicatat: 0, sisa: 0 };
     const t = ambilTransport();
 
