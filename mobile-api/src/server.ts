@@ -21,24 +21,31 @@ const int = (p: Query, name: string, def: number) => {
     return Number.isFinite(v) && v >= 0 ? v : def;
 };
 const ok = (message: string, extra: Result = {}): Result => ({ error: false, message, ...extra });
+// Kode lama dari aplikasi diubah sekali menjadi id; query di backend/src/anggota memakai relasi id.
+const agt = (db: Pool, p: Query) => q.idAnggota(db, p.get('kdAnggota')!);
+const pjm = (db: Pool, p: Query) => q.idPinjaman(db, p.get('noPinjaman')!);
 
 const handlers: Record<string, Handler> = {
     // kdAnggota opsional (tambahan): membatasi ke satu anggota; tanpa itu bentuknya sama dengan server lama.
-    getanggota: async (db, p) => ok('Request successfully completed', { anggota: await q.getAnggota(db, p.get('kdAnggota')?.trim() || undefined) }),
-    getsimpanan: async (db, p) => { need(p, 'kdAnggota'); return ok('Simpanan berhasil diquery', { simpanan: await q.getSimpanan(db, p.get('kdAnggota')!) }); },
+    getanggota: async (db, p) => {
+        const kd = p.get('kdAnggota')?.trim();
+        const id = kd ? await q.idAnggota(db, kd) : undefined;
+        return ok('Request successfully completed', { anggota: id === null ? [] : await q.getAnggota(db, id) });
+    },
+    getsimpanan: async (db, p) => { need(p, 'kdAnggota'); return ok('Simpanan berhasil diquery', { simpanan: await q.getSimpanan(db, await agt(db, p)) }); },
     getsimpananrincipaginated: async (db, p) => {
         need(p, 'kdAnggota', 'jenisSimpanan', 'offset', 'limit');
         return ok('Simpanan rinci (paginated) berhasil diquery', {
-            simpanan_rinci: await q.getSimpananRinciPaginated(db, p.get('kdAnggota')!, p.get('jenisSimpanan')!, int(p, 'offset', 0), int(p, 'limit', 5)),
+            simpanan_rinci: await q.getSimpananRinciPaginated(db, await agt(db, p), p.get('jenisSimpanan')!, int(p, 'offset', 0), int(p, 'limit', 5)),
         });
     },
-    getsaldojenispinjaman: async (db, p) => { need(p, 'kdAnggota'); return ok('Saldo pinjaman berhasil diquery', { saldo_pinjaman: await q.getSaldoJenisPinjaman(db, p.get('kdAnggota')!) }); },
-    getpinjaman: async (db, p) => { need(p, 'kdAnggota'); return ok('Pinjaman berhasil diquery', { pinjaman: await q.getPinjaman(db, p.get('kdAnggota')!) }); },
+    getsaldojenispinjaman: async (db, p) => { need(p, 'kdAnggota'); return ok('Saldo pinjaman berhasil diquery', { saldo_pinjaman: await q.getSaldoJenisPinjaman(db, await agt(db, p)) }); },
+    getpinjaman: async (db, p) => { need(p, 'kdAnggota'); return ok('Pinjaman berhasil diquery', { pinjaman: await q.getPinjaman(db, await agt(db, p)) }); },
     getpinjamanrincipaginated: async (db, p) => {
         need(p, 'noPinjaman');
-        return ok('Pinjaman rinci (paginated) berhasil diquery', { pinjaman_rinci: await q.getPinjamanRinciPaginated(db, p.get('noPinjaman')!, int(p, 'offset', 0), int(p, 'limit', 5)) });
+        return ok('Pinjaman rinci (paginated) berhasil diquery', { pinjaman_rinci: await q.getPinjamanRinciPaginated(db, await pjm(db, p), int(p, 'offset', 0), int(p, 'limit', 5)) });
     },
-    getjadwalangsuran: async (db, p) => { need(p, 'noPinjaman'); return ok('Jadwal angsuran berhasil diquery', { jadwal: await q.getJadwalAngsuran(db, p.get('noPinjaman')!) }); },
+    getjadwalangsuran: async (db, p) => { need(p, 'noPinjaman'); return ok('Jadwal angsuran berhasil diquery', { jadwal: await q.getJadwalAngsuran(db, (await pjm(db, p)).tunaiId) }); },
     getjeniskreditv1: async (db, p) => { need(p, 'statusStaff'); return ok('Jenis kredit berhasil diquery', { jenis_kredit: await q.getJenisKreditV1(db, p.get('statusStaff')!) }); },
     getpertanyaan: async (db) => ok('Daftar pertanyaan berhasil diquery', { pertanyaan: await q.getPertanyaan(db) }),
     isuserexist: async (db, p) => {
@@ -47,24 +54,24 @@ const handlers: Record<string, Handler> = {
         // jawaban tidak pernah dikirim ke aplikasi; pencocokan lewat verifyjawaban (endpoint tulis, belum dibuat)
         return u ? ok('Username ada di database.', { username_exist: true, pertanyaan: u.pertanyaan }) : { error: true, message: 'Username tidak ada di database.' };
     },
-    isterdebet: async (db, p) => { need(p, 'kdAnggota'); return ok('Status terdebet berhasil diquery.', { terdebet: await q.isTerdebet(db, p.get('kdAnggota')!) }); },
-    getpotonganbulanan: async (db, p) => { need(p, 'kdAnggota'); return ok('Potongan bulanan berhasil diquery.', { potongan: await q.getPotonganBulanan(db, p.get('kdAnggota')!) }); },
-    getshu: async (db, p) => { need(p, 'kdAnggota', 'tahun'); return ok('SHU berhasil diquery.', { shu: await q.getShu(db, p.get('kdAnggota')!, p.get('tahun')!) }); },
+    isterdebet: async (db, p) => { need(p, 'kdAnggota'); return ok('Status terdebet berhasil diquery.', { terdebet: await q.isTerdebet(db, await agt(db, p)) }); },
+    getpotonganbulanan: async (db, p) => { need(p, 'kdAnggota'); return ok('Potongan bulanan berhasil diquery.', { potongan: await q.getPotonganBulanan(db, await agt(db, p)) }); },
+    getshu: async (db, p) => { need(p, 'kdAnggota', 'tahun'); return ok('SHU berhasil diquery.', { shu: await q.getShu(db, await agt(db, p), p.get('tahun')!) }); },
     gettahunshu: async (db) => ok('Tahun SHU berhasil diquery.', { tahun: await q.getTahunShu(db) }),
     getlognotifikasi: async (db, p) => {
         need(p, 'kdAnggota');
-        return ok('Log notifikasi berhasil diquery.', { log: await q.getLogNotifikasi(db, p.get('kdAnggota')!, int(p, 'offset', 0), int(p, 'limit', 5)) });
+        return ok('Log notifikasi berhasil diquery.', { log: await q.getLogNotifikasi(db, await agt(db, p), int(p, 'offset', 0), int(p, 'limit', 5)) });
     },
     gethistory: async (db, p) => {
         need(p, 'kdAnggota');
-        return ok('History berhasil diquery.', { history: await q.getHistory(db, p.get('kdAnggota')!, int(p, 'offset', 0), int(p, 'limit', 5)) });
+        return ok('History berhasil diquery.', { history: await q.getHistory(db, await agt(db, p), int(p, 'offset', 0), int(p, 'limit', 5)) });
     },
 };
 
 /** dashboard.php: ringkasan untuk layar utama. */
 async function dashboard(db: Pool, p: Query): Promise<Result> {
     if (!(p.get('kdAnggota') ?? '').trim()) return { error: true, message: 'kdAnggota is required' };
-    const kd = p.get('kdAnggota')!;
+    const kd = await agt(db, p);
     const simpanan = await q.getSimpanan(db, kd);
     const pinjaman = await q.getPinjaman(db, kd);
     const potongan = await q.getPotonganBulanan(db, kd);
