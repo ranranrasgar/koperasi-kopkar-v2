@@ -92,6 +92,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/settings/jenis-simpanan": [MENU.jenisSimpanan],
     "/dashboard/members/karyawan-mattel": [MENU.karyawanMattel, MENU.daftarKaryawan, MENU.lapDaftarKaryawan],
     "/dashboard/members/mobile-users": [MENU.user, MENU.requestUser],
+    "/dashboard/members/pendaftaran": [MENU.user, MENU.requestUser],
     "/dashboard/savings/cards": [MENU.lapBukuSimpanan],
     "/dashboard/savings/analytics": [MENU.lapGrafikSimpanan],
     "/dashboard/savings/time-deposits": [MENU.lapSimpananBerjangka],

@@ -24,7 +24,7 @@ export async function putuskanPendaftaranAction(id: number, setuju: boolean): Pr
         const r = await tx((db) => putuskanPendaftaran(db as never, id, setuju))
         if (!r.ok) return r
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
-        revalidatePath("/dashboard/members/mobile-users")
+        revalidatePath("/dashboard/members", "layout")
         if (r.email) {
             const dasar = (process.env.ANGGOTA_URL ?? "").replace(/\/+$/, "")
             await tx((db) => antreEmail(db, setuju
@@ -58,7 +58,7 @@ export async function hapusUserMobileAction(id: number): Promise<HasilPendaftara
         const r = await tx((db) => hapusAkunAplikasi(db as never, id))
         if (!r.ok) return r
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
-        revalidatePath("/dashboard/members/mobile-users")
+        revalidatePath("/dashboard/members", "layout")
         return { ok: true, pesan: r.pesan }
     } catch (e) {
         if (!(e instanceof GalatSesi)) console.error("hapus user mobile gagal:", e)
