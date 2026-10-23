@@ -16,10 +16,10 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 - Temuan kunci: validasi pengajuan kredit hanya di HP dan server menerima persen bunga dari HP; API PHP masih melayani request tanpa token; 1.170 dari 1.180 password anggota masih MD5; hanya 11 akun punya email; sistem live masih MySQL (PWA di atas PostgreSQL v2 bergantung pada cutover).
 
 ### Keadaan repo
-- Branch `master`.
+- Branch `main` (remote `origin` di GitHub).
 - **Belum di-commit** (23 Oktober, perlu izin pengguna): PWA Tahap 4 (`backend/src/anggota/akun.ts` + uji, halaman `anggota/src/app/{daftar,lupa-password,atur-password,lengkapi-email}`, `(app)/akun/{password,email,foto}`, `actions/akun.ts`, `actions/foto.ts`, `lib/{email,batas,foto}.ts`, `components/{form,FormEmail,FotoProfil,HalamanAuth}.tsx`), `database/postgres/anggota-web.sql` + `anggota-pasang.mjs` + skrip `anggota:pasang`, panduan `03-keanggotaan/03-user-mobile.md` (sudah diperbarui di kedua database), PRD, CLAUDE.md, dan WORKLOG ini.
 - Commit terakhir: `c25ec60` (PWA Tahap 3), `fc7bd56` (PWA Tahap 2), `80bbfba` (PWA Tahap 1).
-- **Tidak ada remote git** (belum di-push ke mana pun). Semua commit hanya ada di `C:\laragon\www\NextJS\Koperasi-Kopkar-v2`. Untuk dikerjakan dari komputer lain, pengguna perlu menambah remote dan push lebih dulu.
+- Remote git: `origin` = github.com/ranranrasgar/koperasi-kopkar-v2 (23 Oktober). `.env.local` tidak ikut; buat ulang di komputer lain.
 - Commit sesi 22 Oktober (lama → baru):
   - 19dfe4a..72b7d8a: halaman per kelompok, perbaikan mode uji form master/pengajuan, dokumentasi
   - 378887f: tombol outline tema gelap
@@ -55,6 +55,12 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 - Tabel `jenis_macet` kosong, jadi kolom kolektibilitas Kredit Macet tidak tampil.
 - `npm audit`: `next` 16.2.10 punya celah kritis *Proxy bypass* (Turbopack). Halaman dan actions tetap cek sesi di server, tetapi sebaiknya `next` dinaikkan versinya.
 - Saat aturan transaksi berubah, perbarui artikel di `database/panduan` (dan di database bila belum disunting admin).
+
+### Himbauan, Promo, dan perapihan detail anggota (23 Oktober)
+- Admin **Himbauan & Promo** (`/dashboard/himbauan`, izin `Kelola Himbauan & Promo (web)`, `frontend/src/app/actions/pengumuman.ts`): tambah, ubah, tampil/sembunyikan, hapus; opsi "kirim juga sebagai notifikasi ke semua anggota" (memakai `kirimKeSemuaAnggota`, tujuan `/beranda`). Teks maks. 255 karakter (batas kolom). Gambar belum bisa diunggah (K10). Mode uji: tidak tersimpan dan tidak terkirim. Himbauan: hanya satu terbaru yang tampil (sama dengan Android); promo: semua yang aktif, kini tampil di Beranda PWA.
+- Detail simpanan: total setoran/penarikan dan deskripsi transaksi. Pinjaman: bagian "Sudah lunas" di daftar (detailnya sudah bisa dibuka), status lunas, angsuran berikutnya dan sisa jasa di rincian.
+- Verifikasi: typecheck frontend dan anggota lolos; kueri pinjaman lunas dan total simpanan dicoba di database uji (anggota 958: 30 lunas, 1123: 12). **Halaman belum dilihat di layar** (login form diblokir di browser pane Claude).
+- Repo punya remote: `origin` = github.com/ranranrasgar/koperasi-kopkar-v2, branch `main` (dulu `master`).
 
 ### PWA anggota Tahap 5: pemasangan + Web Push (23 Oktober, belum di-commit)
 - **Teknologi notifikasi = Web Push standar (VAPID, pustaka `web-push`), bukan Firebase**: FCM di web hanya membungkus Web Push yang sama, jadi tanpa akun/ketergantungan Google. Notifikasi muncul di layar HP walau aplikasi ditutup (diterima service worker); iOS hanya bila PWA dipasang ke layar utama (16.4+). Terbukti: langganan Chrome (endpoint fcm.googleapis.com) tersimpan dan push uji diterima server FCM (201).
