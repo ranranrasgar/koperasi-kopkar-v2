@@ -4,10 +4,24 @@ Log kerja untuk agent berikutnya. **Entri terbaru di paling atas.** Tiap entri: 
 
 ## Status ringkas dan serah terima (perbarui setiap sesi)
 
-Terakhir diperbarui 22 Oktober 2026 malam. Agent baru: baca bagian ini dulu, lalu entri terbaru di bawah bila butuh rincian.
+Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entri terbaru di bawah bila butuh rincian.
+
+### Pekerjaan berikutnya: PWA anggota (pengganti aplikasi Android)
+- **Baca dulu** `docs/analisis-aplikasi-mobile-lama.md` (hasil analisis Android v5.6 + server PHP), lalu `docs/prd-pwa-anggota.md` (PRD).
+- Status: **PRD draf, belum ada kode.** Menunggu keputusan pengguna pada PRD bagian 11 (K1-K11), terutama K1 (kapan dipakai/cutover).
+- Arsitektur **disetujui pengguna**: workspace baru `anggota/` di monorepo ini (satu `npm install`, dua build/proses, satu VPS); aturan dan query anggota di `backend/src/anggota/` dipakai bersama `mobile-api`. PWA tidak memakai API PHP; PHP tetap live sampai cutover lalu dimatikan.
+- Domain **diputuskan (K11)**: `kopkarmjsmattel.com` landing, `anggota.kopkarmjsmattel.com` PWA, `admin.kopkarmjsmattel.com` admin (dibatasi). Rencana DNS/Nginx/PM2 di PRD bagian 12 (belum dijalankan).
+- Sumber yang dianalisis (di luar repo): Android `G:\Rhansoft\Android\KopkarMJS2000_Rhansoft_upgrade`, server PHP live `C:\laragon\www\KopkarMJS2000_2026` (aturan daftar/login di `v1/user.php`, pengajuan di `includes/DbOperation.php createPinjaman`, token di `includes/Auth.php`).
+- Temuan kunci: validasi pengajuan kredit hanya di HP dan server menerima persen bunga dari HP; API PHP masih melayani request tanpa token; 1.170 dari 1.180 password anggota masih MD5; hanya 11 akun punya email; sistem live masih MySQL (PWA di atas PostgreSQL v2 bergantung pada cutover).
 
 ### Keadaan repo
-- Branch `master`, working tree bersih.
+- Branch `master`.
+- **Belum di-commit** (23 Oktober, perlu izin pengguna untuk commit):
+  - Saldo berjalan Buku Simpanan + hanya urut Tanggal: `lib/queries/simpanan.ts`, `lib/list.ts` (`kolomHalaman`), `config/modules.ts`
+  - Pilihan baris per halaman 25/50/100/200/Semua: `lib/halaman.ts`, `components/ui/PilihBaris.tsx`, `ModuleTable.tsx`, `SavingsSummary.tsx`, `LoansDashboard.tsx`, `lib/queries/pinjaman.ts`, `lib/queries/anggota.ts`
+  - Panduan `database/panduan/01-memulai/03-membaca-layar.md`, `04-simpanan/04-laporan-simpanan.md` (database sudah diperbarui)
+  - Dokumen `docs/analisis-aplikasi-mobile-lama.md`, `docs/prd-pwa-anggota.md`, dan WORKLOG ini
+- Commit terakhir: `d3cbe2b` (detail dan kecepatan Daftar Anggota), `44aa544` (serah terima WORKLOG).
 - **Tidak ada remote git** (belum di-push ke mana pun). Semua commit hanya ada di `C:\laragon\www\NextJS\Koperasi-Kopkar-v2`. Untuk dikerjakan dari komputer lain, pengguna perlu menambah remote dan push lebih dulu.
 - Commit sesi 22 Oktober (lama → baru):
   - 19dfe4a..72b7d8a: halaman per kelompok, perbaikan mode uji form master/pengajuan, dokumentasi
@@ -45,6 +59,12 @@ Terakhir diperbarui 22 Oktober 2026 malam. Agent baru: baca bagian ini dulu, lal
 - `npm audit`: `next` 16.2.10 punya celah kritis *Proxy bypass* (Turbopack). Halaman dan actions tetap cek sesi di server, tetapi sebaiknya `next` dinaikkan versinya.
 - Saat aturan transaksi berubah, perbarui artikel di `database/panduan` (dan di database bila belum disunting admin).
 
+### Analisis aplikasi mobile lama dan PRD PWA (23 Oktober)
+- Dibaca: aplikasi Android (52 file Java, `util/Api.java`, layar login/pengajuan/simpanan/pinjaman/SHU/potongan) dan server PHP `C:\laragon\www\KopkarMJS2000_2026` (`v1/Api.php`, `login.php`, `user.php`, `dashboard.php`, `includes/DbOperation.php`, `Auth.php`, `MailHelper.php`, `reset-password.php`). `cleaned.txt` di folder Android hanya potongan 43 baris, bukan sumber lengkap.
+- Dicek ke PostgreSQL v2: kolom `app_user` (`password_hash`, `jawaban_hash`, `fcm_token`), `pengajuan_pinjaman`, kunci di `jenis_kredit`, jumlah hash MD5/bcrypt, email terisi.
+- Hasil ditulis di `docs/analisis-aplikasi-mobile-lama.md` dan `docs/prd-pwa-anggota.md`. Belum ada kode PWA.
+- Catatan: query `getpinjaman`, `getshu`, dan lainnya sudah ada versi PostgreSQL di `mobile-api/src/queries.ts` (SHU sudah memperbaiki bug filter tahun di PHP); PRD mengusulkan memindahkannya ke `backend/src/anggota/` agar dipakai bersama.
+
 ### Optimasi Daftar Anggota (23 Oktober)
 - Pengguna meminta tabel `anggota` dipecah karena lambat. Hasil pengukuran: `anggota` hanya 31 kolom, 2.026 baris, 1 MB; membaca 25 baris = 2 ms. **Tabel tidak dipecah.** Pemecahan juga akan menyentuh mesin posting, kontrak API mobile, `mapping.mjs`/migrasi, dan rekonsiliasi.
 - Penyebab lambat: saldo simpanan dijumlah dari 301 ribu baris untuk semua anggota setiap kali halaman dibuka (171-1.201 ms).
@@ -53,6 +73,29 @@ Terakhir diperbarui 22 Oktober 2026 malam. Agent baru: baca bagian ini dulu, lal
   - Hasil identik dengan query lama.
   - Saat diurutkan per saldo tetap memakai agregat sekali (lebih cepat untuk kasus itu).
 - Detail anggota menampilkan field yang umumnya terisi lewat kolom tersembunyi di `membersConfig`: jenis kelamin, status perkawinan, alamat, kode pos (`0` → kosong), rekening atas nama, potongan simpanan pokok/wajib/sukarela per bulan, tanggal/alasan keluar, pencatat. Kolom terisi <10% (`telp_rmh`, `status_acc`, `keterangan_acc`) tidak dimuat.
+
+### Saldo Buku Simpanan (23 Oktober)
+- Kolom Saldo di `/dashboard/savings/ledger` sebelumnya membaca `simpanan.rp_saldo`. Desktop tidak mengisi kolom itu: 295.339 dari 301.577 baris bernilai 0.
+- Sekarang saldo berjalan dihitung di `lib/queries/simpanan.ts`: jumlah setoran − pengambilan anggota itu untuk jenis yang sama sampai transaksi tersebut, dari seluruh riwayat. Urutan `(tgl_transaksi, urut, id)` karena `urut` tidak unik.
+- Saldo dihitung lewat opsi baru `kolomHalaman` di `paged()`, yaitu kolom mahal yang dihitung setelah LIMIT/OFFSET. Tanpa itu halaman 100 butuh 4,5 detik karena baris yang dilewati ikut dihitung.
+- Diverifikasi: KPK 350295 jenis 02 saldo terbaru 23.945.730, sama dengan Kartu Simpanan dan total saldo.
+- Atas permintaan pengguna, Buku Simpanan hanya bisa diurutkan menurut Tanggal (kolom lain `sortable` dihapus), supaya saldo berjalan tetap terbaca. Kunci urut gabungan `(tgl_transaksi, urut, id)`, sehingga arah urut juga berlaku untuk transaksi di tanggal yang sama. Diverifikasi kedua arah, termasuk tanggal dengan dua transaksi.
+- Disk penuh lagi (0 MB) saat bekerja. Cache Turbopack `.next/dev/cache` tumbuh lagi menjadi ±1 GB dan dihapus; ruang kemudian naik sendiri ke ±4 GB, jadi ada proses lain di komputer yang juga memakai disk.
+- Belum ditangani: daftar tanpa filter tetap ±0,7 detik karena urut/hitung 301 ribu baris tanpa indeks `simpanan(tgl_transaksi, urut)`. Indeks bisa ditambah lewat `mapping.mjs` bila perlu.
+
+### Pilihan baris per halaman (23 Oktober)
+- Semua tabel berpaginasi punya pilihan **25 / 50 / 100 / 200 / Semua** (`components/ui/PilihBaris.tsx`): `ModuleTable`, Rekap Simpanan (`SavingsSummary`), dan Daftar Pinjaman (`LoansDashboard`; bawaan 20 → 25, footer tampil walau satu halaman).
+- Aturan bersama di `lib/halaman.ts` (aman untuk klien): parameter URL `pageSize` berupa angka 1..200 atau `semua`. "Semua" dibatasi `MAKS_SEMUA` = 5.000 baris supaya jurnal (1,1 juta) dan simpanan (301 ribu) tidak membuat server macet; label menjadi "Semua (maks. 5.000)" bila total lebih besar. Mengganti ukuran kembali ke halaman 1.
+- Daftar Anggota: halaman >200 baris memakai penjumlahan saldo sekaligus (2,2× lebih cepat untuk "Semua" daripada per baris).
+- Diverifikasi lewat URL dan klik:
+  - anggota Semua 2.026 baris
+  - COA 152
+  - jurnal Semua dibatasi 5.000
+  - pinjaman Semua 192
+  - `pageSize=999999` → bawaan 25
+  - ganti ke 100 dari halaman 3 → halaman 1 dari 21
+- Waktu muat diukur saat CPU komputer 90–97% (Chrome), jadi angkanya tidak mewakili. Buku Simpanan "Semua" tanpa filter ±3 dtk di database.
+- Panduan *Membaca layar* dibetulkan: sebelumnya menyebut pilihan baris padahal belum ada.
 
 ### Jebakan yang sudah ditemui
 - PowerShell 5.1 `Set-Content -Encoding utf8` menambah BOM. Di `.env.local` ini membuat `PG_URL` tidak terbaca; tulis dengan `[IO.File]::WriteAllText` atau Write tool.
