@@ -119,3 +119,87 @@ export const namaDatabaseServer = () => {
     const u = process.env.PG_URL
     return u ? decodeURIComponent(new URL(u).pathname.replace(/^\//, "")) : ""
 }
+
+// ---------- Unggah cadangan dari komputer (untuk dipulihkan di server ini) ----------
+//
+// Berkas dikirim per potongan maks. POTONGAN_UNGGAH: proxy Next.js menyalin isi permintaan ke memori dan MEMOTONG diam-diam
+// di atas 10 MB (proxyClientMaxBodySize), jadi berkas besar tidak bisa dikirim sekaligus. Potongan ditulis berurutan ke
+// folder sementara .unggah-<id> (tidak tampil di daftar karena tidak berawalan kopkar-), lalu saat selesai manifest
+// disimpan, folder diberi nama cadangan, dan SHA-256 semua berkas diperiksa dengan restore.mjs --periksa.
+
+export const POTONGAN_UNGGAH = 8 * 1024 * 1024
+const ID_UNGGAH = /^[a-f0-9]{24}$/
+export const BERKAS_UNGGAH = /^(data|media)\.dump(\.\d{3})?$/
+
+function folderUnggah(id: string) {
+    if (!ID_UNGGAH.test(id)) throw new Error("id unggahan tidak sah")
+    return path.join(folderCadangan(), `.unggah-${id}`)
+}
+
+/** Ringkasan manifest dari komputer pengguna; melempar galat bila bukan cadangan aplikasi ini. */
+export function bacaManifest(teks: string) {
+    let m: Manifest
+    try { m = JSON.parse(teks) } catch { throw new Error("manifest.json tidak bisa dibaca") }
+    if (m?.format !== "kopkar-backup-1" || !Array.isArray(m.berkas) || !m.berkas.some((b) => b.nama === "data.dump")) {
+        throw new Error("manifest.json bukan cadangan aplikasi ini")
+    }
+    const potongan = m.berkas.flatMap((b) => b.potongan.map((p) => ({ nama: p.nama, ukuran: p.ukuran })))
+    if (potongan.some((p) => !BERKAS_UNGGAH.test(p.nama) || !Number.isSafeInteger(p.ukuran) || p.ukuran < 0)) throw new Error("daftar berkas di manifest tidak sah")
+    return { manifest: m, potongan, total: potongan.reduce((t, p) => t + p.ukuran, 0) }
+}
+
+/**
+ * Tulis satu potongan pada posisi `posisi`. Potongan harus berurutan; potongan yang sama dikirim ulang (mis. koneksi putus)
+ * diterima tanpa ditulis dua kali. Mengembalikan ukuran berkas sekarang.
+ */
+export function tulisPotonganUnggah(id: string, berkas: string, posisi: number, isi: Uint8Array) {
+    if (!BERKAS_UNGGAH.test(berkas)) throw new Error("nama berkas tidak sah")
+    if (isi.length === 0 || isi.length > POTONGAN_UNGGAH) throw new Error(`potongan harus 1 byte sampai ${POTONGAN_UNGGAH} byte`)
+    const folder = folderUnggah(id)
+    fs.mkdirSync(folder, { recursive: true })
+    const f = path.join(folder, berkas)
+    const sekarang = fs.existsSync(f) ? fs.statSync(f).size : 0
+    if (posisi + isi.length <= sekarang) return sekarang // kiriman ulang potongan yang sudah ada
+    if (posisi !== sekarang) throw new Error(`potongan tidak berurutan (posisi ${posisi}, berkas baru ${sekarang} byte)`)
+    fs.appendFileSync(f, isi)
+    return sekarang + isi.length
+}
+
+/** Selesaikan unggahan: semua berkas di manifest harus lengkap; folder diberi nama cadangan lalu diperiksa SHA-256-nya. */
+export async function selesaiUnggah(id: string, teksManifest: string) {
+    const folder = folderUnggah(id)
+    const { manifest, potongan } = bacaManifest(teksManifest)
+    for (const p of potongan) {
+        const f = path.join(folder, p.nama)
+        const uk = fs.existsSync(f) ? fs.statSync(f).size : -1
+        if (uk !== p.ukuran) throw new Error(`${p.nama} belum lengkap (${Math.max(uk, 0)} dari ${p.ukuran} byte)`)
+    }
+    fs.writeFileSync(path.join(folder, "manifest.json"), teksManifest)
+    const cap = new Date(manifest.dibuat)
+    const pad = (n: number) => String(n).padStart(2, "0")
+    const dasar = `kopkar-${String(manifest.database).replace(/[^A-Za-z0-9_]/g, "_")}-${cap.getFullYear()}${pad(cap.getMonth() + 1)}${pad(cap.getDate())}-${pad(cap.getHours())}${pad(cap.getMinutes())}-unggah`
+    let nama = dasar
+    for (let i = 2; fs.existsSync(path.join(folderCadangan(), nama)); i++) nama = `${dasar}${i}`
+    fs.renameSync(folder, path.join(folderCadangan(), nama))
+    const cek = await periksaCadangan(nama)
+    if (!cek.ok) {
+        fs.rmSync(path.join(folderCadangan(), nama), { recursive: true, force: true })
+        return { ok: false as const, nama, keluaran: cek.keluaran }
+    }
+    return { ok: true as const, nama, keluaran: cek.keluaran }
+}
+
+export function batalUnggah(id: string) {
+    fs.rmSync(folderUnggah(id), { recursive: true, force: true })
+}
+
+/** Hapus unggahan setengah jadi yang ditinggal lebih dari sehari (dipanggil saat halaman dibuka). */
+export function bersihkanUnggahLama() {
+    const folder = folderCadangan()
+    if (!fs.existsSync(folder)) return
+    for (const d of fs.readdirSync(folder, { withFileTypes: true })) {
+        if (!d.isDirectory() || !d.name.startsWith(".unggah-")) continue
+        const f = path.join(folder, d.name)
+        if (Date.now() - fs.statSync(f).mtimeMs > 24 * 3600 * 1000) fs.rmSync(f, { recursive: true, force: true })
+    }
+}

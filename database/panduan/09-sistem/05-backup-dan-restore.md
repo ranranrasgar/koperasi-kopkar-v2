@@ -40,9 +40,29 @@ Cara kerjanya aman: isi cadangan dimasukkan ke database sementara dulu, jumlah b
 
 Pemulihan ditolak bila ruang disk server tidak cukup (butuh kira-kira ukuran database ditambah 1 GB). Kosongkan ruang disk atau minta petugas teknis memulihkan lewat perintah server.
 
-## Memindahkan ke server lain
+## Isi berkas cadangan
 
-Cadangan dari komputer atau server lain bisa dipulihkan dengan menyalin foldernya (yang berisi manifest.json) ke folder cadangan server yang tertera di halaman ini, lalu memuat ulang halaman. Untuk server baru, petugas teknis memakai perintah `npm run backup` dan `npm run restore` (langkahnya di `database/postgres/README.md`).
+| Berkas | Isi |
+| --- | --- |
+| `data.dump` (atau `data.dump.001`, `.002`, ... bila dipotong) | Seluruh data dan struktur tabel, terkompresi |
+| `media.dump` | Foto profil anggota dan gambar himbauan/promo/notifikasi (tidak ada bila dibuat "Tanpa media") |
+| `manifest.json` (hasil unduhan bernama `...-manifest.json`) | Catatan cadangan: waktu, nama database, versi PostgreSQL, jumlah baris setiap tabel, ukuran dan sidik SHA-256 setiap berkas |
+
+Ketiganya diperlukan untuk memulihkan. Jangan ganti nama berkasnya.
+
+## Memindahkan data ke server lain (kantor ke VPS, atau sebaliknya)
+
+1. Di server **asal**, buat cadangan lalu **Unduh** semua berkasnya ke satu folder di komputer.
+2. Di server **tujuan**, buka Backup & Restore, pada **Unggah cadangan dari komputer** pilih **semua** berkas tadi sekaligus (tahan Ctrl untuk memilih beberapa berkas).
+3. Periksa daftar berkas yang tampil: semua harus bertanda ✓. Tekan **Unggah**. Berkas dikirim sedikit demi sedikit dengan bilah kemajuan; jangan tutup halaman.
+4. Setelah selesai, server memeriksa SHA-256 semua berkas. Bila cocok, cadangan muncul di daftar (disorot) dan jendela **Pulihkan** langsung terbuka.
+5. Ketik nama database server tujuan, lalu **Pulihkan**.
+
+> **Penting:** PostgreSQL server tujuan harus versi yang **sama atau lebih baru** dari server asal. Cadangan dari server dengan PostgreSQL lebih baru tidak bisa dipulihkan ke server yang lebih lama.
+
+Setelah memulihkan, akun operator dan password ikut kembali seperti saat cadangan dibuat. Bila Anda keluar otomatis, masuk lagi dengan password yang berlaku di cadangan itu.
+
+Bila unggahan lewat browser tidak memungkinkan (berkas sangat besar atau koneksi lambat), petugas teknis bisa menyalin folder cadangan ke folder cadangan server lalu memakai perintah `npm run restore` (langkahnya di `database/postgres/README.md`).
 
 ## Menghapus cadangan lama
 

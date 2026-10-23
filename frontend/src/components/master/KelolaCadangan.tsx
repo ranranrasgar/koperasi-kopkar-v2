@@ -1,10 +1,11 @@
 "use client"
 
-import { useState, useTransition } from "react"
+import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { AlertCircle, CheckCircle2, ChevronDown, DatabaseBackup, Download, Loader2, RotateCcw, ShieldCheck, Trash2 } from "lucide-react"
 import { buatCadanganAction, hapusCadanganAction, periksaCadanganAction, pulihkanCadanganAction, type HasilCadangan } from "@/app/actions/cadangan"
 import type { Cadangan } from "@/lib/cadangan"
+import { UnggahCadangan } from "./UnggahCadangan"
 import { cn } from "@/lib/utils"
 
 const ukuranBaca = (b: number) =>
@@ -27,6 +28,14 @@ export function KelolaCadangan({ daftar, folder, ruangKosong, ukuranDatabase, da
     const [buka, setBuka] = useState<string | null>(null)
     const [pulih, setPulih] = useState<Cadangan | null>(null)
     const [ketik, setKetik] = useState("")
+    // Cadangan yang baru diunggah: disorot, dan dialog Pulihkan langsung dibuka setelah daftar dimuat ulang.
+    const [sorot, setSorot] = useState<string | null>(null)
+    const [bukaPulih, setBukaPulih] = useState(false)
+    useEffect(() => {
+        if (!bukaPulih || !sorot) return
+        const c = daftar.find((x) => x.nama === sorot)
+        if (c) { setPulih(c); setKetik(""); setBukaPulih(false) }
+    }, [bukaPulih, sorot, daftar])
 
     const jalankan = (label: string, fn: () => Promise<HasilCadangan>) => {
         setAksi(label)
@@ -83,6 +92,8 @@ export function KelolaCadangan({ daftar, folder, ruangKosong, ukuranDatabase, da
                 </div>
             )}
 
+            <UnggahCadangan sibuk={sibuk} onSelesai={(nama) => { setSorot(nama); setBukaPulih(true); router.refresh() }} />
+
             <div className="overflow-x-auto rounded-lg border">
                 <table className="w-full text-sm">
                     <thead className="bg-muted/60 text-left text-xs uppercase tracking-wide text-muted-foreground">
@@ -96,7 +107,7 @@ export function KelolaCadangan({ daftar, folder, ruangKosong, ukuranDatabase, da
                             <tr><td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">Belum ada cadangan di folder ini.</td></tr>
                         )}
                         {daftar.map((c) => (
-                            <FragmenBaris key={c.nama} c={c} buka={buka === c.nama} sibuk={sibuk}
+                            <FragmenBaris key={c.nama} c={c} buka={buka === c.nama} sibuk={sibuk} sorot={sorot === c.nama}
                                 onBuka={() => setBuka(buka === c.nama ? null : c.nama)}
                                 onPeriksa={() => jalankan(`Memeriksa ${c.nama}...`, () => periksaCadanganAction(c.nama))}
                                 onHapus={() => { if (confirm(`Hapus cadangan ${c.nama}?\n\nBerkasnya dihapus dari server dan tidak bisa dikembalikan.`)) jalankan(`Menghapus ${c.nama}...`, () => hapusCadanganAction(c.nama)) }}
@@ -132,12 +143,12 @@ export function KelolaCadangan({ daftar, folder, ruangKosong, ukuranDatabase, da
     )
 }
 
-function FragmenBaris({ c, buka, sibuk, onBuka, onPeriksa, onHapus, onPulihkan }: {
-    c: Cadangan; buka: boolean; sibuk: boolean; onBuka: () => void; onPeriksa: () => void; onHapus: () => void; onPulihkan: () => void
+function FragmenBaris({ c, buka, sibuk, sorot, onBuka, onPeriksa, onHapus, onPulihkan }: {
+    c: Cadangan; buka: boolean; sibuk: boolean; sorot: boolean; onBuka: () => void; onPeriksa: () => void; onHapus: () => void; onPulihkan: () => void
 }) {
     return (
         <>
-            <tr className="border-t align-top">
+            <tr className={cn("border-t align-top", sorot && "bg-blue-50 dark:bg-blue-500/10")}>
                 <td className="px-3 py-2.5">
                     <p className="font-medium">{waktu(c.dibuat)}</p>
                     <p className="font-mono text-xs text-muted-foreground">{c.nama}</p>

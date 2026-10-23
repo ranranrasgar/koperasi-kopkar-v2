@@ -250,6 +250,15 @@ Terakhir diperbarui 24 Oktober 2026 (pagi). Agent baru: baca bagian ini dulu, la
 
 ---
 
+## 2026-10-24 — Unggah cadangan dari komputer lalu pulihkan
+
+- Permintaan pengguna: tombol restore dari berkas hasil unduhan, untuk memindah data lokal -> VPS dan sebaliknya. Di halaman Backup & Restore kini ada **Unggah cadangan dari komputer** (`components/master/UnggahCadangan.tsx`): pilih semua berkas satu cadangan, manifest dibaca di browser untuk menampilkan ringkasan dan centang tiap berkas (nama dan ukuran harus cocok), lalu diunggah per potongan 8 MB dengan bilah kemajuan dan coba ulang 3 kali. Setelah server memeriksa SHA-256, cadangan muncul (disorot) dan dialog Pulihkan langsung terbuka.
+- Server: `app/dashboard/settings/backup/unggah/route.ts` (POST mulai/selesai, PUT potongan, DELETE batal; cek izin `MENU.backupRestore` dan Origin) + fungsi unggah di `lib/cadangan.ts`. Alasan per potongan: **proxy Next.js 16 menyalin isi permintaan ke memori dan memotongnya diam-diam di atas 10 MB** (`proxyClientMaxBodySize`, hanya peringatan di log); route juga memastikan isi yang diterima sama dengan Content-Length.
+- Diuji lewat skrip (lapisan server, database uji): cadangan 40 MB dikirim per 8 MB -> utuh; kiriman ulang potongan tidak menggandakan; potongan meloncat, berkas belum lengkap, isi rusak (ukuran sama) ditolak dan folder rusak dibuang; nama/id `../`, potongan > 8 MB, manifest palsu ditolak; cadangan hasil unggahan dipulihkan ke database uji: 61 tabel sama, 21 detik. **Tampilan dan unggah lewat browser belum dicoba** (butuh login operator di browser pane).
+- Catatan pemakaian: PostgreSQL tujuan harus versi sama atau lebih baru dari asal (lokal 14.5; bila VPS memakai versi lebih baru, cadangan VPS tidak bisa dipulihkan ke lokal sebelum PostgreSQL lokal dinaikkan). Restore mengembalikan tabel operator, jadi password operator ikut kembali seperti saat cadangan.
+
+---
+
 ## 2026-10-24 — Menu Backup & Restore di admin
 
 - Permintaan pengguna: modul backup masuk sidebar sebagai menu baru. Menu **Sistem & Pengaturan → Backup & Restore** (`/dashboard/settings/backup`, ikon `backup`), izin baru `MENU.backupRestore` = `Backup & Restore (web)` di `config/akses.ts` (bawaan hanya superadmin; bisa diberikan lewat Kelola Hak Akses, karena daftar izin web dibaca dari `AKSES_HALAMAN`).
