@@ -33,9 +33,22 @@ export const viewport: Viewport = {
     ],
 }
 
+// Dijalankan sebelum halaman tampil: pasang data-tema dari pilihan pengguna dan samakan warna bilah status.
+// window.kopkarTema dipakai pilihan tema di Akun. Warna harus sama dengan viewport.themeColor di atas.
+const SKRIP_TEMA = `(function(){var W={terang:"#f5f7f5",gelap:"#0c110e"};
+function pasang(t){var h=document.documentElement;
+if(t==="terang"||t==="gelap")h.dataset.tema=t;else delete h.dataset.tema;
+document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){
+if(!m.dataset.asli)m.dataset.asli=m.getAttribute("content")||"";
+m.setAttribute("content",W[t]||m.dataset.asli)})}
+window.kopkarTema=pasang;
+function awal(){try{pasang(localStorage.getItem("kopkar-tema")||"")}catch(e){}}
+awal();document.addEventListener("DOMContentLoaded",awal)})();`
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
     return (
-        <html lang="id" className={`${jakarta.variable} h-full antialiased`}>
+        <html lang="id" className={`${jakarta.variable} h-full antialiased`} suppressHydrationWarning>
+            <head><script dangerouslySetInnerHTML={{ __html: SKRIP_TEMA }} /></head>
             <body className="min-h-full">
                 {serverUji && (
                     <div className="bg-tunggu px-4 py-1 text-center text-xs font-semibold text-black">

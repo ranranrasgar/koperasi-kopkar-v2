@@ -2,7 +2,7 @@
 
 /*
  * Tema PWA anggota. Satu warna utama (hijau koperasi, dari logo), netral hangat, warna lain hanya untuk makna:
- * masuk (hijau), keluar (merah), menunggu (kuning). Mode gelap mengikuti pengaturan HP.
+ * masuk (hijau), keluar (merah), menunggu (kuning). Mode gelap mengikuti HP, atau dipilih manual di Akun.
  */
 @theme {
     --font-sans: var(--font-jakarta), ui-sans-serif, system-ui, sans-serif;
@@ -26,8 +26,12 @@
     --radius-kartu: 1.25rem;
 }
 
+/* Pilihan tema di Akun disimpan di localStorage dan dipasang sebagai data-tema pada <html> (lihat layout.tsx). */
+:root { color-scheme: light dark; }
+:root[data-tema="terang"] { color-scheme: light; }
+
 @media (prefers-color-scheme: dark) {
-    :root {
+    :root:not([data-tema="terang"]) {
         --color-latar: oklch(0.17 0.008 160);
         --color-permukaan: oklch(0.215 0.01 160);
         --color-garis: oklch(0.3 0.01 160);
@@ -43,7 +47,27 @@
         --color-keluar: oklch(0.72 0.15 27);
         --color-keluar-lembut: oklch(0.28 0.05 27);
         --color-tunggu: oklch(0.8 0.12 75);
+        color-scheme: dark;
     }
+}
+
+:root[data-tema="gelap"] {
+        --color-latar: oklch(0.17 0.008 160);
+        --color-permukaan: oklch(0.215 0.01 160);
+        --color-garis: oklch(0.3 0.01 160);
+        --color-teks: oklch(0.95 0.005 160);
+        --color-redup: oklch(0.7 0.012 160);
+
+        --color-utama: oklch(0.72 0.12 158);
+        --color-utama-tekan: oklch(0.66 0.12 158);
+        --color-utama-lembut: oklch(0.28 0.04 158);
+        --color-pada-utama: oklch(0.18 0.02 158);
+
+        --color-masuk: oklch(0.74 0.13 152);
+        --color-keluar: oklch(0.72 0.15 27);
+        --color-keluar-lembut: oklch(0.28 0.05 27);
+        --color-tunggu: oklch(0.8 0.12 75);
+        color-scheme: dark;
 }
 
 html {
