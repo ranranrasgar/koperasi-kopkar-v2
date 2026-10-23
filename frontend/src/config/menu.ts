@@ -52,11 +52,6 @@ export const allGroups: MenuGroup[] = [
                 label: "User Mobile",
                 icon: "smartphone",
                 href: "/dashboard/members/mobile-users"
-            },
-            {
-                label: "Pendaftaran Baru",
-                icon: "person_add",
-                href: "/dashboard/members/pendaftaran"
             }
         ]
     },

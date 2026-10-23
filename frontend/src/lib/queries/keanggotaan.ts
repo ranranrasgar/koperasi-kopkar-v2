@@ -29,13 +29,16 @@ export async function daftarUserMobile(s: SearchParams) {
     }
     // menunggu_admin dibaca lewat to_jsonb supaya daftar tetap jalan di database yang kolomnya belum dipasang (npm run anggota:pasang).
     const menunggu = `COALESCE((to_jsonb(u)->>'menunggu_admin')::boolean, false)`
+    const keputusan = `(to_jsonb(u)->>'keputusan_daftar')`
     const st = sp(s, "status")
     if (st === "menunggu") where.push(`${menunggu} AND NOT u.status`)
+    else if (st === "disetujui") where.push(`${keputusan} = 'disetujui'`)
+    else if (st === "ditolak") where.push(`${keputusan} = 'ditolak'`)
     else if (st === "true" || st === "false") where.push(`u.status = ${p(st === "true")}`)
     const base = `
         SELECT u.id, u.username, u.kode_agt, a.nama, a.nik, u.email, u.status, u.created_at::date AS dibuat, u.updated_at::date AS diubah,
                u.fcm_token IS NOT NULL AS punya_token, (${menunggu} AND NOT u.status) AS menunggu_admin, (u.anggota_id IS NOT NULL) AS punya_anggota,
-               CASE WHEN ${menunggu} AND NOT u.status THEN 'menunggu' WHEN u.status THEN 'true' ELSE 'false' END AS status_tampil
+               CASE WHEN ${menunggu} AND NOT u.status THEN 'menunggu' WHEN ${keputusan} = 'ditolak' AND NOT u.status THEN 'ditolak' WHEN u.status THEN 'true' ELSE 'false' END AS status_tampil
           FROM app_user u LEFT JOIN anggota a ON a.id = u.anggota_id
          ${where.length ? `WHERE ${where.join(" AND ")}` : ""}`
     const sortable = Object.fromEntries(["username", "kode_agt", "nama", "status_tampil", "dibuat"].map((k) => [k, k]))

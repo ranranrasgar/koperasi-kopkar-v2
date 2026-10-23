@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import {
-    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, hapusAkunAplikasi, putuskanPendaftaran, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
+    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, hapusAkunAplikasi, jadikanAnggota, putuskanPendaftaran, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
     hashJawaban, hashPasswordAnggota, masukAnggota, pertanyaanUntuk, resetLewatJawaban,
 } from '../src/anggota/akun.ts';
 
@@ -247,5 +247,64 @@ test('hapus akun aplikasi: data aplikasi ikut terhapus, anggota dan data keuanga
         }
         assert.equal((await db.query('SELECT count(*)::int n FROM anggota WHERE id = $1', [a.id])).rows[0].n, 1, 'anggota tetap ada');
         assert.equal((await hapusAkunAplikasi(db, id)).ok, false, 'sudah terhapus');
+    });
+});
+
+test('setujui pendaftaran karyawan Mattel: otomatis jadi anggota dengan kode berformat lama', async () => {
+    await inTx(async (db) => {
+        const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
+        const k = (await db.query(`SELECT k.nik, k.nama, k.grade FROM karyawan_mattel k WHERE length(k.nik) = 6
+            AND NOT EXISTS (SELECT 1 FROM anggota a WHERE a.nik = k.nik) AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.kode_agt = k.nik) LIMIT 1`)).rows[0];
+        const r = await daftarAkun(db, { username: 'uji_jadi_anggota', password: 'Rahasia123', ulangi: 'Rahasia123', nik: k.nik,
+            email: 'uji.jadi.anggota@contoh.id', pertanyaanId: tanya, jawaban: 'Kucing' }, { sub: 'sub-uji-anggota' });
+        const id = Number((r as { userId: number }).userId);
+        const maks = Number((await db.query('SELECT max(urut) m FROM anggota')).rows[0].m);
+        const bulan = (await db.query(`SELECT to_char(now() AT TIME ZONE 'Asia/Jakarta', 'MMYY') b`)).rows[0].b;
+        const oleh = (await db.query('SELECT id, nama FROM opr ORDER BY id LIMIT 1')).rows[0];
+
+        const h = await putuskanPendaftaran(db, id, true, { id: Number(oleh.id), nama: oleh.nama });
+        assert.equal(h.ok, true);
+        const kode = `${bulan}-${String(maks + 1).padStart(4, '0')}`;
+        assert.equal((h as { kodeAnggota?: string }).kodeAnggota, kode);
+
+        const u = await cariAkun(db, { id });
+        assert.equal(u?.akun_aktif, true);
+        assert.equal(u?.kode_agt, kode);
+        assert.ok(u?.anggota_id, 'akun terhubung ke anggota');
+        const a = (await db.query('SELECT * FROM anggota WHERE id = $1', [u!.anggota_id])).rows[0];
+        assert.equal(a.nik, k.nik);
+        assert.equal(a.urut, maks + 1);
+        assert.equal(a.aktif, true);
+        assert.equal(a.agt_non_agt, true);
+        assert.equal(a.grade, (k.grade ?? '').trim());
+        assert.equal(a.opr, oleh.nama.slice(0, 15));
+        assert.ok(a.karyawan_mattel_id, 'tertaut ke karyawan Mattel');
+        assert.equal((await db.query('SELECT count(*)::int n FROM anggota_detail WHERE anggota_id = $1 AND kode_agt = $2', [u!.anggota_id, kode])).rows[0].n, 1);
+
+        // Idempoten: akun yang sudah anggota tidak dibuatkan lagi.
+        const lagi = await jadikanAnggota(db, id, { id: Number(oleh.id), nama: oleh.nama });
+        assert.deepEqual(lagi, { ok: true, kode, dibuat: false });
+        assert.equal((await db.query('SELECT max(urut) m FROM anggota')).rows[0].m, maks + 1);
+    });
+});
+
+test('keputusan pendaftaran tercatat (disetujui / ditolak) untuk filter User Mobile', async () => {
+    await inTx(async (db) => {
+        const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
+        const buat = async (username: string, email: string) => {
+            const a = (await db.query(`SELECT a.nik FROM anggota a WHERE a.aktif AND length(a.nik) = 6
+                AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt)
+                AND NOT EXISTS (SELECT 1 FROM app_user u2 WHERE u2.nikk = a.nik)
+                AND (SELECT count(*) FROM anggota b WHERE b.nik = a.nik) = 1 ORDER BY a.id LIMIT 1`)).rows[0];
+            const r = await daftarAkun(db, { username, password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik, email, pertanyaanId: tanya, jawaban: 'Kucing' }, { sub: `sub-${username}` });
+            return Number((r as { userId: number }).userId);
+        };
+        const setuju = await buat('uji_putus_ya', 'uji.putus.ya@contoh.id');
+        const tolak = await buat('uji_putus_tidak', 'uji.putus.tidak@contoh.id');
+        await putuskanPendaftaran(db, setuju, true, { id: 1, nama: 'uji' });
+        await putuskanPendaftaran(db, tolak, false, { id: 1, nama: 'uji' });
+        const k = async (id: number) => (await db.query('SELECT status, menunggu_admin, keputusan_daftar FROM app_user WHERE id = $1', [id])).rows[0];
+        assert.deepEqual(await k(setuju), { status: true, menunggu_admin: false, keputusan_daftar: 'disetujui' });
+        assert.deepEqual(await k(tolak), { status: false, menunggu_admin: false, keputusan_daftar: 'ditolak' });
     });
 });

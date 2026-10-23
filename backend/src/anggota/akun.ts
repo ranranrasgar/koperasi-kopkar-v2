@@ -203,21 +203,87 @@ export async function daftarMenungguAdmin(db: pg.Pool | pg.PoolClient): Promise<
     return r.rows.map((x) => ({ ...x, id: Number(x.id) })) as PendaftaranBaru[];
 }
 
-export type HasilPutusan = { ok: true; pesan: string; email: string | null; username: string } | { ok: false; error: string };
+export type HasilPutusan = { ok: true; pesan: string; email: string | null; username: string; kodeAnggota?: string } | { ok: false; error: string };
+
+export interface Pelaksana { id: number; nama: string }
+
+/**
+ * Kode anggota baru, format yang sudah berjalan: BBTT-NNNN (bulan dan tahun pencatatan dua digit, strip, nomor urut anggota
+ * empat digit), mis. 0626-2033 untuk anggota ke-2033 yang dicatat Juni 2026. Nomor urut = urut tertinggi + 1 (kolom anggota.urut).
+ * Panggil di dalam transaksi yang memegang kunci 'anggota_baru'.
+ */
+async function kodeAnggotaBaru(db: pg.PoolClient) {
+    const r = (await db.query<{ urut: number; bulan: string }>(
+        `SELECT coalesce(max(urut), 0) + 1 AS urut, to_char(now() AT TIME ZONE 'Asia/Jakarta', 'MMYY') AS bulan FROM anggota`)).rows[0];
+    return { urut: Number(r.urut), kode: `${r.bulan}-${String(r.urut).padStart(4, '0')}` };
+}
+
+/**
+ * Jadikan akun karyawan Mattel sebagai anggota koperasi: bila NIK-nya sudah ada di data anggota (aktif), akun ditautkan ke sana;
+ * bila belum, dibuat baris anggota baru (+ anggota_detail kosong) dengan kode anggota berformat lama, data dari karyawan_mattel,
+ * dan nilai grade/simpanan bawaan mengikuti anggota aktif terbaru berGrade sama (nilai yang paling sering dipakai).
+ * Akun yang sudah punya anggota tidak diubah. Jalankan di dalam transaksi.
+ */
+export async function jadikanAnggota(db: pg.PoolClient, userId: number, oleh: Pelaksana):
+    Promise<{ ok: true; kode: string; dibuat: boolean } | { ok: false; error: string }> {
+    const u = (await db.query<{ anggota_id: string | null; kode_agt: string; karyawan_mattel_id: string | null }>(
+        'SELECT anggota_id::text, kode_agt, karyawan_mattel_id::text FROM app_user WHERE id = $1 FOR UPDATE', [userId])).rows[0];
+    if (!u) return { ok: false, error: 'Akun tidak ditemukan' };
+    if (u.anggota_id) return { ok: true, kode: u.kode_agt, dibuat: false };
+    if (!u.karyawan_mattel_id) return { ok: false, error: 'Akun ini bukan akun karyawan Mattel, tidak ada data untuk membuat anggota.' };
+    const k = (await db.query<{ id: string; nik: string; nama: string | null; sts: string | null; grade: string | null; emphone: string | null; emadd1: string | null; no_rek: string | null }>(
+        'SELECT id::text, nik, nama, sts, grade, emphone, emadd1, no_rek FROM karyawan_mattel WHERE id = $1', [u.karyawan_mattel_id])).rows[0];
+    if (!k) return { ok: false, error: 'Data karyawan Mattel tidak ditemukan' };
+
+    await db.query("SELECT pg_advisory_xact_lock(hashtext('anggota_baru'))");
+    const ada = (await db.query<{ id: string; kode_agt: string; aktif: boolean }>(
+        'SELECT id::text, kode_agt, aktif FROM anggota WHERE nik = $1 ORDER BY aktif DESC, id DESC LIMIT 1', [k.nik])).rows[0];
+    let anggotaId: string, kode: string, dibuat = false;
+    if (ada) {
+        if (!ada.aktif) return { ok: false, error: 'Keanggotaan dengan NIK ini tidak aktif. Aktifkan lewat data anggota.' };
+        anggotaId = ada.id; kode = ada.kode_agt;
+    } else {
+        const grade = (k.grade ?? '').trim();
+        const bawaan = (await db.query<{ rp_grade: string; pokok: string; wajib: string; sukarela: string }>(
+            `WITH terbaru AS (SELECT * FROM anggota WHERE aktif AND agt_non_agt AND urut > (SELECT max(urut) - 400 FROM anggota)),
+                  pilih AS (SELECT * FROM terbaru WHERE grade = $1 UNION ALL SELECT * FROM terbaru WHERE NOT EXISTS (SELECT 1 FROM terbaru WHERE grade = $1))
+             SELECT mode() WITHIN GROUP (ORDER BY rp_grade) rp_grade, mode() WITHIN GROUP (ORDER BY simpanan_pokok) pokok,
+                    mode() WITHIN GROUP (ORDER BY simpanan_wajib) wajib, mode() WITHIN GROUP (ORDER BY simpanan_sukarela) sukarela FROM pilih`, [grade])).rows[0];
+        const { urut, kode: kodeBaru } = await kodeAnggotaBaru(db);
+        anggotaId = (await db.query<{ id: string }>(
+            `INSERT INTO anggota (urut, status_staff, aktif, agt_non_agt, grade, rp_grade, kode_agt, nik, nama, alamat, hp, bank_no_rek, tglpencatatan,
+                                  simpanan_pokok, simpanan_wajib, simpanan_sukarela, opr, karyawan_mattel_id, operator_id)
+             VALUES ($1, $2, true, true, $3, $4, $5, $6, $7, $8, $9, $10, (now() AT TIME ZONE 'Asia/Jakarta')::date, $11, $12, $13, $14, $15, $16) RETURNING id::text`,
+            [urut, (k.sts ?? '').trim().slice(0, 15), grade.slice(0, 15), bawaan?.rp_grade ?? 0, kodeBaru, k.nik, (k.nama ?? '').trim().slice(0, 50),
+                (k.emadd1 ?? '').trim().slice(0, 100), (k.emphone ?? '').trim().slice(0, 20), (k.no_rek ?? '').trim().slice(0, 15),
+                bawaan?.pokok ?? 0, bawaan?.wajib ?? 0, bawaan?.sukarela ?? 0, oleh.nama.slice(0, 15), k.id, oleh.id])).rows[0].id;
+        await db.query('INSERT INTO anggota_detail (anggota_id, urut, kode_agt) SELECT $1, coalesce(max(urut), 0) + 1, $2 FROM anggota_detail', [anggotaId, kodeBaru]);
+        kode = kodeBaru; dibuat = true;
+    }
+    await db.query('UPDATE app_user SET anggota_id = $2, kode_agt = $3, karyawan_mattel_id = NULL, updated_at = now() WHERE id = $1', [userId, anggotaId, kode]);
+    return { ok: true, kode, dibuat };
+}
 
 /**
  * Setujui (akun aktif) atau tolak (akun tetap nonaktif) pendaftaran yang menunggu. Penyetujuan mensyaratkan email
  * terverifikasi, supaya pemberitahuan dan lupa password tidak jatuh ke alamat yang belum terbukti milik pendaftar.
  */
-export async function putuskanPendaftaran(db: pg.PoolClient, userId: number, setuju: boolean): Promise<HasilPutusan> {
+export async function putuskanPendaftaran(db: pg.PoolClient, userId: number, setuju: boolean, oleh?: Pelaksana): Promise<HasilPutusan> {
     const u = (await db.query<{ username: string; email: string | null; verif: boolean }>(
         `SELECT u.username, u.email, coalesce(v.terverifikasi_pada IS NOT NULL AND v.email = lower(trim(u.email)), false) verif
            FROM app_user u LEFT JOIN app_user_email_verif v ON v.app_user_id = u.id
           WHERE u.id = $1 AND u.menunggu_admin AND NOT u.status FOR UPDATE OF u`, [userId])).rows[0];
     if (!u) return { ok: false, error: 'Pendaftaran tidak ada atau sudah diputuskan' };
     if (setuju && !u.verif) return { ok: false, error: 'Email pendaftar belum diverifikasi. Tunggu pendaftar memasukkan kode verifikasi.' };
-    await db.query('UPDATE app_user SET status = $2, menunggu_admin = false, updated_at = now() WHERE id = $1', [userId, setuju]);
-    return { ok: true, pesan: `Pendaftaran ${u.username} ${setuju ? 'disetujui' : 'ditolak'}`, email: u.email, username: u.username };
+    await db.query(`UPDATE app_user SET status = $2, menunggu_admin = false, keputusan_daftar = CASE WHEN $2 THEN 'disetujui' ELSE 'ditolak' END, updated_at = now() WHERE id = $1`, [userId, setuju]);
+    // Disetujui: karyawan Mattel yang belum anggota otomatis dijadikan anggota (kode anggota baru), pendaftar anggota lama tinggal aktif.
+    let kodeAnggota: string | undefined;
+    if (setuju && oleh) {
+        const a = await jadikanAnggota(db, userId, oleh);
+        if (!a.ok) throw new Error(a.error);
+        kodeAnggota = a.kode;
+    }
+    return { ok: true, pesan: `Pendaftaran ${u.username} ${setuju ? 'disetujui' : 'ditolak'}${kodeAnggota ? `, kode anggota ${kodeAnggota}` : ''}`, email: u.email, username: u.username, kodeAnggota };
 }
 
 export type HasilHapus = { ok: true; pesan: string; punyaAnggota: boolean } | { ok: false; error: string };

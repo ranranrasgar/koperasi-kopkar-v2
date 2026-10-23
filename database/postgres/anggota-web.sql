@@ -161,3 +161,5 @@ CREATE TABLE IF NOT EXISTS app_user_google (
 -- Pendaftaran baru dari aplikasi anggota menunggu persetujuan admin: akun status false + menunggu_admin true sampai
 -- admin menyetujui (Anggota, Pendaftaran Baru) atau menolak.
 ALTER TABLE app_user ADD COLUMN IF NOT EXISTS menunggu_admin boolean NOT NULL DEFAULT false;
+-- Keputusan admin atas pendaftaran baru: 'disetujui' atau 'ditolak' (kosong = akun lama / belum diputuskan). Dipakai filter User Mobile.
+ALTER TABLE app_user ADD COLUMN IF NOT EXISTS keputusan_daftar varchar(10);

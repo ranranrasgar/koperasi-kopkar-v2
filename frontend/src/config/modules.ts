@@ -188,7 +188,7 @@ export const userMobileConfig: ModuleConfig = {
     rowKey: "id",
     searchPlaceholder: "Username, kode anggota, nama, atau email",
     filters: [
-        { key: "status", label: "Status", type: "select", options: [{ label: "Menunggu persetujuan", value: "menunggu" }, { label: "Aktif", value: "true" }, { label: "Tidak aktif", value: "false" }] },
+        { key: "status", label: "Status", type: "select", options: [{ label: "Anggota baru (menunggu)", value: "menunggu" }, { label: "Sudah disetujui", value: "disetujui" }, { label: "Ditolak", value: "ditolak" }, { label: "Aktif", value: "true" }, { label: "Tidak aktif", value: "false" }] },
     ],
     columns: [
         { key: "username", label: "Username", type: "string", sortable: true },
@@ -197,7 +197,7 @@ export const userMobileConfig: ModuleConfig = {
         { key: "nik", label: "KPK", type: "string", hidden: true },
         { key: "email", label: "Email", type: "string" },
         { key: "status_tampil", label: "Status", type: "badge", sortable: true,
-            badgeMap: { "true": { label: "Aktif", color: "green" }, "false": { label: "Tidak aktif", color: "gray" }, "menunggu": { label: "Menunggu", color: "orange" } } },
+            badgeMap: { "true": { label: "Aktif", color: "green" }, "false": { label: "Tidak aktif", color: "gray" }, "menunggu": { label: "Menunggu", color: "orange" }, "ditolak": { label: "Ditolak", color: "red" } } },
         { key: "punya_token", label: "Notifikasi", type: "boolean", hidden: true },
         { key: "dibuat", label: "Dibuat", type: "date", sortable: true },
         { key: "diubah", label: "Diubah", type: "date", hidden: true },
