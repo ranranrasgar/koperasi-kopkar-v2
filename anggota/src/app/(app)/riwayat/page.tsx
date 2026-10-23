@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Coins, FileText, HandCoins, Landmark, PiggyBank, type LucideIcon } from "lucide-react"
+import { Coins, FileText, HandCoins, Landmark, WalletCards, type LucideIcon } from "lucide-react"
 import { Arus, batasBaris, Kartu, Kepala, Kosong, MuatLagi } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { riwayat, type Riwayat } from "@/lib/data"
@@ -8,7 +8,7 @@ import { rupiah, tanggal } from "@/lib/format"
 export const metadata: Metadata = { title: "Riwayat" }
 
 const LANGKAH = 25
-const IKON: Record<string, LucideIcon> = { SIMPANAN: PiggyBank, PINJAMAN: HandCoins, KPR: Landmark, PENGAJUAN: FileText, SHU: Coins }
+const IKON: Record<string, LucideIcon> = { SIMPANAN: WalletCards, PINJAMAN: HandCoins, KPR: Landmark, PENGAJUAN: FileText, SHU: Coins }
 
 /** Jenis aksi singkat; nama produk sudah di baris atas. */
 function aksi(r: Riwayat) {

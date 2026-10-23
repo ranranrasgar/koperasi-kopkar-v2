@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next"
 import { Plus_Jakarta_Sans } from "next/font/google"
 import "./globals.css"
+import { PekerjaLatar } from "@/components/PekerjaLatar"
 import { serverUji } from "@/lib/db"
 import { namaKoperasi } from "@/lib/koperasi"
 
@@ -11,8 +12,13 @@ export async function generateMetadata(): Promise<Metadata> {
     return {
         title: { default: `${serverUji ? "[UJI] " : ""}${nama}`, template: `%s · ${nama}` },
         description: `Aplikasi anggota ${nama}: simpanan, pinjaman, SHU, dan pengajuan kredit.`,
-        icons: { icon: "/logo.png", apple: "/logo.png" },
+        icons: {
+            icon: [{ url: "/ikon/favicon-32.png", sizes: "32x32" }, { url: "/ikon/ikon-192.png", sizes: "192x192" }],
+            apple: "/ikon/apple-touch-icon.png",
+        },
+        // iOS: dibuka layar penuh bila dipasang ke layar utama (Bagikan → Tambah ke Layar Utama).
         appleWebApp: { capable: true, title: "Kopkar MJS", statusBarStyle: "default" },
+        formatDetection: { telephone: false },
     }
 }
 
@@ -21,8 +27,9 @@ export const viewport: Viewport = {
     initialScale: 1,
     viewportFit: "cover",
     themeColor: [
-        { media: "(prefers-color-scheme: light)", color: "#f6f8f6" },
-        { media: "(prefers-color-scheme: dark)", color: "#111613" },
+        // Harus sama dengan --color-latar di globals.css (oklch dikonversi ke hex) supaya bilah status menyatu.
+        { media: "(prefers-color-scheme: light)", color: "#f5f7f5" },
+        { media: "(prefers-color-scheme: dark)", color: "#0c110e" },
     ],
 }
 
@@ -36,6 +43,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
                     </div>
                 )}
                 {children}
+                <PekerjaLatar />
             </body>
         </html>
     )

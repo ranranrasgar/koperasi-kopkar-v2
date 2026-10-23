@@ -169,6 +169,17 @@ export interface Notifikasi { title: string | null; pesan: string | null; dateti
 export const notifikasi = (anggotaId: number, batas: number) =>
     bersama.getLogNotifikasi(poolAngka, anggotaId, 0, batas) as Promise<Notifikasi[]>
 
+export interface NotifikasiBaris extends Notifikasi { id: number }
+const KOLOM_NOTIF = "id, title, pesan, to_char(datetimes, 'YYYY-MM-DD HH24:MI:SS') datetimes"
+/** Daftar notifikasi milik anggota, terbaru dulu, dengan id untuk membuka detailnya. */
+export const daftarNotifikasi = (anggotaId: number, batas: number) =>
+    query<NotifikasiBaris>(`SELECT ${KOLOM_NOTIF} FROM log_notifikasi WHERE anggota_id = $1 ORDER BY datetimes DESC, id DESC LIMIT $2`, [anggotaId, batas])
+/** Satu notifikasi; null bila bukan milik anggota ini (id orang lain menghasilkan 404). */
+export async function detailNotifikasi(anggotaId: number, id: number) {
+    const [n] = await query<NotifikasiBaris>(`SELECT ${KOLOM_NOTIF} FROM log_notifikasi WHERE id = $1 AND anggota_id = $2`, [id, anggotaId])
+    return n ?? null
+}
+
 export interface Himbauan { id: number; judul_himbauan: string | null; isi_himbauan: string | null }
 export const himbauan = () => bersama.getHimbauan(poolAngka) as Promise<Himbauan | null>
 export interface Promo { id: number; judul: string | null; isi: string | null }

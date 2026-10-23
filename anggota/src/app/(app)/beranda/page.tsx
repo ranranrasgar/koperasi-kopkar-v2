@@ -1,6 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { Bell, CalendarDays, ChevronRight, Coins, Megaphone, ReceiptText, Wallet, type LucideIcon } from "lucide-react"
+import { AjakanPasang } from "@/components/AjakanPasang"
 import { KartuSaldo } from "@/components/KartuSaldo"
 import { BarisTautan, JudulBagian, Kartu, Kemajuan } from "@/components/ui"
 import { wajibMasuk } from "@/lib/anggota"
@@ -77,6 +78,8 @@ export default async function BerandaPage() {
                     </Link>
                 ))}
             </nav>
+
+            <AjakanPasang />
 
             {info && (info.judul_himbauan || info.isi_himbauan) && (
                 <Kartu className="mt-5 flex gap-3 p-4">

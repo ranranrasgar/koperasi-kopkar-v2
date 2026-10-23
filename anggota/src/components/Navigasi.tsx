@@ -2,11 +2,11 @@
 
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { FilePen, HandCoins, House, PiggyBank, UserRound, type LucideIcon } from "lucide-react"
+import { FilePen, HandCoins, House, UserRound, WalletCards, type LucideIcon } from "lucide-react"
 
 const MENU: { href: string; label: string; ikon: LucideIcon }[] = [
     { href: "/beranda", label: "Beranda", ikon: House },
-    { href: "/simpanan", label: "Simpanan", ikon: PiggyBank },
+    { href: "/simpanan", label: "Simpanan", ikon: WalletCards },
     { href: "/pinjaman", label: "Pinjaman", ikon: HandCoins },
     { href: "/ajukan", label: "Ajukan", ikon: FilePen },
     { href: "/akun", label: "Akun", ikon: UserRound },
