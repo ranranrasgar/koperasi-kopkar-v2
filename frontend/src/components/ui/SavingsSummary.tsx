@@ -153,14 +153,14 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
                     </Button>
                 </form>
 
-                <div className="overflow-x-auto relative">
+                <div className="overflow-auto relative min-h-[280px] max-h-[calc(100dvh-20rem)]">
                     {loading && (
                         <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-20">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
                     )}
                     <table className="w-full text-sm">
-                        <thead className="bg-muted/70 text-muted-foreground sticky top-0 z-10">
+                        <thead className="bg-muted text-muted-foreground sticky top-0 z-10">
                             <tr>
                                 <th rowSpan={2} className="px-3 py-2 text-center text-xs font-semibold w-12">No.</th>
                                 <th colSpan={3} className="px-3 py-2 text-center text-xs border-b font-semibold">Anggota</th>
@@ -209,7 +209,7 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
                             ))}
                         </tbody>
                         {data.items.length > 0 && (
-                            <tfoot className="bg-muted/80 font-bold border-t-2">
+                            <tfoot className="bg-muted font-bold border-t-2 sticky bottom-0 z-10">
                                 <TotalRow label="Subtotal halaman ini" t={pageTotals} />
                                 <TotalRow label="Total seluruh data" t={grandTotal} />
                             </tfoot>
