@@ -1,13 +1,18 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
-import { CircleCheck, CircleDashed } from "lucide-react"
-import { Baris, Blok, Kartu, Kemajuan, Kepala, Kosong } from "@/components/ui"
+import { CalendarClock, CircleCheck, CircleDashed, Hourglass, Landmark } from "lucide-react"
+import { HeroPinjaman } from "@/components/HeroPinjaman"
+import { Baris, JudulBagian, Kartu, Kemajuan, Kepala, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { rincianPinjaman } from "@/lib/data"
-import { rupiah, tanggal } from "@/lib/format"
+import { hariIni, rupiah, selisihHari, tanggal } from "@/lib/format"
 
 export const metadata: Metadata = { title: "Rincian Pinjaman" }
+
+const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
+const bulanTahun = (t: string | null | undefined) => (t ? `${BULAN[Number(t.slice(5, 7)) - 1]} ${t.slice(0, 4)}` : "-")
+const persen = (n: number | null) => (n === null ? "-" : `${Number(n).toLocaleString("id-ID", { maximumFractionDigits: 3 })}%`)
 
 export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[jenis]/[id]">) {
     const a = await wajibAnggota()
@@ -22,36 +27,95 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
     const berikut = sisaJadwal[0]
     const sisaJasa = sisaJadwal.reduce((t, j) => t + j.jasa, 0)
     const lunas = p.sisa <= 100 || p.jml_cicilan >= p.lama_angsuran
+    const persenSelesai = p.lama_angsuran > 0 ? Math.min(100, Math.round((Math.min(p.jml_cicilan, p.lama_angsuran) / p.lama_angsuran) * 100)) : 0
+    const sisaTenor = Math.max(0, p.lama_angsuran - p.jml_cicilan)
+    const targetLunas = jadwal.at(-1)?.tanggal_angsuran
+    const pokokDibayar = bayar.reduce((t, b) => t + b.pokok, 0)
+    const jasaDibayar = bayar.reduce((t, b) => t + b.jasa, 0)
+    const sisaHari = berikut ? selisihHari(hariIni(), berikut.tanggal_angsuran) : null
     const tabKelas = (aktif: boolean) =>
         `flex h-10 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition-colors ${aktif ? "bg-permukaan text-teks shadow-sm" : "text-redup"}`
 
     return (
         <main>
-            <Kepala judul={p.nama_kredit ?? "Pinjaman"} sub={p.no_pinjaman} kembali="/pinjaman" />
+            <Kepala judul="Detail pinjaman" kembali="/pinjaman" />
             <div className="px-5">
-                <Blok>
-                    <p className="text-sm text-redup">{lunas ? "Pinjaman lunas" : "Sisa pokok"}</p>
-                    <p className="angka mt-1 text-[1.75rem] font-bold leading-tight tracking-tight">{rupiah(p.sisa)}</p>
-                    <div className="mt-4 flex items-center gap-3">
-                        <Kemajuan ke={p.jml_cicilan} dari={p.lama_angsuran} />
-                        <span className="angka shrink-0 text-xs text-redup">Cicilan {p.jml_cicilan} dari {p.lama_angsuran}</span>
+                <section className="rounded-[var(--radius-kartu)] border border-garis bg-permukaan p-4">
+                    <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide ${lunas ? "bg-garis text-redup" : "bg-masuk/15 text-masuk"}`}>
+                                <span className={`size-1.5 rounded-full ${lunas ? "bg-redup" : "bg-masuk"}`} />{lunas ? "Lunas" : "Aktif"}
+                            </span>
+                            <h2 className="mt-2.5 text-[1.375rem] font-bold leading-tight tracking-tight">{p.nama_kredit ?? "Pinjaman"}</h2>
+                            <p className="mt-1 text-xs text-redup">{p.no_pinjaman} · Akad {tanggal(p.tgl_pinjaman, true)}</p>
+                        </div>
+                        <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-utama-lembut text-utama"><Landmark size={20} strokeWidth={1.75} /></span>
                     </div>
-                    <dl className="mt-3 divide-y divide-garis border-t border-garis">
-                        <Baris label="Pokok pinjaman" nilai={rupiah(p.pokok)} />
-                        <Baris label="Tanggal pinjaman" nilai={tanggal(p.tgl_pinjaman)} />
-                        {p.persen_bunga !== null && <Baris label="Jasa" nilai={`${p.persen_bunga.toLocaleString("id-ID")}%`} />}
-                        <Baris label="Sisa angsuran" nilai={lunas ? "Lunas" : `${sisaJadwal.length} kali`} />
-                        {!lunas && berikut && <Baris label="Angsuran berikutnya" nilai={`${rupiah(berikut.total)} · ${tanggal(berikut.tanggal_angsuran)}`} />}
-                        {!lunas && sisaJasa > 0 && <Baris label="Sisa jasa" nilai={rupiah(sisaJasa)} />}
-                    </dl>
-                </Blok>
+                    <div className="mt-4 rounded-2xl bg-utama-lembut p-3.5">
+                        <div className="flex items-baseline justify-between gap-3 text-sm">
+                            <span className="font-medium">{Math.min(p.jml_cicilan, p.lama_angsuran)} dari {p.lama_angsuran} angsuran selesai</span>
+                            <span className="angka font-bold">{persenSelesai}%</span>
+                        </div>
+                        <div className="mt-2"><Kemajuan ke={Math.min(p.jml_cicilan, p.lama_angsuran)} dari={p.lama_angsuran} /></div>
+                        <div className="mt-2.5 flex items-center justify-between gap-3 text-[0.6875rem] text-redup">
+                            <span className="flex items-center gap-1"><Hourglass size={12} />{lunas ? "Semua angsuran selesai" : `Sisa tenor: ${sisaTenor} bulan lagi`}</span>
+                            <span>Target lunas: <span className="font-semibold text-teks">{bulanTahun(targetLunas)}</span></span>
+                        </div>
+                    </div>
+                </section>
 
-                <nav aria-label="Tampilan" className="mt-6 flex gap-1 rounded-xl bg-garis/60 p-1">
+                <div className="mt-4">
+                    <HeroPinjaman lunas={lunas} sisa={rupiah(p.sisa)} pokok={rupiah(p.pokok)} jasa={`${persen(p.persen_bunga)}${p.persen_bunga !== null ? " / bln" : ""}`}
+                        angsuran={!lunas && berikut ? rupiah(berikut.total) : null} />
+                </div>
+
+                {!lunas && berikut && (
+                    <section className="mt-4 rounded-[var(--radius-kartu)] border border-garis bg-permukaan p-4">
+                        <div className="flex items-center justify-between gap-3">
+                            <div className="flex min-w-0 items-center gap-3">
+                                <span className="grid size-10 shrink-0 place-items-center rounded-full bg-utama-lembut text-utama"><CalendarClock size={19} strokeWidth={1.75} /></span>
+                                <div className="min-w-0">
+                                    <p className="font-semibold leading-tight">Angsuran ke-{berikut.angsuran_ke}</p>
+                                    <p className="text-xs text-redup">Jatuh tempo: {tanggal(berikut.tanggal_angsuran, true)}</p>
+                                </div>
+                            </div>
+                            {sisaHari !== null && (
+                                <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold ${sisaHari < 0 ? "bg-keluar/15 text-keluar" : sisaHari <= 7 ? "bg-tunggu/15 text-tunggu" : "bg-garis text-redup"}`}>
+                                    {sisaHari < 0 ? `Lewat ${-sisaHari} hari` : sisaHari === 0 ? "Hari ini" : `H-${sisaHari} hari`}
+                                </span>
+                            )}
+                        </div>
+                        <div className="mt-3.5 rounded-2xl bg-utama-lembut p-3.5">
+                            <div className="flex items-baseline justify-between gap-3">
+                                <span className="text-sm text-redup">Nominal tagihan</span>
+                                <span className="angka text-xl font-bold">{rupiah(berikut.total)}</span>
+                            </div>
+                            <dl className="mt-3 space-y-1.5 rounded-xl bg-permukaan p-3 text-sm">
+                                <div className="flex justify-between gap-3"><dt className="flex items-center gap-2 text-redup"><span className="size-1.5 rounded-full bg-utama" />Porsi pokok</dt><dd className="angka">{rupiah(berikut.pokok)}</dd></div>
+                                <div className="flex justify-between gap-3"><dt className="flex items-center gap-2 text-redup"><span className="size-1.5 rounded-full bg-masuk" />Porsi jasa</dt><dd className="angka">{rupiah(berikut.jasa)}</dd></div>
+                                {berikut.biaya > 0 && <div className="flex justify-between gap-3"><dt className="flex items-center gap-2 text-redup"><span className="size-1.5 rounded-full bg-tunggu" />Biaya adm dan provisi</dt><dd className="angka">{rupiah(berikut.biaya)}</dd></div>}
+                            </dl>
+                        </div>
+                    </section>
+                )}
+
+                <JudulBagian>Rincian finansial</JudulBagian>
+                <Kartu className="px-5">
+                    <dl className="divide-y divide-garis">
+                        <Baris label="Pokok pinjaman" nilai={rupiah(p.pokok)} />
+                        <Baris label="Pokok terbayar" nilai={rupiah(pokokDibayar)} warna="text-masuk" tegas />
+                        <Baris label="Jasa dibayar" nilai={rupiah(jasaDibayar)} />
+                        {!lunas && sisaJasa > 0 && <Baris label="Sisa jasa" nilai={rupiah(sisaJasa)} />}
+                        {!lunas && <Baris label="Sisa angsuran" nilai={`${sisaJadwal.length} kali`} />}
+                    </dl>
+                </Kartu>
+
+                <nav aria-label="Tampilan" className="mt-8 flex gap-1 rounded-xl bg-garis/60 p-1">
                     <Link href="?tab=jadwal" replace scroll={false} className={tabKelas(tab === "jadwal")} aria-current={tab === "jadwal" ? "page" : undefined}>
                         Jadwal angsuran
                     </Link>
                     <Link href="?tab=bayar" replace scroll={false} className={tabKelas(tab === "bayar")} aria-current={tab === "bayar" ? "page" : undefined}>
-                        Pembayaran
+                        Riwayat pembayaran
                     </Link>
                 </nav>
 
@@ -82,9 +146,10 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
                     bayar.length === 0 ? <Kartu className="mt-3"><Kosong judul="Belum ada pembayaran" /></Kartu> : (
                         <Kartu className="mt-3 divide-y divide-garis">
                             {bayar.map((b) => (
-                                <div key={`${b.no_bukti}-${b.angsuran_ke}`} className="flex items-start justify-between gap-4 px-5 py-3">
-                                    <div className="min-w-0">
-                                        <p className="text-[0.9375rem] font-medium">Angsuran ke-{b.angsuran_ke}</p>
+                                <div key={`${b.no_bukti}-${b.angsuran_ke}`} className="flex items-center gap-3 px-5 py-3">
+                                    <span className="grid size-10 shrink-0 place-items-center rounded-full bg-masuk/15 text-sm font-bold text-masuk">{b.angsuran_ke}</span>
+                                    <div className="min-w-0 flex-1">
+                                        <p className="text-[0.9375rem] font-medium">Angsuran bulan ke-{b.angsuran_ke}</p>
                                         <p className="truncate text-xs text-redup">{tanggal(b.tanggal_angsuran)} · {b.no_bukti}</p>
                                     </div>
                                     <div className="text-right">
