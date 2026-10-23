@@ -14,7 +14,7 @@ interface Row {
     rp_pinjaman_pokok: number; uang_muka: number; rp_provisi: number; rp_adm: number; temp_total_plafond: number; temp_total_jasa: number
     temp_angs_per_bulan: number; angs_pokok: number; angs_jasa: number; lama_angsuran: number; jml_cicilan: number; sisa_cicilan: number
     jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; total_bayar: number; sisa_pokok: number
-    lunas: boolean; jatuh_tempo: string | null
+    lunas: boolean; jatuh_tempo: string | null; sisa_buku: number
 }
 
 // Kolom sama dengan layar Data Pinjaman Anggota di aplikasi desktop. `teks` untuk dokumen cetak, `jumlah` bila kolom dijumlahkan di baris total.
@@ -40,7 +40,8 @@ const KOLOM: Kolom[] = [
     { judul: "Byr Pokok", kanan: true, mono: true, warna: "text-green-600 dark:text-green-400", teks: (r) => angka(r.bayar_pokok), jumlah: (r) => r.bayar_pokok },
     { judul: "Byr Jasa", kanan: true, mono: true, warna: "text-green-600 dark:text-green-400", teks: (r) => angka(r.bayar_bunga), jumlah: (r) => r.bayar_bunga },
     { judul: "Total Bayar", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.total_bayar), jumlah: (r) => r.total_bayar },
-    { judul: "Sisa Pokok", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.sisa_pokok), jumlah: (r) => r.sisa_pokok },
+    // Lunas tetapi saldo buku masih ada (mis. diselesaikan lewat top-up): sisa 0 dengan tanda *.
+    { judul: "Sisa Pokok", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.sisa_pokok) + (r.lunas && Number(r.sisa_buku) > 100 ? " *" : ""), jumlah: (r) => r.sisa_pokok },
     { judul: "Tunggak", tengah: true, tebal: true, warna: "text-error", teks: (r) => String(r.jml_tunggakan ?? 0) },
     { judul: "Jatuh Tempo", teks: (r) => (r.jatuh_tempo ? formatTanggal(r.jatuh_tempo) : "") },
     { judul: "#Opr", teks: (r) => r.opr ?? "" },
@@ -229,6 +230,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                             <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-blue-500/40" />Jatuh tempo hari ini</span>
                             <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-red-500/40" />Sudah jatuh tempo (tunggak)</span>
                             <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-surface-variant" />Pinjaman lunas</span>
+                            <span>* Lunas, tetapi saldo buku pinjaman masih tersisa (umumnya diselesaikan lewat top-up)</span>
                         </div>
                         </>
                     )}

@@ -10,7 +10,9 @@
 //    rincian TIDAK dipakai: pada baris angsuran nilainya 0 (bukan saldo berjalan).
 //  - Lunas = sisa buku <= SISA_LUNAS ATAU semua cicilan sudah terbayar (jml_cicilan >= lama), aturan yang sama dengan aplikasi
 //    anggota dan API aplikasi lama (pelunasan lewat potongan tidak tercatat di rincian). Pinjaman lunas ditampilkan dengan
-//    sisa cicilan 0 dan tunggakan 0.
+//    sisa pokok 0, sisa cicilan 0, dan tunggakan 0. `sisa_buku` menyimpan saldo buku apa adanya: ±180 pinjaman yang cicilannya selesai
+//    masih bersaldo buku (total ±Rp 1,5 miliar), umumnya pinjaman yang diselesaikan lewat top-up (baris setoran bertanda TOPUP) tanpa
+//    jurnal pelunasan di rincian; header pinjaman (rp_saldo_pokok) dan desktop menganggapnya lunas.
 //  - Tunggak: dihitung langsung dari jadwal tagih (pinjaman_tunai_rincian_tagih): angsuran yang sudah jatuh tempo hari ini dikurangi
 //    jml_cicilan, sama dengan laporan Kredit Macet. Kolom jml_tunggakan di pinjaman_tunai (hasil tombol "Cek Tunggakan" desktop) tidak
 //    dipakai karena usang (hanya 14 pinjaman terisi, padahal ±225 menunggak). Jatuh Tempo = tanggal angsuran berikutnya yang belum dibayar.
@@ -55,14 +57,15 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
 
     // Nilai dari buku pinjaman dan jadwal tagih, hanya dihitung untuk baris yang dibutuhkan (satu halaman, atau semua bila ada filter status).
     const lengkap = (sumber: string) => `
-        SELECT y.*, CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.lama_angsuran - y.jml_cicilan, 0) END AS sisa_cicilan,
+        SELECT y.*, CASE WHEN y.lunas THEN 0 ELSE y.sisa_buku END AS sisa_pokok,
+               CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.lama_angsuran - y.jml_cicilan, 0) END AS sisa_cicilan,
                CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.jatuh_tempo_n - y.jml_cicilan, 0) END AS jml_tunggakan
           FROM (
             SELECT h.id, h.tgl_pinjaman, h.no_pinjaman, h.no_pinjaman_urut, h.kode_agt, h.nik, h.nama, h.rp_pinjaman_pokok, h.uang_muka, h.rp_provisi, h.rp_adm,
                    h.temp_total_plafond, h.temp_total_jasa, h.lama_angsuran, h.jml_cicilan, h.opr, h.kode_kredit,
                    h.temp_total_plafond / NULLIF(h.lama_angsuran, 0) AS angs_pokok, h.temp_total_jasa / NULLIF(h.lama_angsuran, 0) AS angs_jasa,
                    (h.temp_total_plafond + h.temp_total_jasa) / NULLIF(h.lama_angsuran, 0) AS temp_angs_per_bulan,
-                   s.sisa_pokok, LEAST(h.temp_total_plafond, s.dibayar_pokok) AS bayar_pokok, s.bayar_bunga,
+                   s.sisa_pokok AS sisa_buku, LEAST(h.temp_total_plafond, s.dibayar_pokok) AS bayar_pokok, s.bayar_bunga,
                    LEAST(h.temp_total_plafond, s.dibayar_pokok) + s.bayar_bunga AS total_bayar,
                    (s.sisa_pokok <= ${SISA_LUNAS} OR h.jml_cicilan >= h.lama_angsuran) AS lunas,
                    COALESCE(j.jatuh_tempo_n, 0) AS jatuh_tempo_n, j.jatuh_tempo AS jatuh_tempo

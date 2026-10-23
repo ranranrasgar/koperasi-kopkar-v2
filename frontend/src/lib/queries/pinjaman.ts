@@ -20,7 +20,7 @@ export interface LaporanPinjamanRow {
     tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string
     rp_pinjaman_pokok: number; rp_provisi: number; temp_total_plafond: number; temp_total_jasa: number
     temp_angs_per_bulan: number; lama_angsuran: number; jml_cicilan: number; sisa_cicilan: number
-    jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; sisa_pokok: number; lunas: boolean; kode_kredit: string | null
+    jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; sisa_pokok: number; sisa_buku: number; lunas: boolean; kode_kredit: string | null
     uang_muka: number; rp_adm: number; angs_pokok: number; angs_jasa: number; total_bayar: number; jatuh_tempo: string | null; opr: string | null
 }
 
