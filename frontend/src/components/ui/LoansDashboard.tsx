@@ -149,7 +149,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
 
 
             {/* Data Table */}
-            <div className="bg-surface rounded-xl border border-outline-variant shadow-xs overflow-hidden print:hidden">
+            <div className="bg-surface rounded-xl border border-outline-variant shadow-xs overflow-clip print:hidden">
                 {/* Filter: satu baris, rata kiri, di dalam kartu tabel seperti halaman daftar lainnya */}
                 <div className="border-b border-outline-variant bg-surface-container-lowest p-3 print:hidden">
                     <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2">
@@ -192,13 +192,12 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                             <span className={`material-symbols-outlined text-[18px] ${isLoading ? "animate-spin" : ""}`}>{isLoading ? "refresh" : "filter_alt"}</span>
                             Terapkan
                         </button>
+                        <div className="ml-auto">
+                            <PilihKolom kolom={KOLOM.filter((k) => k.judul !== "Nama Anggota" && k.judul !== "No.Pinjaman").map((k) => ({ kunci: k.judul, label: k.judul }))}
+                                terlihat={terlihat} onUbah={ubahKolom} onAturUlang={aturUlangKolom} sudahDiubah={kolomDiubah} />
+                        </div>
                     </form>
                 </div>
-                {/* Halaman (atas) */}
-                {!isLoading && <Paginasi page={page} totalPages={totalPages} pageSize={pageSize} total={totalRecords} onHalaman={(p) => go(p)} onBaris={(v) => go(1, v)}
-                    className="border-b border-outline-variant bg-surface-container-lowest"
-                    awal={<PilihKolom kolom={KOLOM.filter((k) => k.judul !== "Nama Anggota" && k.judul !== "No.Pinjaman").map((k) => ({ kunci: k.judul, label: k.judul }))}
-                        terlihat={terlihat} onUbah={ubahKolom} onAturUlang={aturUlangKolom} sudahDiubah={kolomDiubah} />} />}
                 <div className="overflow-x-auto w-full">
                     {isLoading ? (
                         <div className="h-64 flex flex-col items-center justify-center text-on-surface-variant">
@@ -246,7 +245,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                                             <tr key={row.no_pinjaman} className={`hover:bg-surface-container-lowest/50 transition-colors ${warnaBaris}`}>
                                                 <td className="p-3 align-top text-center text-sm text-on-surface-variant">{(page - 1) * pageSize + idx + 1}</td>
                                                 {kolomTampil.map((k) => (
-                                                    <td key={k.judul} className={`p-3 align-top text-sm ${k.kanan ? "text-right" : k.tengah ? "text-center" : ""} ${k.mono ? "font-mono" : ""} ${k.tebal ? "font-bold" : ""} ${k.warna ?? ""}`}>
+                                                    <td key={k.judul} className={`px-3 py-2 align-top text-sm ${k.kanan ? "text-right" : k.tengah ? "text-center" : ""} ${k.mono ? "font-mono" : ""} ${k.tebal ? "font-bold" : ""} ${k.warna ?? ""}`}>
                                                         {k.judul === "Nama Anggota"
                                                             ? <>{row.nama}<div className="text-[11px] font-normal text-on-surface-variant mt-0.5 font-mono">{row.nik ?? "-"} | {row.kode_agt}</div></>
                                                             : k.teks(row)}
@@ -270,7 +269,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
 
                 {/* Halaman (bawah) */}
                 {!isLoading && <Paginasi page={page} totalPages={totalPages} pageSize={pageSize} total={totalRecords} onHalaman={(p) => go(p)} onBaris={(v) => go(1, v)}
-                    className="border-t border-outline-variant bg-surface-container-lowest" />}
+                    className="sticky bottom-0 z-10 border-t border-outline-variant bg-surface-container-lowest/95 backdrop-blur" />}
             </div>
         </div>
     )
