@@ -45,6 +45,15 @@ Terakhir diperbarui 22 Oktober 2026 malam. Agent baru: baca bagian ini dulu, lal
 - `npm audit`: `next` 16.2.10 punya celah kritis *Proxy bypass* (Turbopack). Halaman dan actions tetap cek sesi di server, tetapi sebaiknya `next` dinaikkan versinya.
 - Saat aturan transaksi berubah, perbarui artikel di `database/panduan` (dan di database bila belum disunting admin).
 
+### Optimasi Daftar Anggota (23 Oktober)
+- Pengguna meminta tabel `anggota` dipecah karena lambat. Hasil pengukuran: `anggota` hanya 31 kolom, 2.026 baris, 1 MB; membaca 25 baris = 2 ms. **Tabel tidak dipecah.** Pemecahan juga akan menyentuh mesin posting, kontrak API mobile, `mapping.mjs`/migrasi, dan rekonsiliasi.
+- Penyebab lambat: saldo simpanan dijumlah dari 301 ribu baris untuk semua anggota setiap kali halaman dibuka (171-1.201 ms).
+- Perbaikan di `lib/queries/anggota.ts`:
+  - Saldo dihitung per baris lewat indeks `simpanan(anggota_id)`: halaman 1 dari 225 ms menjadi 5 ms; cari nama 6 ms; halaman 40 141 ms.
+  - Hasil identik dengan query lama.
+  - Saat diurutkan per saldo tetap memakai agregat sekali (lebih cepat untuk kasus itu).
+- Detail anggota menampilkan field yang umumnya terisi lewat kolom tersembunyi di `membersConfig`: jenis kelamin, status perkawinan, alamat, kode pos (`0` → kosong), rekening atas nama, potongan simpanan pokok/wajib/sukarela per bulan, tanggal/alasan keluar, pencatat. Kolom terisi <10% (`telp_rmh`, `status_acc`, `keterangan_acc`) tidak dimuat.
+
 ### Jebakan yang sudah ditemui
 - PowerShell 5.1 `Set-Content -Encoding utf8` menambah BOM. Di `.env.local` ini membuat `PG_URL` tidak terbaca; tulis dengan `[IO.File]::WriteAllText` atau Write tool.
 - Typecheck gagal *"does not satisfy the constraint AppRoutes"*: `.next/types` usang bertabrakan dengan `.next/dev/types`. Perbaiki dengan `npx next typegen` di `frontend`.

@@ -17,14 +17,21 @@ export async function daftarAnggota(s: SearchParams) {
     if (sp(s, "status_staff")) where.push(`a.status_staff = ${p(sp(s, "status_staff"))}`)
     if (sp(s, "grade")) where.push(`a.grade ILIKE ${p(`%${sp(s, "grade")}%`)}`)
 
-    // Saldo simpanan dijumlah sekali untuk semua anggota supaya bisa diurutkan.
+    // Saldo simpanan (301 ribu baris) adalah bagian termahal. Saat urut per saldo, dijumlah sekali untuk semua anggota;
+    // selain itu dihitung per baris lewat indeks simpanan(anggota_id), sehingga hanya baris halaman yang dihitung
+    // (halaman 1: ±225 ms -> ±5 ms).
+    const saldo = sp(s, "sortBy") === "saldo_simpanan"
+        ? { kolom: "COALESCE(s.saldo, 0)", join: "LEFT JOIN (SELECT anggota_id, SUM(rp_setoran - rp_pengambilan) AS saldo FROM simpanan GROUP BY anggota_id) s ON s.anggota_id = a.id" }
+        : { kolom: "(SELECT COALESCE(SUM(x.rp_setoran - x.rp_pengambilan), 0) FROM simpanan x WHERE x.anggota_id = a.id)", join: "" }
     const base = `
         SELECT a.id, a.kode_agt, a.nik, a.nama, a.aktif, a.agt_non_agt, a.status_staff, a.grade, a.rp_grade,
-               a.alamat, a.kota, a.hp, a.bank_nama, a.bank_no_rek, a.bank_atas_nama, a.tglpencatatan, a.tgl_keluar,
-               COALESCE(s.saldo, 0) AS saldo_simpanan,
+               a.jns_kelamin, a.status AS status_kawin, a.alamat, a.kota, NULLIF(a.kodepos, 0) AS kodepos, a.hp,
+               a.bank_nama, a.bank_no_rek, a.bank_atas_nama, a.simpanan_pokok, a.simpanan_wajib, a.simpanan_sukarela,
+               a.tglpencatatan, a.tgl_keluar, a.alasan_keluar, a.opr,
+               ${saldo.kolom} AS saldo_simpanan,
                u.username AS _username, u.foto AS _foto, o.status AS _role
           FROM anggota a
-          LEFT JOIN (SELECT anggota_id, SUM(rp_setoran - rp_pengambilan) AS saldo FROM simpanan GROUP BY anggota_id) s ON s.anggota_id = a.id
+          ${saldo.join}
           LEFT JOIN app_user u ON u.anggota_id = a.id
           LEFT JOIN opr o ON lower(o.nama) = lower(u.username)
          ${where.length ? `WHERE ${where.join(" AND ")}` : ""}`
