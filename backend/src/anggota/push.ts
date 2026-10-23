@@ -114,6 +114,21 @@ async function dorongKePerangkat(db: Db, anggotaIds: number[], buatMuatan: (angg
 
 // ---------- operator (admin) ----------
 
+/** Push ke browser operator aktif di grup tertentu (grupIds null = semua grup). Tidak melempar. */
+export async function kirimKeOperatorGrup(db: Db, grupIds: number[] | null, n: { judul: string; isi: string; url: string }) {
+    if (!siapkanVapid()) return { perangkat: 0, dikirim: 0, gagal: 0 };
+    try {
+        const rows = (await db.query(
+            `SELECT p.id, p.endpoint, p.p256dh, p.auth FROM opr_push p JOIN opr o ON o.id = p.opr_id
+              WHERE upper(trim(o.status_aktif)) <> 'NON AKTIF' AND ($1::bigint[] IS NULL OR o.grup_id = ANY($1::bigint[]))`, [grupIds])).rows;
+        const muatan = JSON.stringify({ judul: n.judul, isi: n.isi, url: n.url });
+        return await kirimKeBaris(db, 'opr_push', rows, () => muatan);
+    } catch (e) {
+        if ((e as { code?: string }).code === '42P01') return { perangkat: 0, dikirim: 0, gagal: 0 };
+        throw e;
+    }
+}
+
 export async function simpanLanggananOpr(db: Db, oprId: number, s: LanggananPush) {
     await db.query(
         `INSERT INTO opr_push (opr_id, endpoint, p256dh, auth) VALUES ($1, $2, $3, $4)
@@ -175,9 +190,13 @@ export async function kirimNotifikasi(db: Db, anggotaId: number, n: IsiNotifikas
     return { penerima: 1, ...h };
 }
 
-/** Siaran ke semua anggota aktif (pengumuman, promo): satu baris riwayat per anggota, push ke semua perangkat. */
-export async function kirimKeSemuaAnggota(db: Db, n: IsiNotifikasi): Promise<HasilKirim> {
-    const baris = await catatRiwayat(db, n, 'a.aktif', []);
+/**
+ * Siaran ke anggota aktif (pengumuman, promo): satu baris riwayat per anggota, push ke semua perangkat.
+ * statusStaff membatasi ke anggota dengan status_staff itu (null/kosong = semua anggota aktif).
+ */
+export async function kirimKeSemuaAnggota(db: Db, n: IsiNotifikasi, opsi: { statusStaff?: string[] | null } = {}): Promise<HasilKirim> {
+    const staff = opsi.statusStaff && opsi.statusStaff.length ? opsi.statusStaff : null;
+    const baris = staff ? await catatRiwayat(db, n, 'a.aktif AND a.status_staff = ANY($3::text[])', [staff]) : await catatRiwayat(db, n, 'a.aktif', []);
     const idPesan = new Map(baris.map((b) => [Number(b.anggota_id), b.id]));
     if (n.gambarId && baris.length) {
         await db.query(

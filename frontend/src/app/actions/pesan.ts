@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { aturSelesai, balasPesanAdmin, hitungBelumDibaca, kabariAnggotaBalasan, pesanSetelah, PesanSalah } from "@kopkar/backend/src/anggota/pesan.ts"
+import { hitungPengumumanBaru } from "@kopkar/backend/src/anggota/sasaran.ts"
 import { adaLanggananOpr, hapusLanggananOpr, langgananValid, simpanLanggananOpr } from "@kopkar/backend/src/anggota/push.ts"
 import { MENU } from "@/config/akses"
 import { modeUji, pool, tx } from "@/lib/db"
@@ -46,7 +47,7 @@ export async function aturSelesaiAction(id: number, selesai: boolean): Promise<H
 
 export async function aktifkanPushOprAction(langganan: unknown): Promise<Hasil> {
     try {
-        const o = await operatorAktif([MENU.pesanAnggota])
+        const o = await operatorAktif()
         if (!langgananValid(langganan)) return { ok: false, error: "Data langganan browser tidak valid" }
         await simpanLanggananOpr(pool, o.id, langganan)
         return { ok: true, pesan: "Notifikasi aktif" }
@@ -57,7 +58,7 @@ export async function aktifkanPushOprAction(langganan: unknown): Promise<Hasil> 
 
 export async function matikanPushOprAction(endpoint: string): Promise<Hasil> {
     try {
-        const o = await operatorAktif([MENU.pesanAnggota])
+        const o = await operatorAktif()
         await hapusLanggananOpr(pool, o.id, String(endpoint))
         return { ok: true, pesan: "Notifikasi dimatikan" }
     } catch (e) {
@@ -67,20 +68,24 @@ export async function matikanPushOprAction(endpoint: string): Promise<Hasil> {
 
 export async function statusPushOprAction(endpoint: string): Promise<boolean> {
     try {
-        const o = await operatorAktif([MENU.pesanAnggota])
+        const o = await operatorAktif()
         return await adaLanggananOpr(pool, o.id, String(endpoint))
     } catch {
         return false
     }
 }
 
-/** Jumlah percakapan yang menunggu operator (untuk lonceng di navbar); 0 bila sesi habis atau tidak berizin. */
-export async function jumlahPesanBaruAction(): Promise<number> {
+/** Angka merah navbar: percakapan menunggu operator (ikon pesan, hanya bila berizin) dan pengumuman internal belum dibuka (lonceng). */
+export async function jumlahBadgeAction(): Promise<{ pesan: number; pengumuman: number }> {
     try {
-        await operatorAktif([MENU.pesanAnggota])
-        return await hitungBelumDibaca(pool, "admin")
+        const o = await operatorAktif()
+        const [pesan, pengumuman] = await Promise.all([
+            o.izin.includes(MENU.pesanAnggota) ? hitungBelumDibaca(pool, "admin") : 0,
+            hitungPengumumanBaru(pool, o.id),
+        ])
+        return { pesan, pengumuman }
     } catch {
-        return 0
+        return { pesan: 0, pengumuman: 0 }
     }
 }
 

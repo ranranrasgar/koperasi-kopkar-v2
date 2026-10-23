@@ -205,13 +205,30 @@ export async function getHistory(db: Pool, anggotaId: number | null, offset: num
     return r.rows;
 }
 
+// Pengumuman khusus internal kantor atau khusus status staff tertentu (pengumuman_sasaran) tidak ikut ke API lama,
+// karena API lama tidak mengenal anggota yang meminta. Tanpa tabel sasaran, perilakunya sama seperti dulu.
+const UNTUK_SEMUA_ANGGOTA = (jenis: string, tabel: string) =>
+    `AND NOT EXISTS (SELECT 1 FROM pengumuman_sasaran s WHERE s.jenis = '${jenis}' AND s.ref_id = ${tabel}.id AND (NOT s.untuk_anggota OR s.status_staff IS NOT NULL))`;
+const tanpaTabelSasaran = (e: unknown) => (e as { code?: string }).code === '42P01';
+
 export async function getHimbauan(db: Pool) {
-    const r = await db.query('SELECT id, judul_himbauan, isi_himbauan, image FROM himbauan WHERE status = true ORDER BY id DESC LIMIT 1');
-    return r.rows[0] ?? null;
+    const dasar = 'SELECT id, judul_himbauan, isi_himbauan, image FROM himbauan WHERE status = true';
+    try {
+        return (await db.query(`${dasar} ${UNTUK_SEMUA_ANGGOTA('himbauan', 'himbauan')} ORDER BY id DESC LIMIT 1`)).rows[0] ?? null;
+    } catch (e) {
+        if (!tanpaTabelSasaran(e)) throw e;
+        return (await db.query(`${dasar} ORDER BY id DESC LIMIT 1`)).rows[0] ?? null;
+    }
 }
 
 export async function getPromos(db: Pool) {
-    return (await db.query('SELECT id, judul, isi, image FROM promo WHERE status = true ORDER BY id DESC')).rows;
+    const dasar = 'SELECT id, judul, isi, image FROM promo WHERE status = true';
+    try {
+        return (await db.query(`${dasar} ${UNTUK_SEMUA_ANGGOTA('promo', 'promo')} ORDER BY id DESC`)).rows;
+    } catch (e) {
+        if (!tanpaTabelSasaran(e)) throw e;
+        return (await db.query(`${dasar} ORDER BY id DESC`)).rows;
+    }
 }
 
 /** Daftar anggota (data diri + detail; yang punya detail lebih dulu, sebagian anggota belum punya detail sehingga kolom detailnya null seperti di server lama). Tanpa token server lama mengembalikan semua anggota; anggotaId membatasi ke satu orang. */

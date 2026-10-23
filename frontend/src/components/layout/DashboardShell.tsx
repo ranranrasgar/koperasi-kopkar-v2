@@ -12,7 +12,7 @@ function ShellContent({ children, operator }: { children: React.ReactNode; opera
     const pathname = usePathname()
 
     return (
-        <div className="bg-background text-on-background font-body-md min-h-screen flex overflow-x-hidden">
+        <div className="bg-background text-on-background font-body-md min-h-screen flex overflow-x-clip">
             {/* Sidebar (Fixed position) */}
             <div className={cn(
                 "fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out md:translate-x-0",

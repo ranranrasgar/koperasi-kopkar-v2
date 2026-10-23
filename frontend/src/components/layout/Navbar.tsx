@@ -17,7 +17,6 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { OperatorTampil } from "./DashboardShell"
 import { Lonceng } from "./Lonceng"
-import { MENU } from "@/config/akses"
 
 export function Navbar({ operator }: { operator: OperatorTampil }) {
     const pathname = usePathname()
@@ -60,7 +59,7 @@ export function Navbar({ operator }: { operator: OperatorTampil }) {
 
             {/* Right Profile Controls */}
             <div className="flex items-center gap-3">
-                {izin.includes(MENU.pesanAnggota) && <Lonceng />}
+                <Lonceng />
                 {/* Bantuan: buka panduan yang terkait dengan halaman ini (atau Pusat Panduan bila belum ada). */}
                 {!pathname.startsWith("/dashboard/panduan") && (
                     <Link href={`/dashboard/panduan?untuk=${encodeURIComponent(pathname)}`} title="Panduan halaman ini" aria-label="Panduan halaman ini"

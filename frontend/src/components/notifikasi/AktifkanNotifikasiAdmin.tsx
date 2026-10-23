@@ -12,7 +12,7 @@ function kunciKeBytes(b64: string) {
     return Uint8Array.from(bin, (c) => c.charCodeAt(0))
 }
 
-/** Izin Web Push untuk browser operator ini: pesan anggota masuk muncul sebagai notifikasi walau tab admin tidak aktif. */
+/** Izin Web Push untuk browser operator ini: pesan anggota dan pengumuman muncul sebagai notifikasi walau tab admin tidak aktif. */
 export function AktifkanNotifikasiAdmin({ kunciPublik }: { kunciPublik: string | null }) {
     const [keadaan, setKeadaan] = useState<Keadaan>("memeriksa")
     const [pesan, setPesan] = useState<string | null>(null)
@@ -58,8 +58,8 @@ export function AktifkanNotifikasiAdmin({ kunciPublik }: { kunciPublik: string |
             <div className="min-w-0 flex-1">
                 {keadaan === "takdidukung" && <span className="text-muted-foreground">Browser ini belum mendukung notifikasi.</span>}
                 {keadaan === "ditolak" && <span className="text-muted-foreground">Notifikasi diblokir di browser ini. Izinkan lewat pengaturan situs, lalu muat ulang halaman.</span>}
-                {keadaan === "mati" && <span>Aktifkan notifikasi agar pesan anggota muncul walau tab ini tidak sedang dibuka.</span>}
-                {keadaan === "aktif" && <span>Notifikasi pesan anggota aktif di browser ini.</span>}
+                {keadaan === "mati" && <span>Aktifkan notifikasi agar pesan dan pengumuman muncul walau tab ini tidak sedang dibuka.</span>}
+                {keadaan === "aktif" && <span>Notifikasi aktif di browser ini (pesan anggota dan pengumuman).</span>}
                 {pesan && <span role="status" className="ml-2 text-muted-foreground">{pesan}</span>}
             </div>
             {keadaan === "mati" && <button type="button" onClick={aktifkan} disabled={sibuk} className="h-8 rounded-md bg-blue-600 px-3 font-semibold text-white hover:bg-blue-700 disabled:opacity-60">Aktifkan</button>}

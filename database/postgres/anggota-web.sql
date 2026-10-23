@@ -72,3 +72,24 @@ CREATE TABLE IF NOT EXISTS opr_push (
     dibuat_pada timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS ix_opr_push_opr_id ON opr_push (opr_id);
+
+-- Sasaran himbauan/promo: untuk anggota (semua, atau status staff tertentu) dan/atau internal kantor (pengguna aplikasi
+-- admin; semua grup atau grup tertentu). Himbauan/promo tanpa baris di sini = semua anggota saja (perilaku lama).
+CREATE TABLE IF NOT EXISTS pengumuman_sasaran (
+    jenis varchar(12) NOT NULL CHECK (jenis IN ('himbauan', 'promo')),
+    ref_id bigint NOT NULL,
+    untuk_anggota boolean NOT NULL DEFAULT true,
+    status_staff text[],
+    untuk_internal boolean NOT NULL DEFAULT false,
+    grup_ids bigint[],
+    dibuat_pada timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (jenis, ref_id)
+);
+-- Penanda "sudah dibaca" pengumuman internal per operator (angka merah di lonceng navbar admin).
+CREATE TABLE IF NOT EXISTS pengumuman_baca_opr (
+    opr_id bigint NOT NULL REFERENCES opr(id) ON DELETE CASCADE,
+    jenis varchar(12) NOT NULL,
+    ref_id bigint NOT NULL,
+    dibaca_pada timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (opr_id, jenis, ref_id)
+);

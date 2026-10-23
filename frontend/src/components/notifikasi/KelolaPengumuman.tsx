@@ -7,14 +7,16 @@ import { aturStatusPengumumanAction, hapusPengumumanAction, simpanPengumumanActi
 import type { Hasil } from "@/app/actions/transaksi"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
+import type { Sasaran } from "@kopkar/backend/src/anggota/sasaran.ts"
 import { PilihGambar } from "./PilihGambar"
+import { PilihSasaran, ringkasSasaran, SASARAN_AWAL, type OpsiGrup, type OpsiStatus } from "./PilihSasaran"
 import { Field, HasilTransaksi, SubmitButton, useAksiForm } from "@/components/transaksi/common"
 
-export interface Pengumuman { id: number; judul: string; isi: string; aktif: boolean; gambar: string | null }
+export interface Pengumuman { id: number; judul: string; isi: string; aktif: boolean; gambar: string | null; sasaran: Sasaran }
 
 const MAKS = 255
 
-function FormPengumuman({ jenis, awal, onSelesai }: { jenis: JenisPengumuman; awal: Pengumuman | null; onSelesai: () => void }) {
+function FormPengumuman({ jenis, awal, opsiStatus, opsiGrup, onSelesai }: { jenis: JenisPengumuman; awal: Pengumuman | null; opsiStatus: OpsiStatus[]; opsiGrup: OpsiGrup[]; onSelesai: () => void }) {
     const router = useRouter()
     const { hasil, onSubmit, pending } = useAksiForm(async (p: Hasil, f: FormData) => {
         const h = await simpanPengumumanAction(p, f)
@@ -35,9 +37,10 @@ function FormPengumuman({ jenis, awal, onSelesai }: { jenis: JenisPengumuman; aw
             <Field label="Gambar (opsional)" hint="Dikecilkan otomatis sebelum diunggah.">
                 <PilihGambar gambarAda={awal?.gambar} />
             </Field>
+            <PilihSasaran awal={awal?.sasaran ?? SASARAN_AWAL} opsiStatus={opsiStatus} opsiGrup={opsiGrup} />
             <div className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
-                <label className="flex items-center gap-2"><input type="checkbox" name="aktif" defaultChecked={awal?.aktif ?? true} /> Tampilkan di aplikasi anggota</label>
-                <label className="flex items-center gap-2"><input type="checkbox" name="kirim" /> Kirim juga sebagai notifikasi ke semua anggota</label>
+                <label className="flex items-center gap-2"><input type="checkbox" name="aktif" defaultChecked={awal?.aktif ?? true} /> Tampilkan (aktif)</label>
+                <label className="flex items-center gap-2"><input type="checkbox" name="kirim" /> Kirim juga sebagai notifikasi ke penerima di atas</label>
             </div>
             <HasilTransaksi hasil={hasil} />
             <div className="flex gap-2">
@@ -48,7 +51,7 @@ function FormPengumuman({ jenis, awal, onSelesai }: { jenis: JenisPengumuman; aw
     )
 }
 
-export function KelolaPengumuman({ jenis, nama, daftar }: { jenis: JenisPengumuman; nama: string; daftar: Pengumuman[] }) {
+export function KelolaPengumuman({ jenis, nama, daftar, opsiStatus, opsiGrup }: { jenis: JenisPengumuman; nama: string; daftar: Pengumuman[]; opsiStatus: OpsiStatus[]; opsiGrup: OpsiGrup[] }) {
     const router = useRouter()
     const [form, setForm] = useState<Pengumuman | "baru" | null>(null)
     const [hasil, setHasil] = useState<Hasil>(null)
@@ -64,7 +67,7 @@ export function KelolaPengumuman({ jenis, nama, daftar }: { jenis: JenisPengumum
                     <Plus className="h-4 w-4" /> Tambah {nama.toLowerCase()}
                 </button>
             )}
-            {form !== null && <FormPengumuman key={form === "baru" ? "baru" : form.id} jenis={jenis} awal={form === "baru" ? null : form} onSelesai={() => setForm(null)} />}
+            {form !== null && <FormPengumuman key={form === "baru" ? "baru" : form.id} jenis={jenis} awal={form === "baru" ? null : form} opsiStatus={opsiStatus} opsiGrup={opsiGrup} onSelesai={() => setForm(null)} />}
             <HasilTransaksi hasil={form === null ? hasil : null} />
             {daftar.length === 0 ? <p className="text-sm text-muted-foreground">Belum ada {nama.toLowerCase()}.</p> : (
                 <ul className="divide-y rounded-lg border">
@@ -82,6 +85,7 @@ export function KelolaPengumuman({ jenis, nama, daftar }: { jenis: JenisPengumum
                                     </span>
                                 </div>
                                 <p className="mt-0.5 whitespace-pre-line text-sm text-muted-foreground">{d.isi}</p>
+                                <p className="mt-1 text-xs font-medium text-blue-700 dark:text-blue-400">Untuk: {ringkasSasaran(d.sasaran, opsiGrup)}</p>
                             </div>
                             <div className="flex shrink-0 items-center gap-1">
                                 <button type="button" disabled={sibuk} onClick={() => aksi(() => aturStatusPengumumanAction(jenis, d.id, !d.aktif))}

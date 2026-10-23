@@ -206,12 +206,25 @@ export async function detailNotifikasi(anggotaId: number, id: number) {
 
 export interface Slide { kunci: string; jenis: "himbauan" | "promo"; judul: string; isi: string; gambar: string | null }
 
-/** Himbauan dan promo yang aktif untuk slide Beranda: himbauan dulu, masing-masing terbaru lebih dulu. */
-export async function slidePengumuman(): Promise<Slide[]> {
-    const [h, p] = await Promise.all([
-        query<{ id: number; judul: string | null; isi: string | null }>("SELECT id, judul_himbauan judul, isi_himbauan isi FROM himbauan WHERE status = true ORDER BY id DESC"),
-        query<{ id: number; judul: string | null; isi: string | null }>("SELECT id, judul, isi FROM promo WHERE status = true ORDER BY id DESC"),
-    ])
+/**
+ * Himbauan dan promo yang aktif untuk slide Beranda: himbauan dulu, masing-masing terbaru lebih dulu. Hanya yang
+ * ditujukan ke anggota ini: tanpa baris sasaran = semua anggota; dengan sasaran, anggota dicentang dan (bila dibatasi)
+ * status staff anggota termasuk di dalamnya.
+ */
+export async function slidePengumuman(statusStaff: string): Promise<Slide[]> {
+    type Baris = { id: number; judul: string | null; isi: string | null }
+    const ambil = async (jenis: "himbauan" | "promo", kolomJudul: string, kolomIsi: string) => {
+        const dasar = `SELECT t.id, t.${kolomJudul} judul, t.${kolomIsi} isi FROM ${jenis} t WHERE t.status = true`
+        try {
+            return await query<Baris>(
+                `${dasar} AND NOT EXISTS (SELECT 1 FROM pengumuman_sasaran s WHERE s.jenis = '${jenis}' AND s.ref_id = t.id
+                      AND (NOT s.untuk_anggota OR (s.status_staff IS NOT NULL AND NOT ($1::text = ANY(s.status_staff))))) ORDER BY t.id DESC`, [statusStaff.trim()])
+        } catch (e) {
+            if ((e as { code?: string }).code !== "42P01") throw e
+            return query<Baris>(`${dasar} ORDER BY t.id DESC`)
+        }
+    }
+    const [h, p] = await Promise.all([ambil("himbauan", "judul_himbauan", "isi_himbauan"), ambil("promo", "judul", "isi")])
     const [gh, gp] = await Promise.all([tokenGambar(pool, "himbauan", h.map((x) => x.id)), tokenGambar(pool, "promo", p.map((x) => x.id))])
     const buat = (jenis: Slide["jenis"], rows: typeof h, g: Map<number, string>): Slide[] =>
         rows.filter((x) => x.judul?.trim() || x.isi?.trim()).map((x) => ({

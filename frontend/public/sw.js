@@ -7,7 +7,7 @@ self.addEventListener('push', (event) => {
     try { d = event.data ? event.data.json() : {}; } catch { d = { isi: event.data ? event.data.text() : '' }; }
     event.waitUntil(self.registration.showNotification(d.judul || 'Koperasi', {
         body: d.isi || '',
-        tag: 'pesan-anggota', // pesan beruntun menggantikan satu sama lain, bukan menumpuk
+        tag: typeof d.url === 'string' && d.url.startsWith('/dashboard/pesan') ? 'pesan-anggota' : undefined, // pesan beruntun menggantikan satu sama lain
         renotify: true,
         data: { url: typeof d.url === 'string' && d.url.startsWith('/dashboard/') ? d.url : '/dashboard/pesan' },
     }));

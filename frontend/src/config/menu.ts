@@ -22,6 +22,11 @@ export const allGroups: MenuGroup[] = [
                 label: "Dashboard",
                 icon: "dashboard",
                 href: "/dashboard"
+            },
+            {
+                label: "Pengumuman",
+                icon: "notifications_active",
+                href: "/dashboard/pengumuman"
             }
         ]
     },

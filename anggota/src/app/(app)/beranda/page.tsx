@@ -56,8 +56,9 @@ export default async function BerandaPage() {
     }
 
     const id = a.anggotaId
+    const dataAnggota = profil(id)
     const [simpanan, pinjaman, potongan, data, tahun, slide] = await Promise.all([
-        saldoSimpanan(id), pinjamanAktif(id), potonganBulanIni(id), profil(id), tahunShu(), slidePengumuman(),
+        saldoSimpanan(id), pinjamanAktif(id), potonganBulanIni(id), dataAnggota, tahunShu(), dataAnggota.then((d) => slidePengumuman(d?.status_staff ?? "")),
     ])
     const shuTerakhir = tahun[0] ? await shu(id, tahun[0]) : null
     const totalSimpanan = simpanan.filter((s) => s.kode !== "01").reduce((t, s) => t + s.saldo, 0)
