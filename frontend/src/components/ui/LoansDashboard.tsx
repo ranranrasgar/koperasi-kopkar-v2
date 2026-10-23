@@ -4,7 +4,7 @@ import React, { useState, useTransition } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import type { PageData } from "@/config/modules"
 import { formatRupiah, formatTanggal, formatAngka } from "@/lib/format"
-import { PilihBaris } from "@/components/ui/PilihBaris"
+import { Paginasi } from "@/components/ui/Paginasi"
 import { MAKS_SEMUA } from "@/lib/halaman"
 import { dataCetakAction } from "@/app/actions/cetak"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
@@ -205,6 +205,9 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
 
             {/* Data Table */}
             <div className="bg-surface rounded-xl border border-outline-variant shadow-xs overflow-hidden print:hidden">
+                {/* Halaman (atas) */}
+                {!isLoading && <Paginasi page={page} totalPages={totalPages} pageSize={pageSize} total={totalRecords} onHalaman={(p) => go(p)} onBaris={(v) => go(1, v)}
+                    className="border-b border-outline-variant bg-surface-container-lowest" />}
                 <div className="overflow-x-auto w-full">
                     {isLoading ? (
                         <div className="h-64 flex flex-col items-center justify-center text-on-surface-variant">
@@ -262,36 +265,9 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                     )}
                 </div>
 
-                {/* Pagination */}
-                {!isLoading && totalRecords > 0 && (
-                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-outline-variant bg-surface-container-lowest print:hidden">
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                            <PilihBaris pageSize={pageSize} total={totalRecords} onUbah={(v) => go(1, v)} />
-                            <span className="text-sm text-on-surface-variant">
-                                Menampilkan <span className="font-medium text-on-surface">{(page - 1) * pageSize + 1}</span> - <span className="font-medium text-on-surface">{Math.min(page * pageSize, totalRecords)}</span> dari <span className="font-medium text-on-surface">{formatAngka(totalRecords)}</span> hasil
-                            </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                            <button
-                                onClick={() => go(Math.max(1, page - 1))}
-                                disabled={page === 1}
-                                className="p-1 rounded-md text-on-surface hover:bg-surface-variant disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                            >
-                                <span className="material-symbols-outlined">chevron_left</span>
-                            </button>
-                            <span className="text-sm font-medium text-on-surface px-2">
-                                {page} / {totalPages}
-                            </span>
-                            <button
-                                onClick={() => go(Math.min(totalPages, page + 1))}
-                                disabled={page === totalPages}
-                                className="p-1 rounded-md text-on-surface hover:bg-surface-variant disabled:opacity-30 disabled:hover:bg-transparent transition-colors"
-                            >
-                                <span className="material-symbols-outlined">chevron_right</span>
-                            </button>
-                        </div>
-                    </div>
-                )}
+                {/* Halaman (bawah) */}
+                {!isLoading && <Paginasi page={page} totalPages={totalPages} pageSize={pageSize} total={totalRecords} onHalaman={(p) => go(p)} onBaris={(v) => go(1, v)}
+                    className="border-t border-outline-variant bg-surface-container-lowest" />}
             </div>
         </div>
     )
