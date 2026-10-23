@@ -93,7 +93,7 @@ export function cekUsernameBaru(u: string) {
     return null;
 }
 
-export interface IsianDaftar { username: string; password: string; ulangi: string; nik: string; email: string; pertanyaanId: number; jawaban: string }
+export interface IsianDaftar { username: string; password: string; ulangi: string; nik: string; email: string }
 /** userId: akun yang baru dibuat (pendaftaran), belum aktif sampai email diverifikasi. */
 export type HasilAkun = { ok: true; pesan: string; userId?: number; aktif?: boolean } | { ok: false; error: string };
 
@@ -114,9 +114,6 @@ export async function daftarAkun(db: pg.PoolClient, i: IsianDaftar, google?: { s
     if (i.password !== i.ulangi) return gagal('Ulangi password dengan sama persis');
     const salahP = cekPasswordBaruAnggota(i.password);
     if (salahP) return gagal(salahP);
-    if (!i.jawaban.trim()) return gagal('Jawaban pertanyaan keamanan wajib diisi');
-    const tanya = (await db.query<{ id: string; urut: number }>('SELECT id::text, urut FROM pertanyaan WHERE id = $1', [i.pertanyaanId])).rows[0];
-    if (!tanya) return gagal('Pilih pertanyaan keamanan');
 
     // Satu pendaftaran pada satu waktu: username tidak punya unique constraint (data lama), jadi dicek di bawah kunci ini.
     await db.query("SELECT pg_advisory_xact_lock(hashtext('app_user_daftar'))");
@@ -129,20 +126,21 @@ export async function daftarAkun(db: pg.PoolClient, i: IsianDaftar, google?: { s
     if (nik.length !== 6) return gagal('NIK tidak valid (6 karakter)');
     if ((await db.query('SELECT 1 FROM app_user WHERE lower(trim(email)) = $1 LIMIT 1', [email])).rowCount) return gagal('Email ini sudah dipakai akun lain, gunakan email lain.');
 
-    const passwordHash = await hashPasswordAnggota(i.password), jawabanHash = await hashJawaban(i.jawaban);
-    const kolom = `(username, password_hash, kode_agt, nikk, status, created_at, updated_at, id_pertanyaan, pertanyaan_id, jawaban_hash, anggota_id, karyawan_mattel_id, email, menunggu_admin)`;
+    const passwordHash = await hashPasswordAnggota(i.password);
+    // Tanpa pertanyaan keamanan: pemulihan akun lewat email yang sudah terverifikasi.
+    const kolom = `(username, password_hash, kode_agt, nikk, status, created_at, updated_at, anggota_id, karyawan_mattel_id, email, menunggu_admin)`;
     if (anggota) {
         if (!anggota.aktif) return gagal('Keanggotaan dengan NIK ini tidak aktif. Hubungi pengurus koperasi.');
-        const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, false, now(), now(), $5, $6, $7, $8, NULL, $9, true) RETURNING id`,
-            [username, passwordHash, anggota.kode_agt, nik, tanya.urut, tanya.id, jawabanHash, anggota.id, email])).rows[0].id);
+        const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, false, now(), now(), $5, NULL, $6, true) RETURNING id`,
+            [username, passwordHash, anggota.kode_agt, nik, anggota.id, email])).rows[0].id);
         if (google) return { ok: true, pesan: 'Pendaftaran diterima. Akun Anda aktif setelah diverifikasi admin koperasi.', userId: id, ...(await tautkanGoogle(db, id, email, google.sub)) };
         await kirimKodeVerifikasi(db, id, email, username, { aktivasi: true, abaikanJeda: true });
         return { ok: true, pesan: 'Kode verifikasi dikirim ke email Anda. Masukkan kode itu; setelah itu pendaftaran Anda menunggu verifikasi admin koperasi.', userId: id };
     }
     const karyawan = (await db.query<{ id: string }>('SELECT id::text FROM karyawan_mattel WHERE nik = $1 LIMIT 1', [nik])).rows[0];
     if (!karyawan) return gagal('NIK tidak terdaftar di data karyawan Mattel');
-    const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, false, now(), now(), $5, $6, $7, NULL, $8, $9, true) RETURNING id`,
-        [username, passwordHash, nik, nik, tanya.urut, tanya.id, jawabanHash, karyawan.id, email])).rows[0].id);
+    const id = Number((await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, false, now(), now(), NULL, $5, $6, true) RETURNING id`,
+        [username, passwordHash, nik, nik, karyawan.id, email])).rows[0].id);
     if (google) return { ok: true, pesan: 'Pendaftaran diterima. Akun Anda aktif setelah diverifikasi admin koperasi. Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.', userId: id, ...(await tautkanGoogle(db, id, email, google.sub)) };
     await kirimKodeVerifikasi(db, id, email, username, { aktivasi: true, abaikanJeda: true });
     return { ok: true, pesan: 'Kode verifikasi dikirim ke email Anda. Setelah diverifikasi admin, Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.', userId: id };
@@ -328,6 +326,11 @@ export async function resetLewatJawaban(db: pg.PoolClient, username: string, jaw
     const u = (await db.query<{ id: string; jawaban_hash: string | null }>(
         `SELECT id::text, jawaban_hash FROM app_user WHERE lower(trim(username)) = lower(trim($1)) AND status`, [username])).rows[0];
     if (!(await cocokJawaban(jawaban, u?.jawaban_hash ?? null)) || !u) return { ok: false, error: 'Username atau jawaban tidak cocok' };
+    // Pertanyaan keamanan hanya untuk akun lama tanpa email terverifikasi; yang punya email wajib lewat tautan email.
+    const verif = (await db.query(
+        `SELECT 1 FROM app_user a JOIN app_user_email_verif v ON v.app_user_id = a.id
+          WHERE a.id = $1 AND v.terverifikasi_pada IS NOT NULL AND v.email = lower(trim(a.email))`, [u.id])).rowCount;
+    if (verif) return { ok: false, error: 'Akun ini punya email terverifikasi. Gunakan "Lewat email" untuk membuat password baru.' };
     await aturPassword(db, Number(u.id), baru);
     return { ok: true, pesan: 'Password berhasil diganti. Silakan masuk dengan password baru.' };
 }

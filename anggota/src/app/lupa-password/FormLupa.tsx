@@ -5,22 +5,24 @@ import { useActionState, useState } from "react"
 import { pertanyaanAction, resetEmailAction, resetJawabanAction } from "@/app/actions/akun"
 import { ATURAN_PASSWORD, Kolom, KolomPassword, PesanBerhasil, PesanGalat, tanpaReset, Tombol } from "@/components/form"
 
-/** Dua cara: pertanyaan keamanan (langsung di aplikasi) dan tautan lewat email (butuh email terdaftar). */
+/** Dua cara: tautan lewat email (utama) dan pertanyaan keamanan (hanya untuk akun lama tanpa email terverifikasi). */
 export function FormLupa({ emailAktif }: { emailAktif: boolean }) {
-    const [cara, setCara] = useState<"jawaban" | "email">("jawaban")
+    const [cara, setCara] = useState<"jawaban" | "email">("email")
     const tab = (aktif: boolean) =>
         `flex h-10 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition-colors ${aktif ? "bg-permukaan text-teks shadow-sm" : "text-redup"}`
     return (
         <>
             <div role="tablist" aria-label="Cara" className="mb-6 flex gap-1 rounded-xl bg-garis/60 p-1">
-                <button type="button" role="tab" aria-selected={cara === "jawaban"} className={tab(cara === "jawaban")} onClick={() => setCara("jawaban")}>
-                    Pertanyaan keamanan
-                </button>
                 <button type="button" role="tab" aria-selected={cara === "email"} className={tab(cara === "email")} onClick={() => setCara("email")}>
                     Lewat email
                 </button>
+                <button type="button" role="tab" aria-selected={cara === "jawaban"} className={tab(cara === "jawaban")} onClick={() => setCara("jawaban")}>
+                    Akun lama
+                </button>
             </div>
-            {cara === "jawaban" ? <LewatJawaban /> : <LewatEmail aktif={emailAktif} />}
+            {cara === "jawaban"
+                ? <><p className="mb-5 rounded-xl bg-garis/60 px-4 py-3 text-sm leading-relaxed text-redup">Khusus akun lama yang belum punya email terverifikasi dan masih memakai pertanyaan keamanan. Akun yang sudah punya email memakai &quot;Lewat email&quot;.</p><LewatJawaban /></>
+                : <LewatEmail aktif={emailAktif} />}
         </>
     )
 }
@@ -68,7 +70,7 @@ function LewatEmail({ aktif }: { aktif: boolean }) {
         <form onSubmit={tanpaReset(kirim)} className="space-y-5">
             {!aktif && (
                 <p className="rounded-xl bg-tunggu/15 px-4 py-3 text-sm leading-relaxed">
-                    Pengiriman email belum aktif. Untuk sementara gunakan pertanyaan keamanan atau hubungi pengurus koperasi.
+                    Pengiriman email belum aktif. Hubungi pengurus koperasi untuk bantuan.
                 </p>
             )}
             <Kolom label="Username" name="username" autoComplete="username" autoCapitalize="none" autoCorrect="off" spellCheck={false} required />

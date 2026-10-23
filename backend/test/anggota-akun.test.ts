@@ -76,13 +76,12 @@ test('username login tanpa beda huruf besar/kecil dan spasi tepi (seperti MySQL 
 
 test('daftar akun: aturan server lama + password K6, anggota dan karyawan Mattel', async () => {
     await inTx(async (db) => {
-        const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
         // Anggota aktif ber-NIK 6 karakter yang belum punya akun.
         const a = (await db.query(`SELECT a.id, a.nik, a.kode_agt FROM anggota a WHERE a.aktif AND length(a.nik) = 6
             AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt)
             AND (SELECT count(*) FROM anggota b WHERE b.nik = a.nik) = 1 LIMIT 1`)).rows[0];
         const isi = (x: object = {}) => ({ username: 'uji_daftar_pwa', password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik,
-            email: 'uji.daftar.pwa@contoh.id', pertanyaanId: tanya, jawaban: 'Kucing', ...x });
+            email: 'uji.daftar.pwa@contoh.id', ...x });
         const tolak = async (x: object, pesan: RegExp) => {
             const r = await daftarAkun(db, isi(x));
             assert.equal(r.ok, false, JSON.stringify(x));
@@ -94,7 +93,6 @@ test('daftar akun: aturan server lama + password K6, anggota dan karyawan Mattel
         await tolak({ username: 'nama<script>' }, /hanya boleh/);
         await tolak({ ulangi: 'Rahasia124' }, /sama persis/);
         await tolak({ password: 'pendek1', ulangi: 'pendek1' }, /minimal 8/);
-        await tolak({ jawaban: ' ' }, /Jawaban/);
         await tolak({ email: 'bukan-email' }, /Alamat email tidak valid/);
         await tolak({ email: '' }, /Alamat email tidak valid/);
         await tolak({ nik: '12345' }, /NIK tidak valid/);
@@ -156,12 +154,11 @@ test('lupa password lewat jawaban, ganti password, dan email unik', async () => 
 
 test('daftar lewat Google: email terverifikasi tanpa kode, akun menunggu admin; setujui atau tolak; masuk lewat sub', async () => {
     await inTx(async (db) => {
-        const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
         const a = (await db.query(`SELECT a.id, a.nik FROM anggota a WHERE a.aktif AND length(a.nik) = 6
             AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt)
             AND (SELECT count(*) FROM anggota b WHERE b.nik = a.nik) = 1 LIMIT 1`)).rows[0];
         const isi = { username: 'uji_google_pwa', password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik,
-            email: 'Uji.Google.PWA@contoh.id', pertanyaanId: tanya, jawaban: 'Kucing' };
+            email: 'Uji.Google.PWA@contoh.id' };
         assert.equal(await cariAkunGoogle(db, 'sub-uji-1', isi.email), null, 'belum ada akun');
 
         const r = await daftarAkun(db, isi, { sub: 'sub-uji-1' });
@@ -209,12 +206,11 @@ test('cari akun Google: email sama hanya cocok bila email akun terverifikasi', a
 
 test('pendaftaran dengan kode email: email belum terverifikasi tidak bisa disetujui; tolak membiarkan akun nonaktif', async () => {
     await inTx(async (db) => {
-        const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
         const a = (await db.query(`SELECT a.id, a.nik FROM anggota a WHERE a.aktif AND length(a.nik) = 6
             AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt)
             AND (SELECT count(*) FROM anggota b WHERE b.nik = a.nik) = 1 LIMIT 1`)).rows[0];
         const r = await daftarAkun(db, { username: 'uji_kode_pwa', password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik,
-            email: 'uji.kode.pwa@contoh.id', pertanyaanId: tanya, jawaban: 'Kucing' });
+            email: 'uji.kode.pwa@contoh.id' });
         assert.equal(r.ok, true);
         const id = Number((r as { userId: number }).userId);
         assert.equal((await putuskanPendaftaran(db, id, true)).ok, false, 'email belum terverifikasi');
@@ -228,12 +224,11 @@ test('pendaftaran dengan kode email: email belum terverifikasi tidak bisa disetu
 
 test('hapus akun aplikasi: data aplikasi ikut terhapus, anggota dan data keuangannya tidak', async () => {
     await inTx(async (db) => {
-        const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
         const a = (await db.query(`SELECT a.id, a.nik FROM anggota a WHERE a.aktif AND length(a.nik) = 6
             AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt)
             AND (SELECT count(*) FROM anggota b WHERE b.nik = a.nik) = 1 LIMIT 1`)).rows[0];
         const r = await daftarAkun(db, { username: 'uji_hapus_pwa', password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik,
-            email: 'uji.hapus.pwa@contoh.id', pertanyaanId: tanya, jawaban: 'Kucing' }, { sub: 'sub-uji-hapus' });
+            email: 'uji.hapus.pwa@contoh.id' }, { sub: 'sub-uji-hapus' });
         const id = Number((r as { userId: number }).userId);
         await db.query(`INSERT INTO pesan_percakapan (anggota_id, app_user_id, subjek) VALUES ($1, $2, 'uji')`, [a.id, id]);
         await db.query(`INSERT INTO app_user_foto (app_user_id, isi, jenis) VALUES ($1, 'x', 'image/png')`, [id]);
@@ -252,11 +247,10 @@ test('hapus akun aplikasi: data aplikasi ikut terhapus, anggota dan data keuanga
 
 test('setujui pendaftaran karyawan Mattel: otomatis jadi anggota dengan kode berformat lama', async () => {
     await inTx(async (db) => {
-        const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
         const k = (await db.query(`SELECT k.nik, k.nama, k.grade FROM karyawan_mattel k WHERE length(k.nik) = 6
             AND NOT EXISTS (SELECT 1 FROM anggota a WHERE a.nik = k.nik) AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.kode_agt = k.nik) LIMIT 1`)).rows[0];
         const r = await daftarAkun(db, { username: 'uji_jadi_anggota', password: 'Rahasia123', ulangi: 'Rahasia123', nik: k.nik,
-            email: 'uji.jadi.anggota@contoh.id', pertanyaanId: tanya, jawaban: 'Kucing' }, { sub: 'sub-uji-anggota' });
+            email: 'uji.jadi.anggota@contoh.id' }, { sub: 'sub-uji-anggota' });
         const id = Number((r as { userId: number }).userId);
         const maks = Number((await db.query('SELECT max(urut) m FROM anggota')).rows[0].m);
         const bulan = (await db.query(`SELECT to_char(now() AT TIME ZONE 'Asia/Jakarta', 'MMYY') b`)).rows[0].b;
@@ -290,13 +284,12 @@ test('setujui pendaftaran karyawan Mattel: otomatis jadi anggota dengan kode ber
 
 test('keputusan pendaftaran tercatat (disetujui / ditolak) untuk filter User Mobile', async () => {
     await inTx(async (db) => {
-        const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
         const buat = async (username: string, email: string) => {
             const a = (await db.query(`SELECT a.nik FROM anggota a WHERE a.aktif AND length(a.nik) = 6
                 AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt)
                 AND NOT EXISTS (SELECT 1 FROM app_user u2 WHERE u2.nikk = a.nik)
                 AND (SELECT count(*) FROM anggota b WHERE b.nik = a.nik) = 1 ORDER BY a.id LIMIT 1`)).rows[0];
-            const r = await daftarAkun(db, { username, password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik, email, pertanyaanId: tanya, jawaban: 'Kucing' }, { sub: `sub-${username}` });
+            const r = await daftarAkun(db, { username, password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik, email }, { sub: `sub-${username}` });
             return Number((r as { userId: number }).userId);
         };
         const setuju = await buat('uji_putus_ya', 'uji.putus.ya@contoh.id');
@@ -306,5 +299,31 @@ test('keputusan pendaftaran tercatat (disetujui / ditolak) untuk filter User Mob
         const k = async (id: number) => (await db.query('SELECT status, menunggu_admin, keputusan_daftar FROM app_user WHERE id = $1', [id])).rows[0];
         assert.deepEqual(await k(setuju), { status: true, menunggu_admin: false, keputusan_daftar: 'disetujui' });
         assert.deepEqual(await k(tolak), { status: false, menunggu_admin: false, keputusan_daftar: 'ditolak' });
+    });
+});
+
+test('pertanyaan keamanan hanya untuk akun tanpa email terverifikasi; daftar baru tanpa pertanyaan', async () => {
+    await inTx(async (db) => {
+        // Pendaftaran baru tidak menyimpan pertanyaan/jawaban.
+        const a = (await db.query(`SELECT a.nik FROM anggota a WHERE a.aktif AND length(a.nik) = 6
+            AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt)
+            AND (SELECT count(*) FROM anggota b WHERE b.nik = a.nik) = 1 LIMIT 1`)).rows[0];
+        const r = await daftarAkun(db, { username: 'uji_tanpa_tanya', password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik, email: 'uji.tanpa.tanya@contoh.id' });
+        assert.equal(r.ok, true);
+        const baru = (await db.query(`SELECT pertanyaan_id, id_pertanyaan, jawaban_hash FROM app_user WHERE username = 'uji_tanpa_tanya'`)).rows[0];
+        assert.deepEqual(baru, { pertanyaan_id: null, id_pertanyaan: null, jawaban_hash: null });
+
+        // Akun lama berjawaban: tanpa email terverifikasi boleh reset lewat jawaban; dengan email terverifikasi ditolak.
+        const u = (await db.query(`SELECT u.id FROM app_user u WHERE u.status AND u.jawaban_hash IS NOT NULL AND u.pertanyaan_id IS NOT NULL ORDER BY u.id LIMIT 1`)).rows[0];
+        await db.query('UPDATE app_user SET jawaban_hash = $2 WHERE id = $1', [u.id, await hashJawaban('Kucing')]);
+        await db.query('DELETE FROM app_user_email_verif WHERE app_user_id = $1', [u.id]);
+        const nama = (await db.query('SELECT username, email FROM app_user WHERE id = $1', [u.id])).rows[0];
+        const ok = await resetLewatJawaban(db, nama.username, 'kucing', 'Baru12345', 'Baru12345');
+        assert.equal(ok.ok, true, 'tanpa email terverifikasi: boleh');
+        await db.query(`UPDATE app_user SET email = 'uji.lama@contoh.id' WHERE id = $1`, [u.id]);
+        await db.query(`INSERT INTO app_user_email_verif (app_user_id, email, terverifikasi_pada) VALUES ($1, 'uji.lama@contoh.id', now())`, [u.id]);
+        const ditolak = await resetLewatJawaban(db, nama.username, 'kucing', 'Baru12345', 'Baru12345');
+        assert.equal(ditolak.ok, false);
+        if (!ditolak.ok) assert.match(ditolak.error, /Lewat email/);
     });
 });

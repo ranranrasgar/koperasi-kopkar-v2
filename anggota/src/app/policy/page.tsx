@@ -20,7 +20,7 @@ export default async function KebijakanPrivasiPage() {
             <section>
                 <h2>1. Data yang kami kumpulkan</h2>
                 <ul>
-                    <li><strong>Data pendaftaran:</strong> NIK karyawan, username, email, kata sandi (disimpan hanya dalam bentuk hash, tidak bisa dibaca), serta pertanyaan dan jawaban keamanan (jawaban juga di-hash).</li>
+                    <li><strong>Data pendaftaran:</strong> NIK karyawan, username, email, dan kata sandi (disimpan hanya dalam bentuk hash, tidak bisa dibaca). Akun lama dapat juga memiliki jawaban pertanyaan keamanan (juga di-hash).</li>
                     <li><strong>Data dari akun Google</strong> bila Anda memilih &quot;Lanjut dengan Google&quot;: nama, alamat email, foto profil, dan pengenal akun Google Anda. Kami tidak meminta akses ke Gmail, kontak, Drive, kalender, atau data Google lainnya.</li>
                     <li><strong>Data keanggotaan:</strong> data anggota yang sudah dikelola koperasi, yaitu simpanan, pinjaman, potongan gaji, SHU, riwayat transaksi, dan pengajuan kredit yang Anda buat lewat aplikasi.</li>
                     <li><strong>Foto profil</strong> yang Anda unggah atau yang disalin dari akun Google atas pilihan Anda.</li>
@@ -58,7 +58,7 @@ export default async function KebijakanPrivasiPage() {
             <section>
                 <h2>4. Penyimpanan dan keamanan</h2>
                 <p>
-                    Data disimpan di server koperasi. Koneksi ke aplikasi memakai HTTPS, kata sandi dan jawaban keamanan disimpan sebagai hash, dan akses
+                    Data disimpan di server koperasi. Koneksi ke aplikasi memakai HTTPS, kata sandi disimpan sebagai hash, dan akses
                     pengurus dibatasi menurut hak akses. Tidak ada sistem yang sepenuhnya bebas risiko; bila Anda menduga akun disalahgunakan,
                     segera ganti kata sandi dan hubungi kami.
                 </p>

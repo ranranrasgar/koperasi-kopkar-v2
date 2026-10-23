@@ -43,7 +43,7 @@ export async function daftarAction(_: Hasil, f: FormData): Promise<Hasil> {
     try {
         hasil = await withTx(pool, (db) => daftarAkun(db, {
             username: teks(f, "username"), password: teks(f, "password"), ulangi: teks(f, "ulangi"), nik: teks(f, "nik"),
-            email: teks(f, "email"), pertanyaanId: Number(teks(f, "pertanyaan")) || 0, jawaban: teks(f, "jawaban"),
+            email: teks(f, "email"),
         }))
     } catch (e) {
         console.error("daftar akun gagal:", e)
@@ -152,7 +152,7 @@ export async function gantiPasswordAction(_: Hasil, f: FormData): Promise<Hasil>
     return { ok: true, pesan: "Password berhasil diganti." }
 }
 
-/** Lengkapi pendaftaran setelah login Google: NIK, username, password, pertanyaan keamanan. Email dari Google (sudah terverifikasi). */
+/** Lengkapi pendaftaran setelah login Google: NIK, username, password. Email dari Google (sudah terverifikasi). */
 export async function daftarGoogleAction(_: Hasil, f: FormData): Promise<Hasil> {
     const jar = await cookies()
     const g = bacaToken("google-daftar", jar.get(COOKIE_GOOGLE_DAFTAR)?.value)
@@ -163,7 +163,7 @@ export async function daftarGoogleAction(_: Hasil, f: FormData): Promise<Hasil> 
     try {
         hasil = await withTx(pool, (db) => daftarAkun(db, {
             username: teks(f, "username"), password: teks(f, "password"), ulangi: teks(f, "ulangi"), nik: teks(f, "nik"),
-            email: g.email, pertanyaanId: Number(teks(f, "pertanyaan")) || 0, jawaban: teks(f, "jawaban"),
+            email: g.email,
         }, { sub: g.sub }))
     } catch (e) {
         console.error("daftar akun Google gagal:", e)

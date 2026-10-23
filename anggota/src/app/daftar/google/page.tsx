@@ -4,7 +4,6 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { HalamanAuth } from "@/components/HalamanAuth"
 import { anggotaSesi } from "@/lib/anggota"
-import { query } from "@/lib/db"
 import { COOKIE_GOOGLE_DAFTAR } from "@/lib/google"
 import { bacaToken } from "@/lib/sesi"
 import { FormDaftarGoogle } from "./FormDaftarGoogle"
@@ -15,7 +14,6 @@ export default async function DaftarGooglePage() {
     if (await anggotaSesi()) redirect("/beranda")
     const g = bacaToken("google-daftar", (await cookies()).get(COOKIE_GOOGLE_DAFTAR)?.value)
     if (!g) redirect("/masuk?galat=google")
-    const pertanyaan = await query<{ id: number; pertanyaan: string }>("SELECT id, pertanyaan FROM pertanyaan ORDER BY urut")
     // Username awal dari bagian depan email; boleh diubah.
     const usulan = g.email.split("@")[0].replace(/[^A-Za-z0-9._-]/g, "").slice(0, 50)
     return (
@@ -32,7 +30,7 @@ export default async function DaftarGooglePage() {
                     <p className="truncate text-sm text-redup">{g.email}</p>
                 </div>
             </div>
-            <FormDaftarGoogle pertanyaan={pertanyaan} usulanUsername={usulan} />
+            <FormDaftarGoogle usulanUsername={usulan} />
         </HalamanAuth>
     )
 }

@@ -30,7 +30,7 @@ export default async function SyaratKetentuanPage() {
                 <h2>2. Akun dan keamanan</h2>
                 <ul>
                     <li>Data yang Anda berikan harus benar dan milik Anda sendiri. Satu orang satu akun.</li>
-                    <li>Anda bertanggung jawab menjaga kerahasiaan kata sandi, jawaban keamanan, dan akses ke email atau akun Google yang dipakai untuk masuk.</li>
+                    <li>Anda bertanggung jawab menjaga kerahasiaan kata sandi dan akses ke email atau akun Google yang dipakai untuk masuk.</li>
                     <li>Jangan membagikan kode verifikasi kepada siapa pun, termasuk yang mengaku pengurus.</li>
                     <li>Segera hubungi kami bila akun Anda dipakai orang lain.</li>
                 </ul>
