@@ -1,7 +1,8 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { modeUji, tx } from "@/lib/db"
+import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
+import { modeUji, pool, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif } from "@/lib/operator"
 import { MENU } from "@/config/akses"
 
@@ -14,12 +15,21 @@ export type HasilPengajuan = { ok: true; pesan: string } | { ok: false; error: s
 export async function putuskanPengajuanAction(id: number, setuju: boolean): Promise<HasilPengajuan> {
     try {
         await operatorAktif([MENU.pengajuan])
-        const r = await tx(async (db) => (await db.query<{ kd_anggota: string }>(
-            "UPDATE pengajuan_pinjaman SET status = $1 WHERE id = $2 AND status = 'P' RETURNING kd_anggota", [setuju ? "Y" : "N", id])).rows)
+        const r = await tx(async (db) => (await db.query<{ kd_anggota: string; anggota_id: number | null; rp_pinjaman_pokok: string }>(
+            "UPDATE pengajuan_pinjaman SET status = $1 WHERE id = $2 AND status = 'P' RETURNING kd_anggota, anggota_id, rp_pinjaman_pokok", [setuju ? "Y" : "N", id])).rows)
         if (r.length === 0) return { ok: false, error: "Pengajuan tidak ada atau sudah diputuskan" }
         const pesan = `Pengajuan ${r[0].kd_anggota} ${setuju ? "disetujui" : "ditolak"}`
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
         revalidatePath("/dashboard/loans/apply")
+        // Kabari anggota di PWA (riwayat + Web Push). Gagal kirim tidak membatalkan keputusan yang sudah tersimpan.
+        if (r[0].anggota_id) {
+            const rp = Number(r[0].rp_pinjaman_pokok).toLocaleString("id-ID")
+            await kirimNotifikasi(pool, Number(r[0].anggota_id), {
+                judul: setuju ? "Pengajuan kredit disetujui" : "Pengajuan kredit ditolak",
+                isi: `Pengajuan pinjaman Rp ${rp} ${setuju ? "disetujui. Pencairan diproses oleh koperasi." : "tidak disetujui. Hubungi pengurus koperasi untuk keterangan."}`,
+                url: "/ajukan",
+            }).catch((e) => console.error("kirim notifikasi pengajuan gagal:", e))
+        }
         return { ok: true, pesan }
     } catch (e) {
         if (!(e instanceof GalatSesi)) console.error("putuskan pengajuan gagal:", e)

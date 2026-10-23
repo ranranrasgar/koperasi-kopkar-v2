@@ -75,7 +75,7 @@ async function posting(menu: readonly string[], fn: (o: Operator) => Promise<Exc
 
 export async function cariAnggotaAction(kata: string): Promise<AnggotaRingkas[]> {
     const o = await wajibLogin() // sesi habis: alihkan ke login
-    if (!punyaIzin(o.izin, MENU_TRANSAKSI)) return []
+    if (!punyaIzin(o.izin, [...MENU_TRANSAKSI, MENU.kirimNotifikasi])) return []
     if (kata.trim().length < 2) return []
     return cariAnggota(kata)
 }

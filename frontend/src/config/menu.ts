@@ -219,6 +219,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/settings/jenis-simpanan"
             },
             {
+                label: "Kirim Notifikasi",
+                icon: "campaign",
+                href: "/dashboard/notifikasi"
+            },
+            {
                 label: "Kelola Panduan",
                 icon: "edit_note",
                 href: "/dashboard/panduan/kelola"
