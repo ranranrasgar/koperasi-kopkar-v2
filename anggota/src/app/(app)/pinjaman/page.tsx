@@ -10,7 +10,7 @@ export const metadata: Metadata = { title: "Pinjaman" }
 
 function KartuPinjaman({ p }: { p: PinjamanAktif }) {
     return (
-        <Link href={`/pinjaman/${p.jenis}/${p.id}`} className="block px-4 py-4 transition-colors hover:bg-latar/70">
+        <Link href={`/pinjaman/${p.jenis}/${p.id}`} className="block px-5 py-4 transition-colors active:bg-garis/40">
             <div className="flex items-start gap-3">
                 <div className="min-w-0 flex-1">
                     <p className="truncate font-semibold">{p.nama_kredit ?? "Pinjaman"}</p>
@@ -47,37 +47,37 @@ export default async function PinjamanPage() {
         <main>
             <div className="px-5 pt-2">
                 {/* KPR ditampilkan terpisah dari pinjaman tunai (keputusan K3), hanya bila ada. */}
-                <Kartu className={`grid divide-x divide-garis ${kpr.length ? "grid-cols-2" : "grid-cols-1"}`}>
-                    <div className="p-4">
+                <section className={`grid gap-4 ${kpr.length ? "grid-cols-2" : "grid-cols-1"}`}>
+                    <div>
                         <p className="text-xs text-redup">Sisa pinjaman tunai</p>
-                        <p className="angka mt-1 text-lg font-bold">{rupiah(sisaTunai)}</p>
+                        <p className="angka mt-1 text-[1.625rem] font-bold leading-tight tracking-tight">{rupiah(sisaTunai)}</p>
                     </div>
                     {kpr.length > 0 && (
-                        <div className="p-4">
+                        <div>
                             <p className="text-xs text-redup">Sisa KPR</p>
-                            <p className="angka mt-1 text-lg font-bold">{rupiah(sisaKpr)}</p>
+                            <p className="angka mt-1 text-[1.625rem] font-bold leading-tight tracking-tight">{rupiah(sisaKpr)}</p>
                         </div>
                     )}
-                </Kartu>
+                </section>
 
                 {daftar.length === 0 && (
                     <Kartu className="mt-7"><Kosong judul="Tidak ada pinjaman berjalan" isi={lunas.length ? "Pinjaman yang sudah lunas ada di bagian bawah." : undefined} /></Kartu>
                 )}
                 {tunai.length > 0 && (
                     <>
-                        <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Pinjaman tunai</h2>
+                        <h2 className="mb-1 mt-8 text-[0.9375rem] font-semibold">Pinjaman tunai</h2>
                         <Kartu className="divide-y divide-garis overflow-hidden">{tunai.map((p) => <KartuPinjaman key={p.id} p={p} />)}</Kartu>
                     </>
                 )}
                 {kpr.length > 0 && (
                     <>
-                        <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">KPR</h2>
+                        <h2 className="mb-1 mt-8 text-[0.9375rem] font-semibold">KPR</h2>
                         <Kartu className="divide-y divide-garis overflow-hidden">{kpr.map((p) => <KartuPinjaman key={p.id} p={p} />)}</Kartu>
                     </>
                 )}
                 {lunas.length > 0 && (
                     <>
-                        <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Sudah lunas</h2>
+                        <h2 className="mb-1 mt-8 text-[0.9375rem] font-semibold">Sudah lunas</h2>
                         <Kartu className="divide-y divide-garis overflow-hidden">
                             {lunas.map((p) => (
                                 <BarisTautan key={`${p.jenis}-${p.id}`} href={`/pinjaman/${p.jenis}/${p.id}`} judul={p.nama_kredit ?? "Pinjaman"}

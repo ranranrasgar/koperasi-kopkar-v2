@@ -21,14 +21,23 @@ export function Kepala({ judul, sub, kembali, kanan }: { judul: string; sub?: st
     )
 }
 
+/**
+ * Kelompok baris datar, tanpa kotak: garis tipis di atas dan bawah, penuh lebar layar (induk halaman memakai px-5, jadi
+ * baris di dalamnya memakai px-5 supaya sejajar dengan judul). Sengaja bukan kartu berkotak supaya halaman tidak ramai.
+ */
 export function Kartu({ children, className = "" }: { children: React.ReactNode; className?: string }) {
-    return <section className={`rounded-[var(--radius-kartu)] border border-garis bg-permukaan ${className}`}>{children}</section>
+    return <section className={`-mx-5 border-y border-garis ${className}`}>{children}</section>
+}
+
+/** Blok ringkasan (angka utama) tanpa kotak, sejajar dengan margin halaman. */
+export function Blok({ children, className = "" }: { children: React.ReactNode; className?: string }) {
+    return <section className={className}>{children}</section>
 }
 
 /** Judul kecil bagian, opsional dengan tautan "Lihat semua". */
 export function JudulBagian({ children, href, tautan = "Lihat semua" }: { children: React.ReactNode; href?: string; tautan?: string }) {
     return (
-        <div className="mb-2.5 mt-7 flex items-baseline justify-between px-1">
+        <div className="mb-2 mt-8 flex items-baseline justify-between">
             <h2 className="text-[0.9375rem] font-semibold">{children}</h2>
             {href && <Link href={href} className="text-sm font-medium text-utama">{tautan}</Link>}
         </div>
@@ -50,7 +59,7 @@ export function BarisTautan({ href, judul, sub, nilai, nilaiSub }: {
     href: string; judul: React.ReactNode; sub?: React.ReactNode; nilai?: React.ReactNode; nilaiSub?: React.ReactNode
 }) {
     return (
-        <Link href={href} className="flex min-h-16 items-center gap-3 px-4 py-3 transition-colors hover:bg-latar/70 active:bg-latar">
+        <Link href={href} className="flex min-h-16 items-center gap-3 px-5 py-3 transition-colors active:bg-garis/40">
             <div className="min-w-0 flex-1">
                 <p className="truncate text-[0.9375rem] font-medium">{judul}</p>
                 {sub && <p className="truncate text-xs text-redup">{sub}</p>}

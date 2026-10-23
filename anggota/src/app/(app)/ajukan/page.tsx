@@ -33,13 +33,13 @@ export default async function AjukanPage() {
                         produk={jenis.map((j) => ({ kode: j.kode, nama: j.nama, persenBunga: j.persenBunga, perAngsuran: j.perAngsuran,
                             maksCicilan: j.maksCicilan, persenAdm: j.persenAdm, persenProvisi: j.persenProvisi, kunciGrade: j.kunciGrade }))} />}
 
-                <h2 className="mb-2.5 mt-9 px-1 text-[0.9375rem] font-semibold">Pengajuan saya</h2>
+                <h2 className="mb-1 mt-9 text-[0.9375rem] font-semibold">Pengajuan saya</h2>
                 {daftar.length === 0 ? <Kartu><Kosong judul="Belum ada pengajuan" /></Kartu> : (
                     <Kartu className="divide-y divide-garis">
                         {daftar.map((p) => {
                             const s = STATUS[p.status] ?? { teks: p.status, kelas: "bg-garis text-redup" }
                             return (
-                                <div key={p.id} className="flex items-start justify-between gap-3 px-4 py-3">
+                                <div key={p.id} className="flex items-start justify-between gap-3 px-5 py-3">
                                     <div className="min-w-0">
                                         <p className="truncate text-[0.9375rem] font-medium">{p.nama_kredit ?? "Pinjaman"}</p>
                                         <p className="truncate text-xs text-redup">

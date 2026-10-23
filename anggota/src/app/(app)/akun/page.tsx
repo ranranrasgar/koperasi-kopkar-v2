@@ -4,7 +4,7 @@ import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
 import { keluarAction } from "@/app/actions/auth"
 import { FotoProfil } from "@/components/FotoProfil"
 import { PilihTema } from "@/components/PilihTema"
-import { Baris, BarisTautan, Kartu } from "@/components/ui"
+import { Baris, BarisTautan, Blok, Kartu } from "@/components/ui"
 import { wajibMasuk } from "@/lib/anggota"
 import { pool } from "@/lib/db"
 import { infoFoto } from "@/lib/foto"
@@ -24,13 +24,13 @@ export default async function AkunPage() {
     return (
         <main>
             <div className="px-5 pt-2">
-                <Kartu className="flex items-center gap-4 p-5">
+                <Blok className="flex items-center gap-4 pb-1 pt-1">
                     <FotoProfil inisial={inisial} versi={foto.versi} bisaUnggah={foto.terpasang} />
                     <div className="min-w-0">
                         <p className="truncate text-lg font-bold">{a.nama}</p>
                         <p className="truncate text-sm text-redup">{a.username}</p>
                     </div>
-                </Kartu>
+                </Blok>
 
                 {a.anggotaId !== null && (
                     <Kartu className="mt-5 overflow-hidden">
@@ -39,15 +39,15 @@ export default async function AkunPage() {
                     </Kartu>
                 )}
 
-                <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Akun</h2>
+                <h2 className="mb-1 mt-8 text-[0.9375rem] font-semibold">Akun</h2>
                 <Kartu className="divide-y divide-garis overflow-hidden">
-                    <div className="px-4"><Baris label="Username" nilai={a.username} /></div>
+                    <div className="px-5"><Baris label="Username" nilai={a.username} /></div>
                     <BarisTautan href="/akun/email" judul={<span className="flex items-center gap-3"><Mail size={19} strokeWidth={1.75} className="text-redup" />Email</span>}
                         nilaiSub={a.email ?? "Belum diisi"} />
                     <BarisTautan href="/akun/password" judul={<span className="flex items-center gap-3"><KeyRound size={19} strokeWidth={1.75} className="text-redup" />Ganti password</span>} />
                 </Kartu>
 
-                <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Tampilan</h2>
+                <h2 className="mb-1 mt-8 text-[0.9375rem] font-semibold">Tampilan</h2>
                 <PilihTema />
 
                 <p className="mt-6 px-1 text-xs leading-relaxed text-redup">

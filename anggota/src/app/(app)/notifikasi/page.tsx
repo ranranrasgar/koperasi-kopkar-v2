@@ -25,7 +25,7 @@ export default async function NotifikasiPage(props: PageProps<"/notifikasi">) {
                 {baris.length === 0 ? <Kartu><Kosong judul="Belum ada notifikasi" isi="Pemberitahuan dari koperasi akan tampil di sini." /></Kartu> : (
                     <Kartu className="divide-y divide-garis">
                         {baris.map((n) => (
-                            <Link key={n.id} href={`/notifikasi/${n.id}`} className="block px-4 py-3.5 transition-colors hover:bg-latar/70 active:bg-latar">
+                            <Link key={n.id} href={`/notifikasi/${n.id}`} className="block px-5 py-3.5 transition-colors active:bg-garis/40">
                                 <div className="flex items-baseline justify-between gap-3">
                                     <h2 className="text-[0.9375rem] font-semibold">{n.title || "Pemberitahuan"}</h2>
                                     <time dateTime={n.datetimes} className="shrink-0 text-xs text-redup">{tanggal(n.datetimes)}</time>

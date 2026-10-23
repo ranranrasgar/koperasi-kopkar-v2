@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { Baris, Kartu, Kepala, Kosong } from "@/components/ui"
+import { Baris, Blok, Kartu, Kepala, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { potonganBulanIni } from "@/lib/data"
 import { bulanIni, rupiah } from "@/lib/format"
@@ -20,24 +20,24 @@ export default async function PotonganPage() {
         <main>
             <Kepala judul="Potongan gaji" sub={bulanIni()} kembali="/beranda" />
             <div className="px-5">
-                <Kartu className="p-5">
+                <Blok>
                     <p className="text-sm text-redup">Perkiraan total potongan</p>
                     <p className="angka mt-1 text-[1.75rem] font-bold leading-tight tracking-tight">{rupiah(p.total)}</p>
                     <p className="mt-2 text-xs leading-relaxed text-redup">
                         Dihitung dari angsuran berikutnya dan simpanan bulanan Anda. Jumlah akhir mengikuti daftar potongan yang dikirim koperasi.
                     </p>
-                </Kartu>
+                </Blok>
 
-                <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Rincian</h2>
-                <Kartu className="px-4">
+                <h2 className="mb-1 mt-8 text-[0.9375rem] font-semibold">Rincian</h2>
+                <Kartu className="px-5">
                     <dl className="divide-y divide-garis">
                         {rincian.filter(([, n]) => n > 0).map(([l, n]) => <Baris key={l} label={l} nilai={rupiah(n)} />)}
                         <Baris label="Total" nilai={rupiah(p.total)} tegas />
                     </dl>
                 </Kartu>
 
-                <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Rekening pemotongan</h2>
-                <Kartu className="px-4">
+                <h2 className="mb-1 mt-8 text-[0.9375rem] font-semibold">Rekening pemotongan</h2>
+                <Kartu className="px-5">
                     <dl className="divide-y divide-garis">
                         <Baris label="Bank" nilai={p.bank_nama || "-"} />
                         <Baris label="Nomor rekening" nilai={p.bank_no_rek || "-"} />

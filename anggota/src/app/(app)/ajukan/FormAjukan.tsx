@@ -133,7 +133,7 @@ export function FormAjukan({ produk, plafon, hariIni, batasTanggal }: { produk: 
                 </>
             ) : (
                 <>
-                    <div className="rounded-[var(--radius-kartu)] border border-garis bg-permukaan px-4">
+                    <div className="-mx-5 border-y border-garis px-5">
                         <dl className="divide-y divide-garis">
                             {[
                                 ["Jenis pinjaman", p?.nama],

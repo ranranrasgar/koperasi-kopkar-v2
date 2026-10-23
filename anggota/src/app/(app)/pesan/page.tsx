@@ -25,7 +25,7 @@ export default async function PesanPage() {
                 <Link href="/pesan/baru" className="flex h-12 items-center justify-center gap-2 rounded-xl bg-utama font-semibold text-pada-utama hover:bg-utama-tekan">
                     <MessageSquarePlus size={20} strokeWidth={1.75} /> Tulis pesan baru
                 </Link>
-                <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Percakapan</h2>
+                <h2 className="mb-1 mt-8 text-[0.9375rem] font-semibold">Percakapan</h2>
                 {daftar.length === 0 ? (
                     <Kartu><Kosong judul="Belum ada pesan" isi="Tanyakan apa pun ke pengurus koperasi. Balasan muncul di sini dan sebagai notifikasi." /></Kartu>
                 ) : (

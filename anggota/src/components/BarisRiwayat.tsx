@@ -21,8 +21,8 @@ export function BarisRiwayat({ r }: { r: Riwayat }) {
     const Ikon = IKON[r.category] ?? FileText
     const masuk = r.category !== "PENGAJUAN" && r.amount > 0
     return (
-        <div className="flex items-center gap-3 px-4 py-3">
-            <span className={`grid size-10 shrink-0 place-items-center rounded-full ${masuk ? "bg-utama-lembut text-utama" : "bg-latar text-redup"}`}>
+        <div className="flex items-center gap-3 px-5 py-3">
+            <span className={`grid size-10 shrink-0 place-items-center rounded-full ${masuk ? "bg-utama-lembut text-utama" : "bg-garis/50 text-redup"}`}>
                 <Ikon size={19} strokeWidth={1.75} />
             </span>
             <div className="min-w-0 flex-1">

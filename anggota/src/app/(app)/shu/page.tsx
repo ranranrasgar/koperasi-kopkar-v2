@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { Info } from "lucide-react"
-import { Baris, Kartu, Kepala, Kosong } from "@/components/ui"
+import { Baris, Blok, Kartu, Kepala, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { shu, tahunShu } from "@/lib/data"
 import { rupiah } from "@/lib/format"
@@ -39,17 +39,17 @@ export default async function ShuPage(props: PageProps<"/shu">) {
                     </nav>
                 )}
 
-                <Kartu className="p-5">
+                <Blok>
                     <p className="text-sm text-redup">SHU tahun buku {tahun}</p>
                     <p className="angka mt-1 text-[1.75rem] font-bold leading-tight tracking-tight">{rupiah(s.diterima)}</p>
                     {s.no_reff && <p className="mt-1 text-xs text-redup">No. referensi {s.no_reff}</p>}
                     {!s.adaData && <p className="mt-2 text-sm text-redup">Anda tidak tercatat dalam pembagian SHU tahun ini.</p>}
-                </Kartu>
+                </Blok>
 
                 {s.total_shu > 0 && (
                     <>
-                        <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Komponen</h2>
-                        <Kartu className="px-4">
+                        <h2 className="mb-1 mt-8 text-[0.9375rem] font-semibold">Komponen</h2>
+                        <Kartu className="px-5">
                             <dl className="divide-y divide-garis">
                                 {komponen.map(([l, n]) => <Baris key={l} label={l} nilai={rupiah(n)} />)}
                             </dl>

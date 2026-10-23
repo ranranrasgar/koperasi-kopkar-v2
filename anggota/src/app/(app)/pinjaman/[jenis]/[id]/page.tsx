@@ -2,7 +2,7 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { CircleCheck, CircleDashed } from "lucide-react"
-import { Baris, Kartu, Kemajuan, Kepala, Kosong } from "@/components/ui"
+import { Baris, Blok, Kartu, Kemajuan, Kepala, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { rincianPinjaman } from "@/lib/data"
 import { rupiah, tanggal } from "@/lib/format"
@@ -29,7 +29,7 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
         <main>
             <Kepala judul={p.nama_kredit ?? "Pinjaman"} sub={p.no_pinjaman} kembali="/pinjaman" />
             <div className="px-5">
-                <Kartu className="p-5">
+                <Blok>
                     <p className="text-sm text-redup">{lunas ? "Pinjaman lunas" : "Sisa pokok"}</p>
                     <p className="angka mt-1 text-[1.75rem] font-bold leading-tight tracking-tight">{rupiah(p.sisa)}</p>
                     <div className="mt-4 flex items-center gap-3">
@@ -44,7 +44,7 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
                         {!lunas && berikut && <Baris label="Angsuran berikutnya" nilai={`${rupiah(berikut.total)} · ${tanggal(berikut.tanggal_angsuran)}`} />}
                         {!lunas && sisaJasa > 0 && <Baris label="Sisa jasa" nilai={rupiah(sisaJasa)} />}
                     </dl>
-                </Kartu>
+                </Blok>
 
                 <nav aria-label="Tampilan" className="mt-6 flex gap-1 rounded-xl bg-garis/60 p-1">
                     <Link href="?tab=jadwal" replace scroll={false} className={tabKelas(tab === "jadwal")} aria-current={tab === "jadwal" ? "page" : undefined}>
@@ -59,7 +59,7 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
                     jadwal.length === 0 ? <Kartu className="mt-3"><Kosong judul="Jadwal belum tersedia" /></Kartu> : (
                         <Kartu className="mt-3 divide-y divide-garis">
                             {jadwal.map((j) => (
-                                <div key={j.angsuran_ke} className="flex items-center gap-3 px-4 py-3">
+                                <div key={j.angsuran_ke} className="flex items-center gap-3 px-5 py-3">
                                     {j.lunas
                                         ? <CircleCheck size={20} strokeWidth={1.75} className="shrink-0 text-masuk" aria-label="Sudah dibayar" />
                                         : <CircleDashed size={20} strokeWidth={1.75} className="shrink-0 text-redup" aria-label="Belum dibayar" />}
@@ -82,7 +82,7 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
                     bayar.length === 0 ? <Kartu className="mt-3"><Kosong judul="Belum ada pembayaran" /></Kartu> : (
                         <Kartu className="mt-3 divide-y divide-garis">
                             {bayar.map((b) => (
-                                <div key={`${b.no_bukti}-${b.angsuran_ke}`} className="flex items-start justify-between gap-4 px-4 py-3">
+                                <div key={`${b.no_bukti}-${b.angsuran_ke}`} className="flex items-start justify-between gap-4 px-5 py-3">
                                     <div className="min-w-0">
                                         <p className="text-[0.9375rem] font-medium">Angsuran ke-{b.angsuran_ke}</p>
                                         <p className="truncate text-xs text-redup">{tanggal(b.tanggal_angsuran)} · {b.no_bukti}</p>
