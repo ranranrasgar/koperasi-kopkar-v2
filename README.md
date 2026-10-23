@@ -3,7 +3,10 @@
 - `backend/`    mesin posting (simpanan, pinjaman, jurnal) di atas PostgreSQL; semua posting dalam satu transaksi.
 - `mobile-api/` API untuk aplikasi Android dengan kontrak JSON lama (`database/contract`).
 - `frontend/`   web kasir/pengurus (Next.js 16), membaca PostgreSQL langsung dan memposting lewat `backend/src/posting/`.
-- `database/`   skema, migrasi MySQL ke PostgreSQL, rekonsiliasi, kontrak.
+- `anggota/`    PWA anggota (Next.js 16), lihat `docs/prd-pwa-anggota.md`.
+- `database/`   skema, migrasi MySQL ke PostgreSQL, rekonsiliasi, kontrak, backup/restore.
+
+**Deploy ke VPS (Docker)**: langkah demi langkah di [`docs/DEPLOY-VPS.md`](docs/DEPLOY-VPS.md) (`Dockerfile`, `docker-compose.yml`, `.env.contoh`).
 
 Uji backend: `PG_URL=postgres://postgres:@127.0.0.1:5432/kopkar_mjs_2000 npm test`
 

@@ -135,7 +135,9 @@ async function main() {
             berkas.push(await potongDanHitung(path.join(folder, 'media.dump'), o.potongByte));
         }
 
-        const commit = spawnSync('git', ['-C', akarRepo, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).stdout?.trim() || null;
+        // Di dalam image Docker tidak ada .git: commit diberikan saat build lewat KOPKAR_COMMIT.
+        const commit = process.env.KOPKAR_COMMIT
+            || spawnSync('git', ['-C', akarRepo, 'rev-parse', '--short', 'HEAD'], { encoding: 'utf8' }).stdout?.trim() || null;
         const manifest = {
             format: 'kopkar-backup-1',
             dibuat: new Date().toISOString(),

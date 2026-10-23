@@ -1,0 +1,68 @@
+# Produksi di VPS: PostgreSQL 14 + aplikasi admin + aplikasi anggota. Nginx dan HTTPS di host (lihat docs/DEPLOY-VPS.md).
+#
+#   cp .env.contoh .env               lalu isi DB_PASSWORD (dan BACKUP_DIR bila perlu)
+#   docker compose up -d --build
+#
+# Rahasia aplikasi dibaca dari frontend/.env.local dan anggota/.env.local (tidak ikut image). PG_URL di berkas itu
+# diabaikan: alamat database diatur di bawah supaya selalu menunjuk layanan db.
+
+name: kopkar
+
+x-aplikasi: &aplikasi
+  build:
+    context: .
+    args:
+      KOPKAR_COMMIT: ${KOPKAR_COMMIT:-}
+  image: kopkar-app:latest
+  restart: unless-stopped
+  depends_on:
+    db:
+      condition: service_healthy
+  volumes:
+    # Folder cadangan di host = /backup di container (menu Backup & Restore dan npm run backup).
+    - ${BACKUP_DIR:-/var/backups/kopkar}:/backup
+
+services:
+  db:
+    image: postgres:14
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: kopkar
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?isi DB_PASSWORD di .env}
+      POSTGRES_DB: kopkar_mjs_2000
+      TZ: Asia/Jakarta
+      PGTZ: Asia/Jakarta
+    command: ["postgres", "-c", "timezone=Asia/Jakarta"]
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U kopkar -d kopkar_mjs_2000"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    # Tidak dibuka ke internet. Untuk akses dari host (mis. psql), buka baris ini:
+    # ports: ["127.0.0.1:5432:5432"]
+
+  admin:
+    <<: *aplikasi
+    working_dir: /app/frontend
+    command: ["node", "/app/node_modules/next/dist/bin/next", "start", "--port", "3100", "--hostname", "0.0.0.0"]
+    env_file: [frontend/.env.local]
+    environment:
+      PG_URL: postgres://kopkar:${DB_PASSWORD}@db:5432/kopkar_mjs_2000
+      KOPKAR_BACKUP_DIR: /backup
+    ports:
+      - "127.0.0.1:3100:3100"
+
+  anggota:
+    <<: *aplikasi
+    working_dir: /app/anggota
+    command: ["node", "/app/node_modules/next/dist/bin/next", "start", "--port", "3200", "--hostname", "0.0.0.0"]
+    env_file: [anggota/.env.local]
+    environment:
+      PG_URL: postgres://kopkar:${DB_PASSWORD}@db:5432/kopkar_mjs_2000
+    ports:
+      - "127.0.0.1:3200:3200"
+
+volumes:
+  db-data:

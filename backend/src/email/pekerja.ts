@@ -11,6 +11,8 @@ export function mulaiPekerjaEmail() {
     if (g.kopkarPekerjaEmail || process.env.EMAIL_PEKERJA === '0' || !process.env.PG_URL) return;
     g.kopkarPekerjaEmail = true;
     const pool = new pg.Pool({ connectionString: process.env.PG_URL, max: 2 });
+    // Sama dengan createPool (db.ts): koneksi menganggur yang diputus server (restore, restart) tidak boleh menghentikan proses.
+    pool.on('error', (e) => console.error('pekerja email: koneksi database terputus:', e.message));
     let jalan = false;
     const putaran = async () => {
         if (jalan) return;

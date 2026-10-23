@@ -10,6 +10,7 @@ Koperasi Kopkar MJS 2000, v2: npm workspaces monorepo di atas PostgreSQL (hasil 
 - Commit hanya bila diminta pengguna.
 
 ## Perintah
+- Deploy produksi: Docker (`Dockerfile` satu image untuk admin + anggota + skrip database, `docker-compose.yml` db/admin/anggota, Nginx + HTTPS di host). Langkah lengkap: `docs/DEPLOY-VPS.md`. Bila menambah env, workspace, atau proses baru, perbarui ketiganya.
 - Uji backend + mobile-api: `PG_URL=postgres://postgres:@127.0.0.1:5432/kopkar_mjs_2000 npm test` (root). Satu workspace: `npm test -w backend`. Satu file: `cd backend && PG_URL=... npx tsx --test test/simpanan.test.ts`.
 - Typecheck frontend: `npm run typecheck -w frontend`. Tidak ada lint script dan tidak ada uji frontend.
 - Web: `npm run dev` (root) atau `npm run dev -w frontend` (port 3100; `PG_URL`, `SESSION_SECRET`, `KOPKAR_UJI_ROLLBACK` dari `frontend/.env.local`, gitignored). Jangan menjalankan dua dev server utama: port 3100 sering sudah dipakai.

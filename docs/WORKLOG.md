@@ -250,6 +250,16 @@ Terakhir diperbarui 24 Oktober 2026 (pagi). Agent baru: baca bagian ini dulu, la
 
 ---
 
+## 2026-10-24 — Deploy ke VPS dengan Docker
+
+- Permintaan pengguna: langkah demi langkah deploy didokumentasikan di berkas, memakai Docker. Baru: `docs/DEPLOY-VPS.md`, `Dockerfile` (node:22-bookworm-slim, `npm ci` di dalam image, build kedua aplikasi, `postgresql-client-14` dari PGDG supaya Backup & Restore jalan di container, pengguna `node`), `docker-compose.yml` (`db` postgres:14 dengan volume `db-data`, `admin` dan `anggota` dari image yang sama, port hanya `127.0.0.1`, folder cadangan host `/var/backups/kopkar` = `/backup`), `.env.contoh` (DB_PASSWORD, BACKUP_DIR, KOPKAR_COMMIT), `.dockerignore`.
+- Keputusan: Nginx + certbot **di host**, bukan container, karena VPS `101.50.3.222` masih melayani API PHP Android lama lewat Apache (panduan jalur B memindah Apache ke 127.0.0.1:8080 dan meneruskan `/KopkarMJS2000_2026/`). Data pertama dipulihkan lewat `docker compose run ... npm run restore` karena database kosong belum punya operator untuk login ke menu Unggah.
+- Jebakan yang dicatat di panduan: cookie sesi produksi `secure` (login hanya tersimpan lewat HTTPS); `next build` butuh `PG_URL` (pool dibuat saat modul dimuat, `createPool` melempar bila kosong) sehingga Dockerfile memberi PG_URL palsu saat build; Docker melewati ufw untuk port yang dipublikasikan (karena itu hanya 127.0.0.1); `docker compose down -v` menghapus database; role database butuh CREATEDB dan kepemilikan (di compose `kopkar` adalah superuser container).
+- Ikut diperbaiki: pool pekerja email (`backend/src/email/pekerja.ts`) dan `mobile-api/src/db.ts` kini punya penangan `error` (sebelumnya hanya `createPool` di backend), supaya restore/restart PostgreSQL tidak menghentikan proses. `backup.mjs` membaca commit dari `KOPKAR_COMMIT` bila tidak ada `.git` (di dalam image).
+- **Belum diuji**: Docker tidak terpasang di komputer ini, jadi image belum pernah di-build dan compose belum pernah dijalankan; hanya YAML compose diperiksa (terbaca, 3 layanan, port 127.0.0.1) dan jalur di Dockerfile dicocokkan dengan repo. Build pertama di VPS adalah uji sesungguhnya.
+
+---
+
 ## 2026-10-24 — Unggah cadangan dari komputer lalu pulihkan
 
 - Permintaan pengguna: tombol restore dari berkas hasil unduhan, untuk memindah data lokal -> VPS dan sebaliknya. Di halaman Backup & Restore kini ada **Unggah cadangan dari komputer** (`components/master/UnggahCadangan.tsx`): pilih semua berkas satu cadangan, manifest dibaca di browser untuk menampilkan ringkasan dan centang tiap berkas (nama dan ukuran harus cocok), lalu diunggah per potongan 8 MB dengan bilah kemajuan dan coba ulang 3 kali. Setelah server memeriksa SHA-256, cadangan muncul (disorot) dan dialog Pulihkan langsung terbuka.

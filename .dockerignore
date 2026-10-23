@@ -1,0 +1,15 @@
+# Jangan bawa ke image: paket (dipasang ulang di dalam image untuk Linux), hasil build, rahasia, dan data.
+node_modules
+**/node_modules
+**/.next
+**/.next-uji
+**/*.tsbuildinfo
+**/.env
+**/.env.*
+!**/.env.contoh
+backup
+hasil-periksa
+.git
+.claude
+.FullName
+*.log
