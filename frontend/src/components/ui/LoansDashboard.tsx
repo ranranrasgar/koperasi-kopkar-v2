@@ -127,79 +127,48 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                 </div>
             </div>
 
-            {/* Filter Toolbar */}
-            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant p-4 sm:p-5 shadow-xs mb-lg print:hidden">
-                <div className="flex items-center gap-2 mb-4">
-                    <span className="material-symbols-outlined text-primary text-[1.2rem]">filter_list</span>
-                    <h3 className="font-headline-sm font-bold text-on-surface">Filter & Pencarian</h3>
-                </div>
-                
-                <form onSubmit={handleSearch} className="flex flex-col gap-4">
-                    {/* Baris 1: pencarian dan grup/jenis */}
-                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="font-label-md text-label-md font-semibold text-on-surface-variant flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[15px]">search</span> Pencarian
-                            </label>
-                            <div className="flex gap-2">
-                                <select className="bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all max-w-[120px]" value={searchBy} onChange={(e) => setSearchBy(Number(e.target.value))}>
-                                    {searchByOptions.map((opt, idx) => (
-                                        <option key={idx} value={idx}>{opt}</option>
-                                    ))}
-                                </select>
-                                <input type="text" className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all max-w-[120px]" placeholder="Kata kunci..." value={keyword} onChange={(e) => setKeyword(e.target.value)} />
-                            </div>
-                        </div>
-
-                        <div className="flex flex-col gap-1.5">
-                            <label className="font-label-md text-label-md font-semibold text-on-surface-variant flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[15px]">category</span> Grup &amp; Jenis Kredit
-                            </label>
-                            <div className="flex gap-2">
-                                <select className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all max-w-[120px]" value={selectedGroupPinjaman}
-                                    onChange={(e) => { setSelectedGroupPinjaman(e.target.value); setSelectedKredit("All") }}>
-                                    <option value="All">Semua Grup...</option>
-                                    <option value="KOPERASI">KOPERASI</option>
-                                    <option value="BANK / PIHAK LAIN">BANK / PIHAK LAIN</option>
-                                    <option value="KPR">KPR</option>
-                                </select>
-                                <select className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all max-w-[120px]" value={selectedKredit} onChange={(e) => setSelectedKredit(e.target.value)}>
-                                    <option value="All">Semua Jenis...</option>
-                                    {jenisGrup.map((jk) => (
-                                        <option key={jk.kode_kredit} value={jk.kode_kredit}>{jk.nama_kredit}</option>
-                                    ))}
-                                </select>
-                            </div>
-                        </div>
+            {/* Filter: satu baris, rata kiri, seperti halaman daftar lainnya */}
+            <div className="mb-lg rounded-lg border border-outline-variant bg-surface-container-lowest p-3 print:hidden">
+                <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2">
+                    <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={searchBy} onChange={(e) => setSearchBy(Number(e.target.value))} aria-label="Cari berdasarkan">
+                        {searchByOptions.map((opt, idx) => (
+                            <option key={idx} value={idx}>{opt}</option>
+                        ))}
+                    </select>
+                    <div className="relative w-full md:w-[240px]">
+                        <span className="material-symbols-outlined pointer-events-none absolute left-2.5 top-2 text-[18px] text-on-surface-variant">search</span>
+                        <input type="search" className="w-full pl-9 pr-3 h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Kata kunci..." value={keyword} onChange={(e) => setKeyword(e.target.value)} />
                     </div>
-
-                    {/* Baris 2: status pinjaman, anggota aktif, jumlah data, dan tombol terapkan */}
-                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-outline-variant/50 pt-3">
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1" role="radiogroup" aria-label="Status pinjaman">
-                            <span className="font-label-md text-label-md font-semibold text-on-surface-variant flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[15px]">filter_list</span> Status
-                            </span>
-                            {statusLunasOptions.map((opt, idx) => (
-                                <label key={idx} className="flex cursor-pointer items-center gap-1.5 text-xs text-on-surface">
-                                    <input type="radio" name="statusLunas" checked={statusLunas === idx} onChange={() => setStatusLunas(idx)} />
-                                    {opt}
-                                </label>
-                            ))}
-                        </div>
-                        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-on-surface">
-                            <input type="checkbox" checked={isAktif === "Y"} onChange={(e) => setIsAktif(e.target.checked ? "Y" : "S")} />
-                            Anggota aktif
-                        </label>
-                        <span className="text-xs text-on-surface-variant sm:ml-auto">
-                            Ditemukan <strong className="text-on-surface">{formatAngka(totalRecords)}</strong> data
-                        </span>
-                        <button type="submit" disabled={isLoading} className="px-4 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-sm hover:opacity-90 transition-opacity flex items-center gap-1 cursor-pointer disabled:opacity-70">
-                            <span className={`material-symbols-outlined text-[15px] ${isLoading ? "animate-spin" : ""}`}>
-                                {isLoading ? "refresh" : "filter_alt"}
-                            </span>
-                            Terapkan Filter
-                        </button>
+                    <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={selectedGroupPinjaman} aria-label="Grup pinjaman"
+                        onChange={(e) => { setSelectedGroupPinjaman(e.target.value); setSelectedKredit("All") }}>
+                        <option value="All">Semua Grup</option>
+                        <option value="KOPERASI">KOPERASI</option>
+                        <option value="BANK / PIHAK LAIN">BANK / PIHAK LAIN</option>
+                        <option value="KPR">KPR</option>
+                    </select>
+                    <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={selectedKredit} onChange={(e) => setSelectedKredit(e.target.value)} aria-label="Jenis kredit">
+                        <option value="All">Semua Jenis</option>
+                        {jenisGrup.map((jk) => (
+                            <option key={jk.kode_kredit} value={jk.kode_kredit}>{jk.nama_kredit}</option>
+                        ))}
+                    </select>
+                    <div className="flex h-9 items-center gap-3 rounded-md border border-outline-variant bg-background px-3" role="radiogroup" aria-label="Status pinjaman">
+                        {statusLunasOptions.map((opt, idx) => (
+                            <label key={idx} className="flex cursor-pointer items-center gap-1.5 text-sm text-on-surface">
+                                <input type="radio" name="statusLunas" checked={statusLunas === idx} onChange={() => setStatusLunas(idx)} />
+                                {opt}
+                            </label>
+                        ))}
                     </div>
+                    <label className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-outline-variant bg-background px-3 text-sm text-on-surface">
+                        <input type="checkbox" checked={isAktif === "Y"} onChange={(e) => setIsAktif(e.target.checked ? "Y" : "S")} />
+                        Anggota aktif
+                    </label>
+                    <button type="submit" disabled={isLoading}
+                        className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-70">
+                        <span className={`material-symbols-outlined text-[18px] ${isLoading ? "animate-spin" : ""}`}>{isLoading ? "refresh" : "filter_alt"}</span>
+                        Terapkan
+                    </button>
                 </form>
             </div>
 
