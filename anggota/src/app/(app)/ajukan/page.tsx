@@ -25,11 +25,11 @@ export default async function AjukanPage() {
 
     return (
         <main>
-            <p className="px-5 pb-1 pt-1 text-sm text-redup">Diproses oleh pengurus koperasi.</p>
-            <div className="px-5">
+            <div className="px-5 pt-2">
                 {jenis.length === 0
                     ? <Kartu><Kosong judul="Belum ada jenis pinjaman" isi="Saat ini belum ada jenis pinjaman yang bisa diajukan lewat aplikasi." /></Kartu>
                     : <FormAjukan hariIni={hari} batasTanggal={batas} plafon={data?.rp_grade ?? 0}
+                        namaMenunggu={daftar.filter((x) => x.status === "P").map((x) => x.nama_kredit ?? "")}
                         produk={jenis.map((j) => ({ kode: j.kode, nama: j.nama, persenBunga: j.persenBunga, perAngsuran: j.perAngsuran,
                             maksCicilan: j.maksCicilan, persenAdm: j.persenAdm, persenProvisi: j.persenProvisi, kunciGrade: j.kunciGrade }))} />}
 
