@@ -250,6 +250,19 @@ Terakhir diperbarui 24 Oktober 2026 (pagi). Agent baru: baca bagian ini dulu, la
 
 ---
 
+## 2026-10-24 — Menu Backup & Restore di admin
+
+- Permintaan pengguna: modul backup masuk sidebar sebagai menu baru. Menu **Sistem & Pengaturan → Backup & Restore** (`/dashboard/settings/backup`, ikon `backup`), izin baru `MENU.backupRestore` = `Backup & Restore (web)` di `config/akses.ts` (bawaan hanya superadmin; bisa diberikan lewat Kelola Hak Akses, karena daftar izin web dibaca dari `AKSES_HALAMAN`).
+- `frontend/src/lib/cadangan.ts`: daftar cadangan (folder `kopkar-*` yang punya manifest), ruang kosong, dan menjalankan `database/postgres/backup.mjs` / `restore.mjs` sebagai proses anak (satu proses pada satu waktu, nama folder divalidasi supaya tidak keluar dari folder cadangan). `app/actions/cadangan.ts`: buat, periksa, hapus, pulihkan (nama database harus diketik ulang; restore lewat database sementara, `--langsung` tidak ada di web). `app/dashboard/settings/backup/unduh/route.ts`: unduh satu berkas cadangan, dialirkan dari disk, cek izin. Komponen `components/master/KelolaCadangan.tsx`.
+- `backend/src/db.ts`: pool kini punya penangan `error`. Tanpa itu, koneksi menganggur yang diputus server (restore yang menghapus database, restart PostgreSQL) bisa menghentikan proses Node admin dan anggota.
+- `restore.mjs`: syarat ruang disk ditambah cadangan 1 GB (sebelumnya ukuran x 1,15 saja, sehingga di disk C yang tersisa 1,9 GB restore bisa lolos dan menyisakan 0,2 GB).
+- Pusat Panduan: artikel baru `09-sistem/05-backup-dan-restore.md` (terpasang di database asli dan uji).
+- Diuji: typecheck frontend lolos; lapisan server diuji lewat skrip (bukan UI) ke database uji: buat (40 MB, 9 detik), daftar, periksa, dua proses bersamaan ditolak, **pulihkan berhasil** (18 detik), nama `../` ditolak, hapus. Halaman dan rute unduh tanpa sesi dialihkan ke login. **Tampilan halaman belum dilihat di browser**: butuh login operator (password operator tidak diatur tanpa izin pengguna).
+- Temuan: `kopkar_mjs_2000` 1,5 GB tetapi hasil restore isi yang sama 582 MB (bloat); dicatat di README.
+- Jebakan: `.gitignore` berisi `backup/` mengabaikan SEMUA folder bernama backup, termasuk `frontend/src/app/dashboard/settings/backup/` (halaman ini tidak akan ter-commit). Diganti `/backup/` (hanya folder cadangan di akar repo).
+
+---
+
 ## 2026-10-24 — Backup dan restore database (data + media)
 
 - Permintaan pengguna: modul backup dan restore SQL dan storage, dengan memperhatikan besar berkas supaya restore tidak gagal. **Semua media aplikasi ada di database** (`app_user_foto`, `pengumuman_gambar`, `perusahaan.logo`, `opr.logo`; tidak ada folder upload), jadi "storage" = tabel media, dicadangkan terpisah dari data (`media.dump`).

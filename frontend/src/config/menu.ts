@@ -214,6 +214,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/settings/mode"
             },
             {
+                label: "Backup & Restore",
+                icon: "backup",
+                href: "/dashboard/settings/backup"
+            },
+            {
                 label: "Jenis Pinjaman",
                 icon: "sell",
                 href: "/dashboard/settings/jenis-pinjaman"

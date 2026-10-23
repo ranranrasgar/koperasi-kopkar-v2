@@ -1,0 +1,49 @@
+---
+judul: Backup dan restore database
+ringkasan: Membuat cadangan seluruh data koperasi (termasuk foto dan gambar), menyimpannya di luar server, memeriksa keutuhannya, dan memulihkannya.
+menu: /dashboard/settings/backup
+---
+Menu **Sistem & Pengaturan → Backup & Restore** membuat cadangan seluruh database: anggota, simpanan, pinjaman, jurnal, akun aplikasi anggota, operator, pengaturan, panduan, dan **media** (foto anggota, gambar himbauan/promo/notifikasi, logo). Semua media aplikasi disimpan di database, jadi satu cadangan sudah mencakup semuanya.
+
+Menu ini hanya untuk **superadmin**, kecuali diberikan ke grup lain lewat Kelola Hak Akses (izin *Backup & Restore (web)*).
+
+## Membuat cadangan
+
+1. Tekan **Buat cadangan sekarang**. Aplikasi boleh tetap dipakai selama proses berjalan; cadangan diambil dari satu titik waktu, jadi isinya tetap serasi.
+2. Tunggu sampai muncul *Cadangan selesai dibuat* (biasanya kurang dari satu menit). Jangan tutup halaman.
+3. Cadangan baru tampil di daftar beserta tanggal, ukuran, dan jumlah berkasnya.
+
+Centang **Tanpa media** bila hanya perlu data (cadangan lebih kecil; foto dan gambar tidak ikut).
+
+> **Ukuran**: cadangan dikompres. Database berukuran 1,5 GB menjadi sekitar 40 MB. Berkas yang lebih besar dari 500 MB dipotong menjadi beberapa bagian supaya mudah disalin.
+
+## Menyimpan cadangan di luar server
+
+Cadangan yang hanya ada di server ikut hilang bila server rusak. Secara berkala:
+
+1. Tekan **Unduh** pada cadangan, lalu unduh **semua** berkas yang tampil (data.dump, media.dump, dan manifest.json, atau semua potongannya) ke **satu folder** di komputer atau disk luar. Jangan ganti nama berkasnya.
+2. Simpan juga berkas pengaturan server (`.env.local`) di tempat terpisah yang aman. Berkas itu berisi password dan tidak ikut cadangan.
+
+## Memeriksa cadangan
+
+**Periksa** mencocokkan setiap berkas dengan sidik SHA-256 yang dicatat saat cadangan dibuat. Hasil *lengkap dan utuh* berarti cadangan bisa dipulihkan. Berkas yang terpotong saat disalin atau rusak langsung ketahuan, dan pemulihan tidak akan dijalankan dengan berkas seperti itu.
+
+## Memulihkan (restore)
+
+> **Penting:** Pulihkan **mengganti seluruh isi database** dengan isi cadangan. Semua transaksi setelah waktu cadangan **hilang**. Buat cadangan terbaru dulu bila ragu, dan minta semua pengguna keluar.
+
+1. Tekan **Pulihkan** pada cadangan yang dipilih.
+2. Baca peringatannya, lalu ketik nama database persis seperti yang ditampilkan.
+3. Tekan **Pulihkan** dan tunggu sampai selesai (beberapa menit).
+
+Cara kerjanya aman: isi cadangan dimasukkan ke database sementara dulu, jumlah baris setiap tabel dicocokkan dengan catatan cadangan, baru database lama diganti. Bila ada yang gagal di tengah jalan, database lama **tidak berubah**.
+
+Pemulihan ditolak bila ruang disk server tidak cukup (butuh kira-kira ukuran database ditambah 1 GB). Kosongkan ruang disk atau minta petugas teknis memulihkan lewat perintah server.
+
+## Memindahkan ke server lain
+
+Cadangan dari komputer atau server lain bisa dipulihkan dengan menyalin foldernya (yang berisi manifest.json) ke folder cadangan server yang tertera di halaman ini, lalu memuat ulang halaman. Untuk server baru, petugas teknis memakai perintah `npm run backup` dan `npm run restore` (langkahnya di `database/postgres/README.md`).
+
+## Menghapus cadangan lama
+
+Tekan ikon tempat sampah untuk menghapus cadangan dari server. Hapus cadangan lama bila ruang disk menipis, tetapi simpan beberapa yang terbaru (misalnya cadangan harian 7 hari terakhir dan cadangan akhir bulan).

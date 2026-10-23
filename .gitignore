@@ -10,4 +10,4 @@ next-env.d.ts
 hasil-periksa/
 
 # Cadangan database (npm run backup), berisi data anggota
-backup/
+/backup/

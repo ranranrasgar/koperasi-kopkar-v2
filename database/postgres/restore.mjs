@@ -135,7 +135,9 @@ async function main() {
 
     // Ruang disk server (bila servernya di komputer ini dan folder datanya terbaca).
     const kosong = dataDir && fs.existsSync(dataDir) ? ruangKosong(dataDir) : null;
-    const perlu = Math.round(m.ukuranDatabase * 1.15);
+    // Ukuran database + 15%, ditambah 1 GB cadangan untuk WAL, berkas sementara, dan sistem: disk yang hampir penuh membuat
+    // PostgreSQL berhenti, jauh lebih buruk daripada restore yang ditolak.
+    const perlu = Math.round(m.ukuranDatabase * 1.15) + 1024 * 1024 * 1024;
     const lewatSementara = !(berisi && o.langsung);
     if (kosong !== null) {
         log(`Ruang kosong di folder data PostgreSQL: ${ukuranBaca(kosong)}, perlu sekitar ${ukuranBaca(perlu)}`);

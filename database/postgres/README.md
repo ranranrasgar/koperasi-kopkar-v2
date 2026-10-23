@@ -98,6 +98,11 @@ npm run restore -- <folder> --timpa --yakin <nama_db>   # timpa database yang su
 - `pg_restore` tidak bisa membaca format custom dari pipa di Windows ("unsupported version in file header"), karena itu potongan digabung ke berkas, bukan dialirkan.
 - Folder `backup/` di akar repo ada di `.gitignore` (berisi data anggota). Simpan cadangan di disk lain atau disk luar; disk C komputer pengembangan hampir penuh.
 
+**Dari aplikasi admin**: menu **Sistem & Pengaturan → Backup & Restore** (`/dashboard/settings/backup`, izin `Backup & Restore (web)`, bawaan hanya superadmin) menjalankan skrip yang sama: buat cadangan (dengan/tanpa media), daftar cadangan di folder server (`KOPKAR_BACKUP_DIR` atau `backup/`), unduh tiap berkas (dialirkan dari disk), periksa (`--periksa`), hapus, dan pulihkan (lewat database sementara; nama database harus diketik ulang; opsi `--langsung` sengaja tidak ada di web). Satu proses pada satu waktu. Berkas cadangan tidak diunggah lewat browser: salin foldernya ke folder cadangan server.
+
+- Ruang disk untuk restore: ukuran database (saat dicadangkan) x 1,15 **+ 1 GB** cadangan untuk WAL dan berkas sementara.
+- Database `kopkar_mjs_2000` berukuran 1,5 GB tetapi salinan hasil restore dengan isi yang sama hanya 582 MB: sisanya ruang kosong bekas pembaruan (bloat). `VACUUM FULL` (mengunci tabel, jalankan di luar jam kerja) atau satu kali restore memperkecilnya.
+
 **Pindah ke VPS**: (1) di komputer ini `npm run backup -- --ke <folder>`; (2) salin seluruh folder cadangan ke VPS; (3) di VPS: `git pull`, `npm install`, buat `frontend/.env.local` dan `anggota/.env.local` (PG_URL VPS, rahasia sesi, SMTP, VAPID sama dengan sebelumnya, Google); (4) `npm run restore -- <folder> --periksa`, lalu `npm run restore -- <folder>`; (5) `npm run anggota:pasang` bila kode lebih baru dari cadangan; (6) build dan jalankan ulang aplikasi. PostgreSQL di VPS harus versi 14 atau lebih baru, dengan `pg_dump`/`pg_restore` versi yang sama dengan servernya (`KOPKAR_PG_BIN` bila tidak di PATH).
 
 ## Migrasi data produksi 22 Oktober 2026

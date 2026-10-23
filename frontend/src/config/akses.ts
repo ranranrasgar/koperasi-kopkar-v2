@@ -58,6 +58,8 @@ export const MENU = {
     kelolaPanduan: "Kelola Panduan (web)",
     // Saklar mode uji/live; superadmin, dan grup admin (diberikan oleh npm run pengaturan:pasang).
     modeAplikasi: "Mode Aplikasi (web)",
+    // Khusus web; superadmin, atau grup yang diberi izin lewat Kelola Hak Akses. Memulihkan cadangan menimpa seluruh database.
+    backupRestore: "Backup & Restore (web)",
     // Khusus web; superadmin, atau grup yang diberi izin lewat Kelola Hak Akses (kirim pengumuman/promo ke HP anggota).
     kirimNotifikasi: "Kirim Notifikasi (web)",
     // Khusus web; himbauan dan promo yang tampil di Beranda aplikasi anggota.
@@ -119,6 +121,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     // Pusat Panduan (/dashboard/panduan) sengaja tanpa entri: semua operator boleh membaca.
     "/dashboard/panduan/kelola": [MENU.kelolaPanduan],
     "/dashboard/settings/mode": [MENU.modeAplikasi],
+    "/dashboard/settings/backup": [MENU.backupRestore],
     "/dashboard/notifikasi": [MENU.kirimNotifikasi],
     "/dashboard/himbauan": [MENU.kelolaPengumuman],
     "/dashboard/pesan": [MENU.pesanAnggota],
