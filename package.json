@@ -2,10 +2,12 @@
     "name": "kopkar-v2",
     "private": true,
     "type": "module",
-    "workspaces": ["backend", "mobile-api", "frontend"],
+    "workspaces": ["backend", "mobile-api", "frontend", "anggota"],
     "scripts": {
         "dev": "npm run dev -w frontend",
         "dev:uji": "npm run dev:uji -w frontend",
+        "dev:anggota": "npm run dev -w anggota",
+        "dev:anggota:uji": "npm run dev:uji -w anggota",
         "uji:reset": "node database/postgres/uji-reset.mjs",
         "panduan:pasang": "node database/postgres/panduan-pasang.mjs",
         "pengaturan:pasang": "node database/postgres/pengaturan-pasang.mjs",

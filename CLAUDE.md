@@ -17,6 +17,7 @@ Koperasi Kopkar MJS 2000, v2: npm workspaces monorepo di atas PostgreSQL (hasil 
 - Database uji untuk menguji alur antar halaman (data benar-benar tersimpan): `npm run uji:reset` menyalin `kopkar_mjs_2000` ke `kopkar_mjs_2000_uji` (pg_dump/pg_restore, ±30 detik, sumber hanya dibaca), lalu `npm run dev:uji` menjalankan server kedua di port 3101 ke database uji (tanpa rollback, folder build `.next-uji`, `tsconfig.uji.json`, cookie `kopkar_sesi_uji`, banner ungu dan judul "[UJI]"). Bisa berjalan bersamaan dengan server utama; `uji:reset` boleh dijalankan saat server uji hidup.
 - Pusat Panduan: `npm run panduan:pasang` membuat tabel `panduan_kategori`/`panduan` (`database/postgres/panduan.sql`, khusus web, tidak lewat `mapping.mjs`) dan menambahkan isi awal dari `database/panduan/NN-kategori/NN-artikel.md` yang belum ada (cocok lewat slug; suntingan admin tidak ditimpa). `-- --timpa` mengembalikan semua ke isi bawaan. Saat mengubah aturan transaksi atau halaman, perbarui juga artikel panduan terkait di `database/panduan`.
 - API mobile: `PG_URL=... npm start -w mobile-api` (port 8099, `/v1/Api.php?apicall=...`).
+- PWA anggota: `npm run dev:anggota` (port 3200; `PG_URL`, `ANGGOTA_SESSION_SECRET` dari `anggota/.env.local`) atau `npm run dev:anggota:uji` (port 3201, database uji). Typecheck: `npm run typecheck -w anggota`. PRD: `docs/prd-pwa-anggota.md`.
 - Migrasi MySQL ke PostgreSQL: lihat `database/postgres/README.md` (jangan `--reset` pada database yang dipakai).
 - Password operator: `npm run set-password -w frontend -- <nama>` (`--acak`, `--daftar`, `--buat-superadmin`). Mengubah database; jalankan hanya atas permintaan pengguna.
 
@@ -26,7 +27,8 @@ Koperasi Kopkar MJS 2000, v2: npm workspaces monorepo di atas PostgreSQL (hasil 
 - Halaman bersifat server component per route di `src/app/dashboard/**` (tidak ada catch-all). Daftar generik memakai `ModuleConfig` di `src/config/modules.ts`; menu di `src/config/menu.ts`.
 - **Hak akses**: setiap halaman wajib memanggil `wajibIzin("/dashboard/...")` (`src/lib/operator.ts`) karena layout tidak dijalankan ulang pada navigasi; server action memanggil `operatorAktif([MENU.x])`. Peta halaman ke nama menu desktop ada di `src/config/akses.ts` (`MENU`, `AKSES_HALAMAN`) dan harus sama persis dengan teks di tabel `opr_hak_akses`. Halaman baru = entri di `MENU`/`AKSES_HALAMAN` + `menu.ts`. Grup `superadmin` lolos semua izin.
 - Login operator (tabel `opr`, hash scrypt) dengan cookie sesi bertanda tangan 12 jam (`lib/sesi.ts`); `proxy.ts` mengarahkan yang belum login ke `/login`.
-- `mobile-api`: 17 endpoint baca dengan kontrak JSON lama Android (`database/contract/mobile-api-shapes.json`); uji kontrak membandingkan bentuk JSON.
+- `mobile-api`: 17 endpoint baca dengan kontrak JSON lama Android (`database/contract/mobile-api-shapes.json`); uji kontrak membandingkan bentuk JSON. Query-nya ada di `backend/src/anggota/queries.ts` (dipakai juga PWA) dan menerima id, bukan `kode_agt`.
+- `anggota/`: PWA anggota (Next.js, sesi `app_user` sendiri, tema sendiri). Aturan akun di `backend/src/anggota/akun.ts`. Setiap query data memakai `anggotaId` dari sesi (`lib/anggota.ts`), tidak pernah dari parameter. Relasi selalu lewat PK/FK id.
 - `KOPKAR_UJI_ROLLBACK=1`: posting dijalankan lalu di-rollback (mode uji di web); kolom `opr` diisi nama operator yang login.
 
 ## Database
@@ -34,4 +36,4 @@ Koperasi Kopkar MJS 2000, v2: npm workspaces monorepo di atas PostgreSQL (hasil 
 - Tidak ada ORM. SQL PostgreSQL: `$1`, `ILIKE`, `int / int` memotong (cast ke `numeric`), alias SELECT tidak bisa difilter.
 - 16 tabel tidak dimigrasi (`SKIP_TABLES` di `database/postgres/mapping.mjs`: `absen`, `bukubesar`, `neraca_saldo`, ...); laporan diganti query langsung ke `jurnal_umum`. Halaman absensi hanya placeholder.
 - Perubahan skema: ubah `mapping.mjs`, jalankan `generate-schema.mjs`, lalu `migrate.mjs`. Jangan edit `schema.sql` manual.
-- Password anggota di `app_user` masih MD5 tanpa salt dari aplikasi mobile; jangan ditulis dari form web. `opr.password_hash` format `scrypt$salt$hash`.
+- Password anggota di `app_user`: sebagian besar masih MD5 tanpa salt dari aplikasi lama; diganti bcrypt `$2y$` saat anggota login di PWA. Hanya PWA (akun milik anggota sendiri) yang boleh menulisnya, jangan dari form admin. `opr.password_hash` format `scrypt$salt$hash`.

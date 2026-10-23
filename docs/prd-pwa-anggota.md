@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Draf 1, menunggu keputusan pengguna pada bagian 11 |
+| Status | Disetujui; keputusan bagian 11 lengkap, pengerjaan mulai Tahap 1 |
 | Tanggal | 23 Oktober 2026 |
 | Dasar | `docs/analisis-aplikasi-mobile-lama.md` (wajib dibaca dulu) |
 | Pengganti | Aplikasi Android KopkarMJS2000 v5.6 + API PHP `KopkarMJS2000_2026` |
@@ -42,6 +42,7 @@ Sistem admin sedang dipindah ke v2 (PostgreSQL, monorepo ini). PWA anggota mengg
 
 **Keputusan: aplikasi terpisah di monorepo yang sama**, workspace baru `anggota/` (Next.js 16, App Router, Tailwind 4, sama dengan `frontend/`).
 
+- **Relasi lewat id**: semua query memakai PK/FK (`anggota_id`, `pinjaman_tunai_id`, `kpr_id`), bukan kode lama (`kode_agt`, `no_pinjaman`); kode lama hanya diterjemahkan ke id di batas API Android (keputusan pengguna 23 Oktober 2026).
 - **Satu sumber aturan dan data**: PostgreSQL yang sama; aturan bisnis anggota ditulis di `backend/src/anggota/` (baru) dan dipakai PWA. Query baca dipindah dari `mobile-api/src/queries.ts` ke `backend/src/anggota/queries.ts` supaya `mobile-api` (Android lama, selama transisi) dan PWA memakai kode yang sama.
 - **Terpisah dari admin**: subdomain dan port sendiri (lihat 5.1), sesi sendiri (`app_user`, bukan `opr`), sehingga admin bisa tetap tidak terbuka ke internet.
 - **Satu repo, satu `npm install`**: npm workspaces berbagi satu `node_modules` di akar; versi Next/React disamakan dengan `frontend/` (Next 16.2.10, React 19.2.4). Build dan proses berjalan dua (admin dan anggota), di satu VPS.
@@ -156,6 +157,7 @@ Nomor F dipakai untuk pelacakan. "Paritas" berarti mengikuti perilaku yang dirin
 - **Keamanan**: HTTPS wajib; sesi httpOnly + SameSite; setiap query memakai `anggota_id` dari sesi, tidak pernah dari parameter; pembatasan percobaan login/daftar/lupa password; tidak ada jawaban keamanan atau hash di respons; header keamanan standar.
 - **Kinerja**: layar utama < 1 detik di jaringan 4G untuk data satu anggota (query sudah per anggota dan berindeks); muat bertahap untuk daftar panjang.
 - **Tampilan**: mobile-first (360-430 px), mode terang/gelap, Bahasa Indonesia, angka format Rupiah Indonesia, aksesibel (kontras, ukuran sentuh ≥ 44 px, label).
+- **Arah desain (keputusan pengguna 23 Oktober 2026)**: seprofesional mungkin dan nyaman dipakai anggota; **tidak harus mirip aplikasi Android lama** (paritas hanya untuk fungsi, aturan, dan angka). Gaya aplikasi bank/keuangan modern: navigasi bawah (Beranda, Simpanan, Pinjaman, Ajukan, Akun), kartu ringkasan saldo di atas, angka besar dan mudah dibaca, palet tenang dengan satu warna utama, tanpa hiasan berlebih. Tema sendiri, tidak memakai tema admin. **Bukan "AI slop"**: tanpa gradien ungu/biru, ikon kilau/sparkle/robot, emoji sebagai ikon, kartu berbayang tebal bertumpuk, atau teks pemasaran generik. Ikon satu keluarga garis tipis yang konsisten (lucide, dipilih per arti: dompet, kalender, dokumen), tipografi rapi, banyak ruang kosong, warna dipakai untuk makna (hijau masuk, merah keluar, kuning menunggu).
 - **Keandalan**: tidak ada data keuangan di cache luring; galat jaringan ditampilkan jelas dengan tombol coba lagi.
 - **Kompatibilitas**: Chrome Android 100+, Safari iOS 16.4+.
 
@@ -171,8 +173,8 @@ Nomor F dipakai untuk pelacakan. "Paritas" berarti mengikuti perilaku yang dirin
 
 | Tahap | Isi | Selesai bila |
 | --- | --- | --- |
-| 0 | Keputusan bagian 11 | Semua K terjawab |
-| 1 | Workspace `anggota/`, pindah query ke `backend/src/anggota/`, sesi anggota, login (MD5/bcrypt), logout | Login anggota contoh berhasil; `mobile-api` tetap lolos uji kontrak |
+| 0 | Keputusan bagian 11 | Semua K terjawab (**selesai 23 Oktober 2026**) |
+| 1 | Workspace `anggota/`, pindah query ke `backend/src/anggota/`, sesi anggota, login (MD5/bcrypt), logout | Login anggota contoh berhasil; `mobile-api` tetap lolos uji kontrak (**selesai 23 Oktober 2026**) |
 | 2 | Beranda, profil, simpanan, pinjaman, jadwal, potongan, SHU, riwayat, notifikasi (baca) | Uji paritas: angka sama dengan `mobile-api`/PHP untuk ≥ 20 anggota contoh |
 | 3 | Pengajuan kredit dengan validasi server | Uji per aturan (staff, grade, sisa, tenor, besar, persen dari DB); pengajuan muncul di admin `/dashboard/loans/apply` |
 | 4 | Daftar akun, wajib email, lupa password (email + pertanyaan), ganti password/email, foto | Uji alur lengkap di database uji |
@@ -181,9 +183,11 @@ Nomor F dipakai untuk pelacakan. "Paritas" berarti mengikuti perilaku yang dirin
 
 Semua pengujian tulis dilakukan di **database uji** (`npm run uji:reset`, `npm run dev:uji`) atau mode uji. Panduan anggota ditambahkan ke Pusat Panduan (kategori baru "Aplikasi Anggota").
 
-## 11. Keputusan yang dibutuhkan dari pengguna
+## 11. Keputusan pengguna
 
-| No | Pertanyaan | Usulan |
+**Status 23 Oktober 2026: K1–K10 diputuskan.** Pengguna memilih semua usulan di kolom kanan, jadi kolom "Usulan" kini menjadi keputusan. Tampilan dan tema juga diputuskan: profesional, nyaman untuk anggota, tidak harus sama dengan versi lama (lihat "Arah desain" di bagian 8). Tahap 0 selesai.
+
+| No | Pertanyaan | Keputusan |
 | --- | --- | --- |
 | K1 | Kapan PWA dipakai anggota, dan apa yang terjadi pada Android lama? | Rilis bersamaan dengan cutover v2; Android lama dihentikan setelah masa transisi (mis. 1-2 bulan) |
 | K2 | Potongan bulanan: dari snapshot generate desktop (`temp_potongan_all`, paritas) atau proyeksi langsung (seperti halaman admin)? | Proyeksi langsung setelah cutover (snapshot tidak diperbarui lagi bila desktop berhenti) |

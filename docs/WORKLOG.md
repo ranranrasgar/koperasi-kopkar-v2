@@ -8,7 +8,8 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ### Pekerjaan berikutnya: PWA anggota (pengganti aplikasi Android)
 - **Baca dulu** `docs/analisis-aplikasi-mobile-lama.md` (hasil analisis Android v5.6 + server PHP), lalu `docs/prd-pwa-anggota.md` (PRD).
-- Status: **PRD draf, belum ada kode.** Menunggu keputusan pengguna pada PRD bagian 11 (K1-K11), terutama K1 (kapan dipakai/cutover).
+- Status: **Tahap 1 selesai (23 Oktober), belum di-commit.** Keputusan K1-K10 = semua usulan PRD; tampilan bebas dari aplikasi lama, profesional, tanpa "AI slop" (PRD bagian 8). Berikutnya **Tahap 2**: beranda (kartu saldo, menu), navigasi bawah, simpanan, pinjaman, jadwal, potongan, SHU, riwayat, notifikasi; semua query lewat `anggota_id` dari sesi.
+- Jalankan: `npm run dev:anggota` (port 3200, `anggota/.env.local`: `PG_URL`, `ANGGOTA_SESSION_SECRET`) atau `npm run dev:anggota:uji` (port 3201, database uji). Akun uji di database uji: `sulastri` (app_user.id 60); untuk login, atur sendiri password uji di database **uji** saja.
 - Arsitektur **disetujui pengguna**: workspace baru `anggota/` di monorepo ini (satu `npm install`, dua build/proses, satu VPS); aturan dan query anggota di `backend/src/anggota/` dipakai bersama `mobile-api`. PWA tidak memakai API PHP; PHP tetap live sampai cutover lalu dimatikan.
 - Domain **diputuskan (K11)**: `kopkarmjsmattel.com` landing, `anggota.kopkarmjsmattel.com` PWA, `admin.kopkarmjsmattel.com` admin (dibatasi). Rencana DNS/Nginx/PM2 di PRD bagian 12 (belum dijalankan).
 - Sumber yang dianalisis (di luar repo): Android `G:\Rhansoft\Android\KopkarMJS2000_Rhansoft_upgrade`, server PHP live `C:\laragon\www\KopkarMJS2000_2026` (aturan daftar/login di `v1/user.php`, pengajuan di `includes/DbOperation.php createPinjaman`, token di `includes/Auth.php`).
@@ -16,12 +17,8 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ### Keadaan repo
 - Branch `master`.
-- **Belum di-commit** (23 Oktober, perlu izin pengguna untuk commit):
-  - Saldo berjalan Buku Simpanan + hanya urut Tanggal: `lib/queries/simpanan.ts`, `lib/list.ts` (`kolomHalaman`), `config/modules.ts`
-  - Pilihan baris per halaman 25/50/100/200/Semua: `lib/halaman.ts`, `components/ui/PilihBaris.tsx`, `ModuleTable.tsx`, `SavingsSummary.tsx`, `LoansDashboard.tsx`, `lib/queries/pinjaman.ts`, `lib/queries/anggota.ts`
-  - Panduan `database/panduan/01-memulai/03-membaca-layar.md`, `04-simpanan/04-laporan-simpanan.md` (database sudah diperbarui)
-  - Dokumen `docs/analisis-aplikasi-mobile-lama.md`, `docs/prd-pwa-anggota.md`, dan WORKLOG ini
-- Commit terakhir: `d3cbe2b` (detail dan kecepatan Daftar Anggota), `44aa544` (serah terima WORKLOG).
+- **Belum di-commit** (23 Oktober, perlu izin pengguna): PWA Tahap 1 (`anggota/`, `backend/src/anggota/`, `backend/test/anggota-akun.test.ts`, perubahan `mobile-api`, `package.json`, lock), keputusan di `docs/prd-pwa-anggota.md`, `CLAUDE.md`, dan WORKLOG ini.
+- Commit terakhir: `054abe0` (analisis + PRD PWA), `696a211` (pilihan baris), `c40b3de` (saldo Buku Simpanan).
 - **Tidak ada remote git** (belum di-push ke mana pun). Semua commit hanya ada di `C:\laragon\www\NextJS\Koperasi-Kopkar-v2`. Untuk dikerjakan dari komputer lain, pengguna perlu menambah remote dan push lebih dulu.
 - Commit sesi 22 Oktober (lama → baru):
   - 19dfe4a..72b7d8a: halaman per kelompok, perbaikan mode uji form master/pengajuan, dokumentasi
@@ -34,7 +31,7 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
   - 473161d: saklar Mode Uji / Live
 
 ### Yang sudah jadi
-- Backend (mesin posting) + mobile-api: lolos uji (14 + 3).
+- Backend (mesin posting + akun anggota) + mobile-api: lolos uji (17 + 3).
 - Frontend:
   - Semua menu punya halaman. Absensi hanya placeholder.
   - Laporan akuntansi cocok dengan tutup buku desktop 2024-2025.
@@ -58,6 +55,18 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 - Tabel `jenis_macet` kosong, jadi kolom kolektibilitas Kredit Macet tidak tampil.
 - `npm audit`: `next` 16.2.10 punya celah kritis *Proxy bypass* (Turbopack). Halaman dan actions tetap cek sesi di server, tetapi sebaiknya `next` dinaikkan versinya.
 - Saat aturan transaksi berubah, perbarui artikel di `database/panduan` (dan di database bila belum disunting admin).
+
+### PWA anggota Tahap 1 (23 Oktober)
+- Keputusan pengguna: K1-K10 semua usulan PRD; tampilan profesional, modern, tidak harus mirip Android lama, tanpa "AI slop" (PRD bagian 8 dan 11). Relasi wajib lewat id/FK, bukan `kode_agt`.
+- `mobile-api/src/queries.ts` dipindah ke `backend/src/anggota/queries.ts` (mobile-api tinggal re-export). Semua fungsi kini menerima `anggotaId` / id pinjaman dan memfilter lewat `anggota_id`, `pinjaman_tunai_id`, `kpr_id`; `mobile-api/src/server.ts` mengubah `kdAnggota`/`noPinjaman` menjadi id sekali di awal (`idAnggota`, `idPinjaman`). `getanggota` dengan kode yang tidak ada tetap mengembalikan `[]`. Filter tahun SHU memakai rentang tanggal (indeks `(anggota_id, tgl_tutup_buku)`), satu query, bukan empat.
+- Verifikasi: kueri lama vs baru dibandingkan untuk 40 anggota acak + 10 KPR (537 perbandingan): **0 beda nilai**, total waktu 3.794 ms → 481 ms. Urutan `getSaldoJenisPinjaman` dibuat pasti (sebelumnya pinjaman berkode sama urutannya acak). Kontrak Android 17 endpoint 0 beda.
+- Baris tanpa FK yang sengaja tidak terbaca: 10.872 `log_notifikasi` ber-`kode_agt` berupa tanggal (bukan anggota) dan 149 `pinjaman_tunai_rincian_tagih` tanpa pinjaman induk.
+- `backend/src/anggota/akun.ts`: login anggota (urutan sama dengan `login.php`), MD5 cocok → diganti bcrypt `$2y$` (`bcryptjs`, terbaca PHP), aturan password baru K6. Uji `backend/test/anggota-akun.test.ts` (rollback).
+- `anggota/`: Next 16.2.10, port 3200, tema sendiri hijau koperasi (`globals.css`, oklch, mode gelap mengikuti HP, font Plus Jakarta Sans), sesi cookie HMAC 30 hari `kopkar_anggota` (rahasia `ANGGOTA_SESSION_SECRET`), dicek ulang ke database tiap request (`lib/anggota.ts`), kunci 5 kali gagal, pesan login disamarkan kecuali akun nonaktif. Halaman: `/masuk`, `/beranda` (kerangka), tombol keluar.
+- Uji di browser (server uji 3201, ukuran HP): belum login → `/masuk`; password salah → pesan; benar → `/beranda`, hash berubah `$2y$10$`; keluar → `/beranda` kembali ke `/masuk`.
+- **Temuan untuk Tahap 3 (aturan "kunci sisa")**: 1.179 dari 2.836 pinjaman yang masih "bersaldo" sisanya < Rp 100 (receh pembulatan, mis. Rp 2 atau Rp 3,67). Dengan aturan lama (saldo > 0), anggota itu tidak bisa mengajukan kredit jenis yang sama. Perlu keputusan pengguna: ikuti lama atau beri ambang.
+- Jebakan: `String.replace` dengan teks pengganti berisi `$2y$` diikuti backtick menyisipkan isi file (`$` + backtick = bagian sebelum cocokan). Pakai fungsi sebagai pengganti.
+- Belum: Web Push, manifest/service worker (Tahap 5), daftar/lupa password/wajib email (Tahap 4), landing page.
 
 ### Analisis aplikasi mobile lama dan PRD PWA (23 Oktober)
 - Dibaca: aplikasi Android (52 file Java, `util/Api.java`, layar login/pengajuan/simpanan/pinjaman/SHU/potongan) dan server PHP `C:\laragon\www\KopkarMJS2000_2026` (`v1/Api.php`, `login.php`, `user.php`, `dashboard.php`, `includes/DbOperation.php`, `Auth.php`, `MailHelper.php`, `reset-password.php`). `cleaned.txt` di folder Android hanya potongan 43 baris, bukan sumber lengkap.
