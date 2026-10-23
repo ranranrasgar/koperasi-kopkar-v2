@@ -16,7 +16,8 @@ SMTP_FROM=Kopkar MJS <support@kopkarmjsmattel.com>
 EMAIL_MAKS_PER_JAM=100
 ```
 
-- Sandi kotak email diatur di panel Jagoan Hosting: Manage Emails, ikon pensil (ubah) pada baris kotak email. Isi `SMTP_PASS` langsung di `.env.local`, jangan dikirim lewat chat.
+- Sandi kotak email diatur di panel Jagoan Hosting: Manage Emails, ikon pensil (ubah) pada baris kotak email. **Masukkan ke aplikasi dengan `npm run email:sandi`**: perintah ini menanyakan sandi (tidak tampil di layar), menulisnya ke `anggota/.env.local` dan `frontend/.env.local` sekaligus dengan tanda kutip yang benar, lalu langsung memeriksa login SMTP. Jangan mengirim sandi lewat chat.
+- Server email ini Exim (cPanel): login `PLAIN`/`LOGIN` setelah TLS, username **alamat email lengkap**. Galat `535 Incorrect authentication data` berarti sandi tidak cocok dengan sandi kotak email yang berlaku (uji di webmail dengan sandi yang sama).
 - Batas kirim hosting bersama biasanya per jam (angkanya berbeda per paket; tanyakan atau lihat di panel). Atur `EMAIL_MAKS_PER_JAM` (dan `EMAIL_MAKS_PER_HARI`) sedikit di bawah batas itu: email biasa (siaran, notifikasi) ditahan di antrean sampai kuota ada lagi, sedangkan kode verifikasi dan reset password tidak ikut dibatasi dan didahulukan.
 - Cadangan bila 465 bermasalah: `SMTP_PORT=587` dan `SMTP_SECURE=0`.
 - Pasang/cek SPF dan DKIM domain di panel DNS hosting supaya email tidak masuk spam.

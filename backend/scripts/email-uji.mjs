@@ -18,7 +18,7 @@ if (!ke || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(ke)) {
 function envBerkas() {
     try {
         return Object.fromEntries(fs.readFileSync(path.join(here, '../../anggota/.env.local'), 'utf8').split(/\r?\n/)
-            .map((l) => l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/)).filter(Boolean).map((m) => [m[1], m[2].replace(/^["']|["']$/g, '')]));
+            .map((l) => l.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/)).filter(Boolean).map((m) => [m[1], /^".*"$/s.test(m[2]) ? m[2].slice(1, -1).replace(/\\([\\"$])/g, '$1') : m[2].replace(/^'|'$/g, '')]));
     } catch { return {}; }
 }
 const env = { ...envBerkas(), ...process.env };
