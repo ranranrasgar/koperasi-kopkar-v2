@@ -27,14 +27,18 @@ export async function daftarUserMobile(s: SearchParams) {
         const kw = p(`%${sp(s, "search")}%`)
         where.push(`(u.username ILIKE ${kw} OR u.kode_agt ILIKE ${kw} OR a.nama ILIKE ${kw} OR u.email ILIKE ${kw})`)
     }
+    // menunggu_admin dibaca lewat to_jsonb supaya daftar tetap jalan di database yang kolomnya belum dipasang (npm run anggota:pasang).
+    const menunggu = `COALESCE((to_jsonb(u)->>'menunggu_admin')::boolean, false)`
     const st = sp(s, "status")
-    if (st === "true" || st === "false") where.push(`u.status = ${p(st === "true")}`)
+    if (st === "menunggu") where.push(`${menunggu} AND NOT u.status`)
+    else if (st === "true" || st === "false") where.push(`u.status = ${p(st === "true")}`)
     const base = `
         SELECT u.id, u.username, u.kode_agt, a.nama, a.nik, u.email, u.status, u.created_at::date AS dibuat, u.updated_at::date AS diubah,
-               u.fcm_token IS NOT NULL AS punya_token
+               u.fcm_token IS NOT NULL AS punya_token, (${menunggu} AND NOT u.status) AS menunggu_admin, (u.anggota_id IS NOT NULL) AS punya_anggota,
+               CASE WHEN ${menunggu} AND NOT u.status THEN 'menunggu' WHEN u.status THEN 'true' ELSE 'false' END AS status_tampil
           FROM app_user u LEFT JOIN anggota a ON a.id = u.anggota_id
          ${where.length ? `WHERE ${where.join(" AND ")}` : ""}`
-    const sortable = Object.fromEntries(["username", "kode_agt", "nama", "status", "dibuat"].map((k) => [k, k]))
+    const sortable = Object.fromEntries(["username", "kode_agt", "nama", "status_tampil", "dibuat"].map((k) => [k, k]))
     return paged({ base, values, searchParams: s, sortable, defaultSort: "dibuat DESC NULLS LAST" })
 }
 

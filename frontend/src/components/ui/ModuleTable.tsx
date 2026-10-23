@@ -24,6 +24,8 @@ interface ModuleTableProps {
     data: PageData<Row>
     /** Tombol tambahan di kanan judul, mis. tautan ke form transaksi. */
     actions?: React.ReactNode
+    /** Tombol aksi tambahan per baris (komponen klien), di kiri tombol Detail. */
+    aksiBaris?: React.ComponentType<{ item: Row }>
 }
 
 const badgeColorMap: Record<string, string> = {
@@ -55,7 +57,7 @@ function Badge({ val, col }: { val: unknown; col: ColumnConfig }) {
     )
 }
 
-export function ModuleTable({ config, data, actions }: ModuleTableProps) {
+export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: ModuleTableProps) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -273,9 +275,12 @@ export function ModuleTable({ config, data, actions }: ModuleTableProps) {
                                                 )
                                             })}
                                             <td className="px-4 py-3 text-right print:hidden whitespace-nowrap">
-                                                <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/50" title="Detail" onClick={() => setSelectedItem(item)}>
-                                                    <Eye className="h-4 w-4" />
-                                                </Button>
+                                                <div className="flex items-center justify-end gap-1">
+                                                    {AksiBaris && <AksiBaris item={item} />}
+                                                    <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/50" title="Detail" onClick={() => setSelectedItem(item)}>
+                                                        <Eye className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
                                             </td>
                                         </tr>
                                     )

@@ -220,6 +220,23 @@ export async function putuskanPendaftaran(db: pg.PoolClient, userId: number, set
     return { ok: true, pesan: `Pendaftaran ${u.username} ${setuju ? 'disetujui' : 'ditolak'}`, email: u.email, username: u.username };
 }
 
+export type HasilHapus = { ok: true; pesan: string; punyaAnggota: boolean } | { ok: false; error: string };
+
+/**
+ * Hapus akun aplikasi beserta SEMUA data aplikasi yang berelasi dengannya: foto, langganan push, pengantar, verifikasi email,
+ * tautan Google (ON DELETE CASCADE) dan percakapan pesan (milik akun itu, atau milik anggotanya bila akun terhubung ke anggota).
+ * Tidak menyentuh data keuangan anggota (simpanan, pinjaman, jurnal) maupun baris anggota itu sendiri; itu data pembukuan.
+ * Pemeriksaan hak (akun terhubung anggota hanya boleh superadmin/admin) dilakukan pemanggil.
+ */
+export async function hapusAkunAplikasi(db: pg.PoolClient, userId: number): Promise<HasilHapus> {
+    const u = (await db.query<{ username: string; anggota_id: string | null }>(
+        'SELECT username, anggota_id::text FROM app_user WHERE id = $1 FOR UPDATE', [userId])).rows[0];
+    if (!u) return { ok: false, error: 'Akun tidak ditemukan' };
+    await db.query('DELETE FROM pesan_percakapan WHERE app_user_id = $1 OR ($2::bigint IS NOT NULL AND anggota_id = $2)', [userId, u.anggota_id]);
+    await db.query('DELETE FROM app_user WHERE id = $1', [userId]);
+    return { ok: true, pesan: `Akun ${u.username} dan data aplikasinya dihapus`, punyaAnggota: !!u.anggota_id };
+}
+
 // ---------- Lupa password lewat pertanyaan keamanan ----------
 
 /**

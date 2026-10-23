@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import {
-    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, putuskanPendaftaran, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
+    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, hapusAkunAplikasi, putuskanPendaftaran, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
     hashJawaban, hashPasswordAnggota, masukAnggota, pertanyaanUntuk, resetLewatJawaban,
 } from '../src/anggota/akun.ts';
 
@@ -223,5 +223,29 @@ test('pendaftaran dengan kode email: email belum terverifikasi tidak bisa disetu
         const u = await cariAkun(db, { id });
         assert.equal(u?.akun_aktif, false);
         assert.equal(u?.menunggu_admin, false);
+    });
+});
+
+test('hapus akun aplikasi: data aplikasi ikut terhapus, anggota dan data keuangannya tidak', async () => {
+    await inTx(async (db) => {
+        const tanya = Number((await db.query('SELECT id FROM pertanyaan ORDER BY urut LIMIT 1')).rows[0].id);
+        const a = (await db.query(`SELECT a.id, a.nik FROM anggota a WHERE a.aktif AND length(a.nik) = 6
+            AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt)
+            AND (SELECT count(*) FROM anggota b WHERE b.nik = a.nik) = 1 LIMIT 1`)).rows[0];
+        const r = await daftarAkun(db, { username: 'uji_hapus_pwa', password: 'Rahasia123', ulangi: 'Rahasia123', nik: a.nik,
+            email: 'uji.hapus.pwa@contoh.id', pertanyaanId: tanya, jawaban: 'Kucing' }, { sub: 'sub-uji-hapus' });
+        const id = Number((r as { userId: number }).userId);
+        await db.query(`INSERT INTO pesan_percakapan (anggota_id, app_user_id, subjek) VALUES ($1, $2, 'uji')`, [a.id, id]);
+        await db.query(`INSERT INTO app_user_foto (app_user_id, isi, jenis) VALUES ($1, 'x', 'image/png')`, [id]);
+
+        const h = await hapusAkunAplikasi(db, id);
+        assert.deepEqual(h, { ok: true, pesan: 'Akun uji_hapus_pwa dan data aplikasinya dihapus', punyaAnggota: true });
+        assert.equal(await cariAkun(db, { id }), null);
+        for (const [tabel, kolom] of [['app_user_foto', 'app_user_id'], ['app_user_google', 'app_user_id'], ['app_user_email_verif', 'app_user_id'], ['pesan_percakapan', 'anggota_id']] as const) {
+            const n = (await db.query(`SELECT count(*)::int n FROM ${tabel} WHERE ${kolom} = $1`, [kolom === 'anggota_id' ? a.id : id])).rows[0].n;
+            assert.equal(n, 0, tabel);
+        }
+        assert.equal((await db.query('SELECT count(*)::int n FROM anggota WHERE id = $1', [a.id])).rows[0].n, 1, 'anggota tetap ada');
+        assert.equal((await hapusAkunAplikasi(db, id)).ok, false, 'sudah terhapus');
     });
 });

@@ -1,13 +1,18 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { putuskanPendaftaran } from "@kopkar/backend/src/anggota/akun.ts"
+import { hapusAkunAplikasi, putuskanPendaftaran } from "@kopkar/backend/src/anggota/akun.ts"
 import { antreEmail } from "@kopkar/backend/src/email/antrean.ts"
-import { modeUji, tx } from "@/lib/db"
-import { GalatSesi, operatorAktif } from "@/lib/operator"
+import { modeUji, query, tx } from "@/lib/db"
+import { GalatSesi, operatorAktif, type Operator } from "@/lib/operator"
 import { MENU } from "@/config/akses"
 
 export type HasilPendaftaran = { ok: true; pesan: string } | { ok: false; error: string }
+
+const MENU_USER = [MENU.user, MENU.requestUser] as const
+
+/** Hapus akun yang sudah terhubung ke anggota hanya boleh oleh superadmin atau grup admin. */
+export const bolehHapusAkunAnggota = (o: Pick<Operator, "superadmin" | "grup">) => o.superadmin || (o.grup ?? "").trim().toLowerCase() === "admin"
 
 /**
  * Setujui atau tolak pendaftaran akun baru dari aplikasi anggota. Lewat tx() supaya ikut di-rollback di mode uji.
@@ -15,11 +20,11 @@ export type HasilPendaftaran = { ok: true; pesan: string } | { ok: false; error:
  */
 export async function putuskanPendaftaranAction(id: number, setuju: boolean): Promise<HasilPendaftaran> {
     try {
-        await operatorAktif([MENU.user, MENU.requestUser])
+        await operatorAktif(MENU_USER)
         const r = await tx((db) => putuskanPendaftaran(db as never, id, setuju))
         if (!r.ok) return r
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
-        revalidatePath("/dashboard/members/pendaftaran")
+        revalidatePath("/dashboard/members/mobile-users")
         if (r.email) {
             const dasar = (process.env.ANGGOTA_URL ?? "").replace(/\/+$/, "")
             await tx((db) => antreEmail(db, setuju
@@ -36,6 +41,27 @@ export async function putuskanPendaftaranAction(id: number, setuju: boolean): Pr
         return { ok: true, pesan: r.pesan }
     } catch (e) {
         if (!(e instanceof GalatSesi)) console.error("putuskan pendaftaran gagal:", e)
+        return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
+    }
+}
+
+/**
+ * Hapus akun aplikasi anggota beserta data aplikasinya. Akun yang sudah terhubung ke anggota hanya boleh dihapus
+ * superadmin atau grup admin; data keuangan anggota tidak ikut terhapus.
+ */
+export async function hapusUserMobileAction(id: number): Promise<HasilPendaftaran> {
+    try {
+        const o = await operatorAktif(MENU_USER)
+        const [u] = await query<{ anggota_id: string | null }>("SELECT anggota_id::text FROM app_user WHERE id = $1", [id])
+        if (!u) return { ok: false, error: "Akun tidak ditemukan" }
+        if (u.anggota_id && !bolehHapusAkunAnggota(o)) throw new GalatSesi("Akun yang sudah terhubung ke anggota hanya boleh dihapus oleh superadmin atau admin")
+        const r = await tx((db) => hapusAkunAplikasi(db as never, id))
+        if (!r.ok) return r
+        if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
+        revalidatePath("/dashboard/members/mobile-users")
+        return { ok: true, pesan: r.pesan }
+    } catch (e) {
+        if (!(e instanceof GalatSesi)) console.error("hapus user mobile gagal:", e)
         return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
     }
 }
