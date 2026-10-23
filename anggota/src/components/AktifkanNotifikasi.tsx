@@ -16,7 +16,8 @@ function kunciKeBytes(b64: string) {
  * Izin dan langganan Web Push (PRD F13). Izin hanya diminta saat tombol diketuk, bukan otomatis, karena browser
  * menolak permintaan tanpa tindakan pengguna. iOS: hanya bila aplikasi sudah dipasang ke layar utama (iOS 16.4+).
  */
-export function AktifkanNotifikasi({ kunciPublik }: { kunciPublik: string | null }) {
+/** percobaan: tombol "Kirim percobaan" hanya untuk pengembangan; halaman memberi false di production. */
+export function AktifkanNotifikasi({ kunciPublik, percobaan = false }: { kunciPublik: string | null; percobaan?: boolean }) {
     const [keadaan, setKeadaan] = useState<Keadaan>("memeriksa")
     const [pesan, setPesan] = useState<string | null>(null)
     const [sibuk, mulai] = useTransition()
@@ -84,7 +85,7 @@ export function AktifkanNotifikasi({ kunciPublik }: { kunciPublik: string | null
                     <>
                         <p className="mt-0.5 text-sm leading-relaxed text-redup">Aktif. Perangkat ini akan menerima kabar dari koperasi.</p>
                         <div className="mt-3 flex flex-wrap gap-2">
-                            <button type="button" onClick={coba} disabled={sibuk} className={`${tombol} border border-garis hover:bg-latar`}>Kirim percobaan</button>
+                            {percobaan && <button type="button" onClick={coba} disabled={sibuk} className={`${tombol} border border-garis hover:bg-latar`}>Kirim percobaan</button>}
                             <button type="button" onClick={matikan} disabled={sibuk} className={`${tombol} text-redup hover:bg-latar`}>Matikan</button>
                         </div>
                     </>

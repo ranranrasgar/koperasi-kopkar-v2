@@ -30,8 +30,9 @@ export async function statusPushAction(endpoint: string): Promise<boolean> {
     return a ? adaLangganan(pool, a.userId, String(endpoint)) : false
 }
 
-/** Kirim satu notifikasi percobaan ke perangkat milik sendiri; tidak masuk riwayat. */
+/** Kirim satu notifikasi percobaan ke perangkat milik sendiri; tidak masuk riwayat. Hanya untuk pengembangan. */
 export async function kirimUjiPushAction(): Promise<HasilPush> {
+    if (process.env.NODE_ENV === "production") return { ok: false, error: "Tidak tersedia" }
     const a = await anggotaSesi()
     if (!a) return SESI_HABIS
     if (a.anggotaId === null) return { ok: false, error: "Notifikasi hanya untuk anggota" }

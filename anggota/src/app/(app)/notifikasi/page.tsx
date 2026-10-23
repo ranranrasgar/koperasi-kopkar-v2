@@ -21,7 +21,7 @@ export default async function NotifikasiPage(props: PageProps<"/notifikasi">) {
         <main>
             <Kepala judul="Notifikasi" kembali="/beranda" />
             <div className="px-5">
-                <AktifkanNotifikasi kunciPublik={kunciPublikPush()} />
+                <AktifkanNotifikasi kunciPublik={kunciPublikPush()} percobaan={process.env.NODE_ENV !== "production"} />
                 {baris.length === 0 ? <Kartu><Kosong judul="Belum ada notifikasi" isi="Pemberitahuan dari koperasi akan tampil di sini." /></Kartu> : (
                     <Kartu className="divide-y divide-garis">
                         {baris.map((n) => (
