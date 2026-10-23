@@ -10,7 +10,7 @@ import { PilihBaris } from "@/components/ui/PilihBaris"
 import type { PageData } from "@/config/modules"
 import type { Pengajuan } from "@/lib/queries/keanggotaan"
 import { formatRupiah, formatTanggal, formatAngka, formatAngka2 } from "@/lib/format"
-import { FormCard, selectClass } from "./common"
+import { FormCard } from "./common"
 
 const STATUS: Record<string, { label: string; cls: string }> = {
     P: { label: "Menunggu", cls: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400" },
@@ -29,7 +29,7 @@ const KOLOM: { key: string; label: string; kelas: string; urut?: boolean }[] = [
     { key: "status", label: "Status", kelas: "text-center", urut: true },
 ]
 
-const kolomInput = "h-9 rounded-md border bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
+const kolomInput = "h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
 
 export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Pengajuan>; jenis: { id: number; kode: string; nama: string }[]; bolehCair: boolean }) {
     const router = useRouter()
@@ -71,30 +71,30 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
     return (
         <FormCard title="Pengajuan Kredit" description="Pengajuan pinjaman dari aplikasi anggota. Setujui atau tolak; pengajuan yang disetujui dicairkan di form pencairan.">
             <div className="space-y-3">
-                <div className="flex flex-wrap items-end gap-2 print:hidden">
-                    <form className="relative w-full md:w-[300px]" onSubmit={(e) => { e.preventDefault(); ubah({ search: cari.trim() }) }}>
+                <div className="flex flex-wrap items-center gap-2 lg:flex-nowrap print:hidden">
+                    <form className="relative w-full shrink-0 md:w-[15rem]" onSubmit={(e) => { e.preventDefault(); ubah({ search: cari.trim() }) }}>
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                         <input type="search" value={cari} onChange={(e) => setCari(e.target.value)} aria-label="Cari pengajuan"
                             placeholder="KPK, nama, kode anggota, atau NIK"
                             className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </form>
-                    <select aria-label="Status" className={`${selectClass} w-40`} value={status} onChange={(e) => ubahStatus(e.target.value)}>
+                    <select aria-label="Status" className={`${kolomInput} w-[7.5rem] shrink-0`} value={status} onChange={(e) => ubahStatus(e.target.value)}>
                         <option value="P">Menunggu</option>
                         <option value="Y">Disetujui</option>
                         <option value="N">Ditolak</option>
-                        <option value="">Semua status</option>
+                        <option value="">Semua</option>
                     </select>
-                    <select aria-label="Jenis kredit" className={`${selectClass} w-56`} value={sp.get("jenis") ?? ""} onChange={(e) => ubah({ jenis: e.target.value })}>
-                        <option value="">Semua jenis kredit</option>
+                    <select aria-label="Jenis kredit" className={`${kolomInput} w-[11rem] shrink-0`} value={sp.get("jenis") ?? ""} onChange={(e) => ubah({ jenis: e.target.value })}>
+                        <option value="">Semua jenis</option>
                         {jenis.map((j) => <option key={j.id} value={j.id}>{j.nama}</option>)}
                     </select>
-                    <label className="flex items-center gap-1.5 text-xs text-muted-foreground">Realisasi
-                        <input type="date" aria-label="Tanggal realisasi dari" className={kolomInput} value={sp.get("dari") ?? ""} onChange={(e) => ubah({ dari: e.target.value })} />
-                        s/d
-                        <input type="date" aria-label="Tanggal realisasi sampai" className={kolomInput} value={sp.get("sampai") ?? ""} onChange={(e) => ubah({ sampai: e.target.value })} />
-                    </label>
+                    <div className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground" role="group" aria-label="Tanggal realisasi">
+                        <input type="date" title="Realisasi dari" aria-label="Tanggal realisasi dari" className={`${kolomInput} w-[8.5rem]`} value={sp.get("dari") ?? ""} onChange={(e) => ubah({ dari: e.target.value })} />
+                        <span>s/d</span>
+                        <input type="date" title="Realisasi sampai" aria-label="Tanggal realisasi sampai" className={`${kolomInput} w-[8.5rem]`} value={sp.get("sampai") ?? ""} onChange={(e) => ubah({ sampai: e.target.value })} />
+                    </div>
                     {adaFilter && (
-                        <Button type="button" variant="ghost" size="sm" className="h-9 text-muted-foreground"
+                        <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0 px-2 text-muted-foreground"
                             onClick={() => { setCari(""); startTransition(() => router.push(pathname)) }}>
                             <X className="mr-1 h-4 w-4" /> Atur ulang
                         </Button>
