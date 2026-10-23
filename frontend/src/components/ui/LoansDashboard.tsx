@@ -1,7 +1,8 @@
 "use client"
 
 import React, { useState, useTransition } from "react"
-import { useRouter, usePathname } from "next/navigation"
+import { useRouter, usePathname, useSearchParams } from "next/navigation"
+import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react"
 import type { PageData } from "@/config/modules"
 import { formatRupiah, formatTanggal, formatAngka } from "@/lib/format"
 import { Paginasi } from "@/components/ui/Paginasi"
@@ -20,33 +21,33 @@ interface Row {
 }
 
 // Kolom sama dengan layar Data Pinjaman Anggota di aplikasi desktop. `teks` untuk dokumen cetak, `jumlah` bila kolom dijumlahkan di baris total.
-interface Kolom { judul: string; kanan?: boolean; tengah?: boolean; mono?: boolean; tebal?: boolean; warna?: string; teks: (r: Row) => string; jumlah?: (r: Row) => number }
+interface Kolom { judul: string; urut: string; kanan?: boolean; tengah?: boolean; mono?: boolean; tebal?: boolean; warna?: string; teks: (r: Row) => string; jumlah?: (r: Row) => number }
 const angka = (v: number | null | undefined) => formatAngka(Number(v ?? 0))
 const KOLOM: Kolom[] = [
-    { judul: "Realisasi", teks: (r) => formatTanggal(r.tgl_pinjaman) },
-    { judul: "No.Pinjaman", mono: true, tebal: true, teks: (r) => r.no_pinjaman },
-    { judul: "Nama Anggota", tebal: true, teks: (r) => `${r.nama} (${r.nik ?? "-"} | ${r.kode_agt})` },
-    { judul: "#Jns", tengah: true, teks: (r) => r.kode_kredit ?? "" },
-    { judul: "Pinjaman", kanan: true, mono: true, teks: (r) => angka(r.rp_pinjaman_pokok), jumlah: (r) => r.rp_pinjaman_pokok },
-    { judul: "Uang Muka", kanan: true, mono: true, teks: (r) => angka(r.uang_muka), jumlah: (r) => r.uang_muka },
-    { judul: "Sisa Pinjaman", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.temp_total_plafond), jumlah: (r) => r.temp_total_plafond },
-    { judul: "Lama", tengah: true, teks: (r) => String(r.lama_angsuran) },
-    { judul: "Bayar", tengah: true, teks: (r) => String(r.jml_cicilan) },
-    { judul: "Sisa", tengah: true, warna: "text-error", teks: (r) => String(r.sisa_cicilan) },
-    { judul: "Jasa", kanan: true, mono: true, teks: (r) => angka(r.temp_total_jasa), jumlah: (r) => r.temp_total_jasa },
-    { judul: "Adm", kanan: true, mono: true, teks: (r) => angka(r.rp_adm), jumlah: (r) => r.rp_adm },
-    { judul: "Provisi", kanan: true, mono: true, teks: (r) => angka(r.rp_provisi), jumlah: (r) => r.rp_provisi },
-    { judul: "Angs Pokok", kanan: true, mono: true, teks: (r) => angka(r.angs_pokok) },
-    { judul: "Angs Jasa", kanan: true, mono: true, teks: (r) => angka(r.angs_jasa) },
-    { judul: "Angsuran", kanan: true, mono: true, tebal: true, warna: "text-primary", teks: (r) => angka(r.temp_angs_per_bulan) },
-    { judul: "Byr Pokok", kanan: true, mono: true, warna: "text-green-600 dark:text-green-400", teks: (r) => angka(r.bayar_pokok), jumlah: (r) => r.bayar_pokok },
-    { judul: "Byr Jasa", kanan: true, mono: true, warna: "text-green-600 dark:text-green-400", teks: (r) => angka(r.bayar_bunga), jumlah: (r) => r.bayar_bunga },
-    { judul: "Total Bayar", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.total_bayar), jumlah: (r) => r.total_bayar },
+    { judul: "Realisasi", urut: "tgl_pinjaman", teks: (r) => formatTanggal(r.tgl_pinjaman) },
+    { judul: "No.Pinjaman", urut: "no_pinjaman", mono: true, tebal: true, teks: (r) => r.no_pinjaman },
+    { judul: "Nama Anggota", urut: "nama", tebal: true, teks: (r) => `${r.nama} (${r.nik ?? "-"} | ${r.kode_agt})` },
+    { judul: "#Jns", urut: "kode_kredit", tengah: true, teks: (r) => r.kode_kredit ?? "" },
+    { judul: "Pinjaman", urut: "rp_pinjaman_pokok", kanan: true, mono: true, teks: (r) => angka(r.rp_pinjaman_pokok), jumlah: (r) => r.rp_pinjaman_pokok },
+    { judul: "Uang Muka", urut: "uang_muka", kanan: true, mono: true, teks: (r) => angka(r.uang_muka), jumlah: (r) => r.uang_muka },
+    { judul: "Sisa Pinjaman", urut: "temp_total_plafond", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.temp_total_plafond), jumlah: (r) => r.temp_total_plafond },
+    { judul: "Lama", urut: "lama_angsuran", tengah: true, teks: (r) => String(r.lama_angsuran) },
+    { judul: "Bayar", urut: "jml_cicilan", tengah: true, teks: (r) => String(r.jml_cicilan) },
+    { judul: "Sisa", urut: "sisa_cicilan", tengah: true, warna: "text-error", teks: (r) => String(r.sisa_cicilan) },
+    { judul: "Jasa", urut: "temp_total_jasa", kanan: true, mono: true, teks: (r) => angka(r.temp_total_jasa), jumlah: (r) => r.temp_total_jasa },
+    { judul: "Adm", urut: "rp_adm", kanan: true, mono: true, teks: (r) => angka(r.rp_adm), jumlah: (r) => r.rp_adm },
+    { judul: "Provisi", urut: "rp_provisi", kanan: true, mono: true, teks: (r) => angka(r.rp_provisi), jumlah: (r) => r.rp_provisi },
+    { judul: "Angs Pokok", urut: "angs_pokok", kanan: true, mono: true, teks: (r) => angka(r.angs_pokok) },
+    { judul: "Angs Jasa", urut: "angs_jasa", kanan: true, mono: true, teks: (r) => angka(r.angs_jasa) },
+    { judul: "Angsuran", urut: "temp_angs_per_bulan", kanan: true, mono: true, tebal: true, warna: "text-primary", teks: (r) => angka(r.temp_angs_per_bulan) },
+    { judul: "Byr Pokok", urut: "bayar_pokok", kanan: true, mono: true, warna: "text-green-600 dark:text-green-400", teks: (r) => angka(r.bayar_pokok), jumlah: (r) => r.bayar_pokok },
+    { judul: "Byr Jasa", urut: "bayar_bunga", kanan: true, mono: true, warna: "text-green-600 dark:text-green-400", teks: (r) => angka(r.bayar_bunga), jumlah: (r) => r.bayar_bunga },
+    { judul: "Total Bayar", urut: "total_bayar", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.total_bayar), jumlah: (r) => r.total_bayar },
     // Lunas tetapi saldo buku masih ada (mis. diselesaikan lewat top-up): sisa 0 dengan tanda *.
-    { judul: "Sisa Pokok", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.sisa_pokok) + (r.lunas && Number(r.sisa_buku) > 100 ? " *" : ""), jumlah: (r) => r.sisa_pokok },
-    { judul: "Tunggak", tengah: true, tebal: true, warna: "text-error", teks: (r) => String(r.jml_tunggakan ?? 0) },
-    { judul: "Jatuh Tempo", teks: (r) => (r.jatuh_tempo ? formatTanggal(r.jatuh_tempo) : "") },
-    { judul: "#Opr", teks: (r) => r.opr ?? "" },
+    { judul: "Sisa Pokok", urut: "sisa_pokok", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.sisa_pokok) + (r.lunas && Number(r.sisa_buku) > 100 ? " *" : ""), jumlah: (r) => r.sisa_pokok },
+    { judul: "Tunggak", urut: "jml_tunggakan", tengah: true, tebal: true, warna: "text-error", teks: (r) => String(r.jml_tunggakan ?? 0) },
+    { judul: "Jatuh Tempo", urut: "jatuh_tempo", teks: (r) => (r.jatuh_tempo ? formatTanggal(r.jatuh_tempo) : "") },
+    { judul: "#Opr", urut: "opr", teks: (r) => r.opr ?? "" },
 ]
 
 export interface LoansFilter {
@@ -63,6 +64,9 @@ interface LoansDashboardProps {
 export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: LoansDashboardProps) {
     const router = useRouter()
     const pathname = usePathname()
+    const searchParams = useSearchParams()
+    const urutKolom = searchParams.get("sortBy") ?? ""
+    const urutArah = searchParams.get("sortOrder") === "desc" ? "desc" : "asc"
     // Kolom yang tampil diingat di browser; "Nama Anggota" dan "No.Pinjaman" selalu tampil karena penanda baris.
     const { terlihat, ubah: ubahKolom, aturUlang: aturUlangKolom, sudahDiubah: kolomDiubah } = useKolomTersimpan(pathname, Object.fromEntries(KOLOM.map((k) => [k.judul, true])))
     const kolomTampil = KOLOM.filter((k) => terlihat[k.judul] !== false || k.judul === "Nama Anggota" || k.judul === "No.Pinjaman")
@@ -83,12 +87,22 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
     const statusLunasOptions = ["Semua", "Tunggak", "Lunas", "Belum Lunas"]
 
     // baris: parameter pageSize; bawaan ukuran halaman saat ini, supaya pilihan baris ikut saat pindah halaman atau mencari.
-    const go = (p: number, baris = pageSize >= MAKS_SEMUA ? "semua" : String(pageSize)) => {
+    const go = (p: number, baris = pageSize >= MAKS_SEMUA ? "semua" : String(pageSize), urut: { kolom: string; arah: string } | null = null) => {
         const q = new URLSearchParams({
             page: String(p), searchBy: String(searchBy), keyword, aktif: isAktif, grup: selectedGroupPinjaman,
             kredit: selectedKredit, lunas: String(statusLunas), pageSize: baris,
         })
+        // Urutan kolom dipertahankan saat pindah halaman, mengganti filter, atau mengubah jumlah baris.
+        const kolom = urut ? urut.kolom : urutKolom, arah = urut ? urut.arah : urutArah
+        if (kolom) { q.set("sortBy", kolom); q.set("sortOrder", arah) }
         startTransition(() => router.push(`${pathname}?${q.toString()}`))
+    }
+
+    // Klik judul kolom: urut naik; klik lagi: turun; klik ketiga: kembali ke urutan bawaan (terbaru dulu).
+    const urutkan = (kunci: string) => {
+        if (urutKolom !== kunci) go(1, undefined, { kolom: kunci, arah: "asc" })
+        else if (urutArah === "asc") go(1, undefined, { kolom: kunci, arah: "desc" })
+        else go(1, undefined, { kolom: "", arah: "asc" })
     }
 
     const handleSearch = (e: React.FormEvent) => {
@@ -199,9 +213,20 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                             <thead className="bg-surface-container-lowest border-b border-outline-variant text-on-surface-variant font-label-md text-xs">
                                 <tr>
                                     <th className="p-3 font-medium">No</th>
-                                    {kolomTampil.map((k) => (
-                                        <th key={k.judul} className={`p-3 font-medium ${k.kanan ? "text-right" : k.tengah ? "text-center" : ""}`}>{k.judul}</th>
-                                    ))}
+                                    {kolomTampil.map((k) => {
+                                        const aktif = urutKolom === k.urut
+                                        const Panah = aktif ? (urutArah === "asc" ? ArrowUp : ArrowDown) : ArrowUpDown
+                                        return (
+                                            <th key={k.judul} aria-sort={aktif ? (urutArah === "asc" ? "ascending" : "descending") : "none"}
+                                                className={`p-3 font-medium ${k.kanan ? "text-right" : k.tengah ? "text-center" : ""}`}>
+                                                <button type="button" onClick={() => urutkan(k.urut)} title={`Urutkan menurut ${k.judul}`}
+                                                    className={`inline-flex items-center gap-1 hover:text-on-surface ${k.kanan ? "flex-row-reverse" : ""} ${aktif ? "text-on-surface font-semibold" : ""}`}>
+                                                    {k.judul}
+                                                    <Panah className={`h-3 w-3 ${aktif ? "" : "opacity-40"}`} />
+                                                </button>
+                                            </th>
+                                        )
+                                    })}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-outline-variant bg-surface">

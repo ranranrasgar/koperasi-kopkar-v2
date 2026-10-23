@@ -42,6 +42,8 @@ export async function laporanPinjaman(s: SearchParams): Promise<PageData<Laporan
         aktif: sp(s, "aktif") === "S" ? null : sp(s, "aktif") !== "T",
         kredit: sp(s, "kredit"),
         status: parseInt(sp(s, "lunas") || "0", 10) || 0,
+        urutKolom: sp(s, "sortBy") || null,
+        urutArah: sp(s, "sortOrder") === "desc" ? "DESC" : "ASC",
         limit: pageSize,
         offset: (page - 1) * pageSize,
     })

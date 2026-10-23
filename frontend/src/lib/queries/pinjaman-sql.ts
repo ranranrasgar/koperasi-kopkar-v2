@@ -28,6 +28,8 @@ export interface FilterPinjaman {
     aktif: boolean | null        // status anggota; null = semua anggota
     kredit: string               // kode_kredit atau "All"
     status: number               // 0 semua, 1 menunggak, 2 lunas, 3 belum lunas
+    urutKolom: string | null     // kunci kolom hasil (daftar putih URUT_*), null = terbaru dulu
+    urutArah: "ASC" | "DESC"
     limit: number
     offset: number
 }
@@ -46,7 +48,18 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
     if (f.kredit && f.kredit !== "All") where += ` AND jk.kode_kredit = ${p(f.kredit)}`
     if (f.keyword && f.kolomCari) where += ` AND ${f.kolomCari} ILIKE ${p(`%${f.keyword}%`)}`
 
+    // Kolom yang boleh dipakai mengurutkan (nama kolom hasil, bukan teks bebas dari pengguna).
+    // Kolom kontrak ada di baris dasar sehingga halaman bisa dipilih lebih dulu; kolom hitungan butuh buku pinjaman/jadwal untuk semua baris.
+    const URUT_KONTRAK = new Set(["tgl_pinjaman", "no_pinjaman", "nama", "kode_kredit", "rp_pinjaman_pokok", "uang_muka", "temp_total_plafond", "lama_angsuran",
+        "jml_cicilan", "temp_total_jasa", "rp_adm", "rp_provisi", "angs_pokok", "angs_jasa", "temp_angs_per_bulan", "opr"])
+    const URUT_HITUNG = new Set(["sisa_cicilan", "bayar_pokok", "bayar_bunga", "total_bayar", "sisa_pokok", "jml_tunggakan", "jatuh_tempo"])
+    const kolomUrut = f.urutKolom && (URUT_KONTRAK.has(f.urutKolom) || URUT_HITUNG.has(f.urutKolom)) ? f.urutKolom : null
+    const hitungDulu = !!kolomUrut && URUT_HITUNG.has(kolomUrut)
+
     const kontrak = `
+        SELECT k.*, k.temp_total_plafond / NULLIF(k.lama_angsuran, 0) AS angs_pokok, k.temp_total_jasa / NULLIF(k.lama_angsuran, 0) AS angs_jasa,
+               (k.temp_total_plafond + k.temp_total_jasa) / NULLIF(k.lama_angsuran, 0) AS temp_angs_per_bulan
+          FROM (
         SELECT p.id, p.tgl_pinjaman, p.no_pinjaman, p.no_pinjaman_urut, a.kode_agt, a.nik, a.nama,
                p.rp_pinjaman_pokok, p.rp_uang_muka AS uang_muka, p.rp_provisi, p.lama_angsuran, p.jml_cicilan, p.opr, jk.kode_kredit,
                ROUND(p.rp_pinjaman_pokok - p.rp_uang_muka) AS temp_total_plafond,
@@ -55,7 +68,7 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
           FROM pinjaman_tunai p
           JOIN anggota a ON a.id = p.anggota_id
           LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
-         ${where}`
+         ${where}) k`
 
     // Nilai dari buku pinjaman dan jadwal tagih, hanya dihitung untuk baris yang dibutuhkan (satu halaman, atau semua bila ada filter status).
     const lengkap = (sumber: string) => `
@@ -65,8 +78,7 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
           FROM (
             SELECT h.id, h.tgl_pinjaman, h.no_pinjaman, h.no_pinjaman_urut, h.kode_agt, h.nik, h.nama, h.rp_pinjaman_pokok, h.uang_muka, h.rp_provisi, h.rp_adm,
                    h.temp_total_plafond, h.temp_total_jasa, h.lama_angsuran, h.jml_cicilan, h.opr, h.kode_kredit,
-                   h.temp_total_plafond / NULLIF(h.lama_angsuran, 0) AS angs_pokok, h.temp_total_jasa / NULLIF(h.lama_angsuran, 0) AS angs_jasa,
-                   (h.temp_total_plafond + h.temp_total_jasa) / NULLIF(h.lama_angsuran, 0) AS temp_angs_per_bulan,
+                   h.angs_pokok, h.angs_jasa, h.temp_angs_per_bulan,
                    s.sisa_pokok AS sisa_buku, LEAST(h.temp_total_plafond, s.dibayar_pokok) AS bayar_pokok, s.bayar_bunga,
                    LEAST(h.temp_total_plafond, s.dibayar_pokok) + s.bayar_bunga AS total_bayar,
                    (s.sisa_pokok <= ${SISA_LUNAS} OR h.jml_cicilan >= h.lama_angsuran) AS lunas,
@@ -84,7 +96,8 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
                            MIN(t.tanggal_angsuran) FILTER (WHERE t.angsuran_ke > h.jml_cicilan) AS jatuh_tempo
                       FROM pinjaman_tunai_rincian_tagih t WHERE t.pinjaman_tunai_id = h.id) j ON true) y`
 
-    const urut = "tgl_pinjaman DESC, no_pinjaman_urut DESC"
+    // Urutan: kolom pilihan (kolom kosong paling akhir), lalu terbaru dulu sebagai penentu bila nilainya sama.
+    const urut = kolomUrut ? `${kolomUrut} ${f.urutArah === "DESC" ? "DESC" : "ASC"} NULLS LAST, tgl_pinjaman DESC, no_pinjaman_urut DESC` : "tgl_pinjaman DESC, no_pinjaman_urut DESC"
     const kondisiStatus = f.status === 1 ? "WHERE jml_tunggakan > 0"
         : f.status === 2 ? "WHERE lunas"
         : f.status === 3 ? "WHERE NOT lunas" : ""
@@ -92,7 +105,7 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
     const jumlahWhere = values.length
     // Placeholder LIMIT/OFFSET ditambahkan setelah WHERE, jadi query hitung memakai parameter WHERE saja.
     const hasil = (sqlCount: string, sqlItems: string) => ({ sqlCount, sqlItems, valuesCount: values.slice(0, jumlahWhere), valuesItems: [...values] })
-    if (!kondisiStatus) {
+    if (!kondisiStatus && !hitungDulu) {
         // Halaman dipilih dulu (urut + LIMIT), baru buku pinjamannya dihitung untuk baris itu saja.
         const items = `WITH f AS (${kontrak}), h AS (SELECT * FROM f ORDER BY ${urut} LIMIT ${p(f.limit)} OFFSET ${p(f.offset)})
                        SELECT * FROM (${lengkap("h")}) x ORDER BY ${urut}`
