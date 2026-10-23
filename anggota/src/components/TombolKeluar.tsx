@@ -18,7 +18,7 @@ export function TombolKeluar() {
     return (
         <form ref={form} action={keluarAction} className="mt-6">
             <button type="button" onClick={keluar} disabled={proses}
-                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-garis bg-permukaan font-semibold text-keluar hover:bg-keluar-lembut disabled:opacity-70">
+                className="flex h-12 w-full items-center justify-center gap-2 rounded-xl bg-keluar-lembut font-semibold text-keluar transition-colors active:opacity-80 disabled:opacity-70">
                 {proses ? <LoaderCircle size={19} className="animate-spin" /> : <LogOut size={19} strokeWidth={1.75} />}
                 Keluar
             </button>

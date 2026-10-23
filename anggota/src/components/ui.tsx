@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { ChevronLeft, ChevronRight } from "lucide-react"
+import { ChevronLeft, ChevronRight, type LucideIcon } from "lucide-react"
 import { rupiah } from "@/lib/format"
 
 /** Judul halaman; dengan kembali, tampil tombol kembali di kiri. */
@@ -55,11 +55,14 @@ export function Baris({ label, nilai, tegas, warna }: { label: React.ReactNode; 
 }
 
 /** Baris daftar yang bisa diketuk (ke rincian). */
-export function BarisTautan({ href, judul, sub, nilai, nilaiSub }: {
+export function BarisTautan({ href, judul, sub, nilai, nilaiSub, ikon: Ikon, lencana }: {
     href: string; judul: React.ReactNode; sub?: React.ReactNode; nilai?: React.ReactNode; nilaiSub?: React.ReactNode
+    /** Ikon dalam lingkaran berwarna di kiri baris; lencana = penanda kecil merah (mis. "2 baru"). */
+    ikon?: LucideIcon; lencana?: string
 }) {
     return (
         <Link href={href} className="flex min-h-16 items-center gap-3 px-5 py-3 transition-colors active:bg-garis/40">
+            {Ikon && <span className="grid size-10 shrink-0 place-items-center rounded-full bg-utama-lembut text-utama"><Ikon size={19} strokeWidth={1.75} /></span>}
             <div className="min-w-0 flex-1">
                 <p className="truncate text-[0.9375rem] font-medium">{judul}</p>
                 {sub && <p className="truncate text-xs text-redup">{sub}</p>}
@@ -70,6 +73,7 @@ export function BarisTautan({ href, judul, sub, nilai, nilaiSub }: {
                     {nilaiSub && <p className="text-xs text-redup">{nilaiSub}</p>}
                 </div>
             )}
+            {lencana && <span className="shrink-0 rounded-full bg-keluar px-2 py-0.5 text-[0.6875rem] font-bold leading-none text-white">{lencana}</span>}
             <ChevronRight size={18} className="shrink-0 text-redup" />
         </Link>
     )
