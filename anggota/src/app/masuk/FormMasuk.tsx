@@ -1,5 +1,6 @@
 "use client"
 
+import Link from "next/link"
 import { useActionState, useState } from "react"
 import { Eye, EyeOff, LoaderCircle } from "lucide-react"
 import { masukAction } from "@/app/actions/auth"
@@ -21,7 +22,10 @@ export function FormMasuk() {
             </div>
 
             <div className="space-y-2">
-                <label htmlFor="password" className="text-sm font-medium">Password</label>
+                <div className="flex items-baseline justify-between">
+                    <label htmlFor="password" className="text-sm font-medium">Password</label>
+                    <Link href="/lupa-password" className="text-sm font-medium text-utama">Lupa password?</Link>
+                </div>
                 <div className="relative">
                     <input id="password" name="password" type={lihat ? "text" : "password"} className={`${kolom} pr-13`}
                         autoComplete="current-password" required />

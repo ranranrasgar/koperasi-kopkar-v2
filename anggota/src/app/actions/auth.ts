@@ -39,7 +39,8 @@ export async function masukAction(_: HasilAuth, f: FormData): Promise<HasilAuth>
     ;(await cookies()).set(COOKIE_SESI, buatSesi({ u: Number(akun.user_id), pv: sidikPassword(akun.password_hash!) }), {
         httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: LAMA_SESI_DETIK,
     })
-    redirect("/beranda")
+    // Seperti aplikasi lama: akun tanpa email (kurang dari 5 karakter) wajib mengisi email dulu.
+    redirect((akun.email ?? "").trim().length < 5 ? "/lengkapi-email" : "/beranda")
 }
 
 export async function keluarAction() {

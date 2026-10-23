@@ -8,8 +8,8 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ### Pekerjaan berikutnya: PWA anggota (pengganti aplikasi Android)
 - **Baca dulu** `docs/analisis-aplikasi-mobile-lama.md` (hasil analisis Android v5.6 + server PHP), lalu `docs/prd-pwa-anggota.md` (PRD).
-- Status: **Tahap 1 (`80bbfba`), Tahap 2 (`fc7bd56`), dan Tahap 3 selesai (23 Oktober); Tahap 3 belum di-commit.** Keputusan K1-K10 = semua usulan PRD; tampilan bebas dari aplikasi lama, profesional, tanpa "AI slop" (PRD bagian 8). Berikutnya **Tahap 4**: daftar akun, wajib isi email, lupa password (email + pertanyaan keamanan), ganti password/email/foto (PRD F1-F4, F6). Butuh kredensial SMTP koperasi (K9) untuk email.
-- Jalankan: `npm run dev:anggota` (port 3200, `anggota/.env.local`: `PG_URL`, `ANGGOTA_SESSION_SECRET`) atau `npm run dev:anggota:uji` (port 3201, database uji). Akun uji di database uji: `sulastri` (app_user.id 60) dan `Fendra` (id 146, anggota 958: punya pinjaman berjalan, SHU, notifikasi); untuk login, atur sendiri password uji di database **uji** saja.
+- Status: **Tahap 1 (`80bbfba`), Tahap 2 (`fc7bd56`), dan Tahap 3 (`c25ec60`) di-commit; Tahap 4 selesai tetapi belum di-commit (23 Oktober).** Keputusan K1-K10 = semua usulan PRD; tampilan bebas dari aplikasi lama, profesional, tanpa "AI slop" (PRD bagian 8). Berikutnya **Tahap 5**: manifest, ikon, service worker (halaman luring), ajakan pasang, Web Push (PRD F13-F14). Masih tertunda dari Tahap 4: SMTP koperasi (K9; email saat ini hanya ditulis ke log server, `anggota/src/lib/email.ts`) dan `npm run anggota:pasang` di database **asli** (tabel foto; baru dipasang di database uji).
+- Jalankan: `npm run dev:anggota` (port 3200, `anggota/.env.local`: `PG_URL`, `ANGGOTA_SESSION_SECRET`) atau `npm run dev:anggota:uji` (port 3201, database uji). Akun uji di database uji: `sulastri` (app_user.id 60), `Fendra` (id 146, anggota 958: punya pinjaman berjalan, SHU, notifikasi, email `fendra.uji@contoh.id`, foto uji), `uji_rohayati_pwa` (dibuat lewat halaman Daftar); untuk login, atur sendiri password uji di database **uji** saja.
 - Arsitektur **disetujui pengguna**: workspace baru `anggota/` di monorepo ini (satu `npm install`, dua build/proses, satu VPS); aturan dan query anggota di `backend/src/anggota/` dipakai bersama `mobile-api`. PWA tidak memakai API PHP; PHP tetap live sampai cutover lalu dimatikan.
 - Domain **diputuskan (K11)**: `kopkarmjsmattel.com` landing, `anggota.kopkarmjsmattel.com` PWA, `admin.kopkarmjsmattel.com` admin (dibatasi). Rencana DNS/Nginx/PM2 di PRD bagian 12 (belum dijalankan).
 - Sumber yang dianalisis (di luar repo): Android `G:\Rhansoft\Android\KopkarMJS2000_Rhansoft_upgrade`, server PHP live `C:\laragon\www\KopkarMJS2000_2026` (aturan daftar/login di `v1/user.php`, pengajuan di `includes/DbOperation.php createPinjaman`, token di `includes/Auth.php`).
@@ -17,8 +17,8 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ### Keadaan repo
 - Branch `master`.
-- **Belum di-commit** (23 Oktober, perlu izin pengguna): PWA Tahap 3 (`backend/src/anggota/pengajuan.ts`, `pengajuan-hitung.ts`, `backend/test/anggota-pengajuan.test.ts`, `anggota/src/app/(app)/ajukan/`, `anggota/src/app/actions/pengajuan.ts`, navigasi), panduan `05-pinjaman/03-pengajuan-kredit.md` (sudah diperbarui di kedua database karena belum disunting admin), PRD, dan WORKLOG ini.
-- Commit terakhir: `fc7bd56` (PWA Tahap 2), `80bbfba` (PWA Tahap 1), `09758e3` (kueri anggota lewat relasi id).
+- **Belum di-commit** (23 Oktober, perlu izin pengguna): PWA Tahap 4 (`backend/src/anggota/akun.ts` + uji, halaman `anggota/src/app/{daftar,lupa-password,atur-password,lengkapi-email}`, `(app)/akun/{password,email,foto}`, `actions/akun.ts`, `actions/foto.ts`, `lib/{email,batas,foto}.ts`, `components/{form,FormEmail,FotoProfil,HalamanAuth}.tsx`), `database/postgres/anggota-web.sql` + `anggota-pasang.mjs` + skrip `anggota:pasang`, panduan `03-keanggotaan/03-user-mobile.md` (sudah diperbarui di kedua database), PRD, CLAUDE.md, dan WORKLOG ini.
+- Commit terakhir: `c25ec60` (PWA Tahap 3), `fc7bd56` (PWA Tahap 2), `80bbfba` (PWA Tahap 1).
 - **Tidak ada remote git** (belum di-push ke mana pun). Semua commit hanya ada di `C:\laragon\www\NextJS\Koperasi-Kopkar-v2`. Untuk dikerjakan dari komputer lain, pengguna perlu menambah remote dan push lebih dulu.
 - Commit sesi 22 Oktober (lama → baru):
   - 19dfe4a..72b7d8a: halaman per kelompok, perbaikan mode uji form master/pengajuan, dokumentasi
@@ -31,7 +31,7 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
   - 473161d: saklar Mode Uji / Live
 
 ### Yang sudah jadi
-- Backend (mesin posting + akun anggota) + mobile-api: lolos uji (17 + 3).
+- Backend (mesin posting + akun dan pengajuan anggota) + mobile-api: lolos uji (25 + 3).
 - Frontend:
   - Semua menu punya halaman. Absensi hanya placeholder.
   - Laporan akuntansi cocok dengan tutup buku desktop 2024-2025.
@@ -55,6 +55,14 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 - Tabel `jenis_macet` kosong, jadi kolom kolektibilitas Kredit Macet tidak tampil.
 - `npm audit`: `next` 16.2.10 punya celah kritis *Proxy bypass* (Turbopack). Halaman dan actions tetap cek sesi di server, tetapi sebaiknya `next` dinaikkan versinya.
 - Saat aturan transaksi berubah, perbarui artikel di `database/panduan` (dan di database bila belum disunting admin).
+
+### PWA anggota Tahap 4: akun (23 Oktober)
+- Keputusan pengguna: bagian email dibuat tanpa kirim sungguhan sampai akun SMTP koperasi siap. `kirimEmail` (`anggota/src/lib/email.ts`) menulis isi email ke log server; `emailSiap()` = false. Setelah SMTP siap: pasang pustaka SMTP, isi `SMTP_*` di `anggota/.env.local`, ganti bagian itu; `ANGGOTA_URL` untuk alamat tautan.
+- `backend/src/anggota/akun.ts`: `daftarAkun` (paritas `createNewRegisterUser`: username/anggota sudah punya akun, NIK 6 karakter, NIK anggota → akun anggota, selain itu NIK karyawan Mattel → akun tanpa keanggotaan dengan `kode_agt` = NIK dan `karyawan_mattel_id`; tambahan: password K6, username 3-50 karakter, anggota harus aktif, kunci advisory), jawaban keamanan scrypt format migrasi, `pertanyaanUntuk` (username fiktif tetap mendapat pertanyaan supaya tidak membocorkan), `resetLewatJawaban`, `gantiPassword`, `aturEmail` (unik tanpa beda huruf), `akunUntukResetEmail`.
+- **Perbaikan login**: username dicocokkan `lower(trim())` seperti MySQL lama (collation _ci). Sebelumnya 93 username lama berspasi di tepi tidak bisa masuk di PWA. Data saat ini unik menurut aturan ini.
+- PWA: `/daftar`, `/lupa-password` (tab pertanyaan keamanan / email), `/atur-password?token=` (token HMAC 30 menit, sekali pakai karena memuat sidik password, ditandatangani berbeda dari cookie sesi), `/lengkapi-email` (wajib setelah masuk bila email < 5 karakter, dicek di `wajibMasuk`), Akun → Ganti password (sesi perangkat lain berakhir) / Email / foto. Tautan "Lupa password?" dan "Daftar" di halaman Masuk. Pembatasan percobaan di memori (`lib/batas.ts`). Form memakai `tanpaReset` supaya isian tidak hilang saat server menolak.
+- Foto profil: tabel baru `app_user_foto` (bytea, satu per akun; `database/postgres/anggota-web.sql`, `npm run anggota:pasang`), JPG/PNG/WEBP maks. 5 MB dicek dari isi file, `serverActions.bodySizeLimit` 6 MB, disajikan hanya ke pemiliknya di `/akun/foto`. Bila tabel belum dipasang, tombol foto tidak tampil. **Sudah dipasang di database uji saja.** Foto lama Android (`app_user.foto`, file di server PHP) belum dipindahkan (K10).
+- Uji: `backend/test/anggota-akun.test.ts` kini 7 uji (daftar anggota/karyawan, semua pesan tolak, username lama, jawaban, reset, ganti password, email unik). Browser (server uji, 375×812): login Fendra tanpa email → Lengkapi Email; email salah ditolak dan isian tetap; email benar → Beranda (email tercatat di log, tidak terkirim); foto PNG terunggah dan tampil; file teks bernama .png ditolak; `/akun/foto` tanpa sesi dialihkan; ganti password (lama salah ditolak, benar tetap masuk); Daftar NIK anggota 372941 berhasil; lupa password lewat jawaban (huruf berbeda) berhasil; lewat email: tautan dari log membuka halaman, password tersimpan, tautan yang sama ditolak saat dipakai ulang; token reset tidak bisa dipakai sebagai cookie sesi.
 
 ### PWA anggota Tahap 3: pengajuan kredit (23 Oktober)
 - Keputusan pengguna: sisa pinjaman (pokok + jasa) sampai Rp 100 dianggap lunas dan tidak mengunci pengajuan (`SISA_LUNAS` di `backend/src/anggota/pengajuan.ts`).

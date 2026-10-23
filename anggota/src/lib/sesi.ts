@@ -45,3 +45,29 @@ export function bacaSesi(nilai: string | undefined): Sesi | null {
         return null
     }
 }
+
+// Token tautan reset password (lupa password lewat email): 30 menit, sama dengan server lama. Ditandatangani dengan
+// awalan berbeda supaya tidak bisa dipakai sebagai cookie sesi. Memuat sidik password, jadi otomatis tidak berlaku
+// lagi setelah password diganti (sekali pakai).
+const LAMA_RESET_DETIK = 30 * 60
+const tandaReset = (data: string) => tanda(`reset:${data}`)
+
+export function buatTokenReset(u: number, passwordHash: string) {
+    const data = Buffer.from(JSON.stringify({ u, pv: sidikPassword(passwordHash), exp: Math.floor(Date.now() / 1000) + LAMA_RESET_DETIK }))
+        .toString("base64url")
+    return `${data}.${tandaReset(data)}`
+}
+
+export function bacaTokenReset(nilai: string | undefined): Sesi | null {
+    const [data, sig] = (nilai ?? "").split(".")
+    if (!data || !sig) return null
+    const harap = Buffer.from(tandaReset(data)), dapat = Buffer.from(sig)
+    if (harap.length !== dapat.length || !crypto.timingSafeEqual(harap, dapat)) return null
+    try {
+        const s = JSON.parse(Buffer.from(data, "base64url").toString()) as Sesi
+        if (typeof s.u !== "number" || typeof s.pv !== "string" || typeof s.exp !== "number") return null
+        return s.exp > Math.floor(Date.now() / 1000) ? s : null
+    } catch {
+        return null
+    }
+}

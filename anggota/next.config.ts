@@ -7,6 +7,8 @@ const nextConfig: NextConfig = {
     distDir: process.env.KOPKAR_DIST_DIR || ".next",
     typescript: { tsconfigPath: process.env.KOPKAR_DIST_DIR ? "tsconfig.uji.json" : "tsconfig.json" },
     poweredByHeader: false,
+    // Unggah foto profil lewat server action: maks. 5 MB foto + amplop form (bawaan Next 1 MB).
+    experimental: { serverActions: { bodySizeLimit: "6mb" } },
     async headers() {
         return [{
             source: "/:path*",

@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Image from "next/image"
+import Link from "next/link"
 import { redirect } from "next/navigation"
 import { anggotaSesi } from "@/lib/anggota"
 import { namaKoperasi } from "@/lib/koperasi"
@@ -29,8 +30,8 @@ export default async function MasukPage() {
 
             <FormMasuk />
 
-            <p className="mt-auto pt-10 text-center text-xs leading-relaxed text-redup">
-                Lupa password atau belum punya akun? Hubungi pengurus koperasi.
+            <p className="mt-auto pt-10 text-center text-sm text-redup">
+                Belum punya akun? <Link href="/daftar" className="font-semibold text-utama">Daftar</Link>
             </p>
         </main>
     )

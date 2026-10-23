@@ -16,6 +16,9 @@ Anggota bisa memakai **aplikasi Android** koperasi untuk melihat saldo simpanan,
 
 ## Yang perlu diketahui
 
-- Pengajuan kredit dari aplikasi Android masuk ke **Pinjaman → Pengajuan Kredit**.
-- Password anggota diatur dari aplikasi Android dan **tidak bisa diubah dari web**.
+- Akun yang sama dipakai di aplikasi Android lama dan aplikasi anggota baru (di browser HP). Username tidak membedakan huruf besar/kecil.
+- Pengajuan kredit dari kedua aplikasi masuk ke **Pinjaman → Pengajuan Kredit**.
+- Password diatur oleh anggota sendiri dan **tidak bisa diubah dari web admin**. Anggota yang lupa password bisa membuat password baru di aplikasi anggota baru lewat **Lupa password** (pertanyaan keamanan, atau email bila sudah diisi).
+- Anggota dan karyawan Mattel bisa mendaftar akun sendiri di aplikasi anggota baru dengan NIK karyawan. Karyawan yang belum menjadi anggota hanya melihat petunjuk untuk mendaftar sebagai anggota.
+- Setelah masuk ke aplikasi anggota baru, akun tanpa email wajib mengisi email lebih dulu. Satu email hanya untuk satu akun.
 - Halaman ini bersifat baca.

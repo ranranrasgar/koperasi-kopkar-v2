@@ -32,10 +32,17 @@ export const anggotaSesi = cache(async (): Promise<Anggota | null> => {
     }
 })
 
-/** Untuk halaman di dalam aplikasi: alihkan ke halaman masuk bila sesi tidak sah. */
-export async function wajibMasuk() {
+/** Email dianggap terisi bila minimal 5 karakter, sama dengan aplikasi lama. */
+export const punyaEmail = (a: Pick<Anggota, "email">) => (a.email ?? "").trim().length >= 5
+
+/**
+ * Untuk halaman di dalam aplikasi: alihkan ke halaman masuk bila sesi tidak sah, dan ke Lengkapi Email bila akun
+ * belum punya email (wajib seperti aplikasi lama; dicek di setiap halaman karena layout tidak dijalankan ulang).
+ */
+export async function wajibMasuk(opsi: { bolehTanpaEmail?: boolean } = {}) {
     const a = await anggotaSesi()
     if (!a) redirect("/masuk")
+    if (!opsi.bolehTanpaEmail && !punyaEmail(a)) redirect("/lengkapi-email")
     return a
 }
 

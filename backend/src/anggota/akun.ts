@@ -1,4 +1,5 @@
 import crypto from 'node:crypto';
+import { promisify } from 'node:util';
 import bcrypt from 'bcryptjs';
 import type pg from 'pg';
 
@@ -47,13 +48,164 @@ export interface AkunAnggota {
     anggota_aktif: boolean | null;
 }
 
-/** Akun beserta status anggotanya. Username dicocokkan persis (seperti server lama). */
+/**
+ * Akun beserta status anggotanya. Username dicocokkan tanpa beda huruf besar/kecil dan tanpa spasi di tepi, seperti
+ * MySQL lama (collation _ci, dan 93 username lama berspasi di tepi). Data saat ini unik menurut aturan ini.
+ */
 export async function cariAkun(db: pg.Pool | pg.PoolClient, by: { id?: string | number; username?: string }) {
     const r = await db.query<AkunAnggota>(
         `SELECT u.id::text user_id, u.username, u.password_hash, u.email, u.foto, u.status akun_aktif,
                 u.anggota_id::text anggota_id, u.kode_agt, a.nama, a.nik, a.aktif anggota_aktif
            FROM app_user u LEFT JOIN anggota a ON a.id = u.anggota_id
-          WHERE ${by.id !== undefined ? 'u.id = $1' : 'u.username = $1'}`, [by.id ?? by.username]);
+          WHERE ${by.id !== undefined ? 'u.id = $1' : 'lower(trim(u.username)) = lower(trim($1))'}`, [by.id ?? by.username]);
+    return r.rows[0] ?? null;
+}
+
+// ---------- Jawaban pertanyaan keamanan: format migrasi v2, scrypt dari jawaban trim + huruf kecil ----------
+
+const scrypt = promisify(crypto.scrypt) as (s: string, salt: Buffer, len: number, o: crypto.ScryptOptions) => Promise<Buffer>;
+const OPSI_SCRYPT = { N: 16384, r: 8, p: 1 };
+const JAWABAN_SEMU = `scrypt$${'0'.repeat(32)}$${'0'.repeat(64)}`;
+
+export async function hashJawaban(jawaban: string) {
+    const salt = crypto.randomBytes(16);
+    return `scrypt$${salt.toString('hex')}$${(await scrypt(jawaban.trim().toLowerCase(), salt, 32, OPSI_SCRYPT)).toString('hex')}`;
+}
+
+export async function cocokJawaban(jawaban: string, tersimpan: string | null) {
+    const [jenis, salt, hash] = (tersimpan || JAWABAN_SEMU).split('$');
+    if (jenis !== 'scrypt' || !salt || !hash) return false;
+    const harap = Buffer.from(hash, 'hex');
+    const dapat = await scrypt(jawaban.trim().toLowerCase(), Buffer.from(salt, 'hex'), harap.length, OPSI_SCRYPT);
+    return crypto.timingSafeEqual(dapat, harap) && !!tersimpan;
+}
+
+// ---------- Daftar akun (paritas v1/user.php createNewRegisterUser) ----------
+
+/** Username baru: 3-50 karakter; huruf, angka, spasi, titik, garis bawah, minus, @ (sebagian username lama berupa email). */
+export function cekUsernameBaru(u: string) {
+    const v = u.trim();
+    if (v.length < 3 || v.length > 50) return 'Username 3 sampai 50 karakter';
+    if (!/^[A-Za-z0-9 ._@-]+$/.test(v)) return 'Username hanya boleh huruf, angka, spasi, titik, garis bawah, minus, dan @';
+    return null;
+}
+
+export interface IsianDaftar { username: string; password: string; ulangi: string; nik: string; pertanyaanId: number; jawaban: string }
+export type HasilAkun = { ok: true; pesan: string } | { ok: false; error: string };
+
+/**
+ * Buat akun aplikasi anggota. Urutan sama dengan server lama: username/anggota sudah punya akun, NIK 6 karakter,
+ * NIK anggota (akun untuk anggota itu), selain itu NIK karyawan Mattel (akun tanpa keanggotaan, keputusan K5).
+ * Tambahan: aturan password K6, jawaban wajib, anggota yang dipakai harus aktif. Jalankan di dalam transaksi.
+ */
+export async function daftarAkun(db: pg.PoolClient, i: IsianDaftar): Promise<HasilAkun> {
+    const gagal = (error: string): HasilAkun => ({ ok: false, error });
+    const username = i.username.trim(), nik = i.nik.trim();
+    const salahU = cekUsernameBaru(username);
+    if (salahU) return gagal(salahU);
+    if (i.password !== i.ulangi) return gagal('Ulangi password dengan sama persis');
+    const salahP = cekPasswordBaruAnggota(i.password);
+    if (salahP) return gagal(salahP);
+    if (!i.jawaban.trim()) return gagal('Jawaban pertanyaan keamanan wajib diisi');
+    const tanya = (await db.query<{ id: string; urut: number }>('SELECT id::text, urut FROM pertanyaan WHERE id = $1', [i.pertanyaanId])).rows[0];
+    if (!tanya) return gagal('Pilih pertanyaan keamanan');
+
+    // Satu pendaftaran pada satu waktu: username tidak punya unique constraint (data lama), jadi dicek di bawah kunci ini.
+    await db.query("SELECT pg_advisory_xact_lock(hashtext('app_user_daftar'))");
+    const anggota = (await db.query<{ id: string; kode_agt: string; aktif: boolean }>(
+        'SELECT id::text, kode_agt, aktif FROM anggota WHERE nik = $1 ORDER BY aktif DESC, id DESC LIMIT 1', [nik])).rows[0];
+    const ada = (await db.query(
+        `SELECT 1 FROM app_user WHERE lower(trim(username)) = lower($1) OR ($2::bigint IS NOT NULL AND anggota_id = $2) OR kode_agt = $3 LIMIT 1`,
+        [username, anggota?.id ?? null, anggota?.kode_agt ?? nik])).rowCount;
+    if (ada) return gagal('Username atau NIK sudah terdaftar');
+    if (nik.length !== 6) return gagal('NIK tidak valid (6 karakter)');
+
+    const passwordHash = await hashPasswordAnggota(i.password), jawabanHash = await hashJawaban(i.jawaban);
+    const kolom = `(username, password_hash, kode_agt, nikk, status, created_at, updated_at, id_pertanyaan, pertanyaan_id, jawaban_hash, anggota_id, karyawan_mattel_id)`;
+    if (anggota) {
+        if (!anggota.aktif) return gagal('Keanggotaan dengan NIK ini tidak aktif. Hubungi pengurus koperasi.');
+        await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, true, now(), now(), $5, $6, $7, $8, NULL)`,
+            [username, passwordHash, anggota.kode_agt, nik, tanya.urut, tanya.id, jawabanHash, anggota.id]);
+        return { ok: true, pesan: 'Akun berhasil dibuat. Silakan masuk.' };
+    }
+    const karyawan = (await db.query<{ id: string }>('SELECT id::text FROM karyawan_mattel WHERE nik = $1 LIMIT 1', [nik])).rows[0];
+    if (!karyawan) return gagal('NIK tidak terdaftar di data karyawan Mattel');
+    await db.query(`INSERT INTO app_user ${kolom} VALUES ($1, $2, $3, $4, true, now(), now(), $5, $6, $7, NULL, $8)`,
+        [username, passwordHash, nik, nik, tanya.urut, tanya.id, jawabanHash, karyawan.id]);
+    return { ok: true, pesan: 'Akun berhasil dibuat. Anda belum terdaftar sebagai anggota; hubungi pengurus untuk mendaftar.' };
+}
+
+// ---------- Lupa password lewat pertanyaan keamanan ----------
+
+/**
+ * Pertanyaan keamanan untuk username. Username yang tidak ada mendapat pertanyaan tetap yang dipilih dari namanya,
+ * supaya halaman tidak membocorkan apakah username terdaftar (PRD F4). Jawaban tidak pernah dikirim ke browser.
+ */
+export async function pertanyaanUntuk(db: pg.Pool | pg.PoolClient, username: string) {
+    const akun = (await db.query<{ pertanyaan: string }>(
+        `SELECT p.pertanyaan FROM app_user u JOIN pertanyaan p ON p.id = u.pertanyaan_id
+          WHERE lower(trim(u.username)) = lower(trim($1)) AND u.status`, [username])).rows[0];
+    if (akun) return akun.pertanyaan;
+    const semua = (await db.query<{ pertanyaan: string }>('SELECT pertanyaan FROM pertanyaan ORDER BY urut')).rows;
+    if (!semua.length) return null;
+    const h = crypto.createHash('sha256').update(username.trim().toLowerCase()).digest();
+    return semua[h[0] % semua.length].pertanyaan;
+}
+
+/** Atur password baru bila jawaban keamanan cocok. Pesan gagal seragam (username salah atau jawaban salah). */
+export async function resetLewatJawaban(db: pg.PoolClient, username: string, jawaban: string, baru: string, ulangi: string): Promise<HasilAkun> {
+    if (baru !== ulangi) return { ok: false, error: 'Ulangi password baru dengan sama persis' };
+    const salah = cekPasswordBaruAnggota(baru);
+    if (salah) return { ok: false, error: salah };
+    const u = (await db.query<{ id: string; jawaban_hash: string | null }>(
+        `SELECT id::text, jawaban_hash FROM app_user WHERE lower(trim(username)) = lower(trim($1)) AND status`, [username])).rows[0];
+    if (!(await cocokJawaban(jawaban, u?.jawaban_hash ?? null)) || !u) return { ok: false, error: 'Username atau jawaban tidak cocok' };
+    await aturPassword(db, Number(u.id), baru);
+    return { ok: true, pesan: 'Password berhasil diganti. Silakan masuk dengan password baru.' };
+}
+
+/** Simpan password baru (bcrypt $2y$). Sesi lama di perangkat lain otomatis tidak berlaku (sidik password berubah). */
+export async function aturPassword(db: pg.Pool | pg.PoolClient, userId: number, baru: string) {
+    const hash = await hashPasswordAnggota(baru);
+    await db.query('UPDATE app_user SET password_hash = $1, updated_at = now() WHERE id = $2', [hash, userId]);
+    return hash;
+}
+
+/** Ganti password dari menu Akun: password lama harus benar. */
+export async function gantiPassword(db: pg.Pool | pg.PoolClient, userId: number, lama: string, baru: string, ulangi: string) {
+    const u = await cariAkun(db, { id: userId });
+    if (!u || !(await cocokPasswordAnggota(lama, u.password_hash)).cocok) return { ok: false as const, error: 'Password lama salah' };
+    if (baru !== ulangi) return { ok: false as const, error: 'Ulangi password baru dengan sama persis' };
+    const salah = cekPasswordBaruAnggota(baru);
+    if (salah) return { ok: false as const, error: salah };
+    if (baru === lama) return { ok: false as const, error: 'Password baru harus berbeda dari password lama' };
+    return { ok: true as const, hash: await aturPassword(db, userId, baru) };
+}
+
+// ---------- Email (paritas updateEmail: tidak boleh dipakai akun lain) ----------
+
+export function cekEmail(email: string) {
+    const v = email.trim();
+    if (v.length < 5 || v.length > 100 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return 'Alamat email tidak valid';
+    return null;
+}
+
+export async function aturEmail(db: pg.Pool | pg.PoolClient, userId: number, email: string): Promise<HasilAkun> {
+    const v = email.trim().toLowerCase();
+    const salah = cekEmail(v);
+    if (salah) return { ok: false, error: salah };
+    const dipakai = (await db.query('SELECT 1 FROM app_user WHERE lower(trim(email)) = $1 AND id <> $2 LIMIT 1', [v, userId])).rowCount;
+    if (dipakai) return { ok: false, error: 'Email ini sudah dipakai, gunakan email lain.' };
+    await db.query('UPDATE app_user SET email = $1, updated_at = now() WHERE id = $2', [v, userId]);
+    return { ok: true, pesan: 'Email tersimpan.' };
+}
+
+/** Akun aktif yang username dan email-nya cocok (lupa password lewat email), atau null. */
+export async function akunUntukResetEmail(db: pg.Pool | pg.PoolClient, username: string, email: string) {
+    const r = await db.query<{ id: string; email: string; password_hash: string }>(
+        `SELECT id::text, email, password_hash FROM app_user
+          WHERE lower(trim(username)) = lower(trim($1)) AND lower(trim(email)) = lower(trim($2)) AND status AND password_hash IS NOT NULL`,
+        [username, email]);
     return r.rows[0] ?? null;
 }
 

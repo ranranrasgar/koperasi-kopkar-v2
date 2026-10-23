@@ -179,7 +179,7 @@ Nomor F dipakai untuk pelacakan. "Paritas" berarti mengikuti perilaku yang dirin
 | 1 | Workspace `anggota/`, pindah query ke `backend/src/anggota/`, sesi anggota, login (MD5/bcrypt), logout | Login anggota contoh berhasil; `mobile-api` tetap lolos uji kontrak (**selesai 23 Oktober 2026**) |
 | 2 | Beranda, profil, simpanan, pinjaman, jadwal, potongan, SHU, riwayat, notifikasi (baca) | Uji paritas: angka sama dengan `mobile-api`/PHP untuk ≥ 20 anggota contoh (**halaman selesai 23 Oktober 2026**; kueri bersama sudah diuji 40 anggota; sisa pinjaman dan SHU sengaja berbeda, lihat F8/F11) |
 | 3 | Pengajuan kredit dengan validasi server | Uji per aturan (staff, grade, sisa, tenor, besar, persen dari DB); pengajuan muncul di admin `/dashboard/loans/apply` (**selesai 23 Oktober 2026**) |
-| 4 | Daftar akun, wajib email, lupa password (email + pertanyaan), ganti password/email, foto | Uji alur lengkap di database uji |
+| 4 | Daftar akun, wajib email, lupa password (email + pertanyaan), ganti password/email, foto | Uji alur lengkap di database uji (**selesai 23 Oktober 2026**; email belum dikirim sungguhan sampai SMTP siap, hanya ke log) |
 | 5 | PWA: manifest, service worker, Web Push, pasang di Android/iOS | Lighthouse PWA lolos; notifikasi uji terkirim |
 | 6 | Keamanan dan beban | Uji akses silang antar anggota ditolak; pembatasan percobaan aktif |
 

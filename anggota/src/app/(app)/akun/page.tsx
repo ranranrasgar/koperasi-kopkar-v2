@@ -1,16 +1,18 @@
 import type { Metadata } from "next"
-import { LogOut } from "lucide-react"
+import { KeyRound, LogOut, Mail } from "lucide-react"
 import { keluarAction } from "@/app/actions/auth"
-import { Baris, Kartu, Kepala } from "@/components/ui"
+import { FotoProfil } from "@/components/FotoProfil"
+import { Baris, BarisTautan, Kartu, Kepala } from "@/components/ui"
 import { wajibMasuk } from "@/lib/anggota"
 import { profil } from "@/lib/data"
+import { infoFoto } from "@/lib/foto"
 import { rupiah, tanggal } from "@/lib/format"
 
 export const metadata: Metadata = { title: "Akun" }
 
 export default async function AkunPage() {
     const a = await wajibMasuk()
-    const p = a.anggotaId !== null ? await profil(a.anggotaId) : null
+    const [p, foto] = await Promise.all([a.anggotaId !== null ? profil(a.anggotaId) : null, infoFoto(a.userId)])
     const inisial = a.nama.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join("").toUpperCase()
     // Kolom lama berupa teks; "0" atau kosong berarti tidak diisi.
     const thn = Number(p?.lama_bekerja_tahun) || 0, bln = Number(p?.lama_bekerja_bulan) || 0
@@ -22,7 +24,7 @@ export default async function AkunPage() {
             <Kepala judul="Akun" />
             <div className="px-5">
                 <Kartu className="flex items-center gap-4 p-5">
-                    <span className="grid size-14 shrink-0 place-items-center rounded-full bg-utama-lembut text-lg font-bold text-utama">{inisial}</span>
+                    <FotoProfil inisial={inisial} versi={foto.versi} bisaUnggah={foto.terpasang} />
                     <div className="min-w-0">
                         <p className="truncate text-lg font-bold">{a.nama}</p>
                         <p className="truncate text-sm text-redup">{a.anggotaId ? `No. anggota ${a.kodeAgt}` : `NIK ${a.kodeAgt}`} · {a.username}</p>
@@ -82,6 +84,13 @@ export default async function AkunPage() {
                         <p className="mt-3 px-1 text-xs leading-relaxed text-redup">Data salah? Hubungi pengurus koperasi untuk memperbaikinya.</p>
                     </>
                 )}
+
+                <h2 className="mb-2.5 mt-7 px-1 text-[0.9375rem] font-semibold">Keamanan</h2>
+                <Kartu className="divide-y divide-garis overflow-hidden">
+                    <BarisTautan href="/akun/password" judul={<span className="flex items-center gap-3"><KeyRound size={19} strokeWidth={1.75} className="text-redup" />Ganti password</span>} />
+                    <BarisTautan href="/akun/email" judul={<span className="flex items-center gap-3"><Mail size={19} strokeWidth={1.75} className="text-redup" />Email</span>}
+                        nilaiSub={a.email ?? "Belum diisi"} />
+                </Kartu>
 
                 <form action={keluarAction} className="mt-7">
                     <button className="flex h-12 w-full items-center justify-center gap-2 rounded-xl border border-garis bg-permukaan font-semibold text-keluar hover:bg-keluar-lembut">
