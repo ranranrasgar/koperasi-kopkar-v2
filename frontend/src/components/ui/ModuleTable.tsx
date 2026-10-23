@@ -18,6 +18,8 @@ import type { ColumnConfig, FilterConfig, ModuleConfig, PageData } from "@/confi
 import { formatRupiah, formatAngka, formatTanggal } from "@/lib/format"
 import { dataCetakAction } from "@/app/actions/cetak"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
+import { useKolomTersimpan } from "@/lib/kolom-tersimpan"
+import { PilihKolom } from "@/components/ui/PilihKolom"
 
 type Row = Record<string, unknown>
 
@@ -67,9 +69,9 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: Mod
 
     const [selectedItem, setSelectedItem] = useState<Row | null>(null)
     const [searchVal, setSearchVal] = useState(searchParams?.get("search") || "")
-    const [visibleColumns, setVisibleColumns] = useState<Record<string, boolean>>(
-        Object.fromEntries(config.columns.map((col) => [col.key, !col.hidden]))
-    )
+    // Kolom yang tampil diingat per halaman di browser (bawaan: yang tidak bertanda hidden di konfigurasi).
+    const kolomBawaan = Object.fromEntries(config.columns.map((col) => [col.key, !col.hidden]))
+    const { terlihat: visibleColumns, ubah: ubahKolom, aturUlang: aturUlangKolom, sudahDiubah: kolomDiubah } = useKolomTersimpan(pathname, kolomBawaan)
     const activeColumns = config.columns.filter((col) => visibleColumns[col.key])
 
     const updateParams = (updates: Record<string, string | number | null>) => {
@@ -219,26 +221,8 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: Mod
                     )}
 
                     <div className="ml-auto flex items-center">
-                        <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-9 font-semibold text-muted-foreground hover:text-foreground">
-                                    <Settings2 className="mr-1.5 h-4 w-4" /> Kolom
-                                </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end" className="w-48">
-                                <DropdownMenuLabel>Tampilkan Kolom</DropdownMenuLabel>
-                                <DropdownMenuSeparator />
-                                {config.columns.map((col) => (
-                                    <DropdownMenuCheckboxItem
-                                        key={col.key}
-                                        checked={visibleColumns[col.key]}
-                                        onCheckedChange={(val) => setVisibleColumns((prev) => ({ ...prev, [col.key]: val }))}
-                                    >
-                                        {col.label}
-                                    </DropdownMenuCheckboxItem>
-                                ))}
-                            </DropdownMenuContent>
-                        </DropdownMenu>
+                        <PilihKolom kolom={config.columns.map((c) => ({ kunci: c.key, label: c.label }))} terlihat={visibleColumns}
+                            onUbah={ubahKolom} onAturUlang={aturUlangKolom} sudahDiubah={kolomDiubah} />
                     </div>
                 </div>
 

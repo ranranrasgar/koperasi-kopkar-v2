@@ -5,6 +5,8 @@ import { useRouter, usePathname } from "next/navigation"
 import type { PageData } from "@/config/modules"
 import { formatRupiah, formatTanggal, formatAngka } from "@/lib/format"
 import { Paginasi } from "@/components/ui/Paginasi"
+import { PilihKolom } from "@/components/ui/PilihKolom"
+import { useKolomTersimpan } from "@/lib/kolom-tersimpan"
 import { MAKS_SEMUA } from "@/lib/halaman"
 import { dataCetakAction } from "@/app/actions/cetak"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
@@ -61,6 +63,9 @@ interface LoansDashboardProps {
 export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: LoansDashboardProps) {
     const router = useRouter()
     const pathname = usePathname()
+    // Kolom yang tampil diingat di browser; "Nama Anggota" dan "No.Pinjaman" selalu tampil karena penanda baris.
+    const { terlihat, ubah: ubahKolom, aturUlang: aturUlangKolom, sudahDiubah: kolomDiubah } = useKolomTersimpan(pathname, Object.fromEntries(KOLOM.map((k) => [k.judul, true])))
+    const kolomTampil = KOLOM.filter((k) => terlihat[k.judul] !== false || k.judul === "Nama Anggota" || k.judul === "No.Pinjaman")
     const [isLoading, startTransition] = useTransition()
 
     // Filter mengikuti form desktop; diterapkan ke URL saat tombol ditekan.
@@ -98,10 +103,10 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
         const r = await dataCetakAction(pathname, Object.fromEntries(new URLSearchParams(window.location.search)))
         if ("error" in r) { alert(r.error); return }
         const items = r.items as unknown as typeof rows
-        const kolom: KolomTabel[] = KOLOM.map((k) => ({ label: k.judul, kanan: k.kanan, tengah: k.tengah, mono: k.mono && !k.kanan }))
-        const baris = items.map((x) => KOLOM.map((k) => k.teks(x)))
+        const kolom: KolomTabel[] = kolomTampil.map((k) => ({ label: k.judul, kanan: k.kanan, tengah: k.tengah, mono: k.mono && !k.kanan }))
+        const baris = items.map((x) => kolomTampil.map((k) => k.teks(x)))
         const jml = (k: Kolom) => formatAngka(items.reduce((t, x) => t + (k.jumlah ? Number(k.jumlah(x)) || 0 : 0), 0))
-        const total = KOLOM.map((k, i) => (i === 2 ? `Total (${items.length.toLocaleString("id-ID")} pinjaman)` : k.jumlah ? jml(k) : ""))
+        const total = kolomTampil.map((k) => (k.judul === "Nama Anggota" ? `Total (${items.length.toLocaleString("id-ID")} pinjaman)` : k.jumlah ? jml(k) : ""))
         const subjudul = [`Grup ${filter.grup}`, filter.kredit !== "All" ? `Jenis ${filter.kredit}` : "",  filter.aktif === "T" ? "Anggota non-aktif" : filter.aktif === "S" ? "Semua anggota" : "Anggota aktif",
             statusLunasOptions[filter.lunas] && filter.lunas ? `Status ${statusLunasOptions[filter.lunas]}` : "", filter.keyword ? `Pencarian ${(searchByOptions[filter.searchBy] ?? "")}: ${filter.keyword}` : ""].filter(Boolean).join(" · ")
         const galat = await bukaCetak({ judul: "Daftar Pinjaman", subjudul, isi: tabelHtml(kolom, baris, r.total, { total }) })
@@ -175,6 +180,10 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
 
             {/* Data Table */}
             <div className="bg-surface rounded-xl border border-outline-variant shadow-xs overflow-hidden print:hidden">
+                <div className="flex items-center justify-end border-b border-outline-variant px-3 py-2 print:hidden">
+                    <PilihKolom kolom={KOLOM.filter((k) => k.judul !== "Nama Anggota" && k.judul !== "No.Pinjaman").map((k) => ({ kunci: k.judul, label: k.judul }))}
+                        terlihat={terlihat} onUbah={ubahKolom} onAturUlang={aturUlangKolom} sudahDiubah={kolomDiubah} />
+                </div>
                 {/* Halaman (atas) */}
                 {!isLoading && <Paginasi page={page} totalPages={totalPages} pageSize={pageSize} total={totalRecords} onHalaman={(p) => go(p)} onBaris={(v) => go(1, v)}
                     className="border-b border-outline-variant bg-surface-container-lowest" />}
@@ -190,7 +199,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                             <thead className="bg-surface-container-lowest border-b border-outline-variant text-on-surface-variant font-label-md text-xs">
                                 <tr>
                                     <th className="p-3 font-medium">No</th>
-                                    {KOLOM.map((k) => (
+                                    {kolomTampil.map((k) => (
                                         <th key={k.judul} className={`p-3 font-medium ${k.kanan ? "text-right" : k.tengah ? "text-center" : ""}`}>{k.judul}</th>
                                     ))}
                                 </tr>
@@ -198,7 +207,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                             <tbody className="divide-y divide-outline-variant bg-surface">
                                 {rows.length === 0 ? (
                                     <tr>
-                                        <td colSpan={KOLOM.length + 1} className="p-10 text-center text-on-surface-variant">
+                                        <td colSpan={kolomTampil.length + 1} className="p-10 text-center text-on-surface-variant">
                                             <span className="material-symbols-outlined text-4xl mb-2 opacity-50 block">receipt_long</span>
                                             <p className="font-semibold text-sm">Tidak ada data pinjaman yang ditemukan.</p>
                                         </td>
@@ -213,7 +222,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                                         return (
                                             <tr key={row.no_pinjaman} className={`hover:bg-surface-container-lowest/50 transition-colors ${warnaBaris}`}>
                                                 <td className="p-3 align-top text-center text-sm text-on-surface-variant">{(page - 1) * pageSize + idx + 1}</td>
-                                                {KOLOM.map((k) => (
+                                                {kolomTampil.map((k) => (
                                                     <td key={k.judul} className={`p-3 align-top text-sm ${k.kanan ? "text-right" : k.tengah ? "text-center" : ""} ${k.mono ? "font-mono" : ""} ${k.tebal ? "font-bold" : ""} ${k.warna ?? ""}`}>
                                                         {k.judul === "Nama Anggota"
                                                             ? <>{row.nama}<div className="text-[11px] font-normal text-on-surface-variant mt-0.5 font-mono">{row.nik ?? "-"} | {row.kode_agt}</div></>
