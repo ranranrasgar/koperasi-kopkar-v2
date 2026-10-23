@@ -19,11 +19,14 @@ Hampir semua halaman daftar (anggota, pinjaman, jurnal, COA, dan lain-lain) mema
 | Filter | Pilih di kotak pilihan (misalnya Status, Staff) atau buka **Filter Lainnya** |
 | Urutkan | Klik judul kolom yang bertanda panah; klik lagi untuk membalik urutan |
 | Kolom | Tombol **Kolom** untuk menampilkan atau menyembunyikan kolom |
-| Halaman | Navigasi halaman ada di bawah tabel, termasuk jumlah baris per halaman |
+| Baris per halaman | Di bawah tabel: pilih **25, 50, 100, 200**, atau **Semua**. Mengganti pilihan kembali ke halaman 1 |
+| Halaman | Tombol sebelumnya/berikutnya di kanan bawah tabel |
 | Cetak | Mencetak tampilan saat ini (menu dan tombol tidak ikut tercetak) |
 | Ekspor | Mengunduh **halaman yang sedang tampil** sebagai file CSV yang bisa dibuka di Excel |
 
-> **Tips:** Untuk mengekspor lebih banyak baris sekaligus, perbesar jumlah baris per halaman lebih dulu (maksimal 200), lalu tekan **Ekspor**.
+**Semua** menampilkan seluruh baris sampai **5.000 baris**. Untuk tabel yang lebih besar, misalnya Jurnal Umum atau Buku Simpanan tanpa filter, pilihan ini tertulis *Semua (maks. 5.000)* dan menampilkan 5.000 baris pertama; persempit dulu dengan pencarian atau filter tanggal. Menampilkan ribuan baris membutuhkan beberapa detik.
+
+> **Tips:** Untuk mencetak atau mengekspor seluruh data sekaligus, pilih **Semua** lebih dulu, lalu tekan **Cetak** atau **Ekspor**.
 
 ## Laporan dengan periode
 

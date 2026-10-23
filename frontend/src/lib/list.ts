@@ -1,6 +1,7 @@
 import "server-only"
 import { query } from "@/lib/db"
 import type { PageData } from "@/config/modules"
+import { ukuranHalaman } from "@/lib/halaman"
 
 export type SearchParams = Record<string, string | string[] | undefined>
 
@@ -38,7 +39,7 @@ export async function paged<T = Record<string, unknown>>(opts: {
     pageSize?: number
 }): Promise<PageData<T>> {
     const page = Math.max(1, parseInt(sp(opts.searchParams, "page") || "1", 10) || 1)
-    const pageSize = Math.min(200, Math.max(1, parseInt(sp(opts.searchParams, "pageSize") || String(opts.pageSize ?? 25), 10) || 25))
+    const pageSize = ukuranHalaman(sp(opts.searchParams, "pageSize"), opts.pageSize ?? 25)
     const sortCol = opts.sortable[sp(opts.searchParams, "sortBy")]
     const dir = sp(opts.searchParams, "sortOrder") === "desc" ? "DESC" : "ASC"
     const order = sortCol ? `${sortCol} ${dir} NULLS LAST${opts.urutanLanjut ? `, ${opts.urutanLanjut}` : ""}` : opts.defaultSort

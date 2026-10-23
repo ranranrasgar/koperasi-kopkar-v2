@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
+import { PilihBaris } from "@/components/ui/PilihBaris"
 import type { PageData } from "@/config/modules"
 import { formatAngka } from "@/lib/format"
 
@@ -189,9 +190,12 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
                     </table>
                 </div>
 
-                <div className="flex items-center justify-between p-3 border-t print:hidden">
-                    <div className="text-sm text-muted-foreground">
-                        Menampilkan {data.items.length > 0 ? formatAngka((data.page - 1) * data.pageSize + 1) : 0} - {formatAngka(Math.min(data.page * data.pageSize, data.total))} dari {formatAngka(data.total)} data
+                <div className="flex flex-wrap items-center justify-between gap-3 p-3 border-t print:hidden">
+                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                        <PilihBaris pageSize={data.pageSize} total={data.total} disabled={loading} onUbah={(v) => update({ pageSize: v })} />
+                        <div className="text-sm text-muted-foreground">
+                            Menampilkan {data.items.length > 0 ? formatAngka((data.page - 1) * data.pageSize + 1) : 0} - {formatAngka(Math.min(data.page * data.pageSize, data.total))} dari {formatAngka(data.total)} data
+                        </div>
                     </div>
                     <div className="flex items-center space-x-2">
                         <Button variant="outline" size="sm" disabled={data.page === 1 || loading} onClick={() => update({ page: data.page - 1 })}>

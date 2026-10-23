@@ -4,6 +4,8 @@ import React, { useState, useTransition } from "react"
 import { useRouter, usePathname } from "next/navigation"
 import type { PageData } from "@/config/modules"
 import { formatRupiah, formatTanggal, formatAngka } from "@/lib/format"
+import { PilihBaris } from "@/components/ui/PilihBaris"
+import { MAKS_SEMUA } from "@/lib/halaman"
 
 interface Row {
     tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string
@@ -44,10 +46,11 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
 
     const statusLunasOptions = ["Semua", "Tunggakan", "Lunas", "Belum Lunas"]
 
-    const go = (p: number) => {
+    // baris: parameter pageSize; bawaan ukuran halaman saat ini, supaya pilihan baris ikut saat pindah halaman atau mencari.
+    const go = (p: number, baris = pageSize >= MAKS_SEMUA ? "semua" : String(pageSize)) => {
         const q = new URLSearchParams({
             page: String(p), searchBy: String(searchBy), keyword, aktif: isAktif, grup: selectedGroupPinjaman,
-            kredit: selectedKredit, bulan: String(filterBulan), tahun: filterTahun, lunas: String(statusLunas),
+            kredit: selectedKredit, bulan: String(filterBulan), tahun: filterTahun, lunas: String(statusLunas), pageSize: baris,
         })
         startTransition(() => router.push(`${pathname}?${q.toString()}`))
     }
@@ -300,11 +303,14 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                 </div>
 
                 {/* Pagination */}
-                {!isLoading && totalPages > 1 && (
-                    <div className="flex items-center justify-between p-4 border-t border-outline-variant bg-surface-container-lowest print:hidden">
-                        <span className="text-sm text-on-surface-variant">
-                            Menampilkan <span className="font-medium text-on-surface">{(page - 1) * pageSize + 1}</span> - <span className="font-medium text-on-surface">{Math.min(page * pageSize, totalRecords)}</span> dari <span className="font-medium text-on-surface">{formatAngka(totalRecords)}</span> hasil
-                        </span>
+                {!isLoading && totalRecords > 0 && (
+                    <div className="flex flex-wrap items-center justify-between gap-3 p-4 border-t border-outline-variant bg-surface-container-lowest print:hidden">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <PilihBaris pageSize={pageSize} total={totalRecords} onUbah={(v) => go(1, v)} />
+                            <span className="text-sm text-on-surface-variant">
+                                Menampilkan <span className="font-medium text-on-surface">{(page - 1) * pageSize + 1}</span> - <span className="font-medium text-on-surface">{Math.min(page * pageSize, totalRecords)}</span> dari <span className="font-medium text-on-surface">{formatAngka(totalRecords)}</span> hasil
+                            </span>
+                        </div>
                         <div className="flex items-center gap-1">
                             <button
                                 onClick={() => go(Math.max(1, page - 1))}

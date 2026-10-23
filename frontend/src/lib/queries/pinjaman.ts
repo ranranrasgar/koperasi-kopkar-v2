@@ -2,6 +2,7 @@ import "server-only"
 import { query } from "@/lib/db"
 import { params, sp, type SearchParams } from "@/lib/list"
 import type { PageData } from "@/config/modules"
+import { ukuranHalaman } from "@/lib/halaman"
 
 export const GRUP_PINJAMAN = ["KOPERASI", "BANK / PIHAK LAIN", "KPR"]
 
@@ -31,7 +32,7 @@ const KOLOM_CARI_SQL = ["p.no_pinjaman", "a.nik", "a.kode_agt", "a.nama", "a.kot
  */
 export async function laporanPinjaman(s: SearchParams): Promise<PageData<LaporanPinjamanRow>> {
     const page = Math.max(1, parseInt(sp(s, "page") || "1", 10) || 1)
-    const pageSize = 20
+    const pageSize = ukuranHalaman(sp(s, "pageSize"), 25)
     const { values, p } = params()
     let where = "WHERE 1=1"
 

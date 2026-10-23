@@ -1,6 +1,7 @@
 import "server-only"
 import { query } from "@/lib/db"
 import { paged, params, sp, type SearchParams } from "@/lib/list"
+import { ukuranHalaman } from "@/lib/halaman"
 
 export async function daftarAnggota(s: SearchParams) {
     const { values, p } = params()
@@ -17,10 +18,10 @@ export async function daftarAnggota(s: SearchParams) {
     if (sp(s, "status_staff")) where.push(`a.status_staff = ${p(sp(s, "status_staff"))}`)
     if (sp(s, "grade")) where.push(`a.grade ILIKE ${p(`%${sp(s, "grade")}%`)}`)
 
-    // Saldo simpanan (301 ribu baris) adalah bagian termahal. Saat urut per saldo, dijumlah sekali untuk semua anggota;
-    // selain itu dihitung per baris lewat indeks simpanan(anggota_id), sehingga hanya baris halaman yang dihitung
-    // (halaman 1: ±225 ms -> ±5 ms).
-    const saldo = sp(s, "sortBy") === "saldo_simpanan"
+    // Saldo simpanan (301 ribu baris) adalah bagian termahal. Saat urut per saldo atau halaman besar (>200 baris, mis.
+    // "Semua"), dijumlah sekali untuk semua anggota (±0,2 dtk; per baris untuk 2.026 anggota ±1,7 dtk). Selain itu
+    // dihitung per baris lewat indeks simpanan(anggota_id), sehingga hanya baris halaman yang dihitung (halaman 1: ±5 ms).
+    const saldo = sp(s, "sortBy") === "saldo_simpanan" || ukuranHalaman(sp(s, "pageSize"), 25) > 200
         ? { kolom: "COALESCE(s.saldo, 0)", join: "LEFT JOIN (SELECT anggota_id, SUM(rp_setoran - rp_pengambilan) AS saldo FROM simpanan GROUP BY anggota_id) s ON s.anggota_id = a.id" }
         : { kolom: "(SELECT COALESCE(SUM(x.rp_setoran - x.rp_pengambilan), 0) FROM simpanan x WHERE x.anggota_id = a.id)", join: "" }
     const base = `

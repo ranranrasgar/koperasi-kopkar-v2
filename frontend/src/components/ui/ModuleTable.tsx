@@ -5,6 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Search, Printer, Download, Eye, ChevronLeft, ChevronRight, Loader2, ArrowUpDown, Settings2, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
+import { PilihBaris } from "@/components/ui/PilihBaris"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -283,9 +284,13 @@ export function ModuleTable({ config, data, actions }: ModuleTableProps) {
                         </tbody>
                     </table>
 
-                    <div className="flex items-center justify-between px-4 py-3 border-t print:hidden">
-                        <div className="text-xs text-muted-foreground">
-                            Menampilkan <span className="font-semibold">{formatAngka(Math.min(data.total, (data.page - 1) * data.pageSize + 1))}</span> - <span className="font-semibold">{formatAngka(Math.min(data.total, data.page * data.pageSize))}</span> dari <span className="font-semibold">{formatAngka(data.total)}</span> data
+                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t print:hidden">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                            <PilihBaris pageSize={data.pageSize} total={data.total} disabled={isPending}
+                                onUbah={(v) => updateParams({ pageSize: v, page: 1 })} />
+                            <div className="text-xs text-muted-foreground">
+                                Menampilkan <span className="font-semibold">{formatAngka(Math.min(data.total, (data.page - 1) * data.pageSize + 1))}</span> - <span className="font-semibold">{formatAngka(Math.min(data.total, data.page * data.pageSize))}</span> dari <span className="font-semibold">{formatAngka(data.total)}</span> data
+                            </div>
                         </div>
                         <div className="flex items-center gap-1.5">
                             <Button variant="outline" size="icon" className="h-8 w-8" disabled={data.page <= 1 || isPending}
