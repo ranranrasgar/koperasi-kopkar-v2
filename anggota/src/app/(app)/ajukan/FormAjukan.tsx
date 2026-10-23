@@ -28,6 +28,7 @@ export function FormAjukan({ produk, plafon, hariIni, batasTanggal }: { produk: 
     const [tgl, setTgl] = useState(hariIni)
     const [ket, setKet] = useState("")
     const [periksa, setPeriksa] = useState(false)
+    const [selesaiDilihat, setSelesaiDilihat] = useState(false)
 
     const p = produk.find((x) => x.kode === kode)
     const besar = Number(besarTeks.replace(/\D/g, "") || "0")
@@ -35,15 +36,17 @@ export function FormAjukan({ produk, plafon, hariIni, batasTanggal }: { produk: 
     const lewatGrade = !!p?.kunciGrade && besar > plafon
     const bisaPeriksa = !!p && besar > 0 && lama >= 1 && lama <= p.maksCicilan && !lewatGrade && tgl >= hariIni && tgl <= batasTanggal
 
-    if (hasil?.ok) {
+    // Hasil berhasil tampil sampai "Selesai" diketuk; mengirim lagi menampilkan hasil yang baru.
+    if (hasil?.ok && !selesaiDilihat) {
         return (
             <div className="rounded-[var(--radius-kartu)] border border-garis bg-permukaan p-6 text-center">
                 <CircleCheckBig size={40} strokeWidth={1.5} className="mx-auto text-masuk" />
                 <p className="mt-3 text-lg font-bold">{hasil.uji ? "Pengajuan diperiksa" : "Pengajuan terkirim"}</p>
                 <p className="mt-1 text-sm leading-relaxed text-redup">{hasil.pesan}</p>
-                <a href="/ajukan" className="mt-5 inline-flex h-11 items-center rounded-xl border border-garis px-5 text-sm font-semibold hover:bg-latar">
+                <button type="button" onClick={() => { setSelesaiDilihat(true); setPeriksa(false); setBesarTeks(""); setKet(""); setTgl(hariIni); window.scrollTo({ top: 0 }) }}
+                    className="mt-5 inline-flex h-11 items-center rounded-xl border border-garis px-5 text-sm font-semibold hover:bg-latar">
                     Selesai
-                </a>
+                </button>
             </div>
         )
     }
@@ -55,7 +58,7 @@ export function FormAjukan({ produk, plafon, hariIni, batasTanggal }: { produk: 
     }
 
     return (
-        <form action={kirim} className="space-y-5">
+        <form action={(f) => { setSelesaiDilihat(false); kirim(f) }} className="space-y-5">
             {/* Nilai yang dikirim; tampilan di bawah bisa beralih ke ringkasan tanpa kehilangan isian. */}
             <input type="hidden" name="jenis" value={kode} />
             <input type="hidden" name="besar" value={besar} />

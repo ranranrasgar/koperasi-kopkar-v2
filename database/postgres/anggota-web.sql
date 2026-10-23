@@ -93,3 +93,20 @@ CREATE TABLE IF NOT EXISTS pengumuman_baca_opr (
     dibaca_pada timestamptz NOT NULL DEFAULT now(),
     PRIMARY KEY (opr_id, jenis, ref_id)
 );
+
+-- Notifikasi untuk operator (admin) yang dibuat sistem, mis. pengajuan kredit baru dari anggota. Penerima: operator
+-- yang grupnya berizin menu `menu` (atau grup superadmin). Tampil di lonceng navbar admin; penanda baca per operator.
+CREATE TABLE IF NOT EXISTS notif_admin (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    menu varchar(100) NOT NULL,
+    judul varchar(80) NOT NULL,
+    isi varchar(300) NOT NULL,
+    url varchar(200) NOT NULL,
+    dibuat_pada timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_notif_admin_dibuat_pada ON notif_admin (dibuat_pada DESC);
+CREATE TABLE IF NOT EXISTS notif_admin_baca (
+    opr_id bigint NOT NULL REFERENCES opr(id) ON DELETE CASCADE,
+    notif_id bigint NOT NULL REFERENCES notif_admin(id) ON DELETE CASCADE,
+    PRIMARY KEY (opr_id, notif_id)
+);

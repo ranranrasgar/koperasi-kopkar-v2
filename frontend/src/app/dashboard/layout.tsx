@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
+import { hitungNotifAdminBaru } from "@kopkar/backend/src/anggota/notif-admin.ts"
 import { hitungPengumumanBaru } from "@kopkar/backend/src/anggota/sasaran.ts"
 import { DashboardShell } from "@/components/layout/DashboardShell"
 import { modeAplikasi, pool, serverUji } from "@/lib/db"
@@ -12,7 +13,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
     const [k, mode, pesanBaru, pengumumanBaru] = await Promise.all([
         identitasKoperasi(), modeAplikasi(),
         o.izin.includes(MENU.pesanAnggota) ? hitungBelumDibaca(pool, "admin") : 0,
-        hitungPengumumanBaru(pool, o.id),
+        Promise.all([hitungPengumumanBaru(pool, o.id), hitungNotifAdminBaru(pool, o.id)]).then(([a, b]) => a + b),
     ])
     return (
         <DashboardShell operator={{ nama: o.nama, namaLengkap: o.namaLengkap, grup: o.grup, izin: o.izin }} koperasi={{ nama: k.nama, logo: k.logo }} lencana={{ "/dashboard/pesan": pesanBaru, "/dashboard/pengumuman": pengumumanBaru }}>

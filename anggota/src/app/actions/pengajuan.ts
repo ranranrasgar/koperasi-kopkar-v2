@@ -1,9 +1,10 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { beritahuAdmin, MENU_PENGAJUAN } from "@kopkar/backend/src/anggota/notif-admin.ts"
 import { ajukanPinjaman } from "@kopkar/backend/src/anggota/pengajuan.ts"
 import { anggotaSesi } from "@/lib/anggota"
-import { modeUji, tx } from "@/lib/db"
+import { modeUji, pool, tx } from "@/lib/db"
 import { hariIni } from "@/lib/format"
 
 export type HasilAjukan = { ok: true; pesan: string; uji: boolean } | { ok: false; error: string } | null
@@ -33,6 +34,19 @@ export async function ajukanAction(_: HasilAjukan, f: FormData): Promise<HasilAj
         if (!hasil.ok) return hasil
         revalidatePath("/ajukan")
         const uji = await modeUji()
+        if (!uji) {
+            // Kabari pengurus: lonceng navbar admin + Web Push ke browser operator berizin. Gagal kirim tidak membatalkan pengajuan.
+            try {
+                const { rows: [j] } = await pool.query(
+                    "SELECT jk.nama_kredit FROM pengajuan_pinjaman pp LEFT JOIN jenis_kredit jk ON jk.id = pp.jenis_kredit_id WHERE pp.id = $1", [hasil.id])
+                await beritahuAdmin(pool, {
+                    menu: MENU_PENGAJUAN, judul: "Pengajuan kredit baru", url: "/dashboard/loans/apply",
+                    isi: `${a.nama} mengajukan ${j?.nama_kredit ?? "pinjaman"} Rp ${angka("besar").toLocaleString("id-ID")} untuk ${angka("lama")} bulan.`,
+                })
+            } catch (e) {
+                console.error("kabari admin pengajuan gagal:", e)
+            }
+        }
         return { ok: true, uji, pesan: uji ? "Mode uji: pengajuan diperiksa tetapi tidak disimpan." : "Pengajuan terkirim. Pengurus koperasi akan memprosesnya." }
     } catch (e) {
         console.error("pengajuan anggota gagal:", e)

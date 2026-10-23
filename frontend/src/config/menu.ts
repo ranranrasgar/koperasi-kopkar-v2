@@ -24,7 +24,7 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard"
             },
             {
-                label: "Pengumuman",
+                label: "Notifikasi",
                 icon: "notifications_active",
                 href: "/dashboard/pengumuman"
             }

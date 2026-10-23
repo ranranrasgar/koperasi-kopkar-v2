@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache"
 import { aturSelesai, balasPesanAdmin, hitungBelumDibaca, kabariAnggotaBalasan, pesanSetelah, PesanSalah } from "@kopkar/backend/src/anggota/pesan.ts"
+import { hitungNotifAdminBaru } from "@kopkar/backend/src/anggota/notif-admin.ts"
 import { hitungPengumumanBaru } from "@kopkar/backend/src/anggota/sasaran.ts"
 import { adaLanggananOpr, hapusLanggananOpr, langgananValid, simpanLanggananOpr } from "@kopkar/backend/src/anggota/push.ts"
 import { MENU } from "@/config/akses"
@@ -75,13 +76,13 @@ export async function statusPushOprAction(endpoint: string): Promise<boolean> {
     }
 }
 
-/** Angka merah navbar: percakapan menunggu operator (ikon pesan, hanya bila berizin) dan pengumuman internal belum dibuka (lonceng). */
+/** Angka merah navbar: percakapan menunggu operator (ikon pesan, hanya bila berizin) dan notifikasi + pengumuman internal belum dibuka (lonceng). */
 export async function jumlahBadgeAction(): Promise<{ pesan: number; pengumuman: number }> {
     try {
         const o = await operatorAktif()
         const [pesan, pengumuman] = await Promise.all([
             o.izin.includes(MENU.pesanAnggota) ? hitungBelumDibaca(pool, "admin") : 0,
-            hitungPengumumanBaru(pool, o.id),
+            Promise.all([hitungPengumumanBaru(pool, o.id), hitungNotifAdminBaru(pool, o.id)]).then(([a, b]) => a + b),
         ])
         return { pesan, pengumuman }
     } catch {

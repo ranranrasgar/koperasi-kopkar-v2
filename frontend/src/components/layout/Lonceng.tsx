@@ -24,7 +24,7 @@ function Ikon({ href, ikon, judul, jumlah }: { href: string; ikon: string; judul
 }
 
 /**
- * Dua ikon di navbar: pesan (chat dengan anggota, hanya bila berizin) dan lonceng (pengumuman himbauan/promo untuk
+ * Dua ikon di navbar: pesan (chat dengan anggota, hanya bila berizin) dan lonceng (notifikasi sistem seperti pengajuan baru, serta pengumuman untuk
  * operator ini). Angka awal dari layout, lalu diperbarui tiap 10 detik saat tab terlihat dan saat tab dibuka kembali.
  */
 export function Lonceng() {
@@ -48,7 +48,7 @@ export function Lonceng() {
     return (
         <>
             {izin.includes(MENU.pesanAnggota) && <Ikon href="/dashboard/pesan" ikon="chat" judul="Pesan anggota" jumlah={angka.pesan} />}
-            <Ikon href="/dashboard/pengumuman" ikon="notifications" judul="Pengumuman" jumlah={angka.pengumuman} />
+            <Ikon href="/dashboard/pengumuman" ikon="notifications" judul="Notifikasi" jumlah={angka.pengumuman} />
         </>
     )
 }
