@@ -4,57 +4,34 @@ Log kerja untuk agent berikutnya. **Entri terbaru di paling atas.** Tiap entri: 
 
 ## Status ringkas dan serah terima (perbarui setiap sesi)
 
-Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entri terbaru di bawah bila butuh rincian.
-
-### Pekerjaan berikutnya: PWA anggota (pengganti aplikasi Android)
-- **Baca dulu** `docs/analisis-aplikasi-mobile-lama.md` (hasil analisis Android v5.6 + server PHP), lalu `docs/prd-pwa-anggota.md` (PRD).
-- Status: **Tahap 1 (`80bbfba`), Tahap 2 (`fc7bd56`), dan Tahap 3 (`c25ec60`) di-commit; Tahap 4 di-commit `7423eb4`; Tahap 5 (manifest, SW, ajakan pasang, Web Push, admin Kirim Notifikasi) selesai ditulis dan sebagian teruji tetapi belum di-commit; lihat entri Tahap 5 (23 Oktober).** Keputusan K1-K10 = semua usulan PRD; tampilan bebas dari aplikasi lama, profesional, tanpa "AI slop" (PRD bagian 8). Berikutnya **Tahap 5**: manifest, ikon, service worker (halaman luring), ajakan pasang, Web Push (PRD F13-F14). Masih tertunda dari Tahap 4: SMTP koperasi (K9; email saat ini hanya ditulis ke log server, `anggota/src/lib/email.ts`). Tabel foto `app_user_foto` sudah dipasang di database asli dan uji (23 Oktober).
-- Jalankan: `npm run dev:anggota` (port 3200, `anggota/.env.local`: `PG_URL`, `ANGGOTA_SESSION_SECRET`) atau `npm run dev:anggota:uji` (port 3201, database uji). Akun uji di database uji: `sulastri` (app_user.id 60), `Fendra` (id 146, anggota 958: punya pinjaman berjalan, SHU, notifikasi, email `fendra.uji@contoh.id`, foto uji), `uji_rohayati_pwa` (dibuat lewat halaman Daftar); untuk login, atur sendiri password uji di database **uji** saja.
-- Arsitektur **disetujui pengguna**: workspace baru `anggota/` di monorepo ini (satu `npm install`, dua build/proses, satu VPS); aturan dan query anggota di `backend/src/anggota/` dipakai bersama `mobile-api`. PWA tidak memakai API PHP; PHP tetap live sampai cutover lalu dimatikan.
-- Domain **diputuskan (K11)**: `kopkarmjsmattel.com` landing, `anggota.kopkarmjsmattel.com` PWA, `admin.kopkarmjsmattel.com` admin (dibatasi). Rencana DNS/Nginx/PM2 di PRD bagian 12 (belum dijalankan).
-- Sumber yang dianalisis (di luar repo): Android `G:\Rhansoft\Android\KopkarMJS2000_Rhansoft_upgrade`, server PHP live `C:\laragon\www\KopkarMJS2000_2026` (aturan daftar/login di `v1/user.php`, pengajuan di `includes/DbOperation.php createPinjaman`, token di `includes/Auth.php`).
-- Temuan kunci: validasi pengajuan kredit hanya di HP dan server menerima persen bunga dari HP; API PHP masih melayani request tanpa token; 1.170 dari 1.180 password anggota masih MD5; hanya 11 akun punya email; sistem live masih MySQL (PWA di atas PostgreSQL v2 bergantung pada cutover).
+Terakhir diperbarui 24 Oktober 2026 (pagi). Agent baru: baca bagian ini dulu, lalu entri bertanggal bila butuh rincian. Ada dua gaya entri: `### judul (23 Oktober)` tepat di bawah bagian ini, dan `## 2026-10-24 — judul` setelah **Jebakan yang sudah ditemui** (entri 24 Oktober ada di sana).
 
 ### Keadaan repo
-- Branch `main` (remote `origin` di GitHub).
-- **Belum di-commit** (23 Oktober, perlu izin pengguna): PWA Tahap 4 (`backend/src/anggota/akun.ts` + uji, halaman `anggota/src/app/{daftar,lupa-password,atur-password,lengkapi-email}`, `(app)/akun/{password,email,foto}`, `actions/akun.ts`, `actions/foto.ts`, `lib/{email,batas,foto}.ts`, `components/{form,FormEmail,FotoProfil,HalamanAuth}.tsx`), `database/postgres/anggota-web.sql` + `anggota-pasang.mjs` + skrip `anggota:pasang`, panduan `03-keanggotaan/03-user-mobile.md` (sudah diperbarui di kedua database), PRD, CLAUDE.md, dan WORKLOG ini.
-- Commit terakhir: `c25ec60` (PWA Tahap 3), `fc7bd56` (PWA Tahap 2), `80bbfba` (PWA Tahap 1).
-- Remote git: `origin` = github.com/ranranrasgar/koperasi-kopkar-v2 (23 Oktober). `.env.local` tidak ikut; buat ulang di komputer lain.
-- Commit sesi 22 Oktober (lama → baru):
-  - 19dfe4a..72b7d8a: halaman per kelompok, perbaikan mode uji form master/pengajuan, dokumentasi
-  - 378887f: tombol outline tema gelap
-  - 35a651e: COA pohon dengan saldo per tanggal; filter D/K memakai C
-  - e4d5746: jurnal per bukti, debit dulu
-  - c836a62: nama dan logo koperasi dari Pengaturan Perusahaan
-  - 7e684ce: database uji dan server uji
-  - 5bf70d9: Pusat Panduan
-  - 473161d: saklar Mode Uji / Live
+- Branch `main`, remote `origin` = github.com/ranranrasgar/koperasi-kopkar-v2. Semua commit sudah di-push (`main` = `origin/main` per 24 Oktober pagi). `.env.local` tidak ikut repo; buat ulang di komputer lain.
+- Commit terakhir: `b407a71` (catatan migrasi ulang), `3887484` (menu Cari Pinjaman), `182bdd5` (detail pinjaman). Rangkaian PWA: Tahap 1 `80bbfba`, 2 `fc7bd56`, 3 `c25ec60`, 4 `7423eb4`, 5 `298af4a`, lalu banyak commit `anggota:`/`feat(anggota)` (lihat `git log`).
+- Dokumen PWA: `docs/prd-pwa-anggota.md` (PRD, keputusan K1-K11, rencana DNS/Nginx/PM2 belum dijalankan) dan `docs/analisis-aplikasi-mobile-lama.md`. Sumber lama di luar repo: Android `G:\Rhansoft\Android\KopkarMJS2000_Rhansoft_upgrade`, PHP live `C:\laragon\www\KopkarMJS2000_2026`.
+- Berkas tak terlacak `.FullName` di akar repo berisi satu baris kunci host SSH (`101.50.3.222`), tampaknya keluaran perintah yang salah arah. Belum dihapus; tanyakan pengguna.
 
 ### Yang sudah jadi
-- Backend (mesin posting + akun dan pengajuan anggota) + mobile-api: lolos uji (25 + 3).
-- Frontend:
-  - Semua menu punya halaman. Absensi hanya placeholder.
-  - Laporan akuntansi cocok dengan tutup buku desktop 2024-2025.
-  - Semua halaman render tanpa galat (diuji dengan sesi superadmin).
-- Mode uji/live diatur dari **Sistem & Pengaturan → Mode Uji / Live** (admin + superadmin), bukan `.env.local`. **Database asli saat ini mode Uji.**
-- Pusat Panduan `/dashboard/panduan` + Kelola Panduan; 35 artikel terpasang di `kopkar_mjs_2000`.
-- Database uji `kopkar_mjs_2000_uji` (`npm run uji:reset`, server `npm run dev:uji` port 3101).
+- **Admin (`frontend/`, port 3100)**: semua menu punya halaman (Absensi placeholder); laporan akuntansi cocok dengan tutup buku desktop 2024-2025; mode Uji/Live dari Sistem & Pengaturan (**database asli saat ini mode Uji**); Pusat Panduan; pendaftaran anggota baru (setujui/tolak/hapus di User Mobile, karyawan Mattel otomatis dibuatkan anggota berkode lama BBTT-NNNN); Kirim Notifikasi, himbauan/promo bergambar dengan sasaran, Pesan Anggota; notifikasi dan pesan di dropdown navbar; dokumen cetak per laporan berkop; Daftar Pinjaman seperti desktop (tunggakan dari jadwal, kolom bisa diurutkan dan dipilih, detail pinjaman, Cari Pinjaman); Rekap Simpanan bergaya tabel standar.
+- **PWA anggota (`anggota/`, port 3200, uji 3201)**: PRD Tahap 1-5 selesai (masuk, Beranda, simpanan, pinjaman, potongan, SHU, riwayat, notifikasi, pengajuan kredit dengan validasi server, daftar akun dengan persetujuan admin, masuk/daftar dengan Google, verifikasi email, lupa password, foto, pesan ke koperasi, manifest + service worker + Web Push, splash/pengantar, halaman /terms dan /policy). Tampilan disegarkan ala desain Stitch. Tahap 6 (keamanan dan beban) belum.
+- **Backend + mobile-api**: `npm test` = 61 uji backend + 3 mobile-api; **60 lolos, 1 gagal** (lihat Belum selesai).
+- Database uji `kopkar_mjs_2000_uji` (`npm run uji:reset`, server `npm run dev:uji` port 3101, `npm run dev:anggota:uji` port 3201).
 
-### Keadaan lingkungan saat serah terima
-- `frontend/.env.local` berisi `PG_URL` dan `SESSION_SECRET` saja. Jangan tambah `KOPKAR_UJI_ROLLBACK` (akan mengunci saklar mode).
-- Server utama port 3100 dan server uji 3101 dijalankan dari sesi Claude sebelumnya. Bila sesi itu ditutup, keduanya mati; jalankan `npm run dev` (dan `npm run dev:uji` bila perlu) dari folder proyek.
-- **Disk C: hampir penuh** (sisa ±2,4 GB setelah dibersihkan; sempat 0 MB). Cache `.next/dev/cache` tumbuh sampai 2 GB+, `.next-uji` ±430 MB, database uji ±600 MB. Cek ruang disk sebelum `uji:reset` atau `dev:uji`.
-- Database uji disalin **sebelum** saklar mode dibuat, jadi belum punya tabel `pengaturan_web` (tidak masalah: server uji dikunci live). Jalankan `npm run uji:reset` untuk salinan terbaru.
+### Belum selesai / perlu keputusan
+- **Foreign key tabel web hilang (ditemukan 24 Oktober)**: di database asli **dan** uji, semua FK dari tabel `anggota-web.sql` ke tabel hasil migrasi (`app_user`, `anggota`, `opr`) tidak ada; yang tersisa hanya FK antar tabel web (`notif_admin_baca`, `pengumuman_gambar_ref`, `pesan_isi`). Penyebab yang paling mungkin: migrasi ulang `--reset` membuat ulang tabel induk (DROP ... CASCADE ikut membuang FK), sedangkan `CREATE TABLE IF NOT EXISTS` di `anggota-pasang` tidak memasang FK lagi. Akibat: menghapus akun meninggalkan baris yatim (foto, tautan Google, langganan push, verifikasi email) dan uji `hapus akun aplikasi` gagal (`app_user_foto 1 !== 0`). Perbaikan yang diusulkan: `anggota:pasang` memasang ulang FK secara idempoten (bersihkan baris yatim dulu), lalu jalankan di kedua database.
+- Email: SMTP `smtp.emailarray.com` sudah bisa login; **SPF** domain di DNS belum; sandi SMTP yang sempat ditulis di percakapan perlu diganti pengguna.
+- PWA: Tahap 6 (uji akses silang, beban); uji produksi `npm run build -w anggota` dan uji di HP (pasang ke layar utama, `/luring`, push nyata di mode Live); gambar/foto lama dari server PHP (K10) belum dipindahkan; akun lama belum dipaksa mengisi dan memverifikasi email, tombol "Hubungkan Google" untuk akun lama belum ada.
+- Admin: dokumen cetak belum diuji di setiap laporan sungguhan; 182 pinjaman lunas masih bersaldo buku (96 belum ditemukan jurnal baliknya, lihat `lib/queries/pinjaman-sql.ts`); tutup buku dari web hanya pratinjau; 4 bukti desktop berakun `0` dan 2 tanggal salah ketik perlu dibetulkan akuntan; `jenis_macet` kosong.
+- Cutover dari MySQL belum: sistem live masih desktop + PHP. Sebelum migrasi ulang ke database yang sudah dipakai aplikasi baru, baca catatan di `database/postgres/README.md` (ekspor operator/grup buatan web, lalu jalankan ulang `anggota:pasang`, `pengaturan:pasang`, `panduan:pasang`).
+- `npm audit`: `next` 16.2.10 punya celah kritis *Proxy bypass*; halaman dan actions tetap cek sesi di server, tetapi sebaiknya `next` dinaikkan.
 
-### Belum selesai / belum diuji
-- Tombol cetak (`TombolCetak`) belum diuji manual.
-- Login sebagai operator grup admin untuk saklar mode belum diuji di UI (operator admin di database asli belum punya password; izinnya sudah dicek di database).
-- Tutup buku dari web hanya pratinjau; posting tetap di desktop sampai lulus uji paritas.
-- Kop laporan (`components/laporan/Periode.tsx`, `KopLaporan`) masih menulis nama koperasi tetap, belum dari Pengaturan Perusahaan.
-- Data asal: 4 bukti desktop dengan kode akun `0` membuat jurnal tidak seimbang (BB/250814/002, BB/250901/002, BB/251222/002, BB/260211/005); tanggal salah ketik SMPM-0502-256909 (2505-02-06) dan ANGS-CR-0424-120612 (2027-03-27). Perlu dibetulkan akuntan.
-- Tabel `jenis_macet` kosong, jadi kolom kolektibilitas Kredit Macet tidak tampil.
-- `npm audit`: `next` 16.2.10 punya celah kritis *Proxy bypass* (Turbopack). Halaman dan actions tetap cek sesi di server, tetapi sebaiknya `next` dinaikkan versinya.
-- Saat aturan transaksi berubah, perbarui artikel di `database/panduan` (dan di database bila belum disunting admin).
+### Lingkungan
+- `frontend/.env.local`: `PG_URL`, `SESSION_SECRET`, `SMTP_*`, `VAPID_*`. `anggota/.env.local`: `PG_URL`, `ANGGOTA_SESSION_SECRET`, `SMTP_*`, `VAPID_*` (harus sama dengan admin), `GOOGLE_CLIENT_ID/SECRET`. Jangan isi `KOPKAR_UJI_ROLLBACK` di server utama (mengunci saklar mode).
+- Server dev dijalankan dari sesi Claude; bila sesi ditutup, servernya mati: `npm run dev`, `npm run dev:anggota`, dan versi `:uji` bila perlu.
+- **Disk C: sering hampir penuh**: cache `.next/dev/cache` bisa 2 GB+, `.next-uji` ±430 MB, database uji ±600 MB. Cek ruang disk sebelum `uji:reset`, `dev:uji`, atau build.
+- Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
+- Saat aturan transaksi atau halaman berubah, perbarui artikel di `database/panduan` (dan di database bila belum disunting admin).
 
 ### SMTP benar: smtp.emailarray.com; tinggal SPF di DNS (23 Oktober)
 - Penyebab 535: kotak "Mail Business" `support@kopkarmjsmattel.com` ada di **platform emailarray** (terbukti dari pesan pentalan qmail `smtp8.emailarray.com` + webmail Group-Office), bukan di server cPanel `solodns.jagoanhosting.com`. Host yang benar **`smtp.emailarray.com`** (587 STARTTLS, sertifikat `*.emailarray.com` valid, AUTH LOGIN/PLAIN); login dengan sandi pengguna **berhasil** dan email percobaan diterima server. `SMTP_HOST` di kedua `.env.local` sudah diganti (sandi tidak disentuh). Sandi sempat dipakai dalam percakapan dan dijanjikan pengguna akan diganti.
@@ -270,6 +247,19 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 - Git Bash mengubah argumen yang diawali `/` (misal `/dashboard/...`) menjadi path Windows; jalankan skrip seperti itu dari PowerShell.
 - Uji halaman di balik login tanpa password: buat cookie sesi bertanda tangan dari `SESSION_SECRET` untuk operator superadmin. Format ada di `lib/sesi.ts`: `pv` = sha256(password_hash) base64url 16 karakter; nama cookie `kopkar_sesi`, atau `kopkar_sesi_uji` di server uji.
 - Server action menulis lewat `tx()` supaya ikut mode uji. Yang sengaja tidak memakai `tx()`: akses/operator, ganti password, dan saklar mode.
+
+---
+
+## 2026-10-24 — Admin: Cari Pinjaman, tabel seragam, pinjaman lunas bersaldo buku, pendaftaran, navbar
+
+- **Cari Pinjaman** (`/dashboard/loans/cari`, menu baru di Pinjaman, izin `MENU_DETAIL_PINJAMAN_GRUP` di `config/akses.ts`): pintu ke detail pinjaman tanpa izin Daftar Pinjaman. Nomor yang cocok persis langsung membuka `/dashboard/loans/[no]`; potongan nomor, nama, KPK, atau kode anggota menampilkan daftar pilihan (`cariPinjaman` di `lib/queries/pinjaman-detail.ts`, dibatasi grup pinjaman yang berizin).
+- **Bilah halaman seragam** dan menempel di dasar layar untuk semua tabel daftar (`ModuleTable`, `SavingsSummary`, `PengajuanList`). Daftar Pinjaman: filter satu baris di dalam kartu tabel, menu Kolom sebaris dengan baris per halaman, tata letak tabel data standar.
+- **Rekap Simpanan**: toolbar satu baris, kepala tabel dan baris Total/Grand Total selalu terlihat saat digulir; cetak hanya saldo per jenis, lanskap.
+- **Pinjaman lunas bersaldo buku**: lunas = sisa buku <= Rp 100 **atau** semua cicilan terbayar (`jml_cicilan >= lama`), sama dengan PWA dan API lama. Pinjaman seperti itu tampil dengan sisa pokok 0 dan tanda bila buku masih bersaldo: 182 pinjaman (Rp 1.502.623.670), umumnya pinjaman bank (BRI) yang di-top-up atau dilunasi anggota langsung ke bank, dibereskan koperasi dengan jurnal umum manual ("jurnal balik") tanpa mengubah rincian pinjaman. 86 di antaranya (Rp 531,5 juta) jurnalnya ditemukan; 96 belum. Hasil pemeriksaan per pinjaman ada di folder `hasil-periksa/` (memuat data anggota, masuk `.gitignore`).
+- **Pendaftaran anggota baru (admin)**: aksi setujui/tolak/hapus di **User Mobile** dengan filter Anggota baru / Sudah disetujui / Ditolak (kolom `app_user.keputusan_daftar`). Menyetujui karyawan Mattel yang belum anggota otomatis membuat baris `anggota` (+ `anggota_detail` kosong) berkode lama **BBTT-NNNN** (bulan-tahun pencatatan + urut tertinggi + 1, `jadikanAnggota` di `backend/src/anggota/akun.ts`, kunci `anggota_baru`), grade/simpanan bawaan dari anggota aktif terbaru bergrade sama. Halaman lama Pendaftaran Baru mengalihkan ke User Mobile. Hapus akun aplikasi menghapus data aplikasi; anggota dan data keuangannya tetap.
+- **Navbar admin**: dua ikon dengan dropdown, pesan anggota (bila berizin) dan lonceng yang dikelompokkan per jenis (pendaftaran, pengajuan kredit, himbauan, promo, lainnya); angka diperbarui tiap 10 detik saat tab terlihat (`actions/navbar.ts`, `components/layout/Lonceng.tsx`).
+- **Migrasi ulang** (`database/postgres/README.md`): `migrate.mjs`/`reconcile.mjs` butuh paket `mariadb` yang tidak ada di `package.json` (`npm install --no-save mariadb`); `--reset` menghapus operator/grup buatan web, jadi ekspor dulu lalu buat ulang, dan jalankan ulang `anggota:pasang`, `pengaturan:pasang`, `panduan:pasang`.
+- **Diperiksa saat menulis entri ini**: `npm test` 60 dari 61 uji backend lolos + 3 mobile-api. Yang gagal: `hapus akun aplikasi`, karena FK tabel web hilang (lihat Belum selesai di ringkasan atas). Kolom `menunggu_admin`, `keputusan_daftar` dan tabel `app_user_google`, `app_user_foto`, `email_antrean` sudah ada di database asli dan uji.
 
 ---
 
