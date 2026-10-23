@@ -13,7 +13,7 @@ interface Row {
     tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string
     rp_pinjaman_pokok: number; rp_provisi: number; temp_total_plafond: number; temp_total_jasa: number
     temp_angs_per_bulan: number; lama_angsuran: number; jml_cicilan: number; sisa_cicilan: number
-    jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number
+    jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; sisa_pokok: number
 }
 
 export interface LoansFilter {
@@ -73,17 +73,17 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
             { label: "Tgl Pinjaman" }, { label: "No Pinjaman", mono: true }, { label: "Nama" },
             { label: "Plafond Pokok", kanan: true }, { label: "Provisi", kanan: true }, { label: "Total Plafond", kanan: true }, { label: "Total Jasa", kanan: true },
             { label: "Angs / Bulan", kanan: true }, { label: "Lama", tengah: true }, { label: "Cicilan", tengah: true }, { label: "Sisa", tengah: true },
-            { label: "Tunggak", tengah: true }, { label: "Bayar Pokok", kanan: true }, { label: "Bayar Bunga", kanan: true },
+            { label: "Tunggak", tengah: true }, { label: "Bayar Pokok", kanan: true }, { label: "Bayar Bunga", kanan: true }, { label: "Sisa Pokok", kanan: true },
         ]
         const baris = items.map((x) => [
             formatTanggal(x.tgl_pinjaman), x.no_pinjaman, `${x.nama} (${x.nik ?? "-"} | ${x.kode_agt})`,
             formatAngka(x.rp_pinjaman_pokok), formatAngka(x.rp_provisi), formatAngka(x.temp_total_plafond), formatAngka(x.temp_total_jasa),
             formatAngka(x.temp_angs_per_bulan), String(x.lama_angsuran), String(x.jml_cicilan), String(x.sisa_cicilan),
-            String(x.jml_tunggakan ?? 0), formatAngka(x.bayar_pokok), formatAngka(x.bayar_bunga),
+            String(x.jml_tunggakan ?? 0), formatAngka(x.bayar_pokok), formatAngka(x.bayar_bunga), formatAngka(x.sisa_pokok),
         ])
         const jml = (f: (x: (typeof items)[number]) => number) => formatAngka(items.reduce((t, x) => t + (Number(f(x)) || 0), 0))
         const total = ["", "", `Total (${items.length.toLocaleString("id-ID")} pinjaman)`, jml((x) => x.rp_pinjaman_pokok), jml((x) => x.rp_provisi), jml((x) => x.temp_total_plafond),
-            jml((x) => x.temp_total_jasa), jml((x) => x.temp_angs_per_bulan), "", "", "", "", jml((x) => x.bayar_pokok), jml((x) => x.bayar_bunga)]
+            jml((x) => x.temp_total_jasa), jml((x) => x.temp_angs_per_bulan), "", "", "", "", jml((x) => x.bayar_pokok), jml((x) => x.bayar_bunga), jml((x) => x.sisa_pokok)]
         const bulan = filter.bulan ? new Date(2000, filter.bulan - 1, 1).toLocaleString("id-ID", { month: "long" }) : "Semua bulan"
         const subjudul = [`Grup ${filter.grup}`, filter.kredit !== "All" ? `Jenis ${filter.kredit}` : "", `${bulan} ${filter.tahun}`, filter.aktif === "T" ? "Anggota non-aktif" : "Anggota aktif",
             statusLunasOptions[filter.lunas] && filter.lunas ? `Status ${statusLunasOptions[filter.lunas]}` : "", filter.keyword ? `Pencarian ${(searchByOptions[filter.searchBy] ?? "")}: ${filter.keyword}` : ""].filter(Boolean).join(" · ")
@@ -285,12 +285,13 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                                     <th className="p-3 font-medium text-center">Tunggakan</th>
                                     <th className="p-3 font-medium text-right">Bayar Pokok</th>
                                     <th className="p-3 font-medium text-right">Bayar Bunga</th>
+                                    <th className="p-3 font-medium text-right">Sisa Pokok</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-outline-variant bg-surface">
                                 {rows.length === 0 ? (
                                     <tr>
-                                        <td colSpan={15} className="p-10 text-center text-on-surface-variant">
+                                        <td colSpan={16} className="p-10 text-center text-on-surface-variant">
                                             <span className="material-symbols-outlined text-4xl mb-2 opacity-50 block">receipt_long</span>
                                             <p className="font-semibold text-sm">Tidak ada data pinjaman yang ditemukan.</p>
                                         </td>
@@ -319,6 +320,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                                             
                                             <td className="p-4 align-top text-right font-mono text-sm text-green-600 dark:text-green-400">{formatIDR(row.bayar_pokok)}</td>
                                             <td className="p-4 align-top text-right font-mono text-sm text-green-600 dark:text-green-400">{formatIDR(row.bayar_bunga)}</td>
+                                            <td className="p-4 align-top text-right font-mono text-sm font-bold text-on-surface">{formatIDR(row.sisa_pokok)}</td>
                                         </tr>
                                     ))
                                 )}

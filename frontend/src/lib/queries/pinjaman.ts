@@ -3,6 +3,7 @@ import { query } from "@/lib/db"
 import { params, sp, type SearchParams } from "@/lib/list"
 import type { PageData } from "@/config/modules"
 import { ukuranHalaman } from "@/lib/halaman"
+import { sqlLaporanPinjaman } from "@/lib/queries/pinjaman-sql"
 
 export const GRUP_PINJAMAN = ["KOPERASI", "BANK / PIHAK LAIN", "KPR"]
 
@@ -19,7 +20,7 @@ export interface LaporanPinjamanRow {
     tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string
     rp_pinjaman_pokok: number; rp_provisi: number; temp_total_plafond: number; temp_total_jasa: number
     temp_angs_per_bulan: number; lama_angsuran: number; jml_cicilan: number; sisa_cicilan: number
-    jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; kode_kredit: string | null
+    jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; sisa_pokok: number; lunas: boolean; kode_kredit: string | null
 }
 
 // Kolom pencarian sesuai ComboBox1 aplikasi desktop.
@@ -27,65 +28,28 @@ export const KOLOM_CARI = ["No Pinjaman", "NIK", "Kode Anggota", "Nama", "Kota",
 const KOLOM_CARI_SQL = ["p.no_pinjaman", "a.nik", "a.kode_agt", "a.nama", "a.kota", "p.id_supervisor", "p.id_kolektor", "p.id_surveyor", "p.id_sales"]
 
 /**
- * Laporan pinjaman. Query sama dengan web lama (src/app/api/loans/route.ts) yang sudah dicocokkan
- * baris per baris dengan MySQL produksi (selisih Rp 1 di 2 baris karena pembulatan DOUBLE MySQL).
+ * Laporan pinjaman. Kontrak (plafond, jasa, angsuran) memakai rumus desktop; yang dibayar dan sisa dihitung dari buku pinjaman
+ * (lihat pinjaman-sql.ts). Hanya halaman yang tampil yang dihitung dari buku, sehingga cepat walau tabel besar.
  */
 export async function laporanPinjaman(s: SearchParams): Promise<PageData<LaporanPinjamanRow>> {
     const page = Math.max(1, parseInt(sp(s, "page") || "1", 10) || 1)
     const pageSize = ukuranHalaman(sp(s, "pageSize"), 25)
-    const { values, p } = params()
-    let where = "WHERE 1=1"
-
-    const grup = sp(s, "grup") || "KOPERASI"
-    if (grup !== "All") where += ` AND jk.group_pinjaman = ${p(grup)}`
-    const kw = sp(s, "keyword")
-    const kolom = KOLOM_CARI_SQL[parseInt(sp(s, "searchBy") || "0", 10)]
-    if (kw && kolom) where += ` AND ${kolom} ILIKE ${p(`%${kw}%`)}`
-    where += ` AND a.aktif = ${p(sp(s, "aktif") !== "T")}`
-    const kredit = sp(s, "kredit")
-    if (kredit && kredit !== "All") where += ` AND jk.kode_kredit = ${p(kredit)}`
-    const tahun = parseInt(sp(s, "tahun"), 10) || new Date().getFullYear()
-    where += ` AND EXTRACT(YEAR FROM p.tgl_pinjaman) = ${p(tahun)}`
-    const bulan = sp(s, "bulan") === "" ? new Date().getMonth() + 1 : parseInt(sp(s, "bulan"), 10) || 0
-    if (bulan !== 0) where += ` AND EXTRACT(MONTH FROM p.tgl_pinjaman) = ${p(bulan)}`
-
-    // Status lunas memakai kolom hitungan, jadi diterapkan di luar subquery.
-    const status = parseInt(sp(s, "lunas") || "0", 10)
-    const outerWhere = status === 1 ? "WHERE jml_tunggakan > 0"
-        : status === 2 ? "WHERE (temp_total_plafond - bayar_pokok) <= 100"
-        : status === 3 ? "WHERE (temp_total_plafond - bayar_pokok) > 100" : ""
-
-    // lama_angsuran dan bunga_per integer; di-cast supaya pembagian tidak terpotong.
-    const inner = `
-        SELECT
-            p.tgl_pinjaman, p.no_pinjaman, a.bank_no_rek,
-            a.kode_agt, a.nik, a.nama, a.bank_nama,
-            p.rp_pinjaman_pokok, p.persen_adm, p.rp_uang_muka, p.rp_provisi,
-            ROUND((p.rp_pinjaman_pokok - p.rp_uang_muka)) as temp_total_plafond,
-            (((p.rp_pinjaman_pokok - p.rp_uang_muka)*p.persen_bunga /100))*(p.lama_angsuran::numeric/NULLIF(p.bunga_per,0)) as temp_total_jasa,
-            (p.rp_pinjaman_pokok - p.rp_uang_muka) / NULLIF(p.lama_angsuran,0) as temp_angs_pokok,
-            ((((p.rp_pinjaman_pokok - p.rp_uang_muka)*p.persen_bunga /100))*(p.lama_angsuran::numeric/NULLIF(p.bunga_per,0)))/NULLIF(p.lama_angsuran,0) as temp_angs_bunga,
-            ROUND(((p.rp_pinjaman_pokok - p.rp_uang_muka)*p.persen_adm /100)) as rp_adm,
-            ((p.rp_pinjaman_pokok - p.rp_uang_muka) / NULLIF(p.lama_angsuran,0)) +
-            (((((p.rp_pinjaman_pokok - p.rp_uang_muka)*p.persen_bunga /100))*
-            (p.lama_angsuran::numeric/NULLIF(p.bunga_per,0)))/NULLIF(p.lama_angsuran,0)) as temp_angs_per_bulan,
-            p.lama_angsuran, p.jml_cicilan, (p.lama_angsuran - p.jml_cicilan) as sisa_cicilan,
-            p.jml_tunggakan, p.jatuh_tempo_tgl, p.opr, jk.kode_kredit,
-            ROUND((p.rp_pinjaman_pokok / NULLIF(p.lama_angsuran,0)) * p.jml_cicilan) as bayar_pokok,
-            ROUND(((((p.rp_pinjaman_pokok * p.persen_bunga)/100))/NULLIF(p.bunga_per,0)) * p.jml_cicilan) as bayar_bunga,
-            p.no_pinjaman_urut
-        FROM pinjaman_tunai p
-        INNER JOIN pinjaman_tunai_rincian ptr ON ptr.pinjaman_tunai_id = p.id
-        INNER JOIN anggota a ON a.id = p.anggota_id
-        LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
-        ${where}
-        GROUP BY p.id, a.id, jk.id`
-
-    const n = values.length
+    const bulanMentah = sp(s, "bulan")
+    const q = sqlLaporanPinjaman({
+        grup: sp(s, "grup") || "KOPERASI",
+        keyword: sp(s, "keyword"),
+        kolomCari: KOLOM_CARI_SQL[parseInt(sp(s, "searchBy") || "0", 10)] ?? null,
+        aktif: sp(s, "aktif") !== "T",
+        kredit: sp(s, "kredit"),
+        tahun: parseInt(sp(s, "tahun"), 10) || new Date().getFullYear(),
+        bulan: bulanMentah === "" ? new Date().getMonth() + 1 : Math.min(12, Math.max(0, parseInt(bulanMentah, 10) || 0)),
+        status: parseInt(sp(s, "lunas") || "0", 10) || 0,
+        limit: pageSize,
+        offset: (page - 1) * pageSize,
+    })
     const [count, items] = await Promise.all([
-        query<{ total: number }>(`SELECT COUNT(*) AS total FROM (${inner}) t ${outerWhere}`, values),
-        query<LaporanPinjamanRow>(`SELECT * FROM (${inner}) t ${outerWhere}
-            ORDER BY tgl_pinjaman DESC, no_pinjaman_urut DESC LIMIT $${n + 1} OFFSET $${n + 2}`, [...values, pageSize, (page - 1) * pageSize]),
+        query<{ total: number }>(q.sqlCount, q.valuesCount),
+        query<LaporanPinjamanRow>(q.sqlItems, q.valuesItems),
     ])
     const total = count[0]?.total ?? 0
     return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) }

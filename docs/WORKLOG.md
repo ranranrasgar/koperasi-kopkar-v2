@@ -273,6 +273,17 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ---
 
+## 2026-10-24 — Daftar Pinjaman: bayar/sisa dari buku pinjaman dan query lebih cepat
+
+- Penyebab kolom Bayar Pokok/Bayar Bunga 0: pinjaman yang ditampilkan dibuat 19 Okt 2026 dan **memang belum ada angsuran** (`jml_cicilan = 0`, rincian hanya baris pencairan). Bukan bug.
+- Namun rumus lama (`pokok / lama x jml_cicilan`, rumus desktop dan API mobile lama) hanya perkiraan: meleset ±350 pinjaman (pokok) dan ±440 (bunga) dari 22.957, hampir semuanya sebelum 2024; 2024-2026 hanya 8 dari 6.506 yang berbeda. Kolom baru diambil dari buku pinjaman `pinjaman_tunai_rincian`: **Bayar Pokok = SUM(debit_pokok)**, **Bayar Bunga = SUM(debit_bunga)**, **Sisa Pokok = SUM(kredit_pokok - debit_pokok)** (sama dengan aplikasi anggota). Lunas = sisa <= 100 ATAU `jml_cicilan >= lama` (aturan yang sama dengan PWA dan API lama); pinjaman lunas tampil sisa cicilan 0 dan tunggakan 0.
+- **Jangan pakai `pinjaman_tunai_rincian.saldo_pokok/saldo_bunga`**: pada baris angsuran nilainya 0 (bukan saldo berjalan). `pinjaman_tunai.rp_bayar_pokok` berisi sisa tersimpan, bukan jumlah dibayar.
+- Pinjaman tanpa baris rincian (9 di data, mis. CR-0626-22530) sebelumnya hilang karena INNER JOIN; sekarang tampil (bayar 0, sisa = plafond). KPR ada di tabel `kpr` (440), bukan `pinjaman_tunai`, jadi tidak ada di halaman ini.
+- Query dipindah ke `lib/queries/pinjaman-sql.ts` (tanpa import server, bisa diuji skrip): rentang tanggal memakai indeks `tgl_pinjaman` (bukan EXTRACT), tanpa GROUP BY, halaman dipilih dulu lalu buku dihitung untuk baris itu saja. Ukur di data asli: 6-30 ms (sebelumnya 46-63 ms). Kolom baru Sisa Pokok di tabel dan cetak.
+- Parity: `backend/src/anggota/queries.ts` (getpinjaman untuk API mobile lama) masih memakai rumus lama, sengaja (paritas dengan aplikasi Android lama).
+
+---
+
 ## 2026-10-24 — Dokumen cetak per laporan dan perbaikan daftar pilihan (combo)
 
 - **Combo**: `globals.css` kini memberi warna tema pada `select option` (di mode gelap tulisan sebelumnya terang di latar terang). Berlaku untuk semua `<select>` bawaan.
