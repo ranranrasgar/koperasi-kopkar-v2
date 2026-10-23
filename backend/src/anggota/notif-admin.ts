@@ -12,7 +12,7 @@ export const MENU_PENGAJUAN = 'Pengajuan Pinjaman';
 /** Harus sama dengan MENU.requestUser di frontend/src/config/akses.ts. */
 export const MENU_REQUEST_USER = 'Request User && Anggota Baru';
 
-export interface NotifAdmin { id: number; judul: string; isi: string; url: string; waktu: string; baru: boolean }
+export interface NotifAdmin { id: number; menu: string; judul: string; isi: string; url: string; waktu: string; baru: boolean }
 
 /** Operator o (grup g) berhak atas notifikasi n: grup superadmin, atau grup yang berizin menu notifikasi itu. */
 const BERHAK = `(g.nama_grup = 'superadmin' OR EXISTS (SELECT 1 FROM opr_hak_akses h WHERE h.grup_id = g.id AND h.menu = n.menu AND h.akses = 'T'))`;
@@ -42,7 +42,7 @@ async function emailKePengurus(db: Db, n: { judul: string; isi: string; url: str
 export async function notifAdminUntukOperator(db: Db, oprId: number): Promise<NotifAdmin[]> {
     try {
         const r = await db.query(
-            `SELECT n.id, n.judul, n.isi, n.url, to_char(n.dibuat_pada, 'YYYY-MM-DD HH24:MI') waktu, (b.opr_id IS NULL) baru
+            `SELECT n.id, n.menu, n.judul, n.isi, n.url, to_char(n.dibuat_pada, 'YYYY-MM-DD HH24:MI') waktu, (b.opr_id IS NULL) baru
                FROM notif_admin n
                JOIN opr o ON o.id = $1 JOIN opr_grup g ON g.id = o.grup_id
                LEFT JOIN notif_admin_baca b ON b.notif_id = n.id AND b.opr_id = o.id

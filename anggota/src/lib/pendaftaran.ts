@@ -10,8 +10,8 @@ export async function beritahuPendaftaranBaru(userId: number) {
         if (!a) return
         await beritahuAdmin(pool, {
             menu: MENU_REQUEST_USER, judul: "Pendaftaran baru menunggu verifikasi",
-            isi: `${a.nama?.trim() || a.username} (${a.nik ?? a.kode_agt}) mendaftar di aplikasi anggota. Periksa dan setujui di Anggota, Pendaftaran Baru.`,
-            url: "/dashboard/members/pendaftaran",
+            isi: `${a.nama?.trim() || a.username} (${a.nik ?? a.kode_agt}) mendaftar di aplikasi anggota. Periksa dan putuskan di Keanggotaan, User Mobile.`,
+            url: "/dashboard/members/mobile-users?status=menunggu",
         })
     } catch (e) {
         console.error("beritahu admin pendaftaran gagal:", e)
