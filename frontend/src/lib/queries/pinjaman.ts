@@ -21,6 +21,7 @@ export interface LaporanPinjamanRow {
     rp_pinjaman_pokok: number; rp_provisi: number; temp_total_plafond: number; temp_total_jasa: number
     temp_angs_per_bulan: number; lama_angsuran: number; jml_cicilan: number; sisa_cicilan: number
     jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; sisa_pokok: number; lunas: boolean; kode_kredit: string | null
+    uang_muka: number; rp_adm: number; angs_pokok: number; angs_jasa: number; total_bayar: number; jatuh_tempo: string | null; opr: string | null
 }
 
 // Kolom pencarian sesuai ComboBox1 aplikasi desktop.
@@ -39,7 +40,7 @@ export async function laporanPinjaman(s: SearchParams): Promise<PageData<Laporan
         grup: sp(s, "grup") || "KOPERASI",
         keyword: sp(s, "keyword"),
         kolomCari: KOLOM_CARI_SQL[parseInt(sp(s, "searchBy") || "0", 10)] ?? null,
-        aktif: sp(s, "aktif") !== "T",
+        aktif: sp(s, "aktif") === "S" ? null : sp(s, "aktif") !== "T",
         kredit: sp(s, "kredit"),
         tahun: parseInt(sp(s, "tahun"), 10) || new Date().getFullYear(),
         bulan: bulanMentah === "" ? new Date().getMonth() + 1 : Math.min(12, Math.max(0, parseInt(bulanMentah, 10) || 0)),

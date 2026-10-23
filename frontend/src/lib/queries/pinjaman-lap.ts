@@ -24,6 +24,8 @@ export const daftarTunggakan = (per: string) =>
               LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
               JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.tanggal_angsuran <= $1
              WHERE p.jml_cicilan < p.lama_angsuran
+               -- Pinjaman yang saldo bukunya sudah habis (dilunasi sekaligus) bukan tunggakan; aturan sama dengan Daftar Pinjaman.
+               AND COALESCE((SELECT SUM(r.kredit_pokok - r.debit_pokok) FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = p.id), 1000000) > 100
              GROUP BY p.id, a.id, jk.id),
         kpr AS (
             SELECT 'kpr' AS jenis, k.no_pinjaman, a.kode_agt, a.nik, a.nama, a.aktif, 'KPR' AS grup, jk.nama_kredit,

@@ -10,11 +10,41 @@ import { dataCetakAction } from "@/app/actions/cetak"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 
 interface Row {
-    tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string
-    rp_pinjaman_pokok: number; rp_provisi: number; temp_total_plafond: number; temp_total_jasa: number
-    temp_angs_per_bulan: number; lama_angsuran: number; jml_cicilan: number; sisa_cicilan: number
-    jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; sisa_pokok: number
+    tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string; kode_kredit: string | null; opr: string | null
+    rp_pinjaman_pokok: number; uang_muka: number; rp_provisi: number; rp_adm: number; temp_total_plafond: number; temp_total_jasa: number
+    temp_angs_per_bulan: number; angs_pokok: number; angs_jasa: number; lama_angsuran: number; jml_cicilan: number; sisa_cicilan: number
+    jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; total_bayar: number; sisa_pokok: number
+    lunas: boolean; jatuh_tempo: string | null
 }
+
+// Kolom sama dengan layar Data Pinjaman Anggota di aplikasi desktop. `teks` untuk dokumen cetak, `jumlah` bila kolom dijumlahkan di baris total.
+interface Kolom { judul: string; kanan?: boolean; tengah?: boolean; mono?: boolean; tebal?: boolean; warna?: string; teks: (r: Row) => string; jumlah?: (r: Row) => number }
+const angka = (v: number | null | undefined) => formatAngka(Number(v ?? 0))
+const KOLOM: Kolom[] = [
+    { judul: "Realisasi", teks: (r) => formatTanggal(r.tgl_pinjaman) },
+    { judul: "No.Pinjaman", mono: true, tebal: true, teks: (r) => r.no_pinjaman },
+    { judul: "Nama Anggota", tebal: true, teks: (r) => `${r.nama} (${r.nik ?? "-"} | ${r.kode_agt})` },
+    { judul: "#Jns", tengah: true, teks: (r) => r.kode_kredit ?? "" },
+    { judul: "Pinjaman", kanan: true, mono: true, teks: (r) => angka(r.rp_pinjaman_pokok), jumlah: (r) => r.rp_pinjaman_pokok },
+    { judul: "Uang Muka", kanan: true, mono: true, teks: (r) => angka(r.uang_muka), jumlah: (r) => r.uang_muka },
+    { judul: "Sisa Pinjaman", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.temp_total_plafond), jumlah: (r) => r.temp_total_plafond },
+    { judul: "Lama", tengah: true, teks: (r) => String(r.lama_angsuran) },
+    { judul: "Bayar", tengah: true, teks: (r) => String(r.jml_cicilan) },
+    { judul: "Sisa", tengah: true, warna: "text-error", teks: (r) => String(r.sisa_cicilan) },
+    { judul: "Jasa", kanan: true, mono: true, teks: (r) => angka(r.temp_total_jasa), jumlah: (r) => r.temp_total_jasa },
+    { judul: "Adm", kanan: true, mono: true, teks: (r) => angka(r.rp_adm), jumlah: (r) => r.rp_adm },
+    { judul: "Provisi", kanan: true, mono: true, teks: (r) => angka(r.rp_provisi), jumlah: (r) => r.rp_provisi },
+    { judul: "Angs Pokok", kanan: true, mono: true, teks: (r) => angka(r.angs_pokok) },
+    { judul: "Angs Jasa", kanan: true, mono: true, teks: (r) => angka(r.angs_jasa) },
+    { judul: "Angsuran", kanan: true, mono: true, tebal: true, warna: "text-primary", teks: (r) => angka(r.temp_angs_per_bulan) },
+    { judul: "Byr Pokok", kanan: true, mono: true, warna: "text-green-600 dark:text-green-400", teks: (r) => angka(r.bayar_pokok), jumlah: (r) => r.bayar_pokok },
+    { judul: "Byr Jasa", kanan: true, mono: true, warna: "text-green-600 dark:text-green-400", teks: (r) => angka(r.bayar_bunga), jumlah: (r) => r.bayar_bunga },
+    { judul: "Total Bayar", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.total_bayar), jumlah: (r) => r.total_bayar },
+    { judul: "Sisa Pokok", kanan: true, mono: true, tebal: true, teks: (r) => angka(r.sisa_pokok), jumlah: (r) => r.sisa_pokok },
+    { judul: "Tunggak", tengah: true, tebal: true, warna: "text-error", teks: (r) => String(r.jml_tunggakan ?? 0) },
+    { judul: "Jatuh Tempo", teks: (r) => (r.jatuh_tempo ? formatTanggal(r.jatuh_tempo) : "") },
+    { judul: "#Opr", teks: (r) => r.opr ?? "" },
+]
 
 export interface LoansFilter {
     searchBy: number; keyword: string; aktif: string; grup: string; kredit: string; bulan: number; tahun: string; lunas: number
@@ -46,7 +76,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
     const rows = data.items
     const jenisGrup = jenisKredit.filter((jk) => selectedGroupPinjaman === "All" || jk.group_pinjaman === selectedGroupPinjaman)
 
-    const statusLunasOptions = ["Semua", "Tunggakan", "Lunas", "Belum Lunas"]
+    const statusLunasOptions = ["Semua", "Tunggak", "Lunas", "Belum Lunas"]
 
     // baris: parameter pageSize; bawaan ukuran halaman saat ini, supaya pilihan baris ikut saat pindah halaman atau mencari.
     const go = (p: number, baris = pageSize >= MAKS_SEMUA ? "semua" : String(pageSize)) => {
@@ -69,23 +99,12 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
         const r = await dataCetakAction(pathname, Object.fromEntries(new URLSearchParams(window.location.search)))
         if ("error" in r) { alert(r.error); return }
         const items = r.items as unknown as typeof rows
-        const kolom: KolomTabel[] = [
-            { label: "Tgl Pinjaman" }, { label: "No Pinjaman", mono: true }, { label: "Nama" },
-            { label: "Plafond Pokok", kanan: true }, { label: "Provisi", kanan: true }, { label: "Total Plafond", kanan: true }, { label: "Total Jasa", kanan: true },
-            { label: "Angs / Bulan", kanan: true }, { label: "Lama", tengah: true }, { label: "Cicilan", tengah: true }, { label: "Sisa", tengah: true },
-            { label: "Tunggak", tengah: true }, { label: "Bayar Pokok", kanan: true }, { label: "Bayar Bunga", kanan: true }, { label: "Sisa Pokok", kanan: true },
-        ]
-        const baris = items.map((x) => [
-            formatTanggal(x.tgl_pinjaman), x.no_pinjaman, `${x.nama} (${x.nik ?? "-"} | ${x.kode_agt})`,
-            formatAngka(x.rp_pinjaman_pokok), formatAngka(x.rp_provisi), formatAngka(x.temp_total_plafond), formatAngka(x.temp_total_jasa),
-            formatAngka(x.temp_angs_per_bulan), String(x.lama_angsuran), String(x.jml_cicilan), String(x.sisa_cicilan),
-            String(x.jml_tunggakan ?? 0), formatAngka(x.bayar_pokok), formatAngka(x.bayar_bunga), formatAngka(x.sisa_pokok),
-        ])
-        const jml = (f: (x: (typeof items)[number]) => number) => formatAngka(items.reduce((t, x) => t + (Number(f(x)) || 0), 0))
-        const total = ["", "", `Total (${items.length.toLocaleString("id-ID")} pinjaman)`, jml((x) => x.rp_pinjaman_pokok), jml((x) => x.rp_provisi), jml((x) => x.temp_total_plafond),
-            jml((x) => x.temp_total_jasa), jml((x) => x.temp_angs_per_bulan), "", "", "", "", jml((x) => x.bayar_pokok), jml((x) => x.bayar_bunga), jml((x) => x.sisa_pokok)]
+        const kolom: KolomTabel[] = KOLOM.map((k) => ({ label: k.judul, kanan: k.kanan, tengah: k.tengah, mono: k.mono && !k.kanan }))
+        const baris = items.map((x) => KOLOM.map((k) => k.teks(x)))
+        const jml = (k: Kolom) => formatAngka(items.reduce((t, x) => t + (k.jumlah ? Number(k.jumlah(x)) || 0 : 0), 0))
+        const total = KOLOM.map((k, i) => (i === 2 ? `Total (${items.length.toLocaleString("id-ID")} pinjaman)` : k.jumlah ? jml(k) : ""))
         const bulan = filter.bulan ? new Date(2000, filter.bulan - 1, 1).toLocaleString("id-ID", { month: "long" }) : "Semua bulan"
-        const subjudul = [`Grup ${filter.grup}`, filter.kredit !== "All" ? `Jenis ${filter.kredit}` : "", `${bulan} ${filter.tahun}`, filter.aktif === "T" ? "Anggota non-aktif" : "Anggota aktif",
+        const subjudul = [`Grup ${filter.grup}`, filter.kredit !== "All" ? `Jenis ${filter.kredit}` : "", `${bulan} ${filter.tahun}`, filter.aktif === "T" ? "Anggota non-aktif" : filter.aktif === "S" ? "Semua anggota" : "Anggota aktif",
             statusLunasOptions[filter.lunas] && filter.lunas ? `Status ${statusLunasOptions[filter.lunas]}` : "", filter.keyword ? `Pencarian ${(searchByOptions[filter.searchBy] ?? "")}: ${filter.keyword}` : ""].filter(Boolean).join(" · ")
         const galat = await bukaCetak({ judul: "Daftar Pinjaman", subjudul, isi: tabelHtml(kolom, baris, r.total, { total }) })
         if (galat) alert(galat)
@@ -216,24 +235,19 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                             <label className="font-label-md text-label-md font-semibold text-on-surface-variant flex items-center gap-1">
                                 <span className="material-symbols-outlined text-[15px]">filter_list</span> Status
                             </label>
-                            <div className="flex gap-2">
-                                <select
-                                    className="bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-                                    value={isAktif}
-                                    onChange={e => setIsAktif(e.target.value)}
-                                >
-                                    <option value="Y">Aktif</option>
-                                    <option value="T">Non-Aktif</option>
-                                </select>
-                                <select
-                                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-                                    value={statusLunas}
-                                    onChange={e => setStatusLunas(Number(e.target.value))}
-                                >
+                            <div className="flex flex-col gap-2 pt-1">
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1" role="radiogroup" aria-label="Status pinjaman">
                                     {statusLunasOptions.map((opt, idx) => (
-                                        <option key={idx} value={idx}>{opt}</option>
+                                        <label key={idx} className="flex cursor-pointer items-center gap-1.5 text-xs text-on-surface">
+                                            <input type="radio" name="statusLunas" checked={statusLunas === idx} onChange={() => setStatusLunas(idx)} />
+                                            {opt}
+                                        </label>
                                     ))}
-                                </select>
+                                </div>
+                                <label className="flex cursor-pointer items-center gap-1.5 text-xs text-on-surface">
+                                    <input type="checkbox" checked={isAktif === "Y"} onChange={(e) => setIsAktif(e.target.checked ? "Y" : "S")} />
+                                    Anggota aktif
+                                </label>
                             </div>
                         </div>
                     </div>
@@ -267,65 +281,53 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                             <span className="font-label-md">Memuat data pinjaman...</span>
                         </div>
                     ) : (
+                        <>
                         <table className="w-full text-left font-body-md whitespace-nowrap">
                             <thead className="bg-surface-container-lowest border-b border-outline-variant text-on-surface-variant font-label-md text-xs">
                                 <tr>
                                     <th className="p-3 font-medium">No</th>
-                                    <th className="p-3 font-medium">Tgl Pinjaman</th>
-                                    <th className="p-3 font-medium">No Pinjaman</th>
-                                    <th className="p-3 font-medium">Nama</th>
-                                    <th className="p-3 font-medium text-right">Plafond Pokok</th>
-                                    <th className="p-3 font-medium text-right">Provisi</th>
-                                    <th className="p-3 font-medium text-right">Total Plafond</th>
-                                    <th className="p-3 font-medium text-right">Total Jasa</th>
-                                    <th className="p-3 font-medium text-right">Angs Per Bulan</th>
-                                    <th className="p-3 font-medium text-center">Lama<br/>Angs</th>
-                                    <th className="p-3 font-medium text-center">Jml<br/>Cicilan</th>
-                                    <th className="p-3 font-medium text-center">Sisa<br/>Cicilan</th>
-                                    <th className="p-3 font-medium text-center">Tunggakan</th>
-                                    <th className="p-3 font-medium text-right">Bayar Pokok</th>
-                                    <th className="p-3 font-medium text-right">Bayar Bunga</th>
-                                    <th className="p-3 font-medium text-right">Sisa Pokok</th>
+                                    {KOLOM.map((k) => (
+                                        <th key={k.judul} className={`p-3 font-medium ${k.kanan ? "text-right" : k.tengah ? "text-center" : ""}`}>{k.judul}</th>
+                                    ))}
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-outline-variant bg-surface">
                                 {rows.length === 0 ? (
                                     <tr>
-                                        <td colSpan={16} className="p-10 text-center text-on-surface-variant">
+                                        <td colSpan={KOLOM.length + 1} className="p-10 text-center text-on-surface-variant">
                                             <span className="material-symbols-outlined text-4xl mb-2 opacity-50 block">receipt_long</span>
                                             <p className="font-semibold text-sm">Tidak ada data pinjaman yang ditemukan.</p>
                                         </td>
                                     </tr>
                                 ) : (
-                                    rows.map((row, idx) => (
-                                        <tr key={row.no_pinjaman} className="hover:bg-surface-container-lowest/50 transition-colors">
-                                            <td className="p-4 align-top text-center text-sm text-on-surface-variant">{(page - 1) * pageSize + idx + 1}</td>
-                                            <td className="p-4 align-top text-sm text-on-surface-variant">{formatTanggal(row.tgl_pinjaman)}</td>
-                                            <td className="p-4 align-top font-bold text-sm text-on-surface font-mono">{row.no_pinjaman}</td>
-                                            <td className="p-4 align-top font-bold text-sm text-on-surface">
-                                                {row.nama}
-                                                <div className="text-[11px] text-on-surface-variant mt-0.5 font-mono">{row.nik} | {row.kode_agt}</div>
-                                            </td>
-                                            
-                                            <td className="p-4 align-top text-right font-mono text-sm text-on-surface-variant">{formatIDR(row.rp_pinjaman_pokok)}</td>
-                                            <td className="p-4 align-top text-right font-mono text-sm text-on-surface-variant">{formatIDR(row.rp_provisi)}</td>
-                                            <td className="p-4 align-top text-right font-mono text-sm font-bold text-on-surface">{formatIDR(row.temp_total_plafond)}</td>
-                                            <td className="p-4 align-top text-right font-mono text-sm font-bold text-on-surface">{formatIDR(row.temp_total_jasa)}</td>
-                                            <td className="p-4 align-top text-right font-mono text-sm font-bold text-primary">{formatIDR(row.temp_angs_per_bulan)}</td>
-                                            
-                                            <td className="p-4 align-top text-center text-sm text-on-surface">{row.lama_angsuran}</td>
-                                            <td className="p-4 align-top text-center text-sm text-on-surface">{row.jml_cicilan}</td>
-                                            <td className="p-4 align-top text-center text-sm font-bold text-error">{row.sisa_cicilan}</td>
-                                            <td className="p-4 align-top text-center text-sm text-error font-semibold">{row.jml_tunggakan}</td>
-                                            
-                                            <td className="p-4 align-top text-right font-mono text-sm text-green-600 dark:text-green-400">{formatIDR(row.bayar_pokok)}</td>
-                                            <td className="p-4 align-top text-right font-mono text-sm text-green-600 dark:text-green-400">{formatIDR(row.bayar_bunga)}</td>
-                                            <td className="p-4 align-top text-right font-mono text-sm font-bold text-on-surface">{formatIDR(row.sisa_pokok)}</td>
-                                        </tr>
-                                    ))
+                                    rows.map((row, idx) => {
+                                        // Warna baris seperti desktop: merah = sudah jatuh tempo (menunggak), biru = jatuh tempo hari ini, abu-abu = lunas.
+                                        const hariIni = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" })
+                                        const warnaBaris = row.lunas ? "bg-surface-variant/30 text-on-surface-variant"
+                                            : (row.jml_tunggakan ?? 0) > 0 ? "bg-red-500/10"
+                                            : row.jatuh_tempo && row.jatuh_tempo.slice(0, 10) === hariIni ? "bg-blue-500/10" : ""
+                                        return (
+                                            <tr key={row.no_pinjaman} className={`hover:bg-surface-container-lowest/50 transition-colors ${warnaBaris}`}>
+                                                <td className="p-3 align-top text-center text-sm text-on-surface-variant">{(page - 1) * pageSize + idx + 1}</td>
+                                                {KOLOM.map((k) => (
+                                                    <td key={k.judul} className={`p-3 align-top text-sm ${k.kanan ? "text-right" : k.tengah ? "text-center" : ""} ${k.mono ? "font-mono" : ""} ${k.tebal ? "font-bold" : ""} ${k.warna ?? ""}`}>
+                                                        {k.judul === "Nama Anggota"
+                                                            ? <>{row.nama}<div className="text-[11px] font-normal text-on-surface-variant mt-0.5 font-mono">{row.nik ?? "-"} | {row.kode_agt}</div></>
+                                                            : k.teks(row)}
+                                                    </td>
+                                                ))}
+                                            </tr>
+                                        )
+                                    })
                                 )}
                             </tbody>
                         </table>
+                        <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-outline-variant px-4 py-2 text-[11px] text-on-surface-variant">
+                            <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-blue-500/40" />Jatuh tempo hari ini</span>
+                            <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-red-500/40" />Sudah jatuh tempo (tunggak)</span>
+                            <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-surface-variant" />Pinjaman lunas</span>
+                        </div>
+                        </>
                     )}
                 </div>
 

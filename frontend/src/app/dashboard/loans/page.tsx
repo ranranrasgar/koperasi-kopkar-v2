@@ -12,7 +12,7 @@ export default async function LoansPage(props: PageProps<"/dashboard/loans">) {
     const filter = {
         searchBy: parseInt(sp(s, "searchBy") || "0", 10) || 0,
         keyword: sp(s, "keyword"),
-        aktif: sp(s, "aktif") === "T" ? "T" : "Y",
+        aktif: sp(s, "aktif") === "T" ? "T" : sp(s, "aktif") === "S" ? "S" : "Y",
         grup: sp(s, "grup") || "KOPERASI",
         kredit: sp(s, "kredit") || "All",
         bulan: sp(s, "bulan") === "" ? now.getMonth() + 1 : parseInt(sp(s, "bulan"), 10) || 0,
