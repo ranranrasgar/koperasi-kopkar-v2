@@ -12,6 +12,11 @@ import { pool, poolAngka, query } from "@/lib/db"
 /** Sisa pokok di bawah ini dianggap lunas (receh pembulatan), sama dengan status lunas laporan pinjaman admin. */
 const SISA_LUNAS = 100
 
+// Pinjaman LUNAS bila sisa pokok di rincian <= SISA_LUNAS ATAU semua cicilan sudah terbayar (jml_cicilan >= lama_angsuran).
+// Aturan kedua mengikuti API aplikasi lama (getPinjaman: plafon - pokok/lama * jml_cicilan > 0): pelunasan dengan potongan
+// tidak mencatat debit pokok penuh di rincian, jadi rincian masih menyisakan angka walau pinjaman sudah selesai
+// (contoh CR-0321-10998: 48 cicilan tercatat, rincian masih Rp 27,4 juta).
+
 export interface SaldoSimpanan { kode: string; nama: string; saldo: number }
 
 export async function saldoSimpanan(anggotaId: number) {
@@ -58,7 +63,7 @@ export async function pinjamanAktif(anggotaId: number) {
                 t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi angsuran, t.tanggal_angsuran jatuh_tempo
            FROM pinjaman_tunai p
            LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
-           JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) sisa FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = p.id) r ON r.sisa > ${SISA_LUNAS}
+           JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) sisa FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = p.id) r ON r.sisa > ${SISA_LUNAS} AND p.jml_cicilan < p.lama_angsuran
            LEFT JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.angsuran_ke = p.jml_cicilan + 1
           WHERE p.anggota_id = $1
          UNION ALL
@@ -66,7 +71,7 @@ export async function pinjamanAktif(anggotaId: number) {
                 LEAST(k.rp_angsuran_per_bulan, r.sisa), t.tanggal_angsuran
            FROM kpr k
            LEFT JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id
-           JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) sisa FROM kpr_rincian WHERE kpr_id = k.id) r ON r.sisa > ${SISA_LUNAS}
+           JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) sisa FROM kpr_rincian WHERE kpr_id = k.id) r ON r.sisa > ${SISA_LUNAS} AND k.jml_cicilan < k.lama_angsuran
            LEFT JOIN kpr_rincian_tagih t ON t.kpr_id = k.id AND t.angsuran_ke = k.jml_cicilan + 1
           WHERE k.anggota_id = $1
           ORDER BY 1 DESC, 4 DESC`, [anggotaId])
@@ -83,12 +88,12 @@ export async function pinjamanLunas(anggotaId: number) {
             SELECT 'tunai' jenis, p.id, p.no_pinjaman, p.tgl_pinjaman, jk.nama_kredit, p.rp_pinjaman_pokok pokok, p.lama_angsuran
               FROM pinjaman_tunai p LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
              WHERE p.anggota_id = $1
-               AND COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = p.id), 0) <= ${SISA_LUNAS}
+               AND (COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = p.id), 0) <= ${SISA_LUNAS} OR p.jml_cicilan >= p.lama_angsuran)
             UNION ALL
             SELECT 'kpr', k.id, k.no_pinjaman, k.tgl_pinjaman, jk.nama_kredit, k.rp_pinjaman_pokok, k.lama_angsuran
               FROM kpr k LEFT JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id
              WHERE k.anggota_id = $1
-               AND COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM kpr_rincian WHERE kpr_id = k.id), 0) <= ${SISA_LUNAS}
+               AND (COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM kpr_rincian WHERE kpr_id = k.id), 0) <= ${SISA_LUNAS} OR k.jml_cicilan >= k.lama_angsuran)
          ) x ORDER BY tgl_pinjaman DESC, id DESC LIMIT 30`, [anggotaId])
 }
 
@@ -127,7 +132,7 @@ async function pinjamanAktifAtauLunas(anggotaId: number, jenis: "tunai" | "kpr",
         `SELECT $3::text jenis, p.id, p.no_pinjaman, p.tgl_pinjaman, jk.nama_kredit,
                 ${jenis === "tunai" ? "COALESCE(jk.group_pinjaman, 'KOPERASI')" : "'KPR'"} grup,
                 p.rp_pinjaman_pokok pokok, p.lama_angsuran, p.jml_cicilan, jk.bunga_kredit persen_bunga,
-                COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM ${rinci} WHERE ${fk} = p.id), 0) sisa
+                CASE WHEN p.jml_cicilan >= p.lama_angsuran THEN 0 ELSE GREATEST(COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM ${rinci} WHERE ${fk} = p.id), 0), 0) END sisa
            FROM ${tabel} p LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
           WHERE p.id = $1 AND p.anggota_id = $2`, [id, anggotaId, jenis])
 }

@@ -21,7 +21,7 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
     const sisaJadwal = jadwal.filter((j) => !j.lunas)
     const berikut = sisaJadwal[0]
     const sisaJasa = sisaJadwal.reduce((t, j) => t + j.jasa, 0)
-    const lunas = p.sisa <= 100
+    const lunas = p.sisa <= 100 || p.jml_cicilan >= p.lama_angsuran
     const tabKelas = (aktif: boolean) =>
         `flex h-10 flex-1 items-center justify-center rounded-lg text-sm font-semibold transition-colors ${aktif ? "bg-permukaan text-teks shadow-sm" : "text-redup"}`
 
