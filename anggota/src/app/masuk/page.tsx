@@ -43,6 +43,9 @@ export default async function MasukPage({ searchParams }: { searchParams: Promis
             <p className="mt-auto pt-10 text-center text-sm text-redup">
                 Belum punya akun? <Link href="/daftar" className="font-semibold text-utama">Daftar</Link>
             </p>
+            <p className="mt-3 text-center text-xs text-redup">
+                <Link href="/terms" className="underline">Syarat dan Ketentuan</Link> · <Link href="/policy" className="underline">Kebijakan Privasi</Link>
+            </p>
         </main>
     )
 }

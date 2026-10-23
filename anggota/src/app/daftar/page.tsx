@@ -15,7 +15,10 @@ export default async function DaftarPage() {
     return (
         <HalamanAuth judul="Daftar akun" kembali="/masuk"
             sub="Untuk anggota koperasi dan karyawan Mattel. Daftar dengan NIK karyawan Anda dan email aktif; akun aktif setelah email diverifikasi."
-            kaki={<>Sudah punya akun? <Link href="/masuk" className="font-semibold text-utama">Masuk</Link></>}>
+            kaki={<>
+                <p>Sudah punya akun? <Link href="/masuk" className="font-semibold text-utama">Masuk</Link></p>
+                <p className="mt-3 text-xs">Dengan mendaftar Anda menyetujui <Link href="/terms" className="font-semibold text-utama">Syarat dan Ketentuan</Link> serta <Link href="/policy" className="font-semibold text-utama">Kebijakan Privasi</Link>.</p>
+            </>}>
             <FormDaftar pertanyaan={pertanyaan} />
             <TombolGoogle />
         </HalamanAuth>
