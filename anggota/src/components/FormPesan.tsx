@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react"
 import { useRouter } from "next/navigation"
 import { kirimPesanAction } from "@/app/actions/pesan"
 import { Kolom, kelasKolom, PesanGalat, tanpaReset, Tombol } from "@/components/form"
+import { PERISTIWA_SEGARKAN } from "@/components/PercakapanLangsung"
 
 const MAKS = 1000
 
@@ -15,7 +16,7 @@ export function FormPesan({ percakapanId }: { percakapanId?: number }) {
 
     useEffect(() => {
         if (!hasil?.ok) return
-        if (percakapanId) { form.current?.reset(); router.refresh() }
+        if (percakapanId) { form.current?.reset(); window.dispatchEvent(new Event(PERISTIWA_SEGARKAN)) }
         else if (hasil.id) router.replace(`/pesan/${hasil.id}`)
     }, [hasil, percakapanId, router])
 

@@ -6,6 +6,7 @@ import { aturSelesaiAction, balasPesanAction } from "@/app/actions/pesan"
 import type { Hasil } from "@/app/actions/transaksi"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, HasilTransaksi, SubmitButton, useAksiForm } from "@/components/transaksi/common"
+import { PERISTIWA_SEGARKAN } from "./PercakapanLangsung"
 
 export function BalasPesan({ id, selesai, maks }: { id: number; selesai: boolean; maks: number }) {
     const router = useRouter()
@@ -16,7 +17,7 @@ export function BalasPesan({ id, selesai, maks }: { id: number; selesai: boolean
     const [sibuk, mulai] = useTransition()
 
     useEffect(() => {
-        if (hasil?.ok && !hasil.pesan.startsWith("MODE UJI")) { setIsi(""); router.refresh() }
+        if (hasil?.ok && !hasil.pesan.startsWith("MODE UJI")) { setIsi(""); window.dispatchEvent(new Event(PERISTIWA_SEGARKAN)) }
     }, [hasil, router])
 
     const ubahStatus = () => mulai(async () => {

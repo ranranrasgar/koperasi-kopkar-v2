@@ -5,11 +5,11 @@ import Link from "next/link"
 import { jumlahPesanBaruAction } from "@/app/actions/pesan"
 import { useSidebar } from "./SidebarContext"
 
-const JEDA_MS = 30_000
+const JEDA_MS = 10_000
 
 /**
  * Lonceng di navbar: angka merah = pesan anggota yang belum dibaca/dibalas. Angka awal dari layout, lalu diperbarui
- * tiap 30 detik (hanya saat tab terlihat) dan saat tab kembali dibuka, supaya tidak perlu memuat ulang halaman.
+ * tiap 10 detik (hanya saat tab terlihat) dan saat tab kembali dibuka, supaya tidak perlu memuat ulang halaman.
  */
 export function Lonceng() {
     const { lencana } = useSidebar()

@@ -124,6 +124,21 @@ export async function detailPercakapan(db: Db, id: number, anggotaId: number | n
     };
 }
 
+/**
+ * Pesan baru di satu percakapan setelah id tertentu (untuk pembaruan langsung di halaman percakapan). Pemanggil sedang
+ * membuka percakapan, jadi pesan dari pihak lawan langsung ditandai terbaca. null bila bukan percakapan miliknya.
+ */
+export async function pesanSetelah(db: Db, id: number, anggotaId: number | null, setelahId: number, sisi: 'admin' | 'anggota') {
+    const p = await db.query('SELECT 1 FROM pesan_percakapan WHERE id = $1 AND ($2::bigint IS NULL OR anggota_id = $2)', [id, anggotaId]);
+    if (!p.rows[0]) return null;
+    const i = await db.query(
+        `SELECT id, pengirim, opr_nama, isi, to_char(dibuat_pada, 'YYYY-MM-DD HH24:MI') dibuat_pada
+           FROM pesan_isi WHERE percakapan_id = $1 AND id > $2 ORDER BY id LIMIT 100`, [id, setelahId]);
+    const isi = i.rows.map((x) => ({ ...x, id: Number(x.id) })) as IsiPesan[];
+    if (isi.some((m) => m.pengirim !== (sisi === 'admin' ? 'admin' : 'anggota'))) await tandaiDibaca(db, id, sisi);
+    return isi;
+}
+
 /** Jumlah percakapan yang menunggu operator, dan yang belum dibaca anggota. */
 export async function hitungBelumDibaca(db: Db, sisi: 'admin' | 'anggota', anggotaId?: number) {
     try {

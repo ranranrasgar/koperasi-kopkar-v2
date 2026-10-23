@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import {
     aturSelesai, balasPesanAdmin, detailPercakapan, hitungBelumDibaca, JEDA_DETIK, kabariAnggotaBalasan, kabariOperatorPesanBaru, kirimPesanAnggota,
-    MAKS_PER_HARI, MAKS_PESAN, percakapanAdmin, percakapanAnggota, PesanSalah, tandaiDibaca,
+    MAKS_PER_HARI, MAKS_PESAN, percakapanAdmin, percakapanAnggota, pesanSetelah, PesanSalah, tandaiDibaca,
 } from '../src/anggota/pesan.ts';
 import { adaLanggananOpr, hapusLanggananOpr, simpanLanggananOpr } from '../src/anggota/push.ts';
 
@@ -21,7 +21,7 @@ delete process.env.VAPID_SUBJECT;
 async function dua(db: Db) {
     const r = await db.query('SELECT u.id user_id, u.anggota_id FROM app_user u JOIN anggota a ON a.id = u.anggota_id WHERE a.aktif ORDER BY u.id LIMIT 2');
     assert.equal(r.rows.length, 2, 'butuh dua akun anggota aktif');
-    return r.rows.map((x) => ({ userId: Number(x.user_id), anggotaId: Number(x.anggota_id) }));
+    return r.rows.map((x) => ({ appUserId: Number(x.user_id), anggotaId: Number(x.anggota_id) }));
 }
 // Mundurkan waktu pesan agar jeda antar kiriman tidak mengganggu uji berikutnya.
 const mundur = (db: Db) => db.query(`UPDATE pesan_isi SET dibuat_pada = dibuat_pada - interval '1 minute'`);
@@ -99,6 +99,33 @@ test('balasan admin: tanda baca, notifikasi anggota, selesai, dan dibuka lagi ol
         assert.equal(d?.status, 'buka');
         assert.equal((await percakapanAdmin(db, 'buka'))[0].id, p.percakapanId); // belum dibaca admin diurutkan paling atas
         await assert.rejects(balasPesanAdmin(db, { percakapanId: 999999999, oprNama: 'x', isi: 'y' }), /tidak ditemukan/);
+    });
+});
+
+test('pesanSetelah: hanya yang baru, tanda baca pihak yang membuka, dan isolasi pemilik', async () => {
+    await inTx(async (db) => {
+        const [a, b] = await dua(db);
+        const p = await kirimPesanAnggota(db, { ...a, subjek: 'Langsung', isi: 'satu' });
+        const awal = await detailPercakapan(db, p.percakapanId, null);
+        const id1 = awal!.isi[0].id;
+
+        // belum ada pesan baru; pesan anggota sendiri tidak menandai terbaca bagi anggota
+        assert.deepEqual(await pesanSetelah(db, p.percakapanId, a.anggotaId, id1, 'anggota'), []);
+
+        await balasPesanAdmin(db, { percakapanId: p.percakapanId, oprNama: 'kasir1', isi: 'dua' });
+        assert.equal((await percakapanAnggota(db, a.anggotaId))[0].belum_dibaca, true);
+        const baru = await pesanSetelah(db, p.percakapanId, a.anggotaId, id1, 'anggota');
+        assert.deepEqual(baru?.map((m) => [m.pengirim, m.isi]), [['admin', 'dua']]);
+        assert.equal((await percakapanAnggota(db, a.anggotaId))[0].belum_dibaca, false); // membuka = terbaca
+
+        await mundur(db);
+        await kirimPesanAnggota(db, { ...a, percakapanId: p.percakapanId, isi: 'tiga' });
+        assert.equal((await percakapanAdmin(db, 'buka')).find((x) => x.id === p.percakapanId)?.belum_dibaca, true);
+        const utk = await pesanSetelah(db, p.percakapanId, null, baru![0].id, 'admin');
+        assert.deepEqual(utk?.map((m) => m.isi), ['tiga']);
+        assert.equal((await percakapanAdmin(db, 'buka')).find((x) => x.id === p.percakapanId)?.belum_dibaca, false);
+
+        assert.equal(await pesanSetelah(db, p.percakapanId, b.anggotaId, 0, 'anggota'), null); // bukan miliknya
     });
 });
 

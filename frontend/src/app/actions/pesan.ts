@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { aturSelesai, balasPesanAdmin, hitungBelumDibaca, kabariAnggotaBalasan, PesanSalah } from "@kopkar/backend/src/anggota/pesan.ts"
+import { aturSelesai, balasPesanAdmin, hitungBelumDibaca, kabariAnggotaBalasan, pesanSetelah, PesanSalah } from "@kopkar/backend/src/anggota/pesan.ts"
 import { adaLanggananOpr, hapusLanggananOpr, langgananValid, simpanLanggananOpr } from "@kopkar/backend/src/anggota/push.ts"
 import { MENU } from "@/config/akses"
 import { modeUji, pool, tx } from "@/lib/db"
@@ -81,5 +81,17 @@ export async function jumlahPesanBaruAction(): Promise<number> {
         return await hitungBelumDibaca(pool, "admin")
     } catch {
         return 0
+    }
+}
+
+/** Pesan baru di satu percakapan setelah id tertentu (pembaruan langsung); membukanya menandai pesan anggota terbaca. */
+export async function pesanBaruAdminAction(id: number, setelahId: number) {
+    try {
+        await operatorAktif([MENU.pesanAnggota])
+        if (!Number.isInteger(id) || !Number.isInteger(setelahId) || id <= 0 || setelahId < 0) return null
+        const r = await pesanSetelah(pool, id, null, setelahId, "admin")
+        return r ? r.map(({ id, pengirim, opr_nama, isi, dibuat_pada }) => ({ id, pengirim, opr_nama, isi, dibuat_pada })) : null
+    } catch {
+        return null
     }
 }

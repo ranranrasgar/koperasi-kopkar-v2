@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { kabariOperatorPesanBaru, kirimPesanAnggota, PesanSalah } from "@kopkar/backend/src/anggota/pesan.ts"
+import { kabariOperatorPesanBaru, kirimPesanAnggota, pesanSetelah, PesanSalah } from "@kopkar/backend/src/anggota/pesan.ts"
 import { anggotaSesi } from "@/lib/anggota"
 import { modeUji, pool, tx } from "@/lib/db"
 
@@ -31,4 +31,13 @@ export async function kirimPesanAction(_: HasilPesan, f: FormData): Promise<Hasi
         if (e instanceof PesanSalah) return { ok: false, error: e.message }
         throw e
     }
+}
+
+/** Pesan baru di percakapan sendiri setelah id tertentu (pembaruan langsung); membukanya menandai balasan terbaca. */
+export async function pesanBaruAction(id: number, setelahId: number) {
+    const a = await anggotaSesi()
+    if (!a || a.anggotaId === null) return null
+    if (!Number.isInteger(id) || !Number.isInteger(setelahId) || id <= 0 || setelahId < 0) return null
+    const r = await pesanSetelah(pool, id, a.anggotaId, setelahId, "anggota")
+    return r ? r.map(({ id, pengirim, isi, dibuat_pada }) => ({ id, pengirim, isi, dibuat_pada })) : null
 }
