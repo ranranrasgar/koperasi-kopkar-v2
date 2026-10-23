@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import Link from "next/link"
+import { redirect } from "next/navigation"
 import { CalendarDays, ChevronRight, Coins, FilePen, ReceiptText, Wallet, type LucideIcon } from "lucide-react"
 import { AjakanPasang } from "@/components/AjakanPasang"
 import { BarisRiwayat } from "@/components/BarisRiwayat"
@@ -9,6 +10,7 @@ import { BarisTautan, Blok, JudulBagian, Kartu, Kemajuan } from "@/components/ui
 import { wajibMasuk } from "@/lib/anggota"
 import { pinjamanAktif, potonganBulanIni, profil, riwayat, saldoSimpanan, shu, slidePengumuman, tahunShu } from "@/lib/data"
 import { bulanIni, rupiah, tanggal } from "@/lib/format"
+import { sudahLihatIntro } from "@/lib/intro"
 import { namaKoperasi } from "@/lib/koperasi"
 
 export const metadata: Metadata = { title: "Beranda" }
@@ -54,6 +56,9 @@ export default async function BerandaPage() {
             </main>
         )
     }
+
+    // Anggota yang pertama kali masuk melihat pengantar aplikasi dulu (sekali per akun).
+    if (!(await sudahLihatIntro(a.userId))) redirect("/selamat-datang")
 
     const id = a.anggotaId
     const dataAnggota = profil(id)

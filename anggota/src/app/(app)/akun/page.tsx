@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { KeyRound, LogOut, Mail, MessageSquare } from "lucide-react"
+import { BookOpen, KeyRound, LogOut, Mail, MessageSquare } from "lucide-react"
 import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
 import { keluarAction } from "@/app/actions/auth"
 import { FotoProfil } from "@/components/FotoProfil"
@@ -49,6 +49,11 @@ export default async function AkunPage() {
 
                 <h2 className="mb-1 mt-8 text-[0.9375rem] font-semibold">Tampilan</h2>
                 <PilihTema />
+
+                <Kartu className="mt-6 overflow-hidden">
+                    <BarisTautan href="/selamat-datang" judul={<span className="flex items-center gap-3"><BookOpen size={19} strokeWidth={1.75} className="text-redup" />Panduan penggunaan</span>}
+                        sub="Kenali isi dan fitur aplikasi" />
+                </Kartu>
 
                 <p className="mt-6 px-1 text-xs leading-relaxed text-redup">
                     Data diri, keanggotaan, dan rekening Anda tidak ditampilkan di aplikasi ini demi privasi. Hubungi pengurus koperasi bila perlu melihat atau memperbaikinya.

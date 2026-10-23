@@ -43,13 +43,20 @@ if(!m.dataset.asli)m.dataset.asli=m.getAttribute("content")||"";
 m.setAttribute("content",W[t]||m.dataset.asli)})}
 window.kopkarTema=pasang;
 function awal(){try{pasang(localStorage.getItem("kopkar-tema")||"")}catch(e){}}
-awal();document.addEventListener("DOMContentLoaded",awal)})();`
+awal();document.addEventListener("DOMContentLoaded",awal);
+try{if(sessionStorage.getItem("kopkar-splash"))document.documentElement.dataset.splash="selesai";else sessionStorage.setItem("kopkar-splash","1")}catch(e){}})();`
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
     return (
         <html lang="id" className={`${jakarta.variable} h-full antialiased`} suppressHydrationWarning>
             <head><script dangerouslySetInnerHTML={{ __html: SKRIP_TEMA }} /></head>
             <body className="min-h-full">
+                {/* Splash saat aplikasi dibuka: hanya pada pemuatan pertama per sesi, hilang sendiri lewat animasi CSS (tanpa JavaScript). */}
+                <div id="splash" aria-hidden="true">
+                    <img src="/ikon/ikon-192.png" alt="" width={96} height={96} />
+                    <p>Kopkar MJS</p>
+                    <span>Aplikasi Anggota</span>
+                </div>
                 {serverUji && (
                     <div className="bg-tunggu px-4 py-1 text-center text-xs font-semibold text-black">
                         Server uji · database {serverUji}

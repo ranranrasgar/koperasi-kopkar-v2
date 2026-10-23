@@ -110,3 +110,9 @@ CREATE TABLE IF NOT EXISTS notif_admin_baca (
     notif_id bigint NOT NULL REFERENCES notif_admin(id) ON DELETE CASCADE,
     PRIMARY KEY (opr_id, notif_id)
 );
+
+-- Penanda halaman pengantar ("Selamat datang") sudah dilihat; satu baris per akun, tampil sekali saat pertama masuk.
+CREATE TABLE IF NOT EXISTS app_user_intro (
+    app_user_id bigint PRIMARY KEY REFERENCES app_user(id) ON DELETE CASCADE,
+    dilihat_pada timestamptz NOT NULL DEFAULT now()
+);
