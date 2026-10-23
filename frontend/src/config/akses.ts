@@ -62,6 +62,8 @@ export const MENU = {
     kirimNotifikasi: "Kirim Notifikasi (web)",
     // Khusus web; himbauan dan promo yang tampil di Beranda aplikasi anggota.
     kelolaPengumuman: "Kelola Himbauan & Promo (web)",
+    // Khusus web; membaca dan membalas pesan anggota, serta menerima notifikasi pesan masuk. Harus sama dengan MENU_PESAN di backend.
+    pesanAnggota: "Pesan Anggota (web)",
 } as const
 
 /** Grup yang lolos semua pemeriksaan izin dan boleh mengelola hak akses serta operator. */
@@ -110,6 +112,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/settings/mode": [MENU.modeAplikasi],
     "/dashboard/notifikasi": [MENU.kirimNotifikasi],
     "/dashboard/himbauan": [MENU.kelolaPengumuman],
+    "/dashboard/pesan": [MENU.pesanAnggota],
 }
 
 /** Menu yang memakai pencarian anggota di form transaksi. */

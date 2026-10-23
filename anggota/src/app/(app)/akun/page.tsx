@@ -1,9 +1,11 @@
 import type { Metadata } from "next"
-import { KeyRound, LogOut, Mail } from "lucide-react"
+import { KeyRound, LogOut, Mail, MessageSquare } from "lucide-react"
+import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
 import { keluarAction } from "@/app/actions/auth"
 import { FotoProfil } from "@/components/FotoProfil"
 import { Baris, BarisTautan, Kartu, Kepala } from "@/components/ui"
 import { wajibMasuk } from "@/lib/anggota"
+import { pool } from "@/lib/db"
 import { profil } from "@/lib/data"
 import { infoFoto } from "@/lib/foto"
 import { rupiah, tanggal } from "@/lib/format"
@@ -12,7 +14,10 @@ export const metadata: Metadata = { title: "Akun" }
 
 export default async function AkunPage() {
     const a = await wajibMasuk()
-    const [p, foto] = await Promise.all([a.anggotaId !== null ? profil(a.anggotaId) : null, infoFoto(a.userId)])
+    const [p, foto, balasanBaru] = await Promise.all([
+        a.anggotaId !== null ? profil(a.anggotaId) : null, infoFoto(a.userId),
+        a.anggotaId !== null ? hitungBelumDibaca(pool, "anggota", a.anggotaId) : 0,
+    ])
     const inisial = a.nama.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join("").toUpperCase()
     // Kolom lama berupa teks; "0" atau kosong berarti tidak diisi.
     const thn = Number(p?.lama_bekerja_tahun) || 0, bln = Number(p?.lama_bekerja_bulan) || 0
@@ -30,6 +35,13 @@ export default async function AkunPage() {
                         <p className="truncate text-sm text-redup">{a.anggotaId ? `No. anggota ${a.kodeAgt}` : `NIK ${a.kodeAgt}`} · {a.username}</p>
                     </div>
                 </Kartu>
+
+                {a.anggotaId !== null && (
+                    <Kartu className="mt-5 overflow-hidden">
+                        <BarisTautan href="/pesan" judul={<span className="flex items-center gap-2"><MessageSquare size={18} strokeWidth={1.75} className="text-utama" /> Pesan ke koperasi</span>}
+                            sub="Tanya atau sampaikan sesuatu ke pengurus" nilai={balasanBaru > 0 ? `${balasanBaru} baru` : undefined} />
+                    </Kartu>
+                )}
 
                 {p && (
                     <>

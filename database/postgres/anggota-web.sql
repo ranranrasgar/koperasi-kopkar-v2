@@ -36,3 +36,39 @@ CREATE TABLE IF NOT EXISTS pengumuman_gambar_ref (
     PRIMARY KEY (jenis, ref_id)
 );
 CREATE INDEX IF NOT EXISTS ix_pengumuman_gambar_ref_gambar_id ON pengumuman_gambar_ref (gambar_id);
+
+-- Pesan anggota ke koperasi (percakapan dua arah, hanya teks). Pesan masuk memberi Web Push ke operator berizin
+-- "Pesan Anggota (web)"; balasan operator memberi Web Push ke HP anggota.
+CREATE TABLE IF NOT EXISTS pesan_percakapan (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    anggota_id bigint NOT NULL REFERENCES anggota(id),
+    app_user_id bigint REFERENCES app_user(id) ON DELETE SET NULL,
+    subjek varchar(100) NOT NULL,
+    status varchar(10) NOT NULL DEFAULT 'buka' CHECK (status IN ('buka', 'selesai')),
+    dibuat_pada timestamptz NOT NULL DEFAULT now(),
+    pesan_terakhir_pada timestamptz NOT NULL DEFAULT now(),
+    belum_dibaca_admin boolean NOT NULL DEFAULT true,
+    belum_dibaca_anggota boolean NOT NULL DEFAULT false
+);
+CREATE INDEX IF NOT EXISTS ix_pesan_percakapan_anggota_id ON pesan_percakapan (anggota_id, pesan_terakhir_pada DESC);
+CREATE INDEX IF NOT EXISTS ix_pesan_percakapan_status ON pesan_percakapan (status, pesan_terakhir_pada DESC);
+CREATE TABLE IF NOT EXISTS pesan_isi (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    percakapan_id bigint NOT NULL REFERENCES pesan_percakapan(id) ON DELETE CASCADE,
+    pengirim varchar(8) NOT NULL CHECK (pengirim IN ('anggota', 'admin')),
+    opr_nama varchar(50),
+    isi text NOT NULL,
+    dibuat_pada timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_pesan_isi_percakapan_id ON pesan_isi (percakapan_id, id);
+
+-- Langganan Web Push browser operator (admin), satu operator bisa punya beberapa browser.
+CREATE TABLE IF NOT EXISTS opr_push (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    opr_id bigint NOT NULL REFERENCES opr(id) ON DELETE CASCADE,
+    endpoint text NOT NULL UNIQUE,
+    p256dh text NOT NULL,
+    auth text NOT NULL,
+    dibuat_pada timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_opr_push_opr_id ON opr_push (opr_id);

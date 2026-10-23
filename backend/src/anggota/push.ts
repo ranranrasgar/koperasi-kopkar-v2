@@ -81,19 +81,16 @@ async function catatRiwayat(db: Db, n: IsiNotifikasi, pilihAnggota: string, para
     }
 }
 
-/** Kirim push ke semua perangkat milik anggota-anggota ini. Langganan kedaluwarsa (404/410) dihapus; tidak melempar. */
-async function dorongKePerangkat(db: Db, anggotaIds: number[], buatMuatan: (anggotaId: number) => string) {
-    if (anggotaIds.length === 0 || !siapkanVapid()) return { perangkat: 0, dikirim: 0, gagal: 0 };
-    const rows = (await db.query(
-        `SELECT p.id, p.endpoint, p.p256dh, p.auth, u.anggota_id FROM app_user_push p JOIN app_user u ON u.id = p.app_user_id
-          WHERE u.anggota_id = ANY($1::bigint[])`, [anggotaIds])).rows;
+interface BarisLangganan { id: string; endpoint: string; p256dh: string; auth: string; [k: string]: unknown }
+
+/** Kirim ke baris langganan (tabel app_user_push atau opr_push), 50 sekaligus. Yang kedaluwarsa (404/410) dihapus. */
+async function kirimKeBaris(db: Db, tabel: 'app_user_push' | 'opr_push', rows: BarisLangganan[], buatMuatan: (b: BarisLangganan) => string) {
     let dikirim = 0, gagal = 0;
     const kadaluwarsa: string[] = [];
     for (let i = 0; i < rows.length; i += 50) {
         await Promise.all(rows.slice(i, i + 50).map(async (p) => {
             try {
-                await webpush.sendNotification({ endpoint: p.endpoint, keys: { p256dh: p.p256dh, auth: p.auth } },
-                    buatMuatan(Number(p.anggota_id)), { TTL: 86400 });
+                await webpush.sendNotification({ endpoint: p.endpoint, keys: { p256dh: p.p256dh, auth: p.auth } }, buatMuatan(p), { TTL: 86400 });
                 dikirim++;
             } catch (e) {
                 gagal++;
@@ -102,8 +99,55 @@ async function dorongKePerangkat(db: Db, anggotaIds: number[], buatMuatan: (angg
             }
         }));
     }
-    if (kadaluwarsa.length) await db.query('DELETE FROM app_user_push WHERE id = ANY($1::bigint[])', [kadaluwarsa]);
+    if (kadaluwarsa.length) await db.query(`DELETE FROM ${tabel} WHERE id = ANY($1::bigint[])`, [kadaluwarsa]);
     return { perangkat: rows.length, dikirim, gagal };
+}
+
+/** Kirim push ke semua perangkat milik anggota-anggota ini. Tidak melempar. */
+async function dorongKePerangkat(db: Db, anggotaIds: number[], buatMuatan: (anggotaId: number) => string) {
+    if (anggotaIds.length === 0 || !siapkanVapid()) return { perangkat: 0, dikirim: 0, gagal: 0 };
+    const rows = (await db.query(
+        `SELECT p.id, p.endpoint, p.p256dh, p.auth, u.anggota_id FROM app_user_push p JOIN app_user u ON u.id = p.app_user_id
+          WHERE u.anggota_id = ANY($1::bigint[])`, [anggotaIds])).rows;
+    return kirimKeBaris(db, 'app_user_push', rows, (r) => buatMuatan(Number(r.anggota_id)));
+}
+
+// ---------- operator (admin) ----------
+
+export async function simpanLanggananOpr(db: Db, oprId: number, s: LanggananPush) {
+    await db.query(
+        `INSERT INTO opr_push (opr_id, endpoint, p256dh, auth) VALUES ($1, $2, $3, $4)
+         ON CONFLICT (endpoint) DO UPDATE SET opr_id = EXCLUDED.opr_id, p256dh = EXCLUDED.p256dh, auth = EXCLUDED.auth`,
+        [oprId, s.endpoint, s.keys.p256dh, s.keys.auth]);
+}
+
+export async function hapusLanggananOpr(db: Db, oprId: number, endpoint: string) {
+    await db.query('DELETE FROM opr_push WHERE opr_id = $1 AND endpoint = $2', [oprId, endpoint]);
+}
+
+export async function adaLanggananOpr(db: Db, oprId: number, endpoint: string) {
+    return (await db.query('SELECT 1 FROM opr_push WHERE opr_id = $1 AND endpoint = $2', [oprId, endpoint])).rows.length > 0;
+}
+
+/**
+ * Push ke browser semua operator aktif yang berizin menu ini (grup dengan akses 'T' di opr_hak_akses, atau grup
+ * superadmin). Tidak melempar; tanpa VAPID atau tabel opr_push, tidak ada yang terkirim.
+ */
+export async function kirimKeOperator(db: Db, menu: string, n: { judul: string; isi: string; url: string }) {
+    if (!siapkanVapid()) return { perangkat: 0, dikirim: 0, gagal: 0 };
+    try {
+        const rows = (await db.query(
+            `SELECT p.id, p.endpoint, p.p256dh, p.auth
+               FROM opr_push p JOIN opr o ON o.id = p.opr_id JOIN opr_grup g ON g.id = o.grup_id
+              WHERE upper(trim(o.status_aktif)) <> 'NON AKTIF'
+                AND (g.nama_grup = 'superadmin'
+                     OR EXISTS (SELECT 1 FROM opr_hak_akses h WHERE h.grup_id = g.id AND h.menu = $1 AND h.akses = 'T'))`, [menu])).rows;
+        const muatan = JSON.stringify({ judul: n.judul, isi: n.isi, url: n.url });
+        return await kirimKeBaris(db, 'opr_push', rows, () => muatan);
+    } catch (e) {
+        if ((e as { code?: string }).code === '42P01') return { perangkat: 0, dikirim: 0, gagal: 0 };
+        throw e;
+    }
 }
 
 /** Alamat gambar relatif; service worker melengkapinya dengan alamat situs PWA. */
