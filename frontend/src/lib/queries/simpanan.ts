@@ -18,14 +18,22 @@ export async function bukuSimpanan(s: SearchParams) {
     if (isTanggal(sp(s, "sampai"))) where.push(`s.tgl_transaksi <= ${p(sp(s, "sampai"))}`)
 
     const base = `
-        SELECT s.id, s.urut, s.no_bukti, s.tgl_transaksi, s.kode_agt, a.nik, a.nama, j.nama_simpanan,
-               s.rp_setoran, s.rp_pengambilan, s.rp_saldo, s.deskripsi, s.opr
+        SELECT s.id, s.urut, s.anggota_id, s.jenis_simpanan_id, s.no_bukti, s.tgl_transaksi, s.kode_agt, a.nik, a.nama, j.nama_simpanan,
+               s.rp_setoran, s.rp_pengambilan, s.deskripsi, s.opr
           FROM simpanan s
           JOIN anggota a ON a.id = s.anggota_id
           LEFT JOIN jenis_simpanan j ON j.id = s.jenis_simpanan_id
          ${where.length ? `WHERE ${where.join(" AND ")}` : ""}`
-    const sortable = Object.fromEntries(["tgl_transaksi", "no_bukti", "kode_agt", "nama", "rp_setoran", "rp_pengambilan"].map((k) => [k, k]))
-    return paged({ base, values, searchParams: s, sortable, defaultSort: "tgl_transaksi DESC, urut DESC" })
+    // Saldo seperti rekening koran: saldo anggota untuk jenis itu setelah transaksi ini, dari SELURUH riwayat (bukan
+    // hanya periode tampil). Kolom simpanan.rp_saldo tidak dipakai: 98% bernilai 0 karena desktop tidak mengisinya.
+    // Urutan transaksi: (tanggal, urut, id), karena urut tidak unik. Dihitung hanya untuk baris halaman (indeks anggota/jenis/tanggal).
+    const saldo = `(SELECT SUM(x.rp_setoran - x.rp_pengambilan) FROM simpanan x
+        WHERE x.anggota_id = t.anggota_id AND x.jenis_simpanan_id = t.jenis_simpanan_id
+          AND (x.tgl_transaksi, x.urut, x.id) <= (t.tgl_transaksi, t.urut, t.id)) AS rp_saldo`
+    // Hanya urut kronologis (terbaru atau terlama) supaya saldo berjalan tetap terbaca. Satu kunci gabungan, sehingga
+    // arah urut juga berlaku untuk transaksi pada tanggal yang sama.
+    const sortable = { tgl_transaksi: "(tgl_transaksi, urut, id)" }
+    return paged({ base, values, searchParams: s, sortable, defaultSort: "(tgl_transaksi, urut, id) DESC", kolomHalaman: saldo })
 }
 
 // Simpanan per jenis: kode baru ('01'..'04') dan kode lama ('SP', 'SW', 'SS', 'SK').

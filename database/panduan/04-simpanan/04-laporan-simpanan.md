@@ -11,6 +11,12 @@ menu: /dashboard/savings
 
 **Simpanan → Buku Simpanan** berisi semua transaksi setoran dan pengambilan. Saring dengan **Jenis**, **Dari Tanggal**, dan **Sampai Tanggal**, atau cari nomor bukti, kode anggota, KPK, atau nama.
 
+Kolom **Saldo** berlaku seperti rekening koran: saldo anggota untuk jenis simpanan itu **setelah** transaksi di baris tersebut. Saldo dihitung dari seluruh riwayat anggota, bukan hanya dari periode yang sedang ditampilkan, sehingga saldo baris terbaru sama dengan saldo akhir di Kartu Simpanan.
+
+Karena saldonya berjalan, tabel ini hanya bisa diurutkan menurut **Tanggal** (terbaru atau terlama). Kolom lain sengaja tidak bisa diurutkan, supaya baris tetap kronologis dan saldo tetap terbaca.
+
+> **Tips:** Untuk membaca seperti rekening koran, cari satu anggota, pilih satu **Jenis**, lalu klik judul kolom **Tanggal** untuk mengurutkan dari yang terlama.
+
 ## Kartu Simpanan
 
 **Simpanan → Kartu Simpanan** menampilkan mutasi **satu anggota** per jenis simpanan dengan saldo berjalan, seperti buku tabungan.

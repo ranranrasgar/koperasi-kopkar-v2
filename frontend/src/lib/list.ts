@@ -30,6 +30,11 @@ export async function paged<T = Record<string, unknown>>(opts: {
     defaultSort: string
     /** Urutan tambahan setelah kolom yang dipilih pengguna (penentu urutan baris yang nilainya sama). */
     urutanLanjut?: string
+    /**
+     * Kolom mahal (mis. subquery per baris) yang hanya dihitung untuk baris halaman ini, setelah LIMIT/OFFSET.
+     * Ditulis sebagai daftar SELECT yang merujuk kolom hasil `base` lewat alias `t`. Tidak bisa dipakai untuk urut.
+     */
+    kolomHalaman?: string
     pageSize?: number
 }): Promise<PageData<T>> {
     const page = Math.max(1, parseInt(sp(opts.searchParams, "page") || "1", 10) || 1)
@@ -39,9 +44,10 @@ export async function paged<T = Record<string, unknown>>(opts: {
     const order = sortCol ? `${sortCol} ${dir} NULLS LAST${opts.urutanLanjut ? `, ${opts.urutanLanjut}` : ""}` : opts.defaultSort
 
     const n = opts.values.length
+    const halaman = `SELECT * FROM (${opts.base}) t ORDER BY ${order} LIMIT $${n + 1} OFFSET $${n + 2}`
     const [count, items] = await Promise.all([
         query<{ total: number }>(`SELECT COUNT(*) AS total FROM (${opts.base}) t`, opts.values),
-        query<T>(`SELECT * FROM (${opts.base}) t ORDER BY ${order} LIMIT $${n + 1} OFFSET $${n + 2}`,
+        query<T>(opts.kolomHalaman ? `SELECT t.*, ${opts.kolomHalaman} FROM (${halaman}) t ORDER BY ${order}` : halaman,
             [...opts.values, pageSize, (page - 1) * pageSize]),
     ])
     const total = count[0]?.total ?? 0
