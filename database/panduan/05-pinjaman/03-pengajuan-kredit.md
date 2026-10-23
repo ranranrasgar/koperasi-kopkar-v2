@@ -3,7 +3,20 @@ judul: Pengajuan kredit dari aplikasi mobile
 ringkasan: Alur pengajuan dari anggota, cara menyetujui atau menolak, dan meneruskannya ke pencairan.
 menu: /dashboard/loans/apply
 ---
-Anggota mengajukan pinjaman lewat **aplikasi Android**. Pengajuan masuk ke **Pinjaman → Pengajuan Kredit**.
+Anggota mengajukan pinjaman lewat **aplikasi anggota** (aplikasi Android lama, atau aplikasi anggota baru di browser HP). Pengajuan masuk ke **Pinjaman → Pengajuan Kredit**.
+
+## Yang sudah diperiksa sistem (aplikasi anggota baru)
+
+Pengajuan dari aplikasi anggota baru diperiksa di server sebelum masuk ke daftar ini:
+
+- Jenis kredit sesuai status anggota: anggota staff hanya bisa memilih produk staff, non staff hanya produk non staff.
+- Besar pinjaman tidak melebihi plafon (grade) anggota, untuk jenis kredit yang dikunci grade.
+- Untuk jenis kredit yang dikunci sisa: tidak ada pinjaman jenis yang sama yang masih bersisa lebih dari **Rp 100**. Sisa receh pembulatan Rp 100 ke bawah dianggap lunas.
+- Lama pinjaman 1 sampai maksimal cicilan jenis kredit; tanggal realisasi tidak sebelum hari ini dan paling lambat satu tahun ke depan.
+- Persen bunga, adm, provisi, dan denda **diambil dari data jenis kredit**, bukan dari isian anggota.
+- Satu anggota hanya bisa punya satu pengajuan **Menunggu** untuk jenis kredit yang sama.
+
+Pengajuan dari aplikasi Android lama hanya diperiksa di HP anggota, jadi tetap periksa jenis, plafon, dan bunganya sebelum memutuskan.
 
 ## Status pengajuan
 

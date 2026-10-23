@@ -116,6 +116,7 @@ Nomor F dipakai untuk pelacakan. "Paritas" berarti mengikuti perilaku yang dirin
 - **Validasi di server** (urutan dan pesan paritas analisis bagian 4): staff, grade, sisa pinjaman jenis sama (bila `kunci_jika_sisa`), lama 1..`mak_cicilan`, besar > 0. Persen bunga/adm/provisi/denda **diambil dari `jenis_kredit`**, tidak dari isian.
 - Konfirmasi sebelum kirim. Simpan ke `pengajuan_pinjaman` (status P, `anggota_id`, `jenis_kredit_id`) lewat `tx()`.
 - Tambahan: daftar pengajuan anggota sendiri dengan status Menunggu/Disetujui/Ditolak (data sudah ada; aplikasi lama hanya lewat riwayat).
+- **Keputusan 23 Oktober 2026**: kunci sisa memakai ambang Rp 100 (sisa pokok + jasa ≤ Rp 100 dianggap lunas). Tambahan aturan server: tanggal realisasi hari ini s/d satu tahun ke depan, keterangan maks. 100 karakter, satu pengajuan Menunggu per jenis kredit.
 
 ### F10. Potongan bulanan
 - Rekening, pokok, wajib, sukarela, koperasi, bank, KPR, admin bank, total; status "terdebet". Sumber data: keputusan K2.
@@ -177,7 +178,7 @@ Nomor F dipakai untuk pelacakan. "Paritas" berarti mengikuti perilaku yang dirin
 | 0 | Keputusan bagian 11 | Semua K terjawab (**selesai 23 Oktober 2026**) |
 | 1 | Workspace `anggota/`, pindah query ke `backend/src/anggota/`, sesi anggota, login (MD5/bcrypt), logout | Login anggota contoh berhasil; `mobile-api` tetap lolos uji kontrak (**selesai 23 Oktober 2026**) |
 | 2 | Beranda, profil, simpanan, pinjaman, jadwal, potongan, SHU, riwayat, notifikasi (baca) | Uji paritas: angka sama dengan `mobile-api`/PHP untuk ≥ 20 anggota contoh (**halaman selesai 23 Oktober 2026**; kueri bersama sudah diuji 40 anggota; sisa pinjaman dan SHU sengaja berbeda, lihat F8/F11) |
-| 3 | Pengajuan kredit dengan validasi server | Uji per aturan (staff, grade, sisa, tenor, besar, persen dari DB); pengajuan muncul di admin `/dashboard/loans/apply` |
+| 3 | Pengajuan kredit dengan validasi server | Uji per aturan (staff, grade, sisa, tenor, besar, persen dari DB); pengajuan muncul di admin `/dashboard/loans/apply` (**selesai 23 Oktober 2026**) |
 | 4 | Daftar akun, wajib email, lupa password (email + pertanyaan), ganti password/email, foto | Uji alur lengkap di database uji |
 | 5 | PWA: manifest, service worker, Web Push, pasang di Android/iOS | Lighthouse PWA lolos; notifikasi uji terkirim |
 | 6 | Keamanan dan beban | Uji akses silang antar anggota ditolak; pembatasan percobaan aktif |

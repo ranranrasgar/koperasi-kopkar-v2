@@ -55,7 +55,7 @@ export async function tx<T>(fn: (db: Db) => Promise<T>): Promise<T> {
     return hasil as T
 }
 
-async function modeUji() {
+export async function modeUji() {
     if (process.env.KOPKAR_UJI_ROLLBACK === "1") return true
     if (process.env.KOPKAR_UJI_ROLLBACK === "0") return false
     try {

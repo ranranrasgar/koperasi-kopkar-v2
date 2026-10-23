@@ -30,7 +30,7 @@ export default async function RiwayatPage(props: PageProps<"/riwayat">) {
 
     return (
         <main>
-            <Kepala judul="Riwayat transaksi" />
+            <Kepala judul="Riwayat transaksi" kembali="/beranda" />
             <div className="px-5">
                 {baris.length === 0 ? <Kartu><Kosong judul="Belum ada transaksi" /></Kartu> : (
                     <Kartu className="divide-y divide-garis">

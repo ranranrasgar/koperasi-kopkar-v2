@@ -8,7 +8,7 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ### Pekerjaan berikutnya: PWA anggota (pengganti aplikasi Android)
 - **Baca dulu** `docs/analisis-aplikasi-mobile-lama.md` (hasil analisis Android v5.6 + server PHP), lalu `docs/prd-pwa-anggota.md` (PRD).
-- Status: **Tahap 1 (commit `80bbfba`) dan Tahap 2 selesai (23 Oktober); Tahap 2 belum di-commit.** Keputusan K1-K10 = semua usulan PRD; tampilan bebas dari aplikasi lama, profesional, tanpa "AI slop" (PRD bagian 8). Berikutnya **Tahap 3**: pengajuan kredit dengan validasi di server (PRD F9), tab "Ajukan" di navigasi. Perlu keputusan pengguna soal ambang "kunci sisa" (lihat temuan Tahap 1).
+- Status: **Tahap 1 (`80bbfba`), Tahap 2 (`fc7bd56`), dan Tahap 3 selesai (23 Oktober); Tahap 3 belum di-commit.** Keputusan K1-K10 = semua usulan PRD; tampilan bebas dari aplikasi lama, profesional, tanpa "AI slop" (PRD bagian 8). Berikutnya **Tahap 4**: daftar akun, wajib isi email, lupa password (email + pertanyaan keamanan), ganti password/email/foto (PRD F1-F4, F6). Butuh kredensial SMTP koperasi (K9) untuk email.
 - Jalankan: `npm run dev:anggota` (port 3200, `anggota/.env.local`: `PG_URL`, `ANGGOTA_SESSION_SECRET`) atau `npm run dev:anggota:uji` (port 3201, database uji). Akun uji di database uji: `sulastri` (app_user.id 60) dan `Fendra` (id 146, anggota 958: punya pinjaman berjalan, SHU, notifikasi); untuk login, atur sendiri password uji di database **uji** saja.
 - Arsitektur **disetujui pengguna**: workspace baru `anggota/` di monorepo ini (satu `npm install`, dua build/proses, satu VPS); aturan dan query anggota di `backend/src/anggota/` dipakai bersama `mobile-api`. PWA tidak memakai API PHP; PHP tetap live sampai cutover lalu dimatikan.
 - Domain **diputuskan (K11)**: `kopkarmjsmattel.com` landing, `anggota.kopkarmjsmattel.com` PWA, `admin.kopkarmjsmattel.com` admin (dibatasi). Rencana DNS/Nginx/PM2 di PRD bagian 12 (belum dijalankan).
@@ -17,8 +17,8 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ### Keadaan repo
 - Branch `master`.
-- **Belum di-commit** (23 Oktober, perlu izin pengguna): PWA Tahap 2 (halaman di `anggota/src/app/(app)/`, `anggota/src/lib/data.ts`, `format.ts`, `components/`), PRD, dan WORKLOG ini.
-- Commit terakhir: `80bbfba` (PWA Tahap 1), `09758e3` (kueri anggota lewat relasi id), `054abe0` (analisis + PRD PWA).
+- **Belum di-commit** (23 Oktober, perlu izin pengguna): PWA Tahap 3 (`backend/src/anggota/pengajuan.ts`, `pengajuan-hitung.ts`, `backend/test/anggota-pengajuan.test.ts`, `anggota/src/app/(app)/ajukan/`, `anggota/src/app/actions/pengajuan.ts`, navigasi), panduan `05-pinjaman/03-pengajuan-kredit.md` (sudah diperbarui di kedua database karena belum disunting admin), PRD, dan WORKLOG ini.
+- Commit terakhir: `fc7bd56` (PWA Tahap 2), `80bbfba` (PWA Tahap 1), `09758e3` (kueri anggota lewat relasi id).
 - **Tidak ada remote git** (belum di-push ke mana pun). Semua commit hanya ada di `C:\laragon\www\NextJS\Koperasi-Kopkar-v2`. Untuk dikerjakan dari komputer lain, pengguna perlu menambah remote dan push lebih dulu.
 - Commit sesi 22 Oktober (lama → baru):
   - 19dfe4a..72b7d8a: halaman per kelompok, perbaikan mode uji form master/pengajuan, dokumentasi
@@ -55,6 +55,15 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 - Tabel `jenis_macet` kosong, jadi kolom kolektibilitas Kredit Macet tidak tampil.
 - `npm audit`: `next` 16.2.10 punya celah kritis *Proxy bypass* (Turbopack). Halaman dan actions tetap cek sesi di server, tetapi sebaiknya `next` dinaikkan versinya.
 - Saat aturan transaksi berubah, perbarui artikel di `database/panduan` (dan di database bila belum disunting admin).
+
+### PWA anggota Tahap 3: pengajuan kredit (23 Oktober)
+- Keputusan pengguna: sisa pinjaman (pokok + jasa) sampai Rp 100 dianggap lunas dan tidak mengunci pengajuan (`SISA_LUNAS` di `backend/src/anggota/pengajuan.ts`).
+- `backend/src/anggota/pengajuan.ts`: `jenisKreditUntuk` (paritas `getJenisKreditV1`), `ajukanPinjaman` (semua aturan di server, urutan sama dengan aplikasi lama: staff, grade, kunci sisa, lama, besar; tambahan: tanggal realisasi hari ini s/d +1 tahun, keterangan maks. 100 karakter, satu pengajuan Menunggu per jenis), persen bunga/adm/provisi/denda dari `jenis_kredit`, baris anggota dikunci `FOR UPDATE`. `pengajuan-hitung.ts`: estimasi dari `jadwal()` mesin posting (K4), tanpa database sehingga dipakai juga di browser.
+- Uji `backend/test/anggota-pengajuan.test.ts` (rollback): estimasi = jadwal pinjaman nyata CR-0826-22883, produk per status staff, semua pesan tolak, simpan (status P, persen dari jenis kredit, id identity > id lama), tolak pengajuan ganda, kunci sisa (receh tidak mengunci, sisa besar mengunci). Backend kini 21 uji.
+- PWA: tab **Ajukan** menggantikan Riwayat di navigasi bawah (Riwayat tetap dari pintasan Beranda, kini dengan tombol kembali). Form: jenis, besar (terformat), lama (pilihan 1..maks), tanggal realisasi, keperluan; estimasi langsung; langkah Periksa sebelum Kirim; daftar "Pengajuan saya" dengan status Menunggu/Disetujui/Ditolak. Server action `ajukanAction` memakai `tx()` (mode uji berlaku), jeda 5 detik antar kiriman per akun.
+- Uji di browser (server uji, akun Fendra): estimasi 3 juta × 5 bulan = Rp 660.000/bulan, pertama Rp 690.000; kirim → id 17328 berstatus P, muncul paling atas di kueri daftar Pengajuan Kredit admin; kirim ulang jenis sama → ditolak dengan pesan. Data uji ini ada di database **uji** saja.
+- Dicek: identity `pengajuan_pinjaman`, `app_user`, `himbauan`, `promo` sudah berada di atas id lama (nilai berikutnya 17328, 2339, 2, 4); `pg_sequences.last_value` NULL hanya berarti sequence belum pernah dipanggil.
+- Catatan alat uji: `computer type` tidak mengisi input berformat (terkontrol); tombol keyboard satu per satu berfungsi.
 
 ### PWA anggota Tahap 2 (23 Oktober)
 - Halaman: Beranda (kartu saldo dengan tombol sembunyikan nominal yang diingat per perangkat, pintasan, potongan bulan ini, SHU, pinjaman berjalan), Simpanan + mutasi per jenis dengan saldo berjalan, Pinjaman (tunai dan KPR terpisah) + rincian dengan tab Jadwal/Pembayaran, Potongan, SHU per tahun buku, Riwayat, Notifikasi, Akun (data diri, keanggotaan, rekening, keluar), halaman 404. Navigasi bawah: Beranda, Simpanan, Pinjaman, Riwayat, Akun.
