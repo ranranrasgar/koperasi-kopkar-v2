@@ -6,7 +6,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Check, Loader2, Search, X } from "lucide-react"
 import { putuskanPengajuanAction, type HasilPengajuan } from "@/app/actions/pengajuan"
 import { Button } from "@/components/ui/button"
-import { PilihBaris } from "@/components/ui/PilihBaris"
+import { Paginasi } from "@/components/ui/Paginasi"
 import type { PageData } from "@/config/modules"
 import type { Pengajuan } from "@/lib/queries/keanggotaan"
 import { formatRupiah, formatTanggal, formatAngka, formatAngka2 } from "@/lib/format"
@@ -159,23 +159,8 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                         </tbody>
                     </table>
                 </div>
-                <div className="flex flex-wrap items-center justify-between gap-3 print:hidden">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <PilihBaris pageSize={data.pageSize} total={data.total} disabled={isPending} onUbah={(v) => ubah({ pageSize: v, page: 1 })} />
-                        <div className="text-xs text-muted-foreground">
-                            {data.total === 0 ? "Tidak ada data" : <>Menampilkan <span className="font-semibold">{formatAngka(dari)}</span> - <span className="font-semibold">{formatAngka(sampai)}</span> dari <span className="font-semibold">{formatAngka(data.total)}</span> pengajuan</>}
-                        </div>
-                    </div>
-                    <div className="flex items-center gap-1.5">
-                        <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Halaman sebelumnya" disabled={data.page <= 1 || isPending} onClick={() => ubah({ page: data.page - 1 })}>
-                            <ChevronLeft className="h-4 w-4" />
-                        </Button>
-                        <span className="text-xs font-semibold px-2">Halaman {formatAngka(data.page)} dari {formatAngka(data.totalPages)}</span>
-                        <Button variant="outline" size="icon" className="h-8 w-8" aria-label="Halaman berikutnya" disabled={data.page >= data.totalPages || isPending} onClick={() => ubah({ page: data.page + 1 })}>
-                            <ChevronRight className="h-4 w-4" />
-                        </Button>
-                    </div>
-                </div>
+                <Paginasi page={data.page} totalPages={data.totalPages} pageSize={data.pageSize} total={data.total} disabled={isPending}
+                    onHalaman={(p) => ubah({ page: p })} onBaris={(v) => ubah({ pageSize: v, page: 1 })} className="sticky bottom-0 z-10 border-t border-outline-variant bg-background/95 backdrop-blur" />
             </div>
         </FormCard>
     )

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card } from "@/components/ui/card"
-import { PilihBaris } from "@/components/ui/PilihBaris"
+import { Paginasi } from "@/components/ui/Paginasi"
 import type { PageData } from "@/config/modules"
 import { formatAngka, formatTanggal } from "@/lib/format"
 import { dataCetakAction } from "@/app/actions/cetak"
@@ -125,7 +125,7 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
                 </div>
             </div>
 
-            <Card className="rounded-md border shadow-sm flex flex-col py-0 gap-0">
+            <Card className="rounded-md border shadow-sm flex flex-col py-0 gap-0 overflow-clip">
                 <div className="p-4 border-b bg-muted/10 print:hidden">
                     <form className="flex flex-wrap gap-4 items-end" onSubmit={(e) => { e.preventDefault(); update({ search }) }}>
                         <div className="space-y-1">
@@ -223,23 +223,8 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
                     </table>
                 </div>
 
-                <div className="flex flex-wrap items-center justify-between gap-3 p-3 border-t print:hidden">
-                    <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                        <PilihBaris pageSize={data.pageSize} total={data.total} disabled={loading} onUbah={(v) => update({ pageSize: v })} />
-                        <div className="text-sm text-muted-foreground">
-                            Menampilkan {data.items.length > 0 ? formatAngka((data.page - 1) * data.pageSize + 1) : 0} - {formatAngka(Math.min(data.page * data.pageSize, data.total))} dari {formatAngka(data.total)} data
-                        </div>
-                    </div>
-                    <div className="flex items-center space-x-2">
-                        <Button variant="outline" size="sm" disabled={data.page === 1 || loading} onClick={() => update({ page: data.page - 1 })}>
-                            <ChevronLeft className="h-4 w-4 mr-1" /> Prev
-                        </Button>
-                        <div className="text-sm font-medium">Hal {data.page} / {data.totalPages}</div>
-                        <Button variant="outline" size="sm" disabled={data.page >= data.totalPages || loading} onClick={() => update({ page: data.page + 1 })}>
-                            Next <ChevronRight className="h-4 w-4 ml-1" />
-                        </Button>
-                    </div>
-                </div>
+                <Paginasi page={data.page} totalPages={data.totalPages} pageSize={data.pageSize} total={data.total} disabled={loading}
+                    onHalaman={(p) => update({ page: p })} onBaris={(v) => update({ pageSize: v })} className="sticky bottom-0 z-10 border-t border-outline-variant bg-background/95 backdrop-blur" />
             </Card>
         </div>
     )

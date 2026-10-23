@@ -5,7 +5,7 @@ import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Search, Printer, Download, Eye, ChevronLeft, ChevronRight, Loader2, ArrowUpDown, Settings2, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
-import { PilihBaris } from "@/components/ui/PilihBaris"
+import { Paginasi } from "@/components/ui/Paginasi"
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -184,7 +184,7 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: Mod
                 </div>
             </div>
 
-            <Card className="bg-background border border-outline-variant shadow-sm rounded-lg overflow-hidden py-0 gap-0">
+            <Card className="bg-background border border-outline-variant shadow-sm rounded-lg overflow-clip py-0 gap-0">
                 <div className="p-3 border-b flex flex-wrap items-center gap-2 bg-background print:hidden">
                     <form className="relative w-full md:w-[260px]" onSubmit={(e) => { e.preventDefault(); updateParams({ search: searchVal, page: 1 }) }}>
                         <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -304,30 +304,9 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: Mod
                             )}
                         </tbody>
                     </table>
-
-                    <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 border-t print:hidden">
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-                            <PilihBaris pageSize={data.pageSize} total={data.total} disabled={isPending}
-                                onUbah={(v) => updateParams({ pageSize: v, page: 1 })} />
-                            <div className="text-xs text-muted-foreground">
-                                Menampilkan <span className="font-semibold">{formatAngka(Math.min(data.total, (data.page - 1) * data.pageSize + 1))}</span> - <span className="font-semibold">{formatAngka(Math.min(data.total, data.page * data.pageSize))}</span> dari <span className="font-semibold">{formatAngka(data.total)}</span> data
-                            </div>
-                        </div>
-                        <div className="flex items-center gap-1.5">
-                            <Button variant="outline" size="icon" className="h-8 w-8" disabled={data.page <= 1 || isPending}
-                                onClick={() => updateParams({ page: data.page - 1 })}>
-                                <ChevronLeft className="h-4 w-4" />
-                            </Button>
-                            <span className="text-xs font-semibold px-2">
-                                Halaman {formatAngka(data.page)} dari {formatAngka(data.totalPages)}
-                            </span>
-                            <Button variant="outline" size="icon" className="h-8 w-8" disabled={data.page >= data.totalPages || isPending}
-                                onClick={() => updateParams({ page: data.page + 1 })}>
-                                <ChevronRight className="h-4 w-4" />
-                            </Button>
-                        </div>
-                    </div>
                 </CardContent>
+                <Paginasi page={data.page} totalPages={data.totalPages} pageSize={data.pageSize} total={data.total} disabled={isPending}
+                    onHalaman={(p) => updateParams({ page: p })} onBaris={(v) => updateParams({ pageSize: v, page: 1 })} className="sticky bottom-0 z-10 border-t border-outline-variant bg-background/95 backdrop-blur" />
             </Card>
 
             {selectedItem && (
