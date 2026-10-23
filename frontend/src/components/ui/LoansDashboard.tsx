@@ -47,7 +47,7 @@ const KOLOM: Kolom[] = [
 ]
 
 export interface LoansFilter {
-    searchBy: number; keyword: string; aktif: string; grup: string; kredit: string; bulan: number; tahun: string; lunas: number
+    searchBy: number; keyword: string; aktif: string; grup: string; kredit: string; lunas: number
 }
 
 interface LoansDashboardProps {
@@ -68,8 +68,6 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
     const [isAktif, setIsAktif] = useState<string>(filter.aktif)
     const [selectedGroupPinjaman, setSelectedGroupPinjaman] = useState<string>(filter.grup)
     const [selectedKredit, setSelectedKredit] = useState<string>(filter.kredit)
-    const [filterBulan, setFilterBulan] = useState<number>(filter.bulan)
-    const [filterTahun, setFilterTahun] = useState<string>(filter.tahun)
     const [statusLunas, setStatusLunas] = useState<number>(filter.lunas)
 
     const { page, pageSize, totalPages, total: totalRecords } = data
@@ -82,7 +80,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
     const go = (p: number, baris = pageSize >= MAKS_SEMUA ? "semua" : String(pageSize)) => {
         const q = new URLSearchParams({
             page: String(p), searchBy: String(searchBy), keyword, aktif: isAktif, grup: selectedGroupPinjaman,
-            kredit: selectedKredit, bulan: String(filterBulan), tahun: filterTahun, lunas: String(statusLunas), pageSize: baris,
+            kredit: selectedKredit, lunas: String(statusLunas), pageSize: baris,
         })
         startTransition(() => router.push(`${pathname}?${q.toString()}`))
     }
@@ -103,8 +101,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
         const baris = items.map((x) => KOLOM.map((k) => k.teks(x)))
         const jml = (k: Kolom) => formatAngka(items.reduce((t, x) => t + (k.jumlah ? Number(k.jumlah(x)) || 0 : 0), 0))
         const total = KOLOM.map((k, i) => (i === 2 ? `Total (${items.length.toLocaleString("id-ID")} pinjaman)` : k.jumlah ? jml(k) : ""))
-        const bulan = filter.bulan ? new Date(2000, filter.bulan - 1, 1).toLocaleString("id-ID", { month: "long" }) : "Semua bulan"
-        const subjudul = [`Grup ${filter.grup}`, filter.kredit !== "All" ? `Jenis ${filter.kredit}` : "", `${bulan} ${filter.tahun}`, filter.aktif === "T" ? "Anggota non-aktif" : filter.aktif === "S" ? "Semua anggota" : "Anggota aktif",
+        const subjudul = [`Grup ${filter.grup}`, filter.kredit !== "All" ? `Jenis ${filter.kredit}` : "",  filter.aktif === "T" ? "Anggota non-aktif" : filter.aktif === "S" ? "Semua anggota" : "Anggota aktif",
             statusLunasOptions[filter.lunas] && filter.lunas ? `Status ${statusLunasOptions[filter.lunas]}` : "", filter.keyword ? `Pencarian ${(searchByOptions[filter.searchBy] ?? "")}: ${filter.keyword}` : ""].filter(Boolean).join(" · ")
         const galat = await bukaCetak({ judul: "Daftar Pinjaman", subjudul, isi: tabelHtml(kolom, baris, r.total, { total }) })
         if (galat) alert(galat)
@@ -138,136 +135,70 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                 </div>
                 
                 <form onSubmit={handleSearch} className="flex flex-col gap-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                        {/* Search Group */}
+                    {/* Baris 1: pencarian dan grup/jenis */}
+                    <div className="grid grid-cols-1 gap-4 lg:grid-cols-2">
                         <div className="flex flex-col gap-1.5">
                             <label className="font-label-md text-label-md font-semibold text-on-surface-variant flex items-center gap-1">
                                 <span className="material-symbols-outlined text-[15px]">search</span> Pencarian
                             </label>
                             <div className="flex gap-2">
-                                <select 
-                                    className="bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all max-w-[120px]"
-                                    value={searchBy}
-                                    onChange={e => setSearchBy(Number(e.target.value))}
-                                >
+                                <select className="bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all max-w-[120px]" value={searchBy} onChange={(e) => setSearchBy(Number(e.target.value))}>
                                     {searchByOptions.map((opt, idx) => (
                                         <option key={idx} value={idx}>{opt}</option>
                                     ))}
                                 </select>
-                                <input 
-                                    type="text"
-                                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-                                    placeholder="Kata kunci..." 
-                                    value={keyword}
-                                    onChange={e => setKeyword(e.target.value)}
-                                />
+                                <input type="text" className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all max-w-[120px]" placeholder="Kata kunci..." value={keyword} onChange={(e) => setKeyword(e.target.value)} />
                             </div>
                         </div>
 
-                        {/* Grup Pinjaman & Jenis Kredit */}
                         <div className="flex flex-col gap-1.5">
                             <label className="font-label-md text-label-md font-semibold text-on-surface-variant flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[15px]">category</span> Grup & Jenis
+                                <span className="material-symbols-outlined text-[15px]">category</span> Grup &amp; Jenis Kredit
                             </label>
                             <div className="flex gap-2">
-                                <select
-                                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-                                    value={selectedGroupPinjaman}
-                                    onChange={(e) => { setSelectedGroupPinjaman(e.target.value); setSelectedKredit("All") }}
-                                >
+                                <select className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all max-w-[120px]" value={selectedGroupPinjaman}
+                                    onChange={(e) => { setSelectedGroupPinjaman(e.target.value); setSelectedKredit("All") }}>
                                     <option value="All">Semua Grup...</option>
                                     <option value="KOPERASI">KOPERASI</option>
                                     <option value="BANK / PIHAK LAIN">BANK / PIHAK LAIN</option>
                                     <option value="KPR">KPR</option>
                                 </select>
-                                <select
-                                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-                                    value={selectedKredit}
-                                    onChange={(e) => setSelectedKredit(e.target.value)}
-                                >
+                                <select className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all max-w-[120px]" value={selectedKredit} onChange={(e) => setSelectedKredit(e.target.value)}>
                                     <option value="All">Semua Jenis...</option>
                                     {jenisGrup.map((jk) => (
-                                        <option key={jk.kode_kredit} value={jk.kode_kredit}>
-                                            {jk.nama_kredit}
-                                        </option>
+                                        <option key={jk.kode_kredit} value={jk.kode_kredit}>{jk.nama_kredit}</option>
                                     ))}
                                 </select>
-                            </div>
-                        </div>
-
-                        {/* Periode */}
-                        <div className="flex flex-col gap-1.5">
-                            <label className="font-label-md text-label-md font-semibold text-on-surface-variant flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[15px]">calendar_today</span> Periode
-                            </label>
-                            <div className="flex gap-2">
-                                <select 
-                                    className="w-full bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-                                    value={filterBulan}
-                                    onChange={(e) => setFilterBulan(Number(e.target.value))}
-                                >
-                                    <option value="0">Tahunan</option>
-                                    <option value="1">Januari</option>
-                                    <option value="2">Februari</option>
-                                    <option value="3">Maret</option>
-                                    <option value="4">April</option>
-                                    <option value="5">Mei</option>
-                                    <option value="6">Juni</option>
-                                    <option value="7">Juli</option>
-                                    <option value="8">Agustus</option>
-                                    <option value="9">September</option>
-                                    <option value="10">Oktober</option>
-                                    <option value="11">November</option>
-                                    <option value="12">Desember</option>
-                                </select>
-                                <input 
-                                    type="text"
-                                    className="w-24 bg-surface-container-lowest border border-outline-variant rounded-xl px-3 py-2 text-xs text-on-surface focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary transition-all"
-                                    placeholder="Tahun" 
-                                    value={filterTahun}
-                                    onChange={e => setFilterTahun(e.target.value)}
-                                />
-                            </div>
-                        </div>
-
-                        {/* Status Aktif & Status Lunas */}
-                        <div className="flex flex-col gap-1.5">
-                            <label className="font-label-md text-label-md font-semibold text-on-surface-variant flex items-center gap-1">
-                                <span className="material-symbols-outlined text-[15px]">filter_list</span> Status
-                            </label>
-                            <div className="flex flex-col gap-2 pt-1">
-                                <div className="flex flex-wrap items-center gap-x-4 gap-y-1" role="radiogroup" aria-label="Status pinjaman">
-                                    {statusLunasOptions.map((opt, idx) => (
-                                        <label key={idx} className="flex cursor-pointer items-center gap-1.5 text-xs text-on-surface">
-                                            <input type="radio" name="statusLunas" checked={statusLunas === idx} onChange={() => setStatusLunas(idx)} />
-                                            {opt}
-                                        </label>
-                                    ))}
-                                </div>
-                                <label className="flex cursor-pointer items-center gap-1.5 text-xs text-on-surface">
-                                    <input type="checkbox" checked={isAktif === "Y"} onChange={(e) => setIsAktif(e.target.checked ? "Y" : "S")} />
-                                    Anggota aktif
-                                </label>
                             </div>
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-between pt-1 border-t border-outline-variant/50">
-                        <span className="text-xs text-on-surface-variant">
+                    {/* Baris 2: status pinjaman, anggota aktif, jumlah data, dan tombol terapkan */}
+                    <div className="flex flex-wrap items-center gap-x-6 gap-y-3 border-t border-outline-variant/50 pt-3">
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1" role="radiogroup" aria-label="Status pinjaman">
+                            <span className="font-label-md text-label-md font-semibold text-on-surface-variant flex items-center gap-1">
+                                <span className="material-symbols-outlined text-[15px]">filter_list</span> Status
+                            </span>
+                            {statusLunasOptions.map((opt, idx) => (
+                                <label key={idx} className="flex cursor-pointer items-center gap-1.5 text-xs text-on-surface">
+                                    <input type="radio" name="statusLunas" checked={statusLunas === idx} onChange={() => setStatusLunas(idx)} />
+                                    {opt}
+                                </label>
+                            ))}
+                        </div>
+                        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-on-surface">
+                            <input type="checkbox" checked={isAktif === "Y"} onChange={(e) => setIsAktif(e.target.checked ? "Y" : "S")} />
+                            Anggota aktif
+                        </label>
+                        <span className="text-xs text-on-surface-variant sm:ml-auto">
                             Ditemukan <strong className="text-on-surface">{formatAngka(totalRecords)}</strong> data
                         </span>
-                        <div className="flex items-center gap-2">
-                            <button 
-                                type="submit" 
-                                disabled={isLoading} 
-                                className="px-4 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-sm hover:opacity-90 transition-opacity flex items-center gap-1 cursor-pointer disabled:opacity-70"
-                            >
-                                <span className={`material-symbols-outlined text-[15px] ${isLoading ? "animate-spin" : ""}`}>
-                                    {isLoading ? "refresh" : "filter_alt"}
-                                </span>
-                                Terapkan Filter
-                            </button>
-                        </div>
+                        <button type="submit" disabled={isLoading} className="px-4 py-1.5 rounded-xl bg-primary text-white text-xs font-bold shadow-sm hover:opacity-90 transition-opacity flex items-center gap-1 cursor-pointer disabled:opacity-70">
+                            <span className={`material-symbols-outlined text-[15px] ${isLoading ? "animate-spin" : ""}`}>
+                                {isLoading ? "refresh" : "filter_alt"}
+                            </span>
+                            Terapkan Filter
+                        </button>
                     </div>
                 </form>
             </div>

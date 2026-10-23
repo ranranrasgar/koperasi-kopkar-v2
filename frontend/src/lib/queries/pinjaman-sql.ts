@@ -23,8 +23,6 @@ export interface FilterPinjaman {
     kolomCari: string | null     // nama kolom SQL dari daftar putih
     aktif: boolean | null        // status anggota; null = semua anggota
     kredit: string               // kode_kredit atau "All"
-    tahun: number
-    bulan: number                // 0 = semua bulan
     status: number               // 0 semua, 1 menunggak, 2 lunas, 3 belum lunas
     limit: number
     offset: number
@@ -34,16 +32,12 @@ export const SISA_LUNAS = 100
 /** Tanggal hari ini zona Jakarta, dasar hitungan tunggakan. */
 const HARI_INI = "(now() AT TIME ZONE 'Asia/Jakarta')::date"
 
-const tanggal = (t: number, b: number) => `${String(t).padStart(4, "0")}-${String(b).padStart(2, "0")}-01`
-
 export function sqlLaporanPinjaman(f: FilterPinjaman) {
     const values: unknown[] = []
     const p = (v: unknown) => { values.push(v); return `$${values.length}` }
 
-    // Rentang tanggal (bisa memakai indeks tgl_pinjaman), bukan EXTRACT.
-    const dari = f.bulan === 0 ? tanggal(f.tahun, 1) : tanggal(f.tahun, f.bulan)
-    const sampai = f.bulan === 0 ? tanggal(f.tahun + 1, 1) : f.bulan === 12 ? tanggal(f.tahun + 1, 1) : tanggal(f.tahun, f.bulan + 1)
-    let where = `WHERE p.tgl_pinjaman >= ${p(dari)}::date AND p.tgl_pinjaman < ${p(sampai)}::date ${f.aktif === null ? "" : ` AND a.aktif = ${p(f.aktif)}`}`
+    let where = "WHERE 1=1"
+    if (f.aktif !== null) where += ` AND a.aktif = ${p(f.aktif)}`
     if (f.grup !== "All") where += ` AND jk.group_pinjaman = ${p(f.grup)}`
     if (f.kredit && f.kredit !== "All") where += ` AND jk.kode_kredit = ${p(f.kredit)}`
     if (f.keyword && f.kolomCari) where += ` AND ${f.kolomCari} ILIKE ${p(`%${f.keyword}%`)}`

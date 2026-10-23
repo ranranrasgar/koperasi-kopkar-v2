@@ -280,6 +280,7 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 - **Jangan pakai `pinjaman_tunai_rincian.saldo_pokok/saldo_bunga`**: pada baris angsuran nilainya 0 (bukan saldo berjalan). `pinjaman_tunai.rp_bayar_pokok` berisi sisa tersimpan, bukan jumlah dibayar.
 - Pinjaman tanpa baris rincian (9 di data, mis. CR-0626-22530) sebelumnya hilang karena INNER JOIN; sekarang tampil (bayar 0, sisa = plafond). KPR ada di tabel `kpr` (440), bukan `pinjaman_tunai`, jadi tidak ada di halaman ini.
 - Query dipindah ke `lib/queries/pinjaman-sql.ts` (tanpa import server, bisa diuji skrip): rentang tanggal memakai indeks `tgl_pinjaman` (bukan EXTRACT), tanpa GROUP BY, halaman dipilih dulu lalu buku dihitung untuk baris itu saja. Ukur di data asli: 6-30 ms (sebelumnya 46-63 ms). Kolom baru Sisa Pokok di tabel dan cetak.
+- Daftar Pinjaman meniru layar desktop: 24 kolom (Realisasi ... #Opr), status radio Semua/Tunggak/Lunas/Belum Lunas, kotak centang Anggota aktif, warna baris (merah tunggak, biru jatuh tempo hari ini, abu lunas). **Filter periode (bulan/tahun) dibuang**; daftar memuat semua pinjaman (22.957) dengan paginasi (6-430 ms). **Tunggak dihitung dari jadwal tagih** (angsuran jatuh tempo hari ini - jml_cicilan), bukan `jml_tunggakan` yang usang (14 terisi vs ±160 menunggak sebenarnya); Kredit Macet memakai aturan lunas yang sama (162 pinjaman tunai).
 - Parity: `backend/src/anggota/queries.ts` (getpinjaman untuk API mobile lama) masih memakai rumus lama, sengaja (paritas dengan aplikasi Android lama).
 
 ---

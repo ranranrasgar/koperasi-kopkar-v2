@@ -35,15 +35,12 @@ const KOLOM_CARI_SQL = ["p.no_pinjaman", "a.nik", "a.kode_agt", "a.nama", "a.kot
 export async function laporanPinjaman(s: SearchParams): Promise<PageData<LaporanPinjamanRow>> {
     const page = Math.max(1, parseInt(sp(s, "page") || "1", 10) || 1)
     const pageSize = ukuranHalaman(sp(s, "pageSize"), 25)
-    const bulanMentah = sp(s, "bulan")
     const q = sqlLaporanPinjaman({
         grup: sp(s, "grup") || "KOPERASI",
         keyword: sp(s, "keyword"),
         kolomCari: KOLOM_CARI_SQL[parseInt(sp(s, "searchBy") || "0", 10)] ?? null,
         aktif: sp(s, "aktif") === "S" ? null : sp(s, "aktif") !== "T",
         kredit: sp(s, "kredit"),
-        tahun: parseInt(sp(s, "tahun"), 10) || new Date().getFullYear(),
-        bulan: bulanMentah === "" ? new Date().getMonth() + 1 : Math.min(12, Math.max(0, parseInt(bulanMentah, 10) || 0)),
         status: parseInt(sp(s, "lunas") || "0", 10) || 0,
         limit: pageSize,
         offset: (page - 1) * pageSize,
