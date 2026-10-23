@@ -11,8 +11,9 @@
 //  - Lunas = sisa buku <= SISA_LUNAS ATAU semua cicilan sudah terbayar (jml_cicilan >= lama), aturan yang sama dengan aplikasi
 //    anggota dan API aplikasi lama (pelunasan lewat potongan tidak tercatat di rincian). Pinjaman lunas ditampilkan dengan
 //    sisa pokok 0, sisa cicilan 0, dan tunggakan 0. `sisa_buku` menyimpan saldo buku apa adanya: ±180 pinjaman yang cicilannya selesai
-//    masih bersaldo buku (total ±Rp 1,5 miliar), umumnya pinjaman yang diselesaikan lewat top-up (baris setoran bertanda TOPUP) tanpa
-//    jurnal pelunasan di rincian; header pinjaman (rp_saldo_pokok) dan desktop menganggapnya lunas.
+//    masih bersaldo buku (182 pinjaman, total Rp 1.502.623.670). Sekitar 108 di antaranya top-up (28 bertanda TOPUP di setoran, 80 ada
+//    pinjaman baru berdekatan); 74 tidak punya pinjaman pengganti dan perlu diperiksa pengurus. Header pinjaman (rp_saldo_pokok) dan
+//    desktop menganggapnya lunas.
 //  - Tunggak: dihitung langsung dari jadwal tagih (pinjaman_tunai_rincian_tagih): angsuran yang sudah jatuh tempo hari ini dikurangi
 //    jml_cicilan, sama dengan laporan Kredit Macet. Kolom jml_tunggakan di pinjaman_tunai (hasil tombol "Cek Tunggakan" desktop) tidak
 //    dipakai karena usang (hanya 14 pinjaman terisi, padahal ±225 menunggak). Jatuh Tempo = tanggal angsuran berikutnya yang belum dibayar.

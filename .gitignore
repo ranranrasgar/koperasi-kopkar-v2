@@ -5,3 +5,6 @@ node_modules
 next-env.d.ts
 *.tsbuildinfo
 .next-uji
+
+# Hasil pemeriksaan data (memuat data anggota), tidak untuk repo
+hasil-periksa/
