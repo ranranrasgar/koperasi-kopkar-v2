@@ -32,6 +32,10 @@ const t = nodemailer.createTransport({
 });
 
 console.log(`Menghubungi ${env.SMTP_HOST}:${port} (${port === 465 || env.SMTP_SECURE === '1' ? 'TLS langsung' : 'STARTTLS'}) sebagai ${env.SMTP_USER ?? '(tanpa login)'} ...`);
+// Diagnosis isian tanpa menampilkan sandi: panjang dan karakter yang sering salah terbaca.
+const sandi = env.SMTP_PASS ?? '';
+console.log(`Sandi terbaca: ${sandi.length} karakter${sandi.length === 0 ? ' (KOSONG: SMTP_PASS belum terisi)' : ''}; karakter khusus (# $ " ' \\ spasi): ${/[#$"'\\\s]/.test(sandi) ? 'ADA' : 'tidak ada'}; spasi di tepi: ${sandi !== sandi.trim() ? 'ADA' : 'tidak ada'}.`);
+if (env.SMTP_USER && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(env.SMTP_USER)) console.log('Perhatian: SMTP_USER sebaiknya alamat email lengkap.');
 try {
     await t.verify();
     console.log('Koneksi dan login berhasil.');
@@ -42,7 +46,16 @@ try {
     console.log(`Email percobaan dikirim ke ${ke} (${info.messageId}). Periksa juga folder spam.`);
 } catch (e) {
     console.error(`GAGAL: ${e.message}`);
-    if (/535|Invalid login|Username and Password not accepted|BadCredentials/i.test(e.message)) console.error('Petunjuk: login ditolak. Untuk Gmail pakai "sandi aplikasi" 16 karakter (bukan sandi akun) dan aktifkan verifikasi 2 langkah dulu.');
+    if (/535|Invalid login|Username and Password not accepted|BadCredentials|authentication/i.test(e.message)) {
+        console.error('Petunjuk: server terhubung tetapi login ditolak (username/sandi tidak cocok).');
+        if (/gmail|google/i.test(env.SMTP_HOST)) console.error('- Gmail: pakai "sandi aplikasi" 16 karakter (bukan sandi akun) dan aktifkan verifikasi 2 langkah dulu.');
+        else {
+            console.error('- Coba login ke webmail dengan alamat dan sandi yang sama. Bila webmail juga menolak, sandinya salah: atur ulang di panel hosting.');
+            console.error('- Sandi dari panel klien/hosting BUKAN sandi kotak email; yang dipakai adalah sandi kotak email itu sendiri.');
+            console.error('- Bila sandi mengandung # $ " atau spasi, tulis di .env.local dengan tanda kutip ganda: SMTP_PASS="sandi..."');
+            console.error('- Coba juga port 465: (PowerShell) $env:SMTP_PORT=465; $env:SMTP_SECURE=1; npm run email:uji -- alamat@penerima.com');
+        }
+    }
     if (/ECONNREFUSED|ETIMEDOUT|ENOTFOUND|ESOCKET/i.test(e.message)) console.error('Petunjuk: tidak bisa terhubung. Periksa SMTP_HOST, SMTP_PORT (587 atau 465), dan apakah jaringan/firewall memblokir port itu.');
     process.exit(1);
 }
