@@ -250,6 +250,16 @@ Terakhir diperbarui 24 Oktober 2026 (pagi). Agent baru: baca bagian ini dulu, la
 
 ---
 
+## 2026-10-24 — Backup dan restore database (data + media)
+
+- Permintaan pengguna: modul backup dan restore SQL dan storage, dengan memperhatikan besar berkas supaya restore tidak gagal. **Semua media aplikasi ada di database** (`app_user_foto`, `pengumuman_gambar`, `perusahaan.logo`, `opr.logo`; tidak ada folder upload), jadi "storage" = tabel media, dicadangkan terpisah dari data (`media.dump`).
+- Baru: `database/postgres/backup.mjs` (`npm run backup`), `restore.mjs` (`npm run restore`), `pg-alat.mjs` (pencarian pg_dump/pg_restore yang versinya cocok, dipakai juga `uji-reset.mjs`). Cara pakai dan langkah pindah ke VPS: `database/postgres/README.md` bagian Backup dan restore. `backup/` di `.gitignore`.
+- Diuji di komputer ini: cadangan database asli 1,49 GB = 40 MB, 14 detik; dipotong 4 x 10 MB untuk menguji pemotongan; `--periksa` OK; potongan diubah satu byte -> SHA-256 tidak cocok; potongan hilang -> ditolak; tanpa `--timpa` / `--yakin` salah -> ditolak; restore ke database uji (`--langsung`) 18 detik, 61 tabel sama persis, 13 FK web terpasang, sequence di atas id terbesar, `npm test` 61/61 + 3 di database hasil restore. Jalur aman (database sementara lalu tukar) diuji dengan database kecil sekali pakai: berhasil memulihkan data yang diubah setelah cadangan (termasuk 10 foto biner), dan saat gagal (manifest diubah) database lama tetap utuh dan `_pulih` dibersihkan. `npm run uji:reset` dijalankan ulang setelah dipindah ke `pg-alat.mjs`: OK.
+- Jebakan: `pg_restore` di Windows tidak bisa membaca format custom dari stdin (pipa) -> "unsupported version (111.95) in file header". Potongan digabung ke berkas sementara di folder cadangan.
+- Sisa: folder cadangan uji `G:\backup-kopkar-uji` (berisi data anggota) belum dihapus karena penghapusan folder diblok pemeriksaan keamanan; hapus manual. Belum ada halaman admin untuk backup (unggah/unduh berkas besar lewat browser rawan gagal; untuk sekarang lewat perintah di server). Jadwal cadangan rutin (cron di VPS) belum dibuat.
+
+---
+
 ## 2026-10-24 — Admin: Cari Pinjaman, tabel seragam, pinjaman lunas bersaldo buku, pendaftaran, navbar
 
 - **Cari Pinjaman** (`/dashboard/loans/cari`, menu baru di Pinjaman, izin `MENU_DETAIL_PINJAMAN_GRUP` di `config/akses.ts`): pintu ke detail pinjaman tanpa izin Daftar Pinjaman. Nomor yang cocok persis langsung membuka `/dashboard/loans/[no]`; potongan nomor, nama, KPK, atau kode anggota menampilkan daftar pilihan (`cariPinjaman` di `lib/queries/pinjaman-detail.ts`, dibatasi grup pinjaman yang berizin).

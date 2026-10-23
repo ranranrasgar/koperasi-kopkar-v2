@@ -8,23 +8,12 @@
 import fs from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
-import { spawnSync } from 'node:child_process';
-import { fileURLToPath } from 'node:url';
 import pg from 'pg';
+import { cariBin as cariBinPg, jalan, namaDb, pgUrl } from './pg-alat.mjs';
 
-const here = path.dirname(fileURLToPath(import.meta.url));
 const t0 = Date.now();
 const log = (...a) => console.log(`[${((Date.now() - t0) / 1000).toFixed(0).padStart(4)}s]`, ...a);
 const gagal = (pesan) => { console.error(`Gagal: ${pesan}`); process.exit(1); };
-
-function pgUrl() {
-    if (process.env.PG_URL) return process.env.PG_URL;
-    try {
-        return fs.readFileSync(path.join(here, '../../frontend/.env.local'), 'utf8').match(/^PG_URL=(.*)$/m)?.[1]?.trim();
-    } catch {
-        return undefined;
-    }
-}
 
 /** URL database uji: PG_URL_UJI, atau sumber dengan nama database + '_uji'. */
 export function urlUji(sumber) {
@@ -34,34 +23,8 @@ export function urlUji(sumber) {
     return u.toString();
 }
 
-const namaDb = (url) => decodeURIComponent(new URL(url).pathname.replace(/^\//, ''));
-
 /** Folder bin PostgreSQL yang punya pg_dump dengan versi mayor sama dengan server. */
-function cariBin(mayor) {
-    const exe = process.platform === 'win32' ? '.exe' : '';
-    const calon = [];
-    if (process.env.KOPKAR_PG_BIN) calon.push(process.env.KOPKAR_PG_BIN);
-    for (const akar of ['C:/laragon/bin/postgresql', 'C:/Program Files/PostgreSQL']) {
-        try {
-            for (const d of fs.readdirSync(akar)) calon.push(path.join(akar, d, 'bin'), path.join(akar, d));
-        } catch { /* folder tidak ada */ }
-    }
-    calon.push(''); // PATH
-    for (const bin of calon) {
-        const dump = bin ? path.join(bin, `pg_dump${exe}`) : 'pg_dump';
-        if (bin && !fs.existsSync(dump)) continue;
-        const v = spawnSync(dump, ['--version'], { encoding: 'utf8' });
-        const m = v.stdout?.match(/(\d+)\.\d+/);
-        if (v.status === 0 && m && Number(m[1]) === mayor) return bin;
-    }
-    gagal(`pg_dump versi ${mayor} tidak ditemukan. Set KOPKAR_PG_BIN ke folder bin PostgreSQL ${mayor}.`);
-}
-
-function jalan(bin, program, args) {
-    const exe = process.platform === 'win32' ? '.exe' : '';
-    const r = spawnSync(bin ? path.join(bin, program + exe) : program, args, { stdio: 'inherit' });
-    if (r.status !== 0) gagal(`${program} keluar dengan kode ${r.status}`);
-}
+const cariBin = (mayor) => cariBinPg((v) => v === mayor, `versi ${mayor}`).bin;
 
 const TABEL_CEK = ['anggota', 'simpanan', 'pinjaman_tunai', 'jurnal_umum', 'perkiraan', 'opr'];
 

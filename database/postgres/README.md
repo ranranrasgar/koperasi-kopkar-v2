@@ -80,6 +80,26 @@ Diuji 22 Oktober 2026 pada salinan lokal Laragon: MySQL 8.0.30 (data 278 MB) ke 
 - 54 foreign key terpasang; 19 kolom FK wajib sudah `NOT NULL`, 8 kolom belum karena masih ada baris yatim (tabel di bawah).
 - Rahasia: 0 password operator yang dibawa, semua jawaban pertanyaan keamanan ter-hash, 14 akun kas negatif terkoreksi.
 
+## Backup dan restore (pindah server, cadangan rutin)
+
+Satu cadangan berisi seluruh database PostgreSQL: data, akun, operator, pengaturan, panduan, dan **media** (foto anggota, gambar himbauan/promo/notifikasi, logo), karena semua media aplikasi disimpan di database, bukan di folder. Yang tidak ikut: `.env.local` (rahasia, simpan terpisah) dan kode (ada di git).
+
+```
+npm run backup -- --ke G:/cadangan                  # buat cadangan (database sumber hanya dibaca, aplikasi boleh berjalan)
+npm run restore -- <folder-cadangan> --periksa      # periksa kelengkapan dan SHA-256 tanpa mengubah apa pun
+npm run restore -- <folder-cadangan>                # pulihkan ke PG_URL (database tujuan kosong atau belum ada)
+npm run restore -- <folder> --timpa --yakin <nama_db>   # timpa database yang sudah berisi
+```
+
+- **Isi folder** `kopkar-<db>-<tanggal>-<jam>/`: `data.dump` (pg_dump format custom terkompresi, tanpa isi tabel media), `media.dump` (isi `app_user_foto` dan `pengumuman_gambar`), dan `manifest.json` (versi PostgreSQL, commit aplikasi, jumlah baris per tabel, ukuran dan SHA-256 tiap potongan). Hitungan baris, data, dan media diambil dari satu snapshot transaksi, jadi serasi walau ada transaksi saat pencadangan.
+- **Ukuran**: database 1,49 GB (Oktober 2026) menjadi cadangan **40 MB** (indeks dibangun ulang saat restore, sisanya terkompresi); backup ±14 detik, restore ±20 detik. Berkas dipotong per 500 MB (`--potong <MB>`, `0` = tidak dipotong) supaya mudah diunggah atau disalin ke flashdisk FAT32. `--tanpa-media` untuk cadangan tanpa gambar.
+- **Supaya restore tidak gagal**: sebelum database apa pun diubah, tiap potongan diperiksa ukuran dan SHA-256-nya (berkas terpotong atau rusak saat disalin langsung ketahuan), potongan digabung ke satu berkas sementara (dicek ruang disknya, dihapus setelah selesai), versi PostgreSQL tujuan harus sama atau lebih baru dari sumber, dan ruang disk folder data PostgreSQL dicek bila servernya di komputer itu. Restore jalan per bagian (skema, data, media, lalu indeks dan constraint), jadi FK ke tabel media dipasang setelah media masuk.
+- **Menimpa database berisi** (bawaan): dipulihkan ke `<nama>_pulih` dulu, jumlah baris dicocokkan dengan manifest, baru database lama dihapus dan `_pulih` diganti namanya. Bila gagal, database lama tidak tersentuh. Butuh ruang kira-kira sebesar database. Bila ruang tidak cukup: `--langsung` menghapus database lama lebih dulu (pastikan cadangannya sudah `--periksa` OK).
+- `pg_restore` tidak bisa membaca format custom dari pipa di Windows ("unsupported version in file header"), karena itu potongan digabung ke berkas, bukan dialirkan.
+- Folder `backup/` di akar repo ada di `.gitignore` (berisi data anggota). Simpan cadangan di disk lain atau disk luar; disk C komputer pengembangan hampir penuh.
+
+**Pindah ke VPS**: (1) di komputer ini `npm run backup -- --ke <folder>`; (2) salin seluruh folder cadangan ke VPS; (3) di VPS: `git pull`, `npm install`, buat `frontend/.env.local` dan `anggota/.env.local` (PG_URL VPS, rahasia sesi, SMTP, VAPID sama dengan sebelumnya, Google); (4) `npm run restore -- <folder> --periksa`, lalu `npm run restore -- <folder>`; (5) `npm run anggota:pasang` bila kode lebih baru dari cadangan; (6) build dan jalankan ulang aplikasi. PostgreSQL di VPS harus versi 14 atau lebih baru, dengan `pg_dump`/`pg_restore` versi yang sama dengan servernya (`KOPKAR_PG_BIN` bila tidak di PATH).
+
 ## Migrasi data produksi 22 Oktober 2026
 
 Sumber: `db_backup_kopkar_22_10_2026.sql` (dump HeidiSQL dari MySQL 5.7 produksi). Cara memakainya tanpa menyentuh database yang sudah ada:

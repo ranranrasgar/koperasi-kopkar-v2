@@ -8,3 +8,6 @@ next-env.d.ts
 
 # Hasil pemeriksaan data (memuat data anggota), tidak untuk repo
 hasil-periksa/
+
+# Cadangan database (npm run backup), berisi data anggota
+backup/
