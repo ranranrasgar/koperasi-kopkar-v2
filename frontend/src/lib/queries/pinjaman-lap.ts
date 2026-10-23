@@ -8,8 +8,10 @@ export interface Tunggakan {
 }
 
 /**
- * Tunggakan per pinjaman: angsuran yang sudah jatuh tempo (jadwal tagih) dikurangi angsuran yang sudah dibayar (jml_cicilan).
- * Kolom jml_tunggakan dari desktop tidak dipakai karena selalu 0 di data.
+ * Tunggakan per pinjaman: angsuran di jadwal tagih yang sudah terlambat dikurangi angsuran yang sudah dibayar (jml_cicilan).
+ * Terlambat = bulan jatuh temponya sudah berakhir pada tanggal `per` (potongan gaji dibukukan sekitar akhir bulan, jadi angsuran bulan
+ * berjalan belum dianggap terlambat). Aturan sama dengan Daftar Pinjaman. Pinjaman yang saldo bukunya sudah habis tidak dihitung.
+ * Kolom jml_tunggakan dari desktop tidak dipakai karena usang.
  */
 export const daftarTunggakan = (per: string) =>
     query<Tunggakan>(`
@@ -22,7 +24,7 @@ export const daftarTunggakan = (per: string) =>
               FROM pinjaman_tunai p
               JOIN anggota a ON a.id = p.anggota_id
               LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
-              JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.tanggal_angsuran <= $1
+              JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.tanggal_angsuran < date_trunc('month', $1::date)::date
              WHERE p.jml_cicilan < p.lama_angsuran
                -- Pinjaman yang saldo bukunya sudah habis (dilunasi sekaligus) bukan tunggakan; aturan sama dengan Daftar Pinjaman.
                AND COALESCE((SELECT SUM(r.kredit_pokok - r.debit_pokok) FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = p.id), 1000000) > 100
@@ -36,12 +38,17 @@ export const daftarTunggakan = (per: string) =>
               FROM kpr k
               JOIN anggota a ON a.id = k.anggota_id
               LEFT JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id
-              JOIN kpr_rincian_tagih t ON t.kpr_id = k.id AND t.tanggal_angsuran <= $1
+              JOIN kpr_rincian_tagih t ON t.kpr_id = k.id AND t.tanggal_angsuran < date_trunc('month', $1::date)::date
              WHERE k.jml_cicilan < k.lama_angsuran
              GROUP BY k.id, a.id, jk.id)
         SELECT *, jatuh_tempo - jml_cicilan AS tunggak FROM (SELECT * FROM tunai UNION ALL SELECT * FROM kpr) x
          WHERE jatuh_tempo > jml_cicilan
          ORDER BY jatuh_tempo - jml_cicilan DESC, nama`, [per])
+
+/** Pinjaman tunai yang belum lunas tetapi tidak punya jadwal tagih sama sekali (pencairan belum dibukukan lengkap): tidak bisa dinilai menunggak. */
+export const jumlahTanpaJadwal = async () => (await query<{ n: number }>(
+    `SELECT COUNT(*)::int AS n FROM pinjaman_tunai p
+      WHERE p.jml_cicilan < p.lama_angsuran AND NOT EXISTS (SELECT 1 FROM pinjaman_tunai_rincian_tagih t WHERE t.pinjaman_tunai_id = p.id)`))[0]?.n ?? 0
 
 export const jenisMacet = () =>
     query<{ id: number; nama_macet: string; lama: number; denda: number }>("SELECT id, nama_macet, lama, denda FROM jenis_macet ORDER BY lama")

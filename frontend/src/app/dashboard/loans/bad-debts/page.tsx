@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { FormCard, selectClass } from "@/components/transaksi/common"
 import { FormPeriode } from "@/components/laporan/Periode"
-import { daftarTunggakan, jenisMacet } from "@/lib/queries/pinjaman-lap"
+import { daftarTunggakan, jenisMacet, jumlahTanpaJadwal } from "@/lib/queries/pinjaman-lap"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
 import { isTanggal, sp } from "@/lib/list"
 import { MENU } from "@/config/akses"
@@ -19,14 +19,19 @@ export default async function KreditMacetPage(props: PageProps<"/dashboard/loans
     ].filter(Boolean) as string[]
     const grup = grupBoleh.includes(sp(s, "grup")) ? sp(s, "grup") : ""
     const aktif = sp(s, "aktif") || "Y"
-    const [semua, macet] = await Promise.all([daftarTunggakan(per), jenisMacet()])
+    const [semua, macet, tanpaJadwal] = await Promise.all([daftarTunggakan(per), jenisMacet(), jumlahTanpaJadwal()])
     const data = semua.filter((t) => grupBoleh.includes(t.grup) && (!grup || t.grup === grup)
         && (aktif === "" || t.aktif === (aktif === "Y")))
     const kelas = (t: number) => macet.filter((m) => t >= m.lama).at(-1)?.nama_macet
+    // Hari tunggak (DPD) = selisih tanggal laporan dengan jatuh tempo angsuran tertua yang belum dibayar. Bila tabel jenis macet kosong,
+    // kolektibilitas memakai tingkatan umum perbankan (OJK): 1-90 hari Dalam Perhatian Khusus, 91-120 Kurang Lancar, 121-180 Diragukan, lebih dari 180 Macet.
+    const hariTunggak = (sejak: string) => Math.max(0, Math.round((new Date(`${per}T00:00:00`).getTime() - new Date(`${sejak.slice(0, 10)}T00:00:00`).getTime()) / 86_400_000))
+    const kolektibilitas = (hari: number) => hari > 180 ? "Macet" : hari > 120 ? "Diragukan" : hari > 90 ? "Kurang Lancar" : "Dalam Perhatian Khusus"
+    const warnaKol = (k: string) => k === "Macet" ? "text-red-600 dark:text-red-400 font-semibold" : k === "Diragukan" ? "text-orange-600 dark:text-orange-400" : k === "Kurang Lancar" ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
     const total = data.reduce((x, t) => x + t.rp_tunggak, 0)
 
     return (
-        <FormCard title="Kredit Macet / Tunggakan" description="Angsuran yang sudah jatuh tempo menurut jadwal tagih tetapi belum dibayar, per pinjaman.">
+        <FormCard title="Kredit Macet / Tunggakan" description="Angsuran yang terlambat menurut jadwal tagih (bulan jatuh temponya sudah berakhir) dan belum dibayar, per pinjaman.">
             <FormPeriode sampai={per} satuTanggal>
                 <label className="text-xs text-muted-foreground space-y-1">
                     <span className="block font-semibold">Grup</span>
@@ -42,11 +47,16 @@ export default async function KreditMacetPage(props: PageProps<"/dashboard/loans
                     </select>
                 </label>
             </FormPeriode>
+            <p className="mt-3 text-xs text-muted-foreground print:hidden">
+                Aturan: angsuran dianggap menunggak setelah bulan jatuh temponya berakhir, karena potongan gaji dibukukan sekitar akhir bulan. Hari tunggak dihitung dari
+                jatuh tempo angsuran tertua yang belum dibayar. Pinjaman yang saldo bukunya sudah habis (dilunasi sekaligus atau di-top-up) tidak dihitung.
+                {tanpaJadwal > 0 && ` ${tanpaJadwal} pinjaman belum punya jadwal tagih (data pencairan belum lengkap) sehingga tidak bisa dinilai.`}
+            </p>
             {grupBoleh.length === 0 && <p className="mt-4 text-sm text-muted-foreground">Grup Anda tidak punya akses ke laporan tunggakan.</p>}
             <div data-area-cetak data-judul-cetak="Kredit Macet / Tunggakan" data-subjudul-cetak={`Per ${formatTanggal(per, "long")}${grup ? ` · Grup ${grup}` : ""}`}>
             <div className="mt-4 text-sm">
                 <b>{data.length}</b> pinjaman menunggak, total <b className="tabular-nums">Rp {formatAngka(total)}</b> per {formatTanggal(per, "long")}.
-                {macet.length === 0 && <span className="text-muted-foreground"> Kolektibilitas belum diatur (tabel jenis macet kosong).</span>}
+                {macet.length === 0 && <span className="text-muted-foreground"> Kolektibilitas memakai tingkatan umum perbankan (hari tunggak), karena tabel jenis macet kosong.</span>}
             </div>
             <div className="mt-3 overflow-x-auto rounded-md border">
                 <table className="w-full text-sm">
@@ -58,8 +68,9 @@ export default async function KreditMacetPage(props: PageProps<"/dashboard/loans
                             <th className="px-3 py-2 text-center">Dibayar / Jatuh Tempo</th>
                             <th className="px-3 py-2 text-center">Tunggak</th>
                             <th className="px-3 py-2 text-left">Sejak</th>
+                            <th className="px-3 py-2 text-center">Hari</th>
                             <th className="px-3 py-2 text-right">Nilai Tunggakan</th>
-                            {macet.length > 0 && <th className="px-3 py-2 text-left">Kolektibilitas</th>}
+                            <th className="px-3 py-2 text-left">Kolektibilitas</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -74,8 +85,12 @@ export default async function KreditMacetPage(props: PageProps<"/dashboard/loans
                                 <td className="px-3 py-2 text-center">{t.jml_cicilan} / {t.jatuh_tempo} <span className="text-muted-foreground">dari {t.lama_angsuran}</span></td>
                                 <td className="px-3 py-2 text-center font-bold text-error">{t.tunggak}x</td>
                                 <td className="px-3 py-2 whitespace-nowrap">{formatTanggal(t.jatuh_tempo_pertama)}</td>
+                                <td className="px-3 py-2 text-center tabular-nums">{hariTunggak(t.jatuh_tempo_pertama)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{formatAngka(t.rp_tunggak)}</td>
-                                {macet.length > 0 && <td className="px-3 py-2">{kelas(t.tunggak) ?? "-"}</td>}
+                                {(() => {
+                                    const k = macet.length > 0 ? (kelas(t.tunggak) ?? "-") : kolektibilitas(hariTunggak(t.jatuh_tempo_pertama))
+                                    return <td className={`px-3 py-2 whitespace-nowrap ${macet.length > 0 ? "" : warnaKol(k)}`}>{k}</td>
+                                })()}
                             </tr>
                         ))}
                     </tbody>

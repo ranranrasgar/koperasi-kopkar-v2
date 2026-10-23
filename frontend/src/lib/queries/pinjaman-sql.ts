@@ -15,8 +15,8 @@
 //    anggota langsung ke bank: koperasi membereskannya dengan jurnal umum manual ("jurnal balik", pengembalian potongan gaji) tanpa
 //    mengubah rincian pinjaman. Dari 182, 86 (Rp 531,5 juta) punya jurnal balik/koreksi/pelunasan terkait yang ditemukan lewat nomor
 //    pinjaman atau nama anggota; 96 belum ditemukan jurnalnya. Header pinjaman (rp_saldo_pokok) dan desktop menganggapnya lunas.
-//  - Tunggak: dihitung langsung dari jadwal tagih (pinjaman_tunai_rincian_tagih): angsuran yang sudah jatuh tempo hari ini dikurangi
-//    jml_cicilan, sama dengan laporan Kredit Macet. Kolom jml_tunggakan di pinjaman_tunai (hasil tombol "Cek Tunggakan" desktop) tidak
+//  - Tunggak: dihitung langsung dari jadwal tagih (pinjaman_tunai_rincian_tagih): angsuran yang bulan jatuh temponya sudah berakhir dikurangi
+//    jml_cicilan, sama dengan laporan Kredit Macet (potongan gaji dibukukan akhir bulan, jadi angsuran bulan berjalan belum dianggap terlambat). Kolom jml_tunggakan di pinjaman_tunai (hasil tombol "Cek Tunggakan" desktop) tidak
 //    dipakai karena usang (hanya 14 pinjaman terisi, padahal ±225 menunggak). Jatuh Tempo = tanggal angsuran berikutnya yang belum dibayar.
 //  - Jml Cicilan: penghitung di pinjaman_tunai (dikelola aplikasi desktop).
 //  - Pinjaman tanpa baris rincian sama sekali (belum diposting ke buku) tetap tampil, dengan bayar 0 dan sisa = plafond.
@@ -37,6 +37,12 @@ export interface FilterPinjaman {
 export const SISA_LUNAS = 100
 /** Tanggal hari ini zona Jakarta, dasar hitungan tunggakan. */
 const HARI_INI = "(now() AT TIME ZONE 'Asia/Jakarta')::date"
+/**
+ * Angsuran dianggap menunggak bila BULAN jatuh temponya sudah berakhir (jatuh tempo sebelum tanggal 1 bulan ini). Potongan gaji
+ * dibukukan sekitar akhir bulan (tanggal 27-30), jadi angsuran jatuh tempo tanggal 9 yang belum dibukukan di pertengahan bulan
+ * belum terlambat. Aturan yang sama dipakai laporan Kredit Macet (pinjaman-lap.ts).
+ */
+const BATAS_TUNGGAK = `date_trunc('month', ${HARI_INI})::date`
 
 export function sqlLaporanPinjaman(f: FilterPinjaman) {
     const values: unknown[] = []
@@ -91,8 +97,8 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
                            COALESCE(SUM(r.debit_bunga), 0) AS bayar_bunga
                       FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = h.id) s ON true
               LEFT JOIN LATERAL (
-                    -- Jadwal tagih: jumlah angsuran yang sudah jatuh tempo hari ini (untuk tunggakan) dan tanggal angsuran berikutnya yang belum dibayar.
-                    SELECT COUNT(*) FILTER (WHERE t.tanggal_angsuran <= ${HARI_INI}) AS jatuh_tempo_n,
+                    -- Jadwal tagih: jumlah angsuran yang sudah terlambat (bulan jatuh temponya berakhir, untuk tunggakan) dan tanggal angsuran berikutnya yang belum dibayar.
+                    SELECT COUNT(*) FILTER (WHERE t.tanggal_angsuran < ${BATAS_TUNGGAK}) AS jatuh_tempo_n,
                            MIN(t.tanggal_angsuran) FILTER (WHERE t.angsuran_ke > h.jml_cicilan) AS jatuh_tempo
                       FROM pinjaman_tunai_rincian_tagih t WHERE t.pinjaman_tunai_id = h.id) j ON true) y`
 
