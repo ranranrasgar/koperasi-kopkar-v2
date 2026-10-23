@@ -6,7 +6,7 @@ import { wajibIzin } from "@/lib/operator"
 
 function KotakCari({ nilai }: { nilai?: string }) {
     return (
-        <form method="get" action="/dashboard/panduan" role="search" className="relative w-full max-w-xl print:hidden">
+        <form method="get" action="/dashboard/panduan" role="search" className="relative w-full max-w-[36rem] print:hidden">
             <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden>search</span>
             <input name="q" defaultValue={nilai} placeholder="Cari panduan, misalnya: pengambilan simpanan" aria-label="Cari panduan"
                 className="h-12 w-full rounded-full border bg-background pl-12 pr-4 text-[15px] shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -63,7 +63,7 @@ export default async function PusatPanduanPage(props: PageProps<"/dashboard/pand
                 </div>
                 <div className="mt-6 text-xs font-semibold uppercase tracking-[0.2em] text-muted-foreground">Pusat Panduan</div>
                 <h1 className="mx-auto mt-3 max-w-2xl text-3xl font-semibold leading-tight">Aturan dan cara kerja aplikasi koperasi, di satu tempat.</h1>
-                <p className="mx-auto mt-3 max-w-xl text-muted-foreground">
+                <p className="mx-auto mt-3 max-w-[36rem] text-muted-foreground">
                     {jumlah} panduan dari data master, transaksi simpanan dan pinjaman, sampai laporan keuangan dan tutup buku.
                 </p>
                 <div className="mt-8 w-full flex justify-center"><KotakCari /></div>

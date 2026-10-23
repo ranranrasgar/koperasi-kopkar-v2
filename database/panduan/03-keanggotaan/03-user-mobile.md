@@ -1,25 +1,44 @@
 ---
-judul: User aplikasi mobile
-ringkasan: Akun aplikasi Android anggota, status aktif, dan hubungannya dengan pengajuan kredit.
+judul: User Mobile (akun aplikasi anggota)
+ringkasan: Daftar akun aplikasi anggota, filter pendaftaran baru, dan aksi setujui, tolak, hapus, serta jadikan anggota.
 menu: /dashboard/members/mobile-users
 ---
-Anggota bisa memakai **aplikasi Android** koperasi untuk melihat saldo simpanan, pinjaman, dan mengajukan kredit. Akun-akun itu tampil di **Keanggotaan → User Mobile**.
+Anggota memakai **aplikasi anggota** (di browser HP, dan aplikasi Android lama) untuk melihat saldo simpanan, pinjaman, dan mengajukan kredit. Semua akunnya tampil di **Keanggotaan → User Mobile**. Cara kerja pendaftaran akun baru dijelaskan lengkap di kategori **Pendaftaran Anggota Baru (Admin)**; halaman ini ringkasannya.
+
+## Kolom tabel
 
 | Kolom | Arti |
 | --- | --- |
-| Username | Nama login di aplikasi Android |
+| Username | Nama login anggota |
 | Kode Anggota / Nama | Anggota pemilik akun |
-| Email | Email terdaftar |
-| Status | Aktif atau Tidak aktif |
-| Notifikasi | Apakah aplikasi sudah terdaftar menerima notifikasi (tersembunyi; buka lewat **Kolom**) |
+| Email | Email akun |
+| Status | **Aktif**, **Tidak aktif**, **Menunggu** (pendaftaran baru), atau **Ditolak** |
+| Notifikasi | Apakah perangkat sudah menerima notifikasi (tersembunyi; buka lewat **Kolom**) |
 | Dibuat / Diubah | Tanggal akun dibuat dan terakhir diubah |
+
+## Filter Status
+
+| Pilihan | Isinya |
+| --- | --- |
+| Anggota baru (menunggu) | Pendaftaran baru yang belum Anda putuskan |
+| Sudah disetujui | Pendaftaran baru yang Anda setujui |
+| Ditolak | Pendaftaran baru yang Anda tolak |
+| Aktif / Tidak aktif | Semua akun menurut status aktifnya, termasuk akun lama |
+
+## Aksi di setiap baris
+
+| Tombol | Muncul di | Fungsi |
+| --- | --- | --- |
+| Centang hijau (**Setujui**) | Baris Menunggu | Mengaktifkan akun. Karyawan Mattel yang belum anggota otomatis dijadikan anggota. Hanya bisa bila email pendaftar sudah terverifikasi. |
+| Silang oranye (**Tolak**) | Baris Menunggu | Akun tetap nonaktif; pendaftar diberi tahu lewat email. |
+| Ikon tambah orang (**Jadikan anggota**) | Akun aktif yang belum terhubung ke anggota | Membuat data anggota (atau menautkan ke anggota dengan NIK yang sama). |
+| Tempat sampah (**Hapus**) | Semua baris | Menghapus akun beserta data aplikasinya. Akun yang sudah terhubung ke anggota hanya boleh dihapus **superadmin atau grup admin**. |
+| Mata (**Detail**) | Semua baris | Melihat semua kolom baris itu. |
 
 ## Yang perlu diketahui
 
-- Akun yang sama dipakai di aplikasi Android lama dan aplikasi anggota baru (di browser HP). Username tidak membedakan huruf besar/kecil.
-- Pengajuan kredit dari kedua aplikasi masuk ke **Pinjaman → Pengajuan Kredit**.
-- Password diatur oleh anggota sendiri dan **tidak bisa diubah dari web admin**. Anggota yang lupa password bisa membuat password baru di aplikasi anggota baru lewat **Lupa password** (pertanyaan keamanan, atau email bila sudah diisi).
-- Anggota dan karyawan Mattel bisa mendaftar akun sendiri di aplikasi anggota baru dengan NIK karyawan (harus terdaftar sebagai anggota atau di data karyawan Mattel) dan email aktif. Akun baru **aktif setelah email diverifikasi** dengan kode 6 angka yang dikirim ke email itu (berlaku 15 menit). Karyawan yang belum menjadi anggota hanya melihat petunjuk untuk mendaftar sebagai anggota.
-- Setelah masuk ke aplikasi anggota baru, akun tanpa email wajib mengisi email lebih dulu. Satu email hanya untuk satu akun.
-- Notifikasi (himbauan, promo, keputusan pengajuan) juga dikirim ke email anggota, **hanya bila email sudah diverifikasi**; pesan chat tidak dikirim lewat email. Akun lama yang emailnya belum diverifikasi dapat memverifikasinya di Akun > Email.
-- Halaman ini bersifat baca.
+- Password anggota diatur anggota sendiri dan **tidak bisa diubah dari web admin**.
+- Username tidak membedakan huruf besar/kecil. Satu email hanya untuk satu akun.
+- Pengajuan kredit dari aplikasi anggota masuk ke **Pinjaman → Pengajuan Kredit**.
+- Notifikasi (himbauan, promo, keputusan pengajuan) juga dikirim ke email anggota, **hanya bila email sudah terverifikasi**. Pesan chat tidak dikirim lewat email.
+- Hak akses halaman ini: menu *User* atau *Request User && Anggota Baru* pada grup operator.
