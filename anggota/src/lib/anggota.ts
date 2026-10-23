@@ -38,3 +38,13 @@ export async function wajibMasuk() {
     if (!a) redirect("/masuk")
     return a
 }
+
+/**
+ * Untuk halaman data keuangan: hanya anggota terdaftar. Karyawan Mattel yang belum menjadi anggota
+ * dikembalikan ke beranda, yang menjelaskan cara menjadi anggota (keputusan K5).
+ */
+export async function wajibAnggota() {
+    const a = await wajibMasuk()
+    if (a.anggotaId === null) redirect("/beranda")
+    return { ...a, anggotaId: a.anggotaId }
+}

@@ -8,8 +8,8 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ### Pekerjaan berikutnya: PWA anggota (pengganti aplikasi Android)
 - **Baca dulu** `docs/analisis-aplikasi-mobile-lama.md` (hasil analisis Android v5.6 + server PHP), lalu `docs/prd-pwa-anggota.md` (PRD).
-- Status: **Tahap 1 selesai (23 Oktober), belum di-commit.** Keputusan K1-K10 = semua usulan PRD; tampilan bebas dari aplikasi lama, profesional, tanpa "AI slop" (PRD bagian 8). Berikutnya **Tahap 2**: beranda (kartu saldo, menu), navigasi bawah, simpanan, pinjaman, jadwal, potongan, SHU, riwayat, notifikasi; semua query lewat `anggota_id` dari sesi.
-- Jalankan: `npm run dev:anggota` (port 3200, `anggota/.env.local`: `PG_URL`, `ANGGOTA_SESSION_SECRET`) atau `npm run dev:anggota:uji` (port 3201, database uji). Akun uji di database uji: `sulastri` (app_user.id 60); untuk login, atur sendiri password uji di database **uji** saja.
+- Status: **Tahap 1 (commit `80bbfba`) dan Tahap 2 selesai (23 Oktober); Tahap 2 belum di-commit.** Keputusan K1-K10 = semua usulan PRD; tampilan bebas dari aplikasi lama, profesional, tanpa "AI slop" (PRD bagian 8). Berikutnya **Tahap 3**: pengajuan kredit dengan validasi di server (PRD F9), tab "Ajukan" di navigasi. Perlu keputusan pengguna soal ambang "kunci sisa" (lihat temuan Tahap 1).
+- Jalankan: `npm run dev:anggota` (port 3200, `anggota/.env.local`: `PG_URL`, `ANGGOTA_SESSION_SECRET`) atau `npm run dev:anggota:uji` (port 3201, database uji). Akun uji di database uji: `sulastri` (app_user.id 60) dan `Fendra` (id 146, anggota 958: punya pinjaman berjalan, SHU, notifikasi); untuk login, atur sendiri password uji di database **uji** saja.
 - Arsitektur **disetujui pengguna**: workspace baru `anggota/` di monorepo ini (satu `npm install`, dua build/proses, satu VPS); aturan dan query anggota di `backend/src/anggota/` dipakai bersama `mobile-api`. PWA tidak memakai API PHP; PHP tetap live sampai cutover lalu dimatikan.
 - Domain **diputuskan (K11)**: `kopkarmjsmattel.com` landing, `anggota.kopkarmjsmattel.com` PWA, `admin.kopkarmjsmattel.com` admin (dibatasi). Rencana DNS/Nginx/PM2 di PRD bagian 12 (belum dijalankan).
 - Sumber yang dianalisis (di luar repo): Android `G:\Rhansoft\Android\KopkarMJS2000_Rhansoft_upgrade`, server PHP live `C:\laragon\www\KopkarMJS2000_2026` (aturan daftar/login di `v1/user.php`, pengajuan di `includes/DbOperation.php createPinjaman`, token di `includes/Auth.php`).
@@ -17,8 +17,8 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 
 ### Keadaan repo
 - Branch `master`.
-- **Belum di-commit** (23 Oktober, perlu izin pengguna): PWA Tahap 1 (`anggota/`, `backend/src/anggota/`, `backend/test/anggota-akun.test.ts`, perubahan `mobile-api`, `package.json`, lock), keputusan di `docs/prd-pwa-anggota.md`, `CLAUDE.md`, dan WORKLOG ini.
-- Commit terakhir: `054abe0` (analisis + PRD PWA), `696a211` (pilihan baris), `c40b3de` (saldo Buku Simpanan).
+- **Belum di-commit** (23 Oktober, perlu izin pengguna): PWA Tahap 2 (halaman di `anggota/src/app/(app)/`, `anggota/src/lib/data.ts`, `format.ts`, `components/`), PRD, dan WORKLOG ini.
+- Commit terakhir: `80bbfba` (PWA Tahap 1), `09758e3` (kueri anggota lewat relasi id), `054abe0` (analisis + PRD PWA).
 - **Tidak ada remote git** (belum di-push ke mana pun). Semua commit hanya ada di `C:\laragon\www\NextJS\Koperasi-Kopkar-v2`. Untuk dikerjakan dari komputer lain, pengguna perlu menambah remote dan push lebih dulu.
 - Commit sesi 22 Oktober (lama → baru):
   - 19dfe4a..72b7d8a: halaman per kelompok, perbaikan mode uji form master/pengajuan, dokumentasi
@@ -55,6 +55,15 @@ Terakhir diperbarui 23 Oktober 2026. Agent baru: baca bagian ini dulu, lalu entr
 - Tabel `jenis_macet` kosong, jadi kolom kolektibilitas Kredit Macet tidak tampil.
 - `npm audit`: `next` 16.2.10 punya celah kritis *Proxy bypass* (Turbopack). Halaman dan actions tetap cek sesi di server, tetapi sebaiknya `next` dinaikkan versinya.
 - Saat aturan transaksi berubah, perbarui artikel di `database/panduan` (dan di database bila belum disunting admin).
+
+### PWA anggota Tahap 2 (23 Oktober)
+- Halaman: Beranda (kartu saldo dengan tombol sembunyikan nominal yang diingat per perangkat, pintasan, potongan bulan ini, SHU, pinjaman berjalan), Simpanan + mutasi per jenis dengan saldo berjalan, Pinjaman (tunai dan KPR terpisah) + rincian dengan tab Jadwal/Pembayaran, Potongan, SHU per tahun buku, Riwayat, Notifikasi, Akun (data diri, keanggotaan, rekening, keluar), halaman 404. Navigasi bawah: Beranda, Simpanan, Pinjaman, Riwayat, Akun.
+- Data: `anggota/src/lib/data.ts`, semua lewat `anggotaId` dari sesi. Rincian pinjaman dicek `id + anggota_id` (pinjaman anggota lain → 404, diuji). Query bersama backend dipanggil lewat `poolAngka` (`lib/db.ts`) supaya angka sampai sebagai number.
+- Keputusan yang diterapkan: sisa pinjaman = sisa pokok dari rincian (`SUM(kredit_pokok - debit_pokok)`), lunas bila ≤ Rp 100 (sama dengan status lunas laporan admin), KPR terpisah (K3); potongan bulan ini = rumus `proyeksiPotongan` admin untuk satu anggota (K2); karyawan bukan anggota hanya melihat Beranda berisi penjelasan dan Akun (K5, `wajibAnggota()`).
+- **Temuan SHU**: di tutup buku 2025 `temp_shu_backup.rp_labaditahan` = 0 untuk semua anggota, sehingga rumus aplikasi lama (`getShu`, juga di Android dan mobile-api) selalu menghasilkan 0. PWA menampilkan `rp_pencairan` (hasil hitung SHU desktop per anggota) sebagai SHU diterima, rumus lama hanya bila kosong. Komponen SHU hanya tampil bila rumus lama menghasilkan nilai. Perlu dikonfirmasi pengguna/akuntan.
+- **Beda sisa pinjaman**: sisa pokok dari rincian berbeda dari rumus lama (`pokok - pokok/lama × cicilan`) pada 7.607 dari 22.957 pinjaman; 1.730 pinjaman masih bersisa menurut rincian vs 1.621 menurut rumus.
+- Uji di browser (server uji 3201, 375×812, gelap dan terang) dengan akun Fendra: semua halaman tampil; total simpanan Beranda = total Simpanan − simpanan pokok; sisa pinjaman cocok dengan sisa jadwal; tombol sembunyikan nominal tersimpan setelah muat ulang. Diperbaiki saat uji: `kode_pos` bertipe integer (galat `trim`), saldo mutasi terpotong, kotak KPR kosong, baris riwayat terlalu terpotong.
+- Belum: gambar himbauan/promo (file di server PHP, K10), Web Push, manifest/service worker (Tahap 5), ganti password/email/foto (Tahap 4).
 
 ### PWA anggota Tahap 1 (23 Oktober)
 - Keputusan pengguna: K1-K10 semua usulan PRD; tampilan profesional, modern, tidak harus mirip Android lama, tanpa "AI slop" (PRD bagian 8 dan 11). Relasi wajib lewat id/FK, bukan `kode_agt`.

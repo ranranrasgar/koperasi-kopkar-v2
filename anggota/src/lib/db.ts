@@ -22,6 +22,20 @@ export async function query<T = Record<string, unknown>>(sql: string, params: un
     }) as T[]
 }
 
+/**
+ * Pool tiruan untuk query bersama di backend/src/anggota/queries.ts: hasilnya diubah seperti query() di atas,
+ * sehingga uang dan jumlah sampai ke halaman sebagai number.
+ */
+export const poolAngka = {
+    async query(sql: string, params: unknown[] = []) {
+        await connection()
+        const r = await pool.query(sql, params)
+        const conv = r.fields.filter((f) => f.dataTypeID === NUMERIC || f.dataTypeID === INT8).map((f) => f.name)
+        for (const row of r.rows) for (const k of conv) if (row[k] !== null) row[k] = Number(row[k])
+        return r
+    },
+} as unknown as pg.Pool
+
 /** Nama database uji bila dijalankan lewat npm run dev:uji -w anggota, selain itu null. */
 export const serverUji = process.env.KOPKAR_SERVER_UJI || null
 

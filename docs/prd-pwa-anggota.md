@@ -123,6 +123,7 @@ Nomor F dipakai untuk pelacakan. "Paritas" berarti mengikuti perilaku yang dirin
 ### F11. SHU
 - Daftar tahun buku; total SHU dan 4 komponen (sukarela, jasa uang, jasa barang, lama keanggotaan) + No. Reff. Rumus port v2 (bug filter tahun PHP sudah diperbaiki).
 - Teks informasi lama dipertahankan: SHU dibagikan setelah RAT dan dikreditkan ke simpanan sukarela.
+- **Temuan 23 Oktober 2026**: `rp_labaditahan` di tutup buku 2025 bernilai 0, sehingga rumus lama selalu 0. PWA menampilkan `temp_shu_backup.rp_pencairan` (hasil hitung desktop) sebagai SHU diterima; rumus lama hanya cadangan. Perlu konfirmasi pengguna/akuntan.
 
 ### F12. Riwayat transaksi
 - Gabungan simpanan, angsuran pinjaman, angsuran KPR, pengajuan, SHU; terbaru dulu; bertahap (paritas `gethistory`).
@@ -175,7 +176,7 @@ Nomor F dipakai untuk pelacakan. "Paritas" berarti mengikuti perilaku yang dirin
 | --- | --- | --- |
 | 0 | Keputusan bagian 11 | Semua K terjawab (**selesai 23 Oktober 2026**) |
 | 1 | Workspace `anggota/`, pindah query ke `backend/src/anggota/`, sesi anggota, login (MD5/bcrypt), logout | Login anggota contoh berhasil; `mobile-api` tetap lolos uji kontrak (**selesai 23 Oktober 2026**) |
-| 2 | Beranda, profil, simpanan, pinjaman, jadwal, potongan, SHU, riwayat, notifikasi (baca) | Uji paritas: angka sama dengan `mobile-api`/PHP untuk ≥ 20 anggota contoh |
+| 2 | Beranda, profil, simpanan, pinjaman, jadwal, potongan, SHU, riwayat, notifikasi (baca) | Uji paritas: angka sama dengan `mobile-api`/PHP untuk ≥ 20 anggota contoh (**halaman selesai 23 Oktober 2026**; kueri bersama sudah diuji 40 anggota; sisa pinjaman dan SHU sengaja berbeda, lihat F8/F11) |
 | 3 | Pengajuan kredit dengan validasi server | Uji per aturan (staff, grade, sisa, tenor, besar, persen dari DB); pengajuan muncul di admin `/dashboard/loans/apply` |
 | 4 | Daftar akun, wajib email, lupa password (email + pertanyaan), ganti password/email, foto | Uji alur lengkap di database uji |
 | 5 | PWA: manifest, service worker, Web Push, pasang di Android/iOS | Lighthouse PWA lolos; notifikasi uji terkirim |
