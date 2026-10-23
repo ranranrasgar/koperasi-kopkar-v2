@@ -194,13 +194,11 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
 
             {/* Data Table */}
             <div className="bg-surface rounded-xl border border-outline-variant shadow-xs overflow-hidden print:hidden">
-                <div className="flex items-center justify-end border-b border-outline-variant px-3 py-2 print:hidden">
-                    <PilihKolom kolom={KOLOM.filter((k) => k.judul !== "Nama Anggota" && k.judul !== "No.Pinjaman").map((k) => ({ kunci: k.judul, label: k.judul }))}
-                        terlihat={terlihat} onUbah={ubahKolom} onAturUlang={aturUlangKolom} sudahDiubah={kolomDiubah} />
-                </div>
                 {/* Halaman (atas) */}
                 {!isLoading && <Paginasi page={page} totalPages={totalPages} pageSize={pageSize} total={totalRecords} onHalaman={(p) => go(p)} onBaris={(v) => go(1, v)}
-                    className="border-b border-outline-variant bg-surface-container-lowest" />}
+                    className="border-b border-outline-variant bg-surface-container-lowest"
+                    awal={<PilihKolom kolom={KOLOM.filter((k) => k.judul !== "Nama Anggota" && k.judul !== "No.Pinjaman").map((k) => ({ kunci: k.judul, label: k.judul }))}
+                        terlihat={terlihat} onUbah={ubahKolom} onAturUlang={aturUlangKolom} sudahDiubah={kolomDiubah} />} />}
                 <div className="overflow-x-auto w-full">
                     {isLoading ? (
                         <div className="h-64 flex flex-col items-center justify-center text-on-surface-variant">

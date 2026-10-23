@@ -19,9 +19,11 @@ function nomorHalaman(aktif: number, total: number): (number | "…")[] {
  * Bilah halaman: baris per halaman, keterangan "Menampilkan x - y dari z", tombol awal/sebelumnya/nomor/berikutnya/akhir,
  * dan loncat ke halaman tertentu. Dipakai di atas dan di bawah tabel.
  */
-export function Paginasi({ page, totalPages, pageSize, total, onHalaman, onBaris, disabled, className }: {
+export function Paginasi({ page, totalPages, pageSize, total, onHalaman, onBaris, disabled, className, awal }: {
     page: number; totalPages: number; pageSize: number; total: number
     onHalaman: (p: number) => void; onBaris: (nilai: string) => void; disabled?: boolean; className?: string
+    /** Kontrol tambahan di awal baris (mis. menu Kolom), supaya tidak memakai baris sendiri. */
+    awal?: React.ReactNode
 }) {
     const [loncat, setLoncat] = useState("")
     if (total === 0) return null
@@ -37,6 +39,7 @@ export function Paginasi({ page, totalPages, pageSize, total, onHalaman, onBaris
     return (
         <div className={cn("flex flex-wrap items-center justify-between gap-x-6 gap-y-2 p-3 print:hidden", className)}>
             <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+                {awal}
                 <PilihBaris pageSize={pageSize} total={total} onUbah={onBaris} disabled={disabled} />
                 <span className="text-xs text-on-surface-variant">
                     Menampilkan <b className="text-on-surface">{formatAngka(dari)}</b> - <b className="text-on-surface">{formatAngka(sampai)}</b> dari{" "}
