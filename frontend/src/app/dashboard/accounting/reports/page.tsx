@@ -1,8 +1,9 @@
 import Link from "next/link"
 import { FormCard } from "@/components/transaksi/common"
 import { FormPeriode, KopLaporan } from "@/components/laporan/Periode"
+import { query } from "@/lib/db"
 import { saldoPerAkun, type SaldoAkun } from "@/lib/queries/laporan"
-import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
+import { formatAngka, formatAngka2, formatTanggal, hariIni } from "@/lib/format"
 import { isTanggal, sp } from "@/lib/list"
 import { MENU } from "@/config/akses"
 import { wajibIzin } from "@/lib/operator"
@@ -88,6 +89,10 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
         const pendapatan = akun.filter((a) => a.kode_klasifikasi === 40 && ada(a, a.kredit - a.debit))
         const biaya = akun.filter((a) => a.kode_klasifikasi === 50 && ada(a, a.debit - a.kredit))
         const totP = pendapatan.reduce((t, a) => t + a.kredit - a.debit, 0), totB = biaya.reduce((t, a) => t + a.debit - a.kredit, 0)
+        // Pajak pendapatan = persen di Pengaturan Perusahaan x pendapatan sebelum pajak (nol bila rugi), seperti Rugi Laba desktop.
+        const [{ persen }] = await query<{ persen: number }>("SELECT COALESCE(MAX(persen_pajak_pendapatan), 0)::float8 AS persen FROM perusahaan")
+        const sebelumPajak = totP - totB
+        const pajak = Math.max(0, sebelumPajak) * persen / 100
         isi = (
             <>
                 <KopLaporan judul="Laporan Rugi Laba" periode={`${formatTanggal(dari, "long")} s/d ${formatTanggal(sampai, "long")}`} />
@@ -95,9 +100,15 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
                     <Bagian judul="PENDAPATAN" akun={pendapatan} nilai={(a) => a.kredit - a.debit} total="Jumlah Pendapatan" />
                     <Bagian judul="BIAYA" akun={biaya} nilai={(a) => a.debit - a.kredit} total="Jumlah Biaya" />
                     <div className="flex justify-between border-t-2 pt-2 font-bold">
-                        <span>SISA HASIL USAHA (SHU)</span><span className="tabular-nums">{formatAngka(totP - totB)}</span>
+                        <span>PENDAPATAN SEBELUM PAJAK</span><span className="tabular-nums">{formatAngka(sebelumPajak)}</span>
                     </div>
-                    <p className="mt-2 text-[11px] text-muted-foreground">Jurnal tutup buku (TBT) tidak dihitung supaya periode yang mencakup 31 Desember tetap menunjukkan hasil usaha.</p>
+                    <div className="flex justify-between py-1 font-semibold">
+                        <span>PAJAK PENDAPATAN ({String(persen).replace(".", ",")}%)</span><span className="tabular-nums">{formatAngka2(pajak)}</span>
+                    </div>
+                    <div className="flex justify-between border-t-2 pt-2 font-bold">
+                        <span>PENDAPATAN SETELAH PAJAK (SHU)</span><span className="tabular-nums">{formatAngka2(sebelumPajak - pajak)}</span>
+                    </div>
+                    <p className="mt-2 text-[11px] text-muted-foreground">Jurnal tutup buku (TBT) tidak dihitung supaya periode yang mencakup 31 Desember tetap menunjukkan hasil usaha. Persen pajak diatur di Pengaturan Perusahaan; pajak hanya tampil sebagai angka laporan dan tidak dijurnal.</p>
                 </div>
             </>
         )
