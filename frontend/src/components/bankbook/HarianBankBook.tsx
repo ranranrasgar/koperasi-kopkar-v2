@@ -42,8 +42,7 @@ function IsiHari({ tgl, formProps, versi }: { tgl: string; formProps: FormProps;
                                 <td className="px-1 py-1 whitespace-nowrap">
                                     <div className="flex items-center">
                                     <TombolVoucher nomorBukti={t.nomor_bukti} />
-                                    {t.rekonsiliasi ? <span className="text-[10px] text-muted-foreground">Rekon</span>
-                                        : t.bankbook ? <><TombolBankBookUbah nomorBukti={t.nomor_bukti} {...formProps} /><TombolBankBookHapus nomorBukti={t.nomor_bukti} /></>
+                                    {t.bankbook ? <><TombolBankBookUbah nomorBukti={t.nomor_bukti} {...formProps} /><TombolBankBookHapus nomorBukti={t.nomor_bukti} /></>
                                         : <span className="text-[10px] text-muted-foreground" title="Dibuat transaksi lain; ubah dari asalnya">Sistem</span>}
                                     </div>
                                 </td>

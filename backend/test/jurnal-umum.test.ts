@@ -40,7 +40,7 @@ test('jurnal umum: tidak seimbang dan tanpa keterangan ditolak', async () => {
     });
 });
 
-test('jurnal umum: baca, ubah, hapus; bukti non-JU/BB dan yang direkonsiliasi terkunci', async () => {
+test('jurnal umum: baca, ubah, hapus; bukti non-JU/BB terkunci', async () => {
     await inTx(async (db) => {
         const a = await postJurnalUmum(db, { tanggal: '2031-04-01', deskripsi: 'Awal', opr: 'uji', lines: [
             { kodePerkiraan: '5.1.00.95', debit: '600', deskripsi: 'baris sendiri' }, { kodePerkiraan: '5.1.00.95', debit: '400' }, { kodePerkiraan: '1.1.01.21', kredit: '1000' }] });
@@ -55,11 +55,8 @@ test('jurnal umum: baca, ubah, hapus; bukti non-JU/BB dan yang direkonsiliasi te
         await db.query('SAVEPOINT a');
         await assert.rejects(ubahJurnalUmum(db, a.nomorBukti, { tanggal: '2031-04-02', deskripsi: 'x', opr: 'uji', lines: [] }), /Tanggal jurnal tidak bisa diubah/);
         await db.query('ROLLBACK TO a');
-        await db.query("UPDATE jurnal_umum SET status = 'Reconcile' WHERE nomor_bukti = $1", [a.nomorBukti]);
-        await assert.rejects(hapusJurnalUmum(db, a.nomorBukti), /direkonsiliasi/);
-        await db.query("UPDATE jurnal_umum SET status = '' WHERE nomor_bukti = $1", [a.nomorBukti]);
         await hapusJurnalUmum(db, a.nomorBukti);
         assert.equal(await bacaJurnalUmum(db, a.nomorBukti), null);
-        assert.match(alasanTerkunci('CR-1026-23315', false) ?? '', /transaksi lain/);
+        assert.match(alasanTerkunci('CR-1026-23315') ?? '', /transaksi lain/);
     });
 });

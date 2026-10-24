@@ -37,21 +37,19 @@ export interface BuktiJurnal {
 }
 
 /**
- * Bukti yang boleh diubah atau dihapus dari web: jurnal umum (JU/) dan bukti Bank Book (BB/) yang belum direkonsiliasi.
+ * Bukti yang boleh diubah atau dihapus dari web: jurnal umum (JU/) dan bukti Bank Book (BB/).
  * Bukti buatan transaksi lain (simpanan, pinjaman, SHU, tutup buku) tidak boleh, supaya buku pembantunya tidak tidak sinkron.
  */
-export function alasanTerkunci(nomorBukti: string, rekonsiliasi: boolean): string | null {
+export function alasanTerkunci(nomorBukti: string): string | null {
     if (!/^(JU|BB)\//.test(nomorBukti)) return 'Bukti ini dibuat oleh transaksi lain; ubah atau hapus dari asal transaksinya.';
-    if (rekonsiliasi) return 'Sudah direkonsiliasi.';
     return null;
 }
 
 /** Baca satu bukti lengkap (untuk voucher dan form ubah); null bila tidak ada. */
 export async function bacaJurnalUmum(db: Pick<Db, 'query'>, nomorBukti: string): Promise<BuktiJurnal | null> {
     const r = await db.query<{ kode_perkiraan: string; nama_perkiraan: string | null; deskripsi: string | null; d: string; k: string;
-        tanggal: string; opr: string | null; rekon: boolean }>(
-        `SELECT j.kode_perkiraan, p.nama_perkiraan, j.deskripsi, j.debit_jurnalumum d, j.kredit_jurnalumum k, j.tanggal_jurnalumum::text tanggal, j.opr,
-                (j.status = 'Reconcile' OR j.tgl_rekonsiliasi IS NOT NULL) rekon
+        tanggal: string; opr: string | null }>(
+        `SELECT j.kode_perkiraan, p.nama_perkiraan, j.deskripsi, j.debit_jurnalumum d, j.kredit_jurnalumum k, j.tanggal_jurnalumum::text tanggal, j.opr
            FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan
           WHERE j.nomor_bukti = $1 ORDER BY CASE WHEN j.debit_jurnalumum > 0 THEN 0 ELSE 1 END, j.urutan`, [nomorBukti]);
     if (!r.rows.length) return null;
@@ -61,7 +59,7 @@ export async function bacaJurnalUmum(db: Pick<Db, 'query'>, nomorBukti: string):
         // Keterangan jurnal = keterangan baris yang paling sering (baris tanpa keterangan sendiri memakainya).
         deskripsi: [...baris.reduce((m, x) => m.set(x.deskripsi, (m.get(x.deskripsi) ?? 0) + 1), new Map<string, number>())]
             .sort((a, b) => b[1] - a[1])[0][0],
-        terkunci: alasanTerkunci(nomorBukti, r.rows.some((x) => x.rekon)),
+        terkunci: alasanTerkunci(nomorBukti),
     };
 }
 
@@ -78,7 +76,7 @@ export async function ubahJurnalUmum(db: Db, nomorBukti: string, i: JurnalUmumIn
     return { nomorBukti, baris };
 }
 
-/** Hapus bukti JU/ atau BB/ yang belum direkonsiliasi. */
+/** Hapus bukti JU/ atau BB/. */
 export async function hapusJurnalUmum(db: Db, nomorBukti: string) {
     const b = await bacaJurnalUmum(db, nomorBukti);
     if (!b) throw new Error(`Bukti ${nomorBukti} tidak ditemukan`);

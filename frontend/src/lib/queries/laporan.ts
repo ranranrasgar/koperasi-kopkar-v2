@@ -108,7 +108,7 @@ export async function harianBankBook(kode: string, dari: string, sampai: string)
 
 export interface TransaksiBankBook {
     nomor_bukti: string; tanggal: string; deskripsi: string | null; lawan: string | null; debit: number; kredit: number
-    opr: string | null; rekonsiliasi: boolean; bankbook: boolean
+    opr: string | null; bankbook: boolean
 }
 
 /** Bukti yang menyentuh akun kas/bank pada satu tanggal, dengan nama akun lawannya, urut seperti dicatat. */
@@ -119,7 +119,7 @@ export const transaksiBankBook = (kode: string, tanggal: string) =>
                   FROM jurnal_umum x LEFT JOIN perkiraan p ON p.kode_perkiraan = x.kode_perkiraan
                  WHERE x.nomor_bukti = j.nomor_bukti AND x.kode_perkiraan <> $1) lawan,
                SUM(j.debit_jurnalumum) debit, SUM(j.kredit_jurnalumum) kredit, MIN(j.opr) opr,
-               BOOL_OR(j.status = 'Reconcile' OR j.tgl_rekonsiliasi IS NOT NULL) rekonsiliasi, j.nomor_bukti LIKE 'BB/%' bankbook
+               j.nomor_bukti LIKE 'BB/%' bankbook
           FROM jurnal_umum j
          WHERE j.kode_perkiraan = $1 AND j.tanggal_jurnalumum = $2 AND NOT ${PEMBUKA}
          GROUP BY j.nomor_bukti, j.tanggal_jurnalumum ORDER BY MIN(j.urutan)`, [kode, tanggal])

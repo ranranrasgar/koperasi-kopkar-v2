@@ -27,7 +27,7 @@ export function TombolVoucher({ nomorBukti }: { nomorBukti: string }) {
 
 /**
  * Aksi per baris daftar Jurnal Umum: cetak voucher untuk semua bukti; ubah (hanya JU/) dan hapus (JU/ dan BB/) untuk bukti yang boleh.
- * Bukti transaksi lain atau yang sudah direkonsiliasi ditolak server dengan pesan alasannya.
+ * Bukti transaksi lain ditolak server dengan pesan alasannya.
  */
 export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
     const router = useRouter()

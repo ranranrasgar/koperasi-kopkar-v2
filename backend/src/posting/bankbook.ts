@@ -56,14 +56,13 @@ function susunBaris(i: BankBookInput): JournalLine[] {
     return [bank, ...baris];
 }
 
-/** Bukti BB yang boleh diubah/dihapus: ada, dibuat lewat Bank Book, dan belum direkonsiliasi. */
+/** Bukti BB yang boleh diubah/dihapus: ada dan dibuat lewat Bank Book. (Tanda 'Reconcile' di baris kas/bank diisi otomatis oleh desktop saat simpan, bukan kunci.) */
 async function cekBisaDiubah(db: Db, nomorBukti: string) {
     if (!/^BB\/\d{6}\/\d+$/.test(nomorBukti)) throw new Error(`${nomorBukti} bukan bukti Bank Book`);
-    const r = await db.query<{ n: string; rekon: string; tanggal: string }>(
-        `SELECT COUNT(*) n, COUNT(*) FILTER (WHERE status = 'Reconcile' OR tgl_rekonsiliasi IS NOT NULL) rekon, MIN(tanggal_jurnalumum)::text tanggal
+    const r = await db.query<{ n: string; tanggal: string }>(
+        `SELECT COUNT(*) n, MIN(tanggal_jurnalumum)::text tanggal
            FROM jurnal_umum WHERE nomor_bukti = $1`, [nomorBukti]);
     if (Number(r.rows[0].n) === 0) throw new Error(`Bukti ${nomorBukti} tidak ditemukan`);
-    if (Number(r.rows[0].rekon) > 0) throw new Error(`Bukti ${nomorBukti} sudah direkonsiliasi, tidak bisa diubah atau dihapus`);
     return r.rows[0].tanggal;
 }
 
@@ -86,6 +85,8 @@ export async function simpanBankBook(db: Db, i: BankBookInput & { nomorBukti?: s
     }
     await postJournal(db, { nomorBukti, tanggal: i.tanggal, deskripsi: i.deskripsi.trim(), opr: i.opr,
         sumberTipe: 'bankbook', sumberId: null, tahunPrefix: 'BB', lines });
+    // Seperti desktop: baris sisi kas/bank langsung bertanda Reconcile dengan tanggal transaksinya.
+    await db.query(`UPDATE jurnal_umum SET status = 'Reconcile', tgl_rekonsiliasi = tanggal_jurnalumum WHERE nomor_bukti = $1 AND kode_perkiraan = $2`, [nomorBukti, i.akunBank]);
     return { nomorBukti, total: lines[0].debit !== undefined ? String(lines[0].debit) : String(lines[0].kredit) };
 }
 
@@ -116,7 +117,6 @@ export async function bacaBankBook(db: Pick<Db, 'query'>, nomorBukti: string, ak
     const lain = r.rows.filter((x) => x.kode_perkiraan !== akunBank);
     let terkunci: string | null = null;
     if (!nomorBukti.startsWith('BB/')) terkunci = 'Bukan bukti Bank Book (dibuat oleh transaksi lain); ubah dari asal transaksinya.';
-    else if (r.rows.some((x) => x.status === 'Reconcile' || x.tgl_rekonsiliasi)) terkunci = 'Sudah direkonsiliasi.';
     else if (bank.length !== 1) terkunci = 'Akun kas/bank muncul lebih dari satu baris; ubah lewat Jurnal Umum.';
     return {
         nomorBukti, tanggal: r.rows[0].tanggal, deskripsi: bank[0]?.deskripsi ?? r.rows[0].deskripsi ?? '', akunBank,

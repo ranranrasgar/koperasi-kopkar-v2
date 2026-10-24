@@ -57,7 +57,7 @@ test('bank book: ubah mengganti isi bukti, tanggal tidak boleh diubah, hapus men
     });
 });
 
-test('bank book: masukan tidak sah dan bukti terkunci ditolak', async () => {
+test('bank book: masukan tidak sah dan bukti non-BB ditolak', async () => {
     await inTx(async (db) => {
         const { bank, x } = await ambilAkun(db);
         const dasar = { akunBank: bank, tanggal: '2031-03-08', deskripsi: 'x', opr: 'uji' };
@@ -77,8 +77,10 @@ test('bank book: masukan tidak sah dan bukti terkunci ditolak', async () => {
         await assert.rejects(hapusBankBook(db, 'JU/310308/001'), /bukan bukti Bank Book/);
 
         const a = await simpanBankBook(db, { ...dasar, lawan: [{ kodePerkiraan: x, kredit: 5 }] });
-        await db.query("UPDATE jurnal_umum SET status = 'Reconcile' WHERE nomor_bukti = $1 AND kode_perkiraan = $2", [a.nomorBukti, bank]);
-        await assert.rejects(hapusBankBook(db, a.nomorBukti), /sudah direkonsiliasi/);
-        assert.match((await bacaBankBook(db, a.nomorBukti, bank))?.terkunci ?? '', /rekonsiliasi/);
+        // Desktop menandai baris kas/bank 'Reconcile' saat simpan; itu bukan kunci, dan web meniru tandanya.
+        const tanda = (await db.query("SELECT kode_perkiraan k, status, tgl_rekonsiliasi::text t FROM jurnal_umum WHERE nomor_bukti = $1 ORDER BY urutan", [a.nomorBukti])).rows;
+        assert.deepEqual(tanda.map((r) => [r.k, r.status, r.t]), [[bank, 'Reconcile', '2031-03-08'], [x, '', null]]);
+        assert.equal((await bacaBankBook(db, a.nomorBukti, bank))?.terkunci, null);
+        await hapusBankBook(db, a.nomorBukti);
     });
 });
