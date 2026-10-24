@@ -1,11 +1,12 @@
 import Link from "next/link"
 import { FormCard, selectClass } from "@/components/transaksi/common"
-import { TombolBankBookBaru, TombolBankBookHapus, TombolBankBookUbah } from "@/components/bankbook/BankBook"
+import { TombolBankBookBaru } from "@/components/bankbook/BankBook"
+import { HarianBankBook } from "@/components/bankbook/HarianBankBook"
 import { TombolCetak } from "@/components/ui/TombolCetak"
-import { akunBankBook, harianBankBook, transaksiBankBook } from "@/lib/queries/laporan"
+import { akunBankBook, harianBankBook } from "@/lib/queries/laporan"
 import { semuaAkun } from "@/lib/queries/akuntansi"
-import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
-import { isTanggal, sp } from "@/lib/list"
+import { formatAngka, hariIni } from "@/lib/format"
+import { sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
 
 const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
@@ -24,13 +25,9 @@ export default async function BankBookPage(props: PageProps<"/dashboard/accounti
     if (!akun) return <FormCard title="Bank Book" description="Belum ada akun kas/bank (keterangan GC atau BANK) di Chart of Accounts.">{null}</FormCard>
 
     const { awal, rows } = await harianBankBook(kode, dari, sampai)
-    const tglDipilih = sp(s, "tgl")
-    const tgl = isTanggal(tglDipilih) && tglDipilih >= dari && tglDipilih <= sampai ? tglDipilih
-        : (rows.find((r) => r.tanggal === hari && r.bukti > 0) ?? [...rows].reverse().find((r) => r.bukti > 0) ?? rows[0])?.tanggal ?? dari
-    const transaksi = await transaksiBankBook(kode, tgl)
     const masuk = rows.reduce((t, r) => t + Number(r.debit), 0), keluar = rows.reduce((t, r) => t + Number(r.kredit), 0)
     const formProps = { akunBank: { id: akun.id, kode_perkiraan: akun.kode_perkiraan, nama_perkiraan: akun.nama_perkiraan }, semuaAkun: await semuaAkun(), hariIni: hari }
-    const ke = (o: { akun?: string; tgl?: string }) => `?akun=${o.akun ?? kode}&bulan=${bulan}&tahun=${tahun}${o.tgl ? `&tgl=${o.tgl}` : ""}`
+    const ke = (o: { akun?: string }) => `?akun=${o.akun ?? kode}&bulan=${bulan}&tahun=${tahun}`
     const tahunPilihan = Array.from({ length: 8 }, (_, i) => Number(hari.slice(0, 4)) + 1 - i)
     if (!tahunPilihan.includes(tahun)) tahunPilihan.push(tahun)
 
@@ -79,49 +76,7 @@ export default async function BankBookPage(props: PageProps<"/dashboard/accounti
                         ))}
                     </dl>
 
-                    <div className="overflow-x-auto rounded-md border">
-                        <table className="w-full text-sm">
-                            <thead className="bg-muted text-muted-foreground text-xs">
-                                <tr><th className="px-2 py-2 text-left">Tanggal</th><th className="px-2 py-2 text-right">Saldo Awal</th><th className="px-2 py-2 text-right">Debit</th><th className="px-2 py-2 text-right">Kredit</th><th className="px-2 py-2 text-right">Saldo Akhir</th></tr>
-                            </thead>
-                            <tbody>
-                                {rows.map((r) => (
-                                    <tr key={r.tanggal} className={`border-t ${r.tanggal === tgl ? "bg-blue-50 dark:bg-blue-500/10" : ""}`}>
-                                        <td className="px-2 py-0.5 whitespace-nowrap"><Link href={ke({ tgl: r.tanggal })} className="hover:underline">{formatTanggal(r.tanggal)}</Link>{r.bukti > 0 && <span className="ml-1 text-[10px] text-muted-foreground">{r.bukti} bukti</span>}</td>
-                                        <td className="px-2 py-0.5 text-right tabular-nums">{formatAngka(r.awal)}</td>
-                                        <td className="px-2 py-0.5 text-right tabular-nums">{formatAngka(r.debit)}</td>
-                                        <td className="px-2 py-0.5 text-right tabular-nums">{formatAngka(r.kredit)}</td>
-                                        <td className="px-2 py-0.5 text-right tabular-nums">{formatAngka(r.akhir)}</td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
-
-                    <div className="overflow-x-auto rounded-md border">
-                        <div className="border-b bg-muted px-3 py-2 text-xs font-semibold text-muted-foreground">Bukti tanggal {formatTanggal(tgl, "long")}</div>
-                        <table className="w-full text-sm">
-                            <thead className="text-muted-foreground text-xs">
-                                <tr><th className="px-2 py-2 text-left">No. Bukti</th><th className="px-2 py-2 text-left">Keterangan / lawan</th><th className="px-2 py-2 text-right">Debit</th><th className="px-2 py-2 text-right">Kredit</th><th className="w-20"></th></tr>
-                            </thead>
-                            <tbody>
-                                {transaksi.length === 0 && <tr><td colSpan={5} className="px-2 py-6 text-center text-muted-foreground">Tidak ada transaksi pada tanggal ini</td></tr>}
-                                {transaksi.map((t) => (
-                                    <tr key={t.nomor_bukti} className="border-t align-top">
-                                        <td className="px-2 py-1.5 font-mono text-xs whitespace-nowrap">{t.nomor_bukti}</td>
-                                        <td className="px-2 py-1.5"><div>{t.deskripsi}</div><div className="text-xs text-muted-foreground">{t.lawan}</div></td>
-                                        <td className="px-2 py-1.5 text-right tabular-nums">{Number(t.debit) ? formatAngka(t.debit) : ""}</td>
-                                        <td className="px-2 py-1.5 text-right tabular-nums">{Number(t.kredit) ? formatAngka(t.kredit) : ""}</td>
-                                        <td className="px-1 py-1 whitespace-nowrap print:hidden">
-                                            {t.rekonsiliasi ? <span className="text-[10px] text-muted-foreground">Rekon</span>
-                                                : t.bankbook ? <><TombolBankBookUbah nomorBukti={t.nomor_bukti} {...formProps} /><TombolBankBookHapus nomorBukti={t.nomor_bukti} /></>
-                                                : <span className="text-[10px] text-muted-foreground" title="Dibuat transaksi lain; ubah dari asalnya">Sistem</span>}
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
-                    </div>
+                    <HarianBankBook rows={rows} formProps={formProps} />
                 </div>
             </div>
         </div>

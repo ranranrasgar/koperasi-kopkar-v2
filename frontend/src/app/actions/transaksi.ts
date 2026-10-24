@@ -12,6 +12,7 @@ import { modeUji, pool, query, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
 import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
 import { cariAnggota, type AnggotaRingkas } from "@/lib/queries/anggota"
+import { transaksiBankBook, type TransaksiBankBook } from "@/lib/queries/laporan"
 import { kprBerjalan, pinjamanBerjalan, type KprBerjalan, type PinjamanBerjalan } from "@/lib/queries/pinjaman"
 
 export type Hasil = { ok: true; pesan: string; rincian?: Record<string, string | number>; jadwal?: Jadwal[] } | { ok: false; error: string } | null
@@ -273,5 +274,16 @@ export async function bacaBankBookAction(nomorBukti: string, akunBank: string): 
         return b ? { bukti: b } : { error: `Bukti ${nomorBukti} tidak ditemukan` }
     } catch (e) {
         return { error: e instanceof Error ? e.message : "Gagal membaca bukti" }
+    }
+}
+
+/** Bukti satu akun kas/bank pada satu tanggal, untuk modal harian Bank Book. */
+export async function transaksiBankBookAction(akunBank: string, tgl: string): Promise<{ items: TransaksiBankBook[] } | { error: string }> {
+    try {
+        await operatorAktif([MENU.bankBook])
+        if (!TANGGAL.test(tgl)) throw new InputSalah("Tanggal tidak valid")
+        return { items: await transaksiBankBook(akunBank, tgl) }
+    } catch (e) {
+        return { error: e instanceof Error ? e.message : "Gagal membaca transaksi" }
     }
 }
