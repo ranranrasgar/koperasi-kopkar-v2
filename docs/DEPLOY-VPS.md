@@ -16,7 +16,7 @@ Internet ──> Nginx di host (HTTPS, certbot) ──┬─> 127.0.0.1:3100  co
 | --- | --- | --- |
 | `https://admin.kopkarmjsmattel.com` | Aplikasi admin | `admin` (port host 127.0.0.1:3100) |
 | `https://anggota.kopkarmjsmattel.com` | PWA anggota | `anggota` (127.0.0.1:3200) |
-| `https://kopkarmjsmattel.com` (+ `www`) | Diarahkan ke PWA anggota | `anggota` |
+| `https://kopkarmjsmattel.com` (+ `www`) | Landing page (HTML statis, folder `landing/`) | tidak ada: dilayani langsung oleh Nginx dari `/srv/kopkar/landing` |
 
 Berkas Docker di akar repo:
 
@@ -276,10 +276,20 @@ server {
     location / { return 404; }
 }
 
-# Aplikasi anggota (+ domain utama)
+# Domain utama: landing page statis dari repo (folder landing/). Ikut terbarui saat git pull, tanpa build.
 server {
     listen 80;
-    server_name kopkarmjsmattel.com www.kopkarmjsmattel.com anggota.kopkarmjsmattel.com;
+    server_name kopkarmjsmattel.com www.kopkarmjsmattel.com;
+    root /srv/kopkar/landing;
+    index index.html;
+    location / { try_files $uri $uri/ =404; }
+    location ~* \.(png|ico)$ { expires 7d; }
+}
+
+# Aplikasi anggota
+server {
+    listen 80;
+    server_name anggota.kopkarmjsmattel.com;
     client_max_body_size 8m;                 # foto profil maks. 5 MB
     location / {
         proxy_pass http://127.0.0.1:3200;
