@@ -31,6 +31,10 @@ interface ModuleTableProps {
     actions?: React.ReactNode
     /** Tombol aksi tambahan per baris (komponen klien), di kiri tombol Detail. */
     aksiBaris?: React.ComponentType<{ item: Row }>
+    /** Baris Total di bawah tabel: jumlah per kolom (kunci kolom) untuk SEMUA baris hasil saring, bukan hanya halaman ini. */
+    jumlah?: Record<string, number>
+    /** Catatan tambahan di bawah deskripsi. */
+    keterangan?: React.ReactNode
 }
 
 const badgeColorMap: Record<string, string> = {
@@ -62,7 +66,7 @@ function Badge({ val, col }: { val: unknown; col: ColumnConfig }) {
     )
 }
 
-export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: ModuleTableProps) {
+export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumlah, keterangan }: ModuleTableProps) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -173,6 +177,7 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: Mod
                 <div className="flex flex-col gap-1">
                     <h1 className="text-2xl font-semibold tracking-tight text-foreground">{config.title}</h1>
                     <p className="text-sm text-muted-foreground">{config.description}</p>
+                    {keterangan && <p className="text-xs text-muted-foreground">{keterangan}</p>}
                 </div>
                 <div className="flex items-center gap-2 shrink-0 print:hidden">
                     <Button onClick={handleCetak} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={mencetak || data.items.length === 0}>
@@ -300,6 +305,19 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: Mod
                                 })
                             )}
                         </tbody>
+                        {jumlah && data.items.length > 0 && (
+                            <tfoot>
+                                <tr className="border-t-2 bg-muted/40 font-semibold">
+                                    <td className="px-4 py-3 text-right" colSpan={Math.max(1, activeColumns.findIndex((c) => c.key in jumlah) + 1)}>Total</td>
+                                    {activeColumns.slice(Math.max(0, activeColumns.findIndex((c) => c.key in jumlah))).map((col) => (
+                                        <td key={col.key} className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
+                                            {col.key in jumlah ? formatValue(jumlah[col.key], col.type) : ""}
+                                        </td>
+                                    ))}
+                                    <td className="print:hidden" />
+                                </tr>
+                            </tfoot>
+                        )}
                     </table>
                 </CardContent>
                 <Paginasi page={data.page} totalPages={data.totalPages} pageSize={data.pageSize} total={data.total} disabled={isPending}

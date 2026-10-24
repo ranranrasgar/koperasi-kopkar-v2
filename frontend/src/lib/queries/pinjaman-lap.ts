@@ -1,5 +1,8 @@
 import "server-only"
+import type { PageData } from "@/config/modules"
 import { query } from "@/lib/db"
+import { ukuranHalaman } from "@/lib/halaman"
+import { sp, type SearchParams } from "@/lib/list"
 
 export interface Tunggakan {
     jenis: "tunai" | "kpr"; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string; aktif: boolean
@@ -89,6 +92,39 @@ export const proyeksiPotongan = () =>
               FROM anggota a LEFT JOIN pt ON pt.anggota_id = a.id LEFT JOIN k ON k.anggota_id = a.id LEFT JOIN temp_potongan_all t ON t.anggota_id = a.id
              WHERE a.aktif)
         SELECT *, s_pokok + s_wajib + s_sukarela + koperasi + bank + kpr + adm AS total FROM x ORDER BY nama`)
+
+/** Kolom uang Transaksi Potongan Gaji yang dijumlahkan di baris total. */
+export const KOLOM_JUMLAH_POTONGAN = ["s_wajib", "s_sukarela", "koperasi", "bank", "kpr", "adm", "total"] as const
+
+/**
+ * Transaksi Potongan Gaji dalam bentuk tabel seragam (cari, filter staff, urut, halaman): proyeksi anggota aktif dihitung
+ * sekali (±100 ms untuk ±1.100 anggota), lalu disaring dan diurutkan di sini. Jumlah = total semua baris hasil saring.
+ */
+export async function daftarPotongan(s: SearchParams): Promise<PageData<Potongan & { beda: boolean }> & { jumlah: Record<string, number>; beda: number }> {
+    const cari = sp(s, "search").toLowerCase(), staff = sp(s, "status_staff")
+    const semua = (await proyeksiPotongan()).map((p) => ({ ...p, beda: p.snap_total !== null && Math.round(p.snap_total) !== Math.round(p.total) }))
+    const data = semua.filter((p) => (!staff || p.status_staff === staff)
+        && (!cari || p.nama.toLowerCase().includes(cari) || p.kode_agt.toLowerCase().includes(cari) || (p.nik ?? "").toLowerCase().includes(cari)))
+    const kunci = sp(s, "sortBy") as keyof Potongan
+    if (kunci && semua.length && kunci in semua[0]) {
+        const arah = sp(s, "sortOrder") === "desc" ? -1 : 1
+        data.sort((a, b) => {
+            const x = a[kunci], y = b[kunci]
+            if (x === y) return a.nama.localeCompare(b.nama)
+            if (x === null) return 1
+            if (y === null) return -1
+            return (typeof x === "number" && typeof y === "number" ? x - y : String(x).localeCompare(String(y))) * arah
+        })
+    }
+    const pageSize = ukuranHalaman(sp(s, "pageSize"), 25)
+    const totalPages = Math.max(1, Math.ceil(data.length / pageSize))
+    const page = Math.min(totalPages, Math.max(1, parseInt(sp(s, "page") || "1", 10) || 1))
+    return {
+        items: data.slice((page - 1) * pageSize, page * pageSize), total: data.length, page, pageSize, totalPages,
+        jumlah: Object.fromEntries(KOLOM_JUMLAH_POTONGAN.map((k) => [k, data.reduce((t, p) => t + p[k], 0)])),
+        beda: data.filter((p) => p.beda).length,
+    }
+}
 
 export interface ShuAnggota {
     kode_agt: string; nik: string | null; nama: string; status_staff: string | null; rp_sukarela: number; rp_jasa_uang: number

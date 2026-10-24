@@ -203,3 +203,31 @@ export const userMobileConfig: ModuleConfig = {
         { key: "diubah", label: "Diubah", type: "date", hidden: true },
     ],
 }
+
+export const potonganConfig: ModuleConfig = {
+    title: "Transaksi Potongan Gaji",
+    description: "Proyeksi potongan gaji bulan berjalan untuk anggota aktif, dihitung langsung dari data (rumus sama dengan hasil generate desktop).",
+    rowKey: "kode_agt",
+    searchPlaceholder: "Kode, KPK, atau nama",
+    filters: [
+        { key: "status_staff", label: "Staff", type: "select", options: [{ label: "Staff", value: "Staff" }, { label: "No Staff", value: "No Staff" }] },
+    ],
+    columns: [
+        { key: "kode_agt", label: "Kode Anggota", type: "string", sortable: true, mono: true },
+        { key: "nik", label: "KPK", type: "string", sortable: true },
+        { key: "nama", label: "Nama Lengkap", type: "string", sortable: true },
+        { key: "status_staff", label: "Staff", type: "badge", sortable: true, hidden: true,
+            badgeMap: { "Staff": { label: "STAFF", color: "indigo" }, "No Staff": { label: "NON-STAFF", color: "orange" } } },
+        { key: "bank_nama", label: "Bank", type: "string", sortable: true, hidden: true },
+        { key: "bank_no_rek", label: "No. Rekening", type: "string", hidden: true },
+        { key: "s_wajib", label: "S. Wajib", type: "number", sortable: true },
+        { key: "s_sukarela", label: "S. Sukarela", type: "number", sortable: true },
+        { key: "koperasi", label: "Pinj. Koperasi", type: "number", sortable: true },
+        { key: "bank", label: "Pinj. Bank", type: "number", sortable: true },
+        { key: "kpr", label: "KPR", type: "number", sortable: true },
+        { key: "adm", label: "Adm Bank", type: "number", sortable: true },
+        { key: "total", label: "Total", type: "number", sortable: true },
+        // Total dari hasil generate terakhir aplikasi desktop (temp_potongan_all), pembanding proyeksi.
+        { key: "snap_total", label: "Generate Terakhir", type: "number", sortable: true },
+    ],
+}
