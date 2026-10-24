@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="com.google.android.gms.permission.AD_ID" tools:node="remove" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
+
+    <queries>
+        <intent>
+            <action android:name="android.media.action.IMAGE_CAPTURE" />
+        </intent>
+    </queries>
+
+    <application
+        android:allowBackup="true"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:supportsRtl="true"
+        android:theme="@style/Theme.KopkarMJS"
+        android:usesCleartextTraffic="true"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:name="androidx.multidex.MultiDexApplication"
+        tools:targetApi="m">
+
+
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.JadwalAngsuranActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.TokoActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.PpobActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.UpdateEmailActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.HistoryActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.PotonganBulananActivityV1" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.LogNotifikasiActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.ShuActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.PotonganBulananActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.ResetPasswordActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.LupaPasswordActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.PengajuanKreditActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.PinjamanRinciActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.PinjamanActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.SimpananRinciActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.SimpananActivity" />
+        <activity android:name="com.rhansoft.kopkarmjsjkt2000.DetailAnggota" />
+        <activity
+            android:name="com.rhansoft.kopkarmjsjkt2000.LoginActivity"
+            android:theme="@style/Theme.KopkarMJS" />
+        <activity
+            android:name="com.rhansoft.kopkarmjsjkt2000.views.SplashActivity"
+            android:theme="@style/Theme.App.Splash"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name="com.rhansoft.kopkarmjsjkt2000.AnggotaActivity"
+            android:theme="@style/Theme.KopkarMJS"
+            android:exported="true">
+            <meta-data
+                android:name="android.app.searchable"
+                android:resource="@xml/searchable"
+
+                />
+
+            <intent-filter>
+                <action android:name="android.intent.action.SEARCH" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name="com.rhansoft.kopkarmjsjkt2000.MainActivity"
+            android:theme="@style/Theme.KopkarMJS"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+            </intent-filter>
+        </activity>
+
+        <service android:name="com.rhansoft.kopkarmjsjkt2000.notifikasi.MyFirebaseMessagingService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.provider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/file_paths" />
+        </provider>
+
+
+    </application>
+
+</manifest>
