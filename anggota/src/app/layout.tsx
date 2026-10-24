@@ -35,12 +35,17 @@ export const viewport: Viewport = {
 
 // Dijalankan sebelum halaman tampil: pasang data-tema dari pilihan pengguna dan samakan warna bilah status.
 // window.kopkarTema dipakai pilihan tema di Akun. Warna harus sama dengan viewport.themeColor di atas.
+// Meta theme-color milik Next (viewport) tidak boleh diubah isinya: React lalu menganggapnya tidak cocok saat hydrate dan
+// menambah meta putih baru, sehingga bilah status tetap putih saat tema gelap dipilih di HP bermode terang. Pilihan
+// terang/gelap dipasang sebagai meta tersendiri tanpa media di paling atas <head> (browser memakai meta pertama yang
+// cocok); "Otomatis" menghapusnya sehingga meta Next (mengikuti mode HP) yang berlaku.
 const SKRIP_TEMA = `(function(){var W={terang:"#ffffff",gelap:"#0c110e"};
 function pasang(t){var h=document.documentElement;
 if(t==="terang"||t==="gelap")h.dataset.tema=t;else delete h.dataset.tema;
-document.querySelectorAll('meta[name="theme-color"]').forEach(function(m){
-if(!m.dataset.asli)m.dataset.asli=m.getAttribute("content")||"";
-m.setAttribute("content",W[t]||m.dataset.asli)})}
+var m=document.getElementById("warna-tema");
+if(!W[t]){if(m)m.remove();return}
+if(!m){m=document.createElement("meta");m.id="warna-tema";m.name="theme-color"}
+m.setAttribute("content",W[t]);document.head.insertBefore(m,document.head.firstChild)}
 window.kopkarTema=pasang;
 function awal(){try{pasang(localStorage.getItem("kopkar-tema")||"")}catch(e){}}
 awal();document.addEventListener("DOMContentLoaded",awal);
