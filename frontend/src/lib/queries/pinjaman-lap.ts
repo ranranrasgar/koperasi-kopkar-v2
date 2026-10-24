@@ -77,7 +77,13 @@ export const proyeksiPotongan = () =>
                    SUM(t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi) FILTER (WHERE jk.group_pinjaman = 'BANK / PIHAK LAIN') AS bank
               FROM pinjaman_tunai p JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
               JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.angsuran_ke = p.jml_cicilan + 1
-             WHERE p.jml_cicilan < p.lama_angsuran GROUP BY 1),
+              -- LATERAL: saldo hanya dihitung untuk pinjaman yang punya angsuran berikutnya (subquery di WHERE 4x lebih lambat).
+              LEFT JOIN LATERAL (SELECT SUM(r.kredit_pokok - r.debit_pokok) AS sisa FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = p.id) s ON true
+             WHERE p.jml_cicilan < p.lama_angsuran
+               -- Pinjaman yang saldo bukunya sudah habis (dilunasi sekaligus) tidak dipotong lagi, seperti desktop (sisa_pokok > 2000)
+               -- dan Daftar Tunggakan.
+               AND COALESCE(s.sisa, 1000000) > 100
+             GROUP BY 1),
         k AS (
             SELECT k.anggota_id, SUM(LEAST(k.rp_angsuran_per_bulan, r.sisa)) AS rp
               FROM kpr k JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) AS sisa FROM kpr_rincian WHERE kpr_id = k.id) r ON r.sisa > 0
