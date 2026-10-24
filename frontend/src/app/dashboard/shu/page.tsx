@@ -66,7 +66,7 @@ export default async function ShuPage(props: PageProps<"/dashboard/shu">) {
                                         <th className="px-2 py-2 text-center">Lama (bln)</th>
                                         <th className="px-2 py-2 text-right">Jasa Uang</th>
                                         <th className="px-2 py-2 text-right">Jasa Barang</th>
-                                        <th className="px-2 py-2 text-right">Ke Sukarela</th>
+                                        <th className="px-2 py-2 text-right">Saldo Sukarela</th>
                                         <th className="px-2 py-2 text-right">Dicairkan</th>
                                         <th className="px-2 py-2 text-left">No. Ref</th>
                                     </tr>
