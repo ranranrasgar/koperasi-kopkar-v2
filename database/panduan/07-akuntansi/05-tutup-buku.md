@@ -1,6 +1,6 @@
 ---
 judul: Tutup buku dan saldo awal tahun
-ringkasan: Cara kerja jurnal tutup buku tahunan (TBT), bagaimana saldo awal tahun dihitung, dan status tutup buku di web.
+ringkasan: Cara kerja jurnal tutup buku tahunan (TBT), bagaimana saldo awal tahun dihitung, dan cara memproses tutup buku dari web.
 menu: /dashboard/accounting/closing
 ---
 ## Apa yang dilakukan tutup buku
@@ -20,12 +20,22 @@ Baris saldo pembuka tidak pernah dihitung sebagai mutasi. Model ini sudah dicoco
 
 ## Halaman Tutup Buku di web
 
-**Akuntansi → Tutup Buku** menampilkan:
+**Akuntansi → Tutup Buku** punya tiga bagian:
 
-- **Pratinjau** tahun berjalan: akun pendapatan dan biaya yang akan ditutup, dan SHU berjalan sampai hari ini.
-- **Riwayat Tutup Buku**: setiap jurnal TBT per tahun, bagian (penutupan rugi laba atau saldo pembuka), jumlah baris, total debit/kredit, dan operatornya.
+- **Pratinjau** tahun yang dipilih: pendapatan sebelum pajak, pajak (persen dari Pengaturan Perusahaan), laba ditahan setelah pajak, dan nominal tiap pos SHU.
+- **Proses tutup buku**: memposting jurnal TBT persis seperti desktop. Hanya untuk **superadmin atau admin**, dan hanya untuk tahun sebelum tahun berjalan.
+- **Riwayat Tutup Buku**: setiap jurnal TBT per tahun, bagian, jumlah baris, total debit/kredit, dan operatornya.
 
-> **Penting:** Halaman ini **belum memposting** tutup buku. Tutup buku tahunan tetap dilakukan di **aplikasi desktop** sampai posting otomatis dari web lulus uji kecocokan terhadap tutup buku 2024 dan 2025.
+Urutan prosesnya:
+
+1. Akun pendapatan dan biaya tahun itu dinolkan pada 31 Desember.
+2. Laba dikreditkan ke **Laba Ditahan**; pajak (laba dikali persen pajak) dipindahkan ke **Hutang Pajak**.
+3. Laba setelah pajak dibagi ke pos-pos SHU menurut persen di pos SHU; semua nilai dibulatkan 2 desimal.
+4. Saldo semua akun neraca menjadi saldo awal pada 1 Januari tahun berikutnya.
+
+Memproses ulang tahun yang sudah ditutup mengganti jurnal lamanya. Proses ulang **ditolak** bila SHU anggota tahun itu sudah ada yang dicairkan, atau bila tahun sesudahnya sudah ditutup buku.
+
+> **Catatan:** Jurnal tutup buku desktop 2025 tidak seimbang sekitar Rp 3.468 karena jurnal lama di data. Seperti desktop, tutup buku web memindahkan saldo apa adanya, jadi selisih lama ikut terbawa; selisihnya ditampilkan di hasil proses.
 
 ## Setelah tutup buku
 

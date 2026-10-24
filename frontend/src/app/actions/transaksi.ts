@@ -292,7 +292,7 @@ export async function transaksiBankBookAction(akunBank: string, tgl: string): Pr
 
 // ---------- ubah, hapus, voucher bukti jurnal ----------
 
-const MENU_BUKTI = [MENU.jurnalUmum, MENU.bankBook]
+const MENU_BUKTI = [MENU.jurnalUmum, MENU.bankBook, MENU.shu] // voucher juga untuk bukti pencairan SHU
 
 /** Isi form ubah jurnal umum, beserta daftar akun (dimuat saat form dibuka, bukan di tiap baris daftar). */
 export async function bacaJurnalAction(nomorBukti: string): Promise<{ bukti: BuktiJurnal; akun: { id: number; kode_perkiraan: string; nama_perkiraan: string }[] } | { error: string }> {

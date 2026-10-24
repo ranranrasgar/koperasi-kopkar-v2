@@ -11,6 +11,7 @@ import { daftarKaryawanMattel, daftarUserMobile } from "@/lib/queries/keanggotaa
 import { laporanPinjaman } from "@/lib/queries/pinjaman"
 import { daftarPotongan } from "@/lib/queries/pinjaman-lap"
 import { bukuSimpanan, rekapSimpanan } from "@/lib/queries/simpanan"
+import { anggotaShu } from "@/lib/queries/shu"
 import { hariIni } from "@/lib/format"
 
 export interface KopCetak {
@@ -58,6 +59,7 @@ const DAFTAR: Record<string, Ambil> = {
     "/dashboard/savings/ledger": (s) => bukuSimpanan(s) as Promise<PageData>,
     "/dashboard/loans": (s) => laporanPinjaman(s) as unknown as Promise<PageData>,
     "/dashboard/deductions": (s) => daftarPotongan(s) as unknown as Promise<PageData>,
+    "/dashboard/shu": (s) => anggotaShu(Number(s.tahun), s) as unknown as Promise<PageData>,
     "/dashboard/savings": async (s) => {
         const { grandTotal, ...d } = await rekapSimpanan({ ...s, endDate: /^\d{4}-\d{2}-\d{2}$/.test(s.endDate ?? "") ? s.endDate : hariIni() })
         return { ...(d as unknown as PageData), ekstra: grandTotal }
