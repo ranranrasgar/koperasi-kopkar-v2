@@ -35,7 +35,8 @@ export default async function BankBookPage(props: PageProps<"/dashboard/accounti
     if (!tahunPilihan.includes(tahun)) tahunPilihan.push(tahun)
 
     return (
-        <FormCard title="Bank Book" description="Buku kas & bank harian per akun, lengkap dengan entri, ubah, dan hapus bukti BB.">
+        <div className="space-y-3">
+            <h1 className="text-lg font-bold">Bank Book</h1>
             <div className="grid gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]">
                 <nav aria-label="Akun kas dan bank" className="self-start rounded-md border print:hidden">
                     <div className="border-b bg-muted px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kas / Bank</div>
@@ -123,6 +124,6 @@ export default async function BankBookPage(props: PageProps<"/dashboard/accounti
                     </div>
                 </div>
             </div>
-        </FormCard>
+        </div>
     )
 }
