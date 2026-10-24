@@ -45,10 +45,10 @@ for (const p of plans) {
     }
 }
 const names = new Set(plans.map((p) => p.name));
-for (const [t, cols] of EXTRA_INDEXES) {
+for (const [t, cols, parsial] of EXTRA_INDEXES) {
     if (!names.has(t)) throw new Error(`EXTRA_INDEXES: tabel ${t} tidak ada`);
-    const label = cols.map((c) => c.replace(/[^a-z0-9_]/gi, '')).join('_');
-    indexes.push(`CREATE INDEX ${name63(`ix_${t}_${label}`)} ON ${t} (${colList(cols)});`);
+    const label = cols.map((c) => c.replace(/[^a-z0-9_]/gi, '')).join('_') + (parsial ? `_${parsial.nama}` : '');
+    indexes.push(`CREATE INDEX ${name63(`ix_${t}_${label}`)} ON ${t} (${colList(cols)})${parsial ? ` WHERE ${parsial.where}` : ''};`);
 }
 const parents = new Set();
 for (const p of plans) for (const f of p.fks) { if (!names.has(f.ref)) throw new Error(`FK ${p.name}.${f.col}: tabel induk ${f.ref} tidak ada`); parents.add(f.ref); }

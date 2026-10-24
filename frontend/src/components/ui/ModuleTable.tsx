@@ -19,6 +19,7 @@ import { formatRupiah, formatAngka, formatTanggal } from "@/lib/format"
 import { dataCetakAction } from "@/app/actions/cetak"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 import { useKolomTersimpan } from "@/lib/kolom-tersimpan"
+import { MemuatData } from "@/components/ui/MemuatData"
 import { PilihKolom } from "@/components/ui/PilihKolom"
 
 type Row = Record<string, unknown>
@@ -227,11 +228,7 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris }: Mod
                 </div>
 
                 <CardContent className="p-0 overflow-x-auto relative min-h-[300px]">
-                    {isPending && (
-                        <div className="absolute inset-0 bg-background/50 backdrop-blur-[1px] flex items-center justify-center z-10">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                    )}
+                    <MemuatData aktif={isPending} />
                     <table className="w-full text-left border-collapse text-sm">
                         <thead>
                             <tr className="border-b bg-muted/40 font-bold text-muted-foreground">

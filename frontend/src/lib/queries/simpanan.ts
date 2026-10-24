@@ -92,11 +92,10 @@ export async function rekapSimpanan(s: SearchParams) {
     for (const j of JENIS) for (const k of ["Setoran", "Ambil", "Saldo"]) sortable[`${k}_${j.name}`] = `"${k}_${j.name}"`
     sortable.Saldo_Total = `"Saldo_Total"`
 
-    const [page, [total]] = await Promise.all([
-        paged<RekapSimpananRow>({ base, values, searchParams: s, sortable, defaultSort: "nama ASC" }),
-        query<Omit<RekapSimpananRow, "kode_agt" | "nama" | "nik" | "status_staff">>(
-            `SELECT ${[...JENIS.flatMap((j) => ["Setoran", "Ambil", "Saldo"].map((k) => `COALESCE(SUM("${k}_${j.name}"), 0) AS "${k}_${j.name}"`)),
-                `COALESCE(SUM("Saldo_Total"), 0) AS "Saldo_Total"`].join(", ")} FROM (${base}) t`, values),
-    ])
-    return { ...page, grandTotal: total }
+    // Isi halaman, jumlah baris, dan baris total dari satu query: agregasi seluruh simpanan cukup dihitung sekali.
+    const { jumlah, ...page } = await paged<RekapSimpananRow, keyof RekapSimpananRow & string>({
+        base, values, searchParams: s, sortable, defaultSort: "nama ASC",
+        jumlahkan: [...JENIS.flatMap((j) => ["Setoran", "Ambil", "Saldo"].map((k) => `${k}_${j.name}` as keyof RekapSimpananRow)), "Saldo_Total"],
+    })
+    return { ...page, grandTotal: jumlah as Omit<RekapSimpananRow, "kode_agt" | "nama" | "nik" | "status_staff"> }
 }

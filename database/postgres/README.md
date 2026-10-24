@@ -28,6 +28,8 @@ PG_URL=postgres://user:pass@127.0.0.1:5432/kopkar node database/postgres/migrate
 PG_URL=postgres://user:pass@127.0.0.1:5432/kopkar npm run sequences:pasang   # WAJIB setelah setiap migrasi
 ```
 
+> **Indeks baru**: indeks tambahan ada di `mapping.mjs` (`EXTRA_INDEXES`, boleh parsial: `{ nama, where }`) lalu `schema.sql`. `migrate.mjs` hanya memasangnya saat tabel dibuat, jadi untuk database yang sudah ada jalankan `npm run indeks:pasang` (`-- --periksa` hanya melapor): memasang indeks biasa dari `schema.sql` yang belum ada dengan `CREATE INDEX CONCURRENTLY`, tanpa mengunci tabel, aman diulang.
+
 > **Nomor bukti setelah migrasi**: aplikasi web membuat nomor bukti (SMPM/SMPK, CR-, ANGS-CR-, KPR-, JU/, urut jurnal) dari sequence PostgreSQL, bukan `max()+1`. `--reset` mengisi ulang tabel dari MySQL tetapi tidak menyentuh sequence, jadi bila desktop sudah membuat transaksi baru di MySQL, nomor terbesar di data bisa melewati posisi sequence dan transaksi web berikutnya ditolak (`UNIQUE`). `npm run sequences:pasang` (`apply-sequences.mjs` + `sequences.sql`) menaikkan setiap sequence ke nomor terbesar di data; sequence tidak pernah diturunkan, jadi aman diulang kapan saja.
 
 - `MYSQL_URL` (opsional) default ke Laragon: `mysql://root:@127.0.0.1:3306/kopkar_mjs_2000`.

@@ -11,6 +11,7 @@ import { Paginasi } from "@/components/ui/Paginasi"
 import type { PageData } from "@/config/modules"
 import { formatAngka, formatTanggal } from "@/lib/format"
 import { dataCetakAction } from "@/app/actions/cetak"
+import { MemuatData } from "@/components/ui/MemuatData"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 
 type Totals = {
@@ -154,11 +155,7 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
                 </form>
 
                 <div className="overflow-auto relative min-h-[280px] max-h-[calc(100dvh-20rem)]">
-                    {loading && (
-                        <div className="absolute inset-0 bg-background/50 flex items-center justify-center z-20">
-                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                        </div>
-                    )}
+                    <MemuatData aktif={loading} pesan="Memuat rekap simpanan..." />
                     <table className="w-full text-sm">
                         <thead className="bg-muted text-muted-foreground sticky top-0 z-10">
                             <tr>

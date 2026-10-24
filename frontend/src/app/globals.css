@@ -454,3 +454,13 @@ html[data-theme="default"].dark {
     --sidebar-border: oklch(0.35 0.05 260);
     --sidebar-ring: oklch(0.5 0.2 260 / 0.5);
 }
+
+/* Bilah progres memuat data (MemuatData, BilahProgres): potongan bergerak dari kiri ke kanan. Gerak dimatikan bila
+   pengguna memilih kurangi animasi. */
+@keyframes memuat {
+    0% { transform: translateX(-100%); }
+    100% { transform: translateX(300%); }
+}
+@media (prefers-reduced-motion: reduce) {
+    .animate-\[memuat_1\.1s_ease-in-out_infinite\] { animation: none; width: 100%; opacity: 0.6; }
+}

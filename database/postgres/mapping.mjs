@@ -163,6 +163,8 @@ export const EXTRA_INDEXES = [
     ['anggota', ['aktif']],
     ['app_user', ['lower(username)']],
     ['simpanan', ['anggota_id', 'jenis_simpanan_id', 'tgl_transaksi']],
+    ['simpanan', ['tgl_transaksi', 'urut', 'id']], // urut kronologis Buku Simpanan, dasbor, grafik per tahun
+    ['simpanan', ['kode_agt', 'tgl_transaksi']], // Kartu Simpanan
     ['pinjaman_tunai', ['tgl_pinjaman']],
     ['pinjaman_tunai_rincian', ['pinjaman_tunai_id', 'tanggal_angsuran']],
     ['pinjaman_tunai_rincian', ['no_bukti']],
@@ -174,6 +176,8 @@ export const EXTRA_INDEXES = [
     ['jurnal_umum', ['tanggal_jurnalumum']],
     ['jurnal_umum', ['perkiraan_id', 'tanggal_jurnalumum']],
     ['jurnal_umum', ['sumber_tipe', 'sumber_id']],
+    // Jurnal pembuka tahun (TBT/...): dicari setiap laporan saldo; LIKE 'TBT/%' tidak bisa memakai indeks biasa.
+    ['jurnal_umum', ['tanggal_jurnalumum'], { nama: 'tbt', where: "nomor_bukti LIKE 'TBT/%'" }],
     ['kas', ['tgl_kas']],
     ['kas', ['no_bukti']],
     ['log_notifikasi', ['anggota_id', 'datetimes']],

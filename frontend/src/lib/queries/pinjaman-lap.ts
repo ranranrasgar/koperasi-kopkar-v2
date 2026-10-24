@@ -18,17 +18,19 @@ export const daftarTunggakan = (per: string) =>
         WITH tunai AS (
             SELECT 'tunai' AS jenis, p.no_pinjaman, a.kode_agt, a.nik, a.nama, a.aktif, jk.group_pinjaman AS grup, jk.nama_kredit,
                    p.tgl_pinjaman, p.lama_angsuran, p.jml_cicilan,
-                   COUNT(t.*) AS jatuh_tempo,
-                   COALESCE(SUM(t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi) FILTER (WHERE t.angsuran_ke > p.jml_cicilan), 0) AS rp_tunggak,
-                   MIN(t.tanggal_angsuran) FILTER (WHERE t.angsuran_ke > p.jml_cicilan) AS jatuh_tempo_pertama
+                   t.jatuh_tempo, t.rp_tunggak, t.jatuh_tempo_pertama
               FROM pinjaman_tunai p
               JOIN anggota a ON a.id = p.anggota_id
               LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
-              JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.tanggal_angsuran < date_trunc('month', $1::date)::date
+              CROSS JOIN LATERAL (
+                  SELECT COUNT(*) AS jatuh_tempo,
+                         COALESCE(SUM(t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi) FILTER (WHERE t.angsuran_ke > p.jml_cicilan), 0) AS rp_tunggak,
+                         MIN(t.tanggal_angsuran) FILTER (WHERE t.angsuran_ke > p.jml_cicilan) AS jatuh_tempo_pertama
+                    FROM pinjaman_tunai_rincian_tagih t
+                   WHERE t.pinjaman_tunai_id = p.id AND t.tanggal_angsuran < date_trunc('month', $1::date)::date) t
              WHERE p.jml_cicilan < p.lama_angsuran
                -- Pinjaman yang saldo bukunya sudah habis (dilunasi sekaligus) bukan tunggakan; aturan sama dengan Daftar Pinjaman.
-               AND COALESCE((SELECT SUM(r.kredit_pokok - r.debit_pokok) FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = p.id), 1000000) > 100
-             GROUP BY p.id, a.id, jk.id),
+               AND COALESCE((SELECT SUM(r.kredit_pokok - r.debit_pokok) FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = p.id), 1000000) > 100),
         kpr AS (
             SELECT 'kpr' AS jenis, k.no_pinjaman, a.kode_agt, a.nik, a.nama, a.aktif, 'KPR' AS grup, jk.nama_kredit,
                    k.tgl_pinjaman, k.lama_angsuran, k.jml_cicilan,
@@ -43,7 +45,7 @@ export const daftarTunggakan = (per: string) =>
              GROUP BY k.id, a.id, jk.id)
         SELECT *, jatuh_tempo - jml_cicilan AS tunggak FROM (SELECT * FROM tunai UNION ALL SELECT * FROM kpr) x
          WHERE jatuh_tempo > jml_cicilan
-         ORDER BY jatuh_tempo - jml_cicilan DESC, nama`, [per])
+         ORDER BY jatuh_tempo - jml_cicilan DESC, nama, no_pinjaman`, [per])
 
 /** Pinjaman tunai yang belum lunas tetapi tidak punya jadwal tagih sama sekali (pencairan belum dibukukan lengkap): tidak bisa dinilai menunggak. */
 export const jumlahTanpaJadwal = async () => (await query<{ n: number }>(
@@ -67,10 +69,12 @@ export interface Potongan {
 export const proyeksiPotongan = () =>
     query<Potongan>(`
         WITH pt AS (
-            SELECT p.anggota_id, jk.group_pinjaman AS g, SUM(t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi) AS rp
+            SELECT p.anggota_id,
+                   SUM(t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi) FILTER (WHERE jk.group_pinjaman = 'KOPERASI') AS koperasi,
+                   SUM(t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi) FILTER (WHERE jk.group_pinjaman = 'BANK / PIHAK LAIN') AS bank
               FROM pinjaman_tunai p JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
               JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.angsuran_ke = p.jml_cicilan + 1
-             WHERE p.jml_cicilan < p.lama_angsuran GROUP BY 1, 2),
+             WHERE p.jml_cicilan < p.lama_angsuran GROUP BY 1),
         k AS (
             SELECT k.anggota_id, SUM(LEAST(k.rp_angsuran_per_bulan, r.sisa)) AS rp
               FROM kpr k JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) AS sisa FROM kpr_rincian WHERE kpr_id = k.id) r ON r.sisa > 0
@@ -78,12 +82,11 @@ export const proyeksiPotongan = () =>
         x AS (
             SELECT a.kode_agt, a.nik, a.nama, a.status_staff, a.bank_nama, a.bank_no_rek,
                    0::numeric AS s_pokok, a.simpanan_wajib AS s_wajib, a.simpanan_sukarela AS s_sukarela,
-                   COALESCE((SELECT rp FROM pt WHERE pt.anggota_id = a.id AND g = 'KOPERASI'), 0) AS koperasi,
-                   COALESCE((SELECT rp FROM pt WHERE pt.anggota_id = a.id AND g = 'BANK / PIHAK LAIN'), 0) AS bank,
+                   COALESCE(pt.koperasi, 0) AS koperasi, COALESCE(pt.bank, 0) AS bank,
                    COALESCE(k.rp, 0) AS kpr,
                    (SELECT rp_adm_bank FROM perusahaan ORDER BY id LIMIT 1) AS adm,
                    t.s_pokok + t.s_wajib + t.s_sukarela + t.rp_koperasi + t.rp_bank + t.rp_kpr + t.rp_adm_bank AS snap_total
-              FROM anggota a LEFT JOIN k ON k.anggota_id = a.id LEFT JOIN temp_potongan_all t ON t.anggota_id = a.id
+              FROM anggota a LEFT JOIN pt ON pt.anggota_id = a.id LEFT JOIN k ON k.anggota_id = a.id LEFT JOIN temp_potongan_all t ON t.anggota_id = a.id
              WHERE a.aktif)
         SELECT *, s_pokok + s_wajib + s_sukarela + koperasi + bank + kpr + adm AS total FROM x ORDER BY nama`)
 

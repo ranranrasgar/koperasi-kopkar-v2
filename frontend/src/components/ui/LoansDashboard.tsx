@@ -7,6 +7,7 @@ import type { PageData } from "@/config/modules"
 import { formatRupiah, formatTanggal, formatAngka } from "@/lib/format"
 import Link from "next/link"
 import { Paginasi } from "@/components/ui/Paginasi"
+import { MemuatData } from "@/components/ui/MemuatData"
 import { PilihKolom } from "@/components/ui/PilihKolom"
 import { useKolomTersimpan } from "@/lib/kolom-tersimpan"
 import { MAKS_SEMUA } from "@/lib/halaman"
@@ -199,14 +200,8 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                         </div>
                     </form>
                 </div>
-                <div className="overflow-x-auto w-full">
-                    {isLoading ? (
-                        <div className="h-64 flex flex-col items-center justify-center text-on-surface-variant">
-                            <span className="material-symbols-outlined text-4xl animate-spin mb-2">refresh</span>
-                            <span className="font-label-md">Memuat data pinjaman...</span>
-                        </div>
-                    ) : (
-                        <>
+                <div className="relative min-h-[16rem] overflow-x-auto w-full">
+                    <MemuatData aktif={isLoading} pesan="Memuat data pinjaman..." />
                         <table className="w-full text-left font-body-md whitespace-nowrap">
                             <thead className="bg-surface-container-lowest border-b border-outline-variant text-on-surface-variant font-label-md text-xs">
                                 <tr>
@@ -267,13 +262,11 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                             <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-surface-variant" />Pinjaman lunas</span>
                             <span>* Lunas menurut cicilan, tetapi saldo buku pinjaman masih tersisa (diselesaikan di luar angsuran koperasi: top-up atau pelunasan langsung ke bank, dibereskan lewat jurnal balik)</span>
                         </div>
-                        </>
-                    )}
                 </div>
 
                 {/* Halaman (bawah) */}
-                {!isLoading && <Paginasi page={page} totalPages={totalPages} pageSize={pageSize} total={totalRecords} onHalaman={(p) => go(p)} onBaris={(v) => go(1, v)}
-                    className="sticky bottom-0 z-10 border-t border-outline-variant bg-surface-container-lowest/95 backdrop-blur" />}
+                <Paginasi page={page} totalPages={totalPages} pageSize={pageSize} total={totalRecords} disabled={isLoading} onHalaman={(p) => go(p)} onBaris={(v) => go(1, v)}
+                    className="sticky bottom-0 z-10 border-t border-outline-variant bg-surface-container-lowest/95 backdrop-blur" />
             </div>
         </div>
     )

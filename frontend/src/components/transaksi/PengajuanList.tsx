@@ -7,6 +7,7 @@ import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Check, Loader2, Search, 
 import { putuskanPengajuanAction, type HasilPengajuan } from "@/app/actions/pengajuan"
 import { Button } from "@/components/ui/button"
 import { Paginasi } from "@/components/ui/Paginasi"
+import { MemuatData } from "@/components/ui/MemuatData"
 import type { PageData } from "@/config/modules"
 import type { Pengajuan } from "@/lib/queries/keanggotaan"
 import { formatRupiah, formatTanggal, formatAngka, formatAngka2 } from "@/lib/format"
@@ -107,7 +108,8 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                         {hasil.ok ? hasil.pesan : hasil.error}
                     </div>
                 )}
-                <div className="overflow-x-auto rounded-md border">
+                <div className="relative min-h-[10rem] overflow-x-auto rounded-md border">
+                    <MemuatData aktif={isPending} />
                     <table className="w-full text-sm">
                         <thead className="bg-muted text-muted-foreground text-xs">
                             <tr>

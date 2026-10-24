@@ -1,7 +1,9 @@
 import Link from "next/link"
+import { Suspense } from "react"
 import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
 import { hitungNotifAdminBaru } from "@kopkar/backend/src/anggota/notif-admin.ts"
 import { hitungPengumumanBaru } from "@kopkar/backend/src/anggota/sasaran.ts"
+import { BilahProgres } from "@/components/layout/BilahProgres"
 import { DashboardShell } from "@/components/layout/DashboardShell"
 import { modeAplikasi, pool, serverUji } from "@/lib/db"
 import { identitasKoperasi } from "@/lib/koperasi"
@@ -17,6 +19,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
     ])
     return (
         <DashboardShell operator={{ nama: o.nama, namaLengkap: o.namaLengkap, grup: o.grup, izin: o.izin }} koperasi={{ nama: k.nama, logo: k.logo }} lencana={{ "/dashboard/pesan": pesanBaru, "/dashboard/pengumuman": pengumumanBaru }}>
+            <Suspense fallback={null}><BilahProgres /></Suspense>
             {serverUji && (
                 <div role="status" className="mb-4 rounded-md border border-violet-400 bg-violet-50 dark:bg-violet-500/10 px-4 py-2 text-sm text-violet-800 dark:text-violet-300">
                     <span className="font-semibold">Server uji, database {serverUji}.</span> Transaksi benar-benar disimpan, tetapi di salinan database,

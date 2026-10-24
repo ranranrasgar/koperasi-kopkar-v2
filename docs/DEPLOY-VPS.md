@@ -204,6 +204,7 @@ C=kopkar-kopkar_mjs_2000-20261024-0340                     # nama folder cadanga
 docker compose run --rm -w /app admin npm run restore -- /backup/$C --periksa   # SHA-256 semua berkas cocok?
 docker compose run --rm -w /app admin npm run restore -- /backup/$C --timpa --yakin kopkar_mjs_2000
 docker compose run --rm -w /app admin npm run anggota:pasang      # tabel/kolom/FK khusus web (aman diulang)
+docker compose run --rm -w /app admin npm run indeks:pasang       # indeks dari schema.sql yang belum ada (aman diulang)
 docker compose run --rm -w /app admin npm run pengaturan:pasang   # tabel pengaturan_web dan izin Mode Aplikasi
 docker compose run --rm -w /app admin npm run panduan:pasang      # artikel Pusat Panduan yang belum ada
 ```
@@ -380,6 +381,7 @@ git pull
 sed -i "s/^KOPKAR_COMMIT=.*/KOPKAR_COMMIT=$(git rev-parse --short HEAD)/" .env
 docker compose build
 docker compose run --rm -w /app admin npm run anggota:pasang
+docker compose run --rm -w /app admin npm run indeks:pasang
 docker compose run --rm -w /app admin npm run pengaturan:pasang
 docker compose run --rm -w /app admin npm run panduan:pasang
 docker compose up -d                       # mengganti container admin dan anggota dengan image baru (putus beberapa detik)

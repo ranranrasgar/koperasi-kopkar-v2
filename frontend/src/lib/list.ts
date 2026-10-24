@@ -23,7 +23,7 @@ export function params() {
  * Halaman tabel: `base` adalah SELECT lengkap tanpa ORDER BY/LIMIT. Kolom urut hanya boleh
  * dari daftar `sortable` (nama kolom hasil SELECT), karena disisipkan ke SQL.
  */
-export async function paged<T = Record<string, unknown>>(opts: {
+export async function paged<T = Record<string, unknown>, J extends string = never>(opts: {
     base: string
     values: unknown[]
     searchParams: SearchParams
@@ -36,8 +36,13 @@ export async function paged<T = Record<string, unknown>>(opts: {
      * Ditulis sebagai daftar SELECT yang merujuk kolom hasil `base` lewat alias `t`. Tidak bisa dipakai untuk urut.
      */
     kolomHalaman?: string
+    /**
+     * Kolom hasil `base` yang dijumlahkan untuk seluruh baris (baris total). Dihitung bersama jumlah baris dan isi halaman
+     * dalam satu query (window function), jadi `base` yang berat (agregasi) cukup dihitung sekali.
+     */
+    jumlahkan?: readonly J[]
     pageSize?: number
-}): Promise<PageData<T>> {
+}): Promise<PageData<T> & { jumlah: Record<J, number> }> {
     const page = Math.max(1, parseInt(sp(opts.searchParams, "page") || "1", 10) || 1)
     const pageSize = ukuranHalaman(sp(opts.searchParams, "pageSize"), opts.pageSize ?? 25)
     const sortCol = opts.sortable[sp(opts.searchParams, "sortBy")]
@@ -45,6 +50,19 @@ export async function paged<T = Record<string, unknown>>(opts: {
     const order = sortCol ? `${sortCol} ${dir} NULLS LAST${opts.urutanLanjut ? `, ${opts.urutanLanjut}` : ""}` : opts.defaultSort
 
     const n = opts.values.length
+    if (opts.jumlahkan) {
+        const kol = opts.jumlahkan.map((k) => `COALESCE(SUM("${k}") OVER (), 0) AS "_j_${k}"`)
+        const baris = await query<Record<string, unknown>>(
+            `SELECT t.*, COUNT(*) OVER () AS _total, ${kol.join(", ")} FROM (${opts.base}) t ORDER BY ${order} LIMIT $${n + 1} OFFSET $${n + 2}`,
+            [...opts.values, pageSize, (page - 1) * pageSize])
+        // Halaman di luar jangkauan tidak mengembalikan baris, jadi jumlah dan total dibaca terpisah.
+        const ringkas = baris[0] ?? (await query<Record<string, unknown>>(
+            `SELECT COUNT(*) AS _total, ${opts.jumlahkan.map((k) => `COALESCE(SUM("${k}"), 0) AS "_j_${k}"`).join(", ")} FROM (${opts.base}) t`, opts.values))[0]
+        const jumlah = Object.fromEntries(opts.jumlahkan.map((k) => [k, Number(ringkas[`_j_${k}`])])) as Record<J, number>
+        const total = Number(ringkas._total)
+        for (const b of baris) { delete b._total; for (const k of opts.jumlahkan) delete b[`_j_${k}`] }
+        return { items: baris as T[], total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)), jumlah }
+    }
     const halaman = `SELECT * FROM (${opts.base}) t ORDER BY ${order} LIMIT $${n + 1} OFFSET $${n + 2}`
     const [count, items] = await Promise.all([
         query<{ total: number }>(`SELECT COUNT(*) AS total FROM (${opts.base}) t`, opts.values),
@@ -52,5 +70,5 @@ export async function paged<T = Record<string, unknown>>(opts: {
             [...opts.values, pageSize, (page - 1) * pageSize]),
     ])
     const total = count[0]?.total ?? 0
-    return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) }
+    return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)), jumlah: {} as Record<J, number> }
 }

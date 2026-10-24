@@ -302,6 +302,20 @@ Terakhir diperbarui 24 Oktober 2026 (pagi). Agent baru: baca bagian ini dulu, la
 
 ---
 
+## 2026-10-24 — Penanda memuat di tabel dan query laporan lebih cepat
+
+**Penanda memuat (admin).** `components/ui/MemuatData.tsx`: lapisan di atas tabel (bilah progres bergerak di tepi atas + "Memuat data..."), isi lama tetap terlihat dan diredupkan. Dipakai di ModuleTable (semua daftar berbasis config), Rekap Simpanan, Daftar Pinjaman (dulu tabel disembunyikan saat memuat; kini tetap tampil, paginasi dinonaktifkan), dan Pengajuan. `components/layout/BilahProgres.tsx` di layout dasbor: bilah tipis di atas layar saat tautan internal diklik atau formulir GET dikirim (halaman laporan berformulir biasa), hilang saat alamat berubah (batas aman 15 detik). `app/dashboard/loading.tsx`: kerangka tabel saat halaman baru diambil. Keyframe `memuat` di `globals.css` (diam bila prefers-reduced-motion). Belum dicek di browser (pane Claude belum login).
+
+**Query (hasil dibandingkan sebelum/sesudah, hash JSON sama).** Diukur langsung ke database asli; query daftar utama (anggota, pinjaman, COA, jurnal, user mobile) dan layout sudah cepat (1-150 ms). Yang diperbaiki:
+- `pembukaTerakhir` (dipakai Neraca, Laba Rugi, Neraca Saldo, Buku Besar, COA, Tutup Buku): `LIKE 'TBT/%'` memindai seluruh `jurnal_umum` (860 MB) = **±1,4 detik** setiap laporan. Indeks parsial `ix_jurnal_umum_tanggal_jurnalumum_tbt` (tanggal, WHERE nomor_bukti LIKE 'TBT/%'): 1 ms; laporan saldo kini ±80-100 ms.
+- Proyeksi Potongan: dua subquery per anggota yang memindai CTE berulang diganti pivot `FILTER` + JOIN: 313 -> ±100 ms.
+- Tunggakan: mulai dari pinjaman belum lunas + `LATERAL` jadwal tagih per pinjaman (indeks), bukan memindai 136 ribu baris jadwal: ±370 -> ±110-160 ms. Isi sama; urutan dua pinjaman milik anggota yang sama dengan tunggak sama dulu acak, kini ditambah `no_pinjaman` sebagai penentu.
+- Rekap Simpanan: halaman, jumlah baris, dan baris total dulu tiga query yang masing-masing mengagregasi seluruh simpanan; kini satu query (`paged({ jumlahkan })` di `lib/list.ts`, window `SUM(...) OVER ()`; halaman di luar jangkauan memakai query ringkas terpisah).
+- Indeks `simpanan (tgl_transaksi, urut, id)` dan `simpanan (kode_agt, tgl_transaksi)`: Kartu Simpanan 155 -> 8-27 ms, grafik dasbor 124 -> 13 ms, transaksi terakhir 133 -> 2 ms.
+- Indeks baru di `mapping.mjs` (EXTRA_INDEXES kini boleh parsial: `{ nama, where }`, `generate-schema.mjs` ikut) dan `schema.sql`; **`npm run indeks:pasang`** (baru, `database/postgres/indeks-pasang.mjs`) memasang indeks dari `schema.sql` yang belum ada dengan CREATE INDEX CONCURRENTLY lalu ANALYZE tabelnya. **Sudah dijalankan di database asli dan uji** (3 indeks). Dicatat di README database, DEPLOY-VPS.md (langkah pasang dan pembaruan), CLAUDE.md.
+
+**Masih lambat karena bloat, bukan query.** `simpanan` 164 MB untuk 250 ribu baris (salinan hasil restore: 43 MB), `jurnal_umum` 860 MB; database asli 1,5 GB vs salinan bersih 583 MB. Query yang menjumlah seluruh simpanan (statistik dasbor, saldo awal grafik, Rekap Simpanan) ±130-400 ms dan lebih lambat saat cache dingin. Obatnya `VACUUM FULL` (mengunci tabel selama berjalan, butuh ruang kosong sebesar tabel hasil); **belum dijalankan**: disk C: tinggal ±2 GB. Di VPS tidak perlu: database dipasang dari cadangan (restore) sehingga sudah padat. Lambat lain yang terasa di komputer ini: server `next dev` mengompilasi setiap halaman saat pertama dibuka; versi produksi (`next build` + `start`) jauh lebih cepat.
+
 ## 2026-10-24 — Admin: Cari Pinjaman, tabel seragam, pinjaman lunas bersaldo buku, pendaftaran, navbar
 
 - **Cari Pinjaman** (`/dashboard/loans/cari`, menu baru di Pinjaman, izin `MENU_DETAIL_PINJAMAN_GRUP` di `config/akses.ts`): pintu ke detail pinjaman tanpa izin Daftar Pinjaman. Nomor yang cocok persis langsung membuka `/dashboard/loans/[no]`; potongan nomor, nama, KPK, atau kode anggota menampilkan daftar pilihan (`cariPinjaman` di `lib/queries/pinjaman-detail.ts`, dibatasi grup pinjaman yang berizin).
