@@ -1,0 +1,353 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="#F9FAFB"
+    android:clipChildren="false"
+    android:clipToPadding="false">
+
+    <!-- Header Toolbar -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/layoutToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/white"
+        android:elevation="2dp"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <androidx.constraintlayout.widget.ConstraintLayout
+            android:layout_width="match_parent"
+            android:layout_height="64dp">
+
+            <ImageView
+                android:id="@+id/btnBack"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginStart="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"
+                android:src="@drawable/ic_arrow_back_blue"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toStartOf="parent"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="12dp"
+                android:text="Layanan PPOB"
+                android:textColor="@color/design_blue_dark"
+                android:textSize="18sp"
+                android:textStyle="bold"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintStart_toEndOf="@id/btnBack"
+                app:layout_constraintTop_toTopOf="parent" />
+
+            <ImageView
+                android:id="@+id/btnHelp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:layout_marginEnd="8dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="10dp"
+                android:src="@drawable/ic_help_outline"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toStartOf="@id/btnProfile"
+                app:layout_constraintTop_toTopOf="parent"
+                app:tint="@color/design_blue_dark" />
+
+            <com.google.android.material.imageview.ShapeableImageView
+                android:id="@+id/btnProfile"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="16dp"
+                android:src="@drawable/icon_user"
+                app:layout_constraintBottom_toBottomOf="parent"
+                app:layout_constraintEnd_toEndOf="parent"
+                app:layout_constraintTop_toTopOf="parent"
+                app:shapeAppearanceOverlay="@style/CircleImage" />
+
+        </androidx.constraintlayout.widget.ConstraintLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <androidx.core.widget.NestedScrollView
+        android:id="@+id/nestedScroll"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:clipToPadding="false"
+        android:paddingBottom="100dp"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/layoutToolbar">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:padding="16dp">
+
+            <!-- Search Bar -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="48dp"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeColor="#E5E7EB"
+                app:strokeWidth="1dp"
+                app:cardBackgroundColor="@android:color/white">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:gravity="center_vertical"
+                    android:paddingHorizontal="16dp">
+                    <ImageView
+                        android:layout_width="20dp"
+                        android:layout_height="20dp"
+                        android:src="@drawable/ic_simulasi"
+                        app:tint="#9CA3AF" />
+                    <TextView
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:text="Cari layanan (Pulsa, PLN, PDAM...)"
+                        android:textColor="#9CA3AF"
+                        android:textSize="14sp" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                android:text="KATEGORI PPOB"
+                android:textColor="@color/design_text_gray"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <!-- Category Grid -->
+            <GridLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="16dp"
+                android:columnCount="4">
+
+                <!-- Pulsa -->
+                <LinearLayout style="@style/PpobCategoryItem">
+                    <ImageView style="@style/PpobCategoryIcon" android:src="@drawable/ic_phone_android" android:background="#EFF6FF" app:tint="#3B82F6"/>
+                    <TextView style="@style/PpobCategoryLabel" android:text="Pulsa" />
+                </LinearLayout>
+
+                <!-- Paket Data -->
+                <LinearLayout style="@style/PpobCategoryItem">
+                    <ImageView style="@style/PpobCategoryIcon" android:src="@drawable/ic_signal_cellular_alt" android:background="#F0FDF4" app:tint="#22C55E"/>
+                    <TextView style="@style/PpobCategoryLabel" android:text="Paket Data" />
+                </LinearLayout>
+
+                <!-- Token PLN -->
+                <LinearLayout style="@style/PpobCategoryItem">
+                    <ImageView style="@style/PpobCategoryIcon" android:src="@drawable/ic_bolt" android:background="#FFFBEB" app:tint="#F59E0B"/>
+                    <TextView style="@style/PpobCategoryLabel" android:text="Token PLN" />
+                </LinearLayout>
+
+                <!-- PDAM -->
+                <LinearLayout style="@style/PpobCategoryItem">
+                    <ImageView style="@style/PpobCategoryIcon" android:src="@drawable/ic_water_drop" android:background="#F0F9FF" app:tint="#0EA5E9"/>
+                    <TextView style="@style/PpobCategoryLabel" android:text="PDAM" />
+                </LinearLayout>
+
+                <!-- BPJS -->
+                <LinearLayout style="@style/PpobCategoryItem">
+                    <ImageView style="@style/PpobCategoryIcon" android:src="@drawable/ic_security" android:background="#FEF2F2" app:tint="#EF4444"/>
+                    <TextView style="@style/PpobCategoryLabel" android:text="BPJS" />
+                </LinearLayout>
+
+                <!-- Telkom -->
+                <LinearLayout style="@style/PpobCategoryItem">
+                    <ImageView style="@style/PpobCategoryIcon" android:src="@drawable/ic_router" android:background="#F5F3FF" app:tint="#8B5CF6"/>
+                    <TextView style="@style/PpobCategoryLabel" android:text="Telkom" />
+                </LinearLayout>
+
+                <!-- E-Wallet -->
+                <LinearLayout style="@style/PpobCategoryItem">
+                    <ImageView style="@style/PpobCategoryIcon" android:src="@drawable/ic_wallet" android:background="#FFF7ED" app:tint="#F97316"/>
+                    <TextView style="@style/PpobCategoryLabel" android:text="E-Wallet" />
+                </LinearLayout>
+
+                <!-- Lainnya -->
+                <LinearLayout style="@style/PpobCategoryItem">
+                    <ImageView style="@style/PpobCategoryIcon" android:src="@drawable/ic_grid_view" android:background="#F9FAFB" app:tint="#6B7280"/>
+                    <TextView style="@style/PpobCategoryLabel" android:text="Lainnya" />
+                </LinearLayout>
+
+            </GridLayout>
+
+            <!-- Promo Banner -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="140dp"
+                android:layout_marginTop="24dp"
+                app:cardCornerRadius="20dp"
+                app:cardElevation="0dp">
+                <FrameLayout android:layout_width="match_parent" android:layout_height="match_parent">
+                    <ImageView
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:scaleType="centerCrop"
+                        android:src="@drawable/bg_dashboard_header" />
+                    <View android:layout_width="match_parent" android:layout_height="match_parent" android:background="#80003B95" />
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="center_vertical"
+                        android:orientation="vertical"
+                        android:padding="20dp">
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:background="@drawable/bg_secure_pill"
+                            android:backgroundTint="#40FFFFFF"
+                            android:paddingHorizontal="8dp"
+                            android:paddingVertical="2dp"
+                            android:text="PROMO BULAN INI"
+                            android:textColor="@android:color/white"
+                            android:textSize="9sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="8dp"
+                            android:text="Cashback 5%\nTagihan PLN &amp; PDAM"
+                            android:textColor="@android:color/white"
+                            android:textSize="18sp"
+                            android:textStyle="bold" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="4dp"
+                            android:text="Khusus Anggota MJS 2000"
+                            android:textColor="#E0E7FF"
+                            android:textSize="11sp" />
+                    </LinearLayout>
+                </FrameLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+            <RelativeLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp">
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="SERING DIBELI"
+                    android:textColor="@color/design_text_dark"
+                    android:textSize="14sp"
+                    android:textStyle="bold" />
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_alignParentEnd="true"
+                    android:text="Lihat Semua"
+                    android:textColor="@color/design_blue_dark"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+            </RelativeLayout>
+
+            <!-- Quick Purchase List -->
+            <include layout="@layout/item_ppob_quick" />
+            <include layout="@layout/item_ppob_quick" />
+            <include layout="@layout/item_ppob_quick" />
+
+            <!-- Recent Transactions Section -->
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="24dp"
+                app:cardCornerRadius="16dp"
+                app:cardElevation="0dp"
+                app:cardBackgroundColor="#F3F4F6">
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:padding="16dp">
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical">
+                        <ImageView
+                            android:layout_width="20dp"
+                            android:layout_height="20dp"
+                            android:src="@drawable/ic_history_menu"
+                            app:tint="@color/design_blue_dark" />
+                        <TextView
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="8dp"
+                            android:text="Transaksi Terakhir"
+                            android:textColor="@color/design_text_dark"
+                            android:textSize="14sp"
+                            android:textStyle="bold" />
+                    </LinearLayout>
+
+                    <HorizontalScrollView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="12dp"
+                        android:scrollbars="none">
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:orientation="horizontal">
+                            <!-- Recent Card 1 -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="160dp"
+                                android:layout_height="wrap_content"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:cardBackgroundColor="@android:color/white">
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="12dp">
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="12 Okt, 08:45" android:textSize="10sp" android:textColor="@color/design_text_gray"/>
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="PLN 012345678" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/design_text_dark"/>
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Berhasil" android:textSize="11sp" android:textColor="#22C55E" android:textStyle="bold"/>
+                                </LinearLayout>
+                            </com.google.android.material.card.MaterialCardView>
+                            <!-- Recent Card 2 -->
+                            <com.google.android.material.card.MaterialCardView
+                                android:layout_width="160dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="12dp"
+                                app:cardCornerRadius="12dp"
+                                app:cardElevation="0dp"
+                                app:cardBackgroundColor="@android:color/white">
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:padding="12dp">
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="10 Okt, 19:20" android:textSize="10sp" android:textColor="@color/design_text_gray"/>
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="XL 087812344" android:textSize="12sp" android:textStyle="bold" android:textColor="@color/design_text_dark"/>
+                                    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="Berhasil" android:textSize="11sp" android:textColor="#22C55E" android:textStyle="bold"/>
+                                </LinearLayout>
+                            </com.google.android.material.card.MaterialCardView>
+                        </LinearLayout>
+                    </HorizontalScrollView>
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+    </androidx.core.widget.NestedScrollView>
+
+    <!-- Bottom Navigation -->
+    <include
+        android:id="@+id/bottomNav"
+        layout="@layout/layout_footer"
+        android:layout_width="match_parent"
+        android:layout_height="90dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

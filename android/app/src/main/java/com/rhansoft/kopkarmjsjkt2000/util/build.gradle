@@ -1,0 +1,39 @@
+package com.rhansoft.kopkarmjsjkt.util
+
+ext {
+    sourceCompatibility = JavaVersion.VERSION_11
+    targetCompatibility = JavaVersion.VERSION_11
+}
+
+// Top-level com.rhansoft.kopkarmjsjkt.util.build file where you can add configuration options common to all sub-projects/modules.
+
+buildscript {
+
+    repositories {
+        google()
+        jcenter()
+
+    }
+    dependencies {
+
+        classpath 'com.android.tools.com.rhansoft.kopkarmjsjkt.util.build:gradle:7.2.0'
+        classpath 'com.google.gms:google-services:4.3.10'
+
+
+
+        // NOTE: Do not place your application dependencies here; they belong
+        // in the individual module com.rhansoft.kopkarmjsjkt.util.build.gradle files
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        jcenter()
+
+    }
+}
+
+task clean(type: Delete) {
+    delete rootProject.buildDir
+}

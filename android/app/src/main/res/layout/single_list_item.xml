@@ -1,0 +1,50 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <RelativeLayout
+        android:id="@+id/singleRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp">
+
+        <ImageView
+            android:id="@+id/userImg"
+            android:src="@drawable/icon_user"
+            android:layout_width="60dp"
+            android:layout_height="60dp" />
+
+        <TextView
+            android:id="@+id/pNametxt"
+            android:text="Nama Karyawan"
+            android:textSize="20sp"
+            android:layout_marginTop="6dp"
+            android:maxLines="1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:layout_toRightOf="@+id/userImg"
+            android:layout_toEndOf="@+id/userImg"
+            android:layout_marginLeft="8dp"
+            android:layout_marginStart="8dp" />
+
+        <TextView
+            android:id="@+id/pKdAnggotatxt"
+            android:text="KPK"
+            android:textSize="14sp"
+            android:maxLines="1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@+id/pNametxt"
+            android:layout_alignLeft="@+id/pNametxt"
+            android:layout_alignStart="@+id/pNametxt" />
+
+    </RelativeLayout>
+
+    <View
+        android:layout_below="@+id/singleRow"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#f2f2f2" />
+
+</RelativeLayout>

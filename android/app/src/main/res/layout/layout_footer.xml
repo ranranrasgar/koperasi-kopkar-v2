@@ -1,0 +1,178 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/bottomNavContainer"
+    android:layout_width="match_parent"
+    android:layout_height="90dp"
+    android:clipChildren="false">
+
+    <!-- Background Footer Putih (Sama dengan Background) -->
+    <View
+        android:id="@+id/navBackground"
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:background="@drawable/bg_footer_light"
+        android:elevation="16dp"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="70dp"
+        android:orientation="horizontal"
+        android:weightSum="5"
+        android:elevation="17dp"
+        app:layout_constraintBottom_toBottomOf="parent">
+
+        <!-- Beranda -->
+        <LinearLayout
+            android:id="@+id/nav_home"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iv_nav_home"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_calendar_today" />
+
+            <TextView
+                android:id="@+id/tv_nav_home"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Beranda"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Pinjaman -->
+        <LinearLayout
+            android:id="@+id/nav_pinjaman"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iv_nav_pinjaman"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_attach_money_black_24dp" />
+
+            <TextView
+                android:id="@+id/tv_nav_pinjaman"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Pinjaman"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Spacer untuk QR ngambang -->
+        <View
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1" />
+
+        <!-- Simpanan -->
+        <LinearLayout
+            android:id="@+id/nav_simpanan"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iv_nav_simpanan"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_save" />
+
+            <TextView
+                android:id="@+id/tv_nav_simpanan"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Simpanan"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+        <!-- Akun Saya (Profile) -->
+        <LinearLayout
+            android:id="@+id/nav_profile"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:clickable="true"
+            android:focusable="true"
+            android:gravity="center"
+            android:orientation="vertical">
+
+            <ImageView
+                android:id="@+id/iv_nav_profile"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_person_menu" />
+
+            <TextView
+                android:id="@+id/tv_nav_profile"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                android:text="Akun"
+                android:textSize="10sp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <!-- Tombol QR Ngambang (Circle Style) -->
+    <FrameLayout
+        android:id="@+id/nav_qr"
+        android:layout_width="65dp"
+        android:layout_height="80dp"
+        android:layout_marginBottom="10dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:elevation="20dp"
+        android:clipChildren="false"
+        android:clipToPadding="false"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent">
+
+        <View
+            android:layout_width="55dp"
+            android:layout_height="55dp"
+            android:layout_gravity="top|center_horizontal"
+            android:background="@drawable/bg_floating_circle" />
+
+        <ImageView
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_gravity="top|center_horizontal"
+            android:layout_marginTop="12dp"
+            android:src="@drawable/ic_qr_code_scanner"
+            app:tint="@android:color/white" />
+
+        <TextView
+            android:id="@+id/tv_nav_qr"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="bottom|center_horizontal"
+            android:text="QR Scan"
+            android:textColor="@color/design_blue_dark"
+            android:textSize="10sp"
+            android:textStyle="bold" />
+    </FrameLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

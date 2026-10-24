@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+    <RelativeLayout
+        android:id="@+id/singleRow"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="5dp">
+
+        <TextView
+            android:id="@+id/txvTglTrx"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentTop="true"
+            android:paddingRight="5dp"
+            android:text="2020/10/24"
+            android:textSize="11dp" />
+
+        <TextView
+            android:id="@+id/txvNoRef"
+            android:text="SMPM-1712-0006"
+            android:textSize="11dp"
+            android:layout_width="115dp"
+            android:layout_height="wrap_content"
+            android:paddingRight="5dp"
+            android:layout_toRightOf="@id/txvTglTrx"
+            />
+
+        <TextView
+            android:id="@+id/txvDebit"
+            android:text="204.856,69"
+            android:textSize="11dp"
+            android:layout_width="75dp"
+            android:layout_height="wrap_content"
+            android:paddingLeft="15dp"
+            android:gravity="right"
+            android:layout_toRightOf="@id/txvNoRef"
+            />
+        <TextView
+            android:id="@+id/txvKredit"
+            android:text="204.856,69"
+            android:textSize="11dp"
+            android:layout_width="75dp"
+            android:layout_height="wrap_content"
+            android:paddingLeft="15dp"
+            android:gravity="right"
+            android:layout_toRightOf="@id/txvDebit"
+            />
+
+    </RelativeLayout>
+
+    <View
+        android:layout_below="@+id/singleRow"
+        android:layout_width="match_parent"
+        android:layout_height="1dp"
+        android:background="#FFC107" />
+</RelativeLayout>

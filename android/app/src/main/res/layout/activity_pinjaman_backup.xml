@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        app:titleTextColor="@android:color/white" />
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="20dp"
+        tools:context=".PinjamanActivity">
+
+        <ProgressBar
+            android:id="@+id/progressBar"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true"
+            android:elevation="10dp"
+            android:translationZ="10dp"
+            android:visibility="gone" />
+
+        <TextView
+            android:id="@+id/labelNama"
+            android:layout_width="@dimen/barisKiri"
+            android:layout_height="wrap_content"
+            android:paddingBottom="@dimen/paddingBottom"
+            android:text="Nama" />
+
+        <TextView
+            android:id="@+id/txvNama"
+            android:layout_width="@dimen/barisKanan"
+            android:layout_height="wrap_content"
+            android:layout_toRightOf="@id/labelNama"
+            android:paddingBottom="@dimen/paddingBottom"
+            android:text="Andre"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/labelKdAnggota"
+            android:layout_width="@dimen/barisKiri"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/labelNama"
+            android:paddingBottom="@dimen/paddingBottom"
+            android:text="Kode Anggota" />
+
+        <TextView
+            android:id="@+id/txvKdAnggota"
+            android:layout_width="@dimen/barisKanan"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/txvNama"
+            android:layout_toRightOf="@id/labelKdAnggota"
+            android:paddingBottom="@dimen/paddingBottom"
+            android:text="AG-2011-0001"
+            android:textStyle="bold" />
+
+        <RelativeLayout
+            android:id="@+id/singleRow"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/labelKdAnggota"
+            android:background="@color/yello"
+            android:padding="5dp">
+
+            <TextView
+                android:id="@+id/labelTglPinjaman"
+                android:layout_width="60dp"
+                android:layout_height="wrap_content"
+                android:paddingRight="5dp"
+                android:text="Tgl Pjm"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelNoPinjaman"
+                android:layout_width="75dp"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@id/labelTglPinjaman"
+                android:gravity="left"
+                android:paddingLeft="5dp"
+                android:text="No Pinjaman"
+                android:textSize="11sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelPlafond"
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@id/labelNoPinjaman"
+                android:gravity="right"
+                android:paddingLeft="10dp"
+                android:text="Plafond"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelSaldo"
+                android:layout_width="80dp"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@id/labelPlafond"
+                android:gravity="right"
+                android:paddingLeft="10dp"
+                android:text="Saldo"
+                android:textSize="12sp"
+                android:textStyle="bold" />
+
+        </RelativeLayout>
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rvwPinjaman"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_below="@id/singleRow"
+            android:paddingBottom="10dp"
+            android:scrollbars="vertical" />
+
+    </RelativeLayout>
+</LinearLayout>

@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="#FFFFFF">
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="20dp">
+
+        <com.google.android.material.card.MaterialCardView
+            android:layout_width="match_parent"
+            android:layout_height="200dp"
+            android:layout_marginBottom="16dp"
+            app:cardCornerRadius="16dp"
+            app:cardElevation="0dp"
+            app:strokeColor="#F3F4F6"
+            app:strokeWidth="1dp">
+
+            <ImageView
+                android:id="@+id/imgDetailHimbauan"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:scaleType="centerCrop"
+                android:src="@drawable/ic_notifications_none" />
+        </com.google.android.material.card.MaterialCardView>
+
+        <TextView
+            android:id="@+id/tvTitleDetail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="Judul Himbauan"
+            android:textColor="@color/design_text_dark"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <View
+            android:layout_width="40dp"
+            android:layout_height="3dp"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="16dp"
+            android:background="@color/design_blue_dark" />
+
+        <TextView
+            android:id="@+id/tvContentDetail"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:lineSpacingExtra="4sp"
+            android:text="Isi detail himbauan akan muncul di sini secara lengkap sesuai dengan yang ada di database."
+            android:textColor="@color/design_text_gray"
+            android:textSize="14sp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCloseDialog"
+            style="@style/Widget.MaterialComponents.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="end"
+            android:layout_marginTop="20dp"
+            android:text="TUTUP"
+            android:textColor="@color/design_blue_dark" />
+
+    </LinearLayout>
+</androidx.core.widget.NestedScrollView>

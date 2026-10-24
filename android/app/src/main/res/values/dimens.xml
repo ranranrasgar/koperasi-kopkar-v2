@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="barisKiri">150dp</dimen>
+    <dimen name="barisKanan">220dp</dimen>
+    <dimen name="paddingBottom">6dp</dimen>
+</resources>

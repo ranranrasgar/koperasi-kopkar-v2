@@ -1,0 +1,39 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="8dp"
+    android:layout_marginBottom="4dp"
+    android:background="@android:color/transparent">
+
+    <TextView
+        android:id="@+id/txvTitle"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Judul"
+        android:textStyle="bold"
+        android:textColor="#333"
+        android:paddingBottom="4dp"
+        android:textSize="14sp" />
+
+    <TextView
+        android:id="@+id/txvPesan"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/bg_bubble"
+        android:text="Isi pesan..."
+        android:textColor="#000"
+        android:textSize="14sp"
+        android:padding="12dp"
+        android:maxWidth="280dp" />
+
+    <TextView
+        android:id="@+id/txvTanggal"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="2025-07-14"
+        android:textColor="#777"
+        android:textSize="12sp"
+        android:layout_marginTop="4dp" />
+
+</LinearLayout>

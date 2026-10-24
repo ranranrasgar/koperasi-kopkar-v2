@@ -1,0 +1,234 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical">
+
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="?attr/colorPrimary"
+        android:elevation="4dp"
+        app:titleTextColor="@android:color/white" />
+
+    <ScrollView
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:padding="20dp"
+        tools:context=".PotonganBulananActivity">
+
+        <RelativeLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+
+            <TextView
+                android:id="@+id/labelKdAnggota"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Kode Anggota" />
+
+            <TextView
+                android:id="@+id/txvKdAnggota"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_toRightOf="@id/labelKdAnggota"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="AG-2011-0001"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelNama"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelKdAnggota"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Nama" />
+
+            <TextView
+                android:id="@+id/txvNama"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvKdAnggota"
+                android:layout_toRightOf="@id/labelNama"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Andre"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelNoRek"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelNama"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="No Rekening" />
+
+            <TextView
+                android:id="@+id/txvNoRek"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvNama"
+                android:layout_toRightOf="@id/labelNoRek"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="12345"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelNmBank"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelNoRek"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Bank" />
+
+            <TextView
+                android:id="@+id/txvNmBank"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvNoRek"
+                android:layout_toRightOf="@id/labelNoRek"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="BCA"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelPokok"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelNmBank"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Pokok" />
+
+            <TextView
+                android:id="@+id/txvPokok"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvNmBank"
+                android:layout_toRightOf="@id/labelPokok"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelWajib"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelPokok"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Wajib" />
+
+            <TextView
+                android:id="@+id/txvWajib"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvPokok"
+                android:layout_toRightOf="@id/labelWajib"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelSukarela"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelWajib"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Sukarela" />
+
+            <TextView
+                android:id="@+id/txvSukarela"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvWajib"
+                android:layout_toRightOf="@id/labelSukarela"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelKoperasi"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelSukarela"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Koperasi" />
+
+            <TextView
+                android:id="@+id/txvKoperasi"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvSukarela"
+                android:layout_toRightOf="@id/labelKoperasi"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelBank"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelKoperasi"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Bank" />
+
+            <TextView
+                android:id="@+id/txvBank"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvKoperasi"
+                android:layout_toRightOf="@id/labelBank"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelKpr"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelBank"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="KPR" />
+
+            <TextView
+                android:id="@+id/txvKpr"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvBank"
+                android:layout_toRightOf="@id/labelKpr"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelAdmBank"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelKpr"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Admin Bank" />
+
+            <TextView
+                android:id="@+id/txvAdmBank"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvKpr"
+                android:layout_toRightOf="@id/labelAdmBank"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/labelTotal"
+                android:layout_width="@dimen/barisKiri"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/labelAdmBank"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:text="Total Potongan" />
+
+            <TextView
+                android:id="@+id/txvTotal"
+                android:layout_width="@dimen/barisKanan"
+                android:layout_height="wrap_content"
+                android:layout_below="@id/txvAdmBank"
+                android:layout_toRightOf="@id/labelTotal"
+                android:paddingBottom="@dimen/paddingBottom"
+                android:textStyle="bold" />
+        </RelativeLayout>
+    </ScrollView>
+</LinearLayout>
