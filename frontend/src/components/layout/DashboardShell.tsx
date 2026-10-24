@@ -43,18 +43,19 @@ function ShellContent({ children, operator }: { children: React.ReactNode; opera
 }
 
 /**
- * Halaman tabel/laporan yang banyak kolomnya dibuat selebar layar; halaman lain (form, kartu, detail, grafik) dibatasi supaya tetap proporsional.
+ * Halaman yang tabelnya benar-benar banyak kolom (sekitar 10 ke atas, atau kolomnya bisa ditambah pengguna) selebar layar.
+ * Tabel 5-8 kolom (Karyawan, User Mobile, Buku Simpanan, Jurnal, Neraca Saldo, Bank Book), form, kartu, dan detail dibatasi supaya proporsional.
  * Awalan dengan "/" di akhir berlaku untuk seluruh turunannya; tanpa itu hanya alamat persis.
  */
 const HALAMAN_LEBAR = [
-    "/dashboard/members/", "/dashboard/members",
-    "/dashboard/savings", "/dashboard/savings/ledger",
-    "/dashboard/loans", "/dashboard/loans/apply", "/dashboard/loans/bad-debts",
-    "/dashboard/deductions/",
-    "/dashboard/accounting/journal", "/dashboard/accounting/trial-balance", "/dashboard/accounting/bank-book",
-    "/dashboard/attendance",
+    "/dashboard/members",          // Daftar Anggota: 25 kolom bisa dipilih
+    "/dashboard/savings",          // Rekap Simpanan: 17+ kolom
+    "/dashboard/loans",            // Daftar Pinjaman: 24 kolom
+    "/dashboard/loans/bad-debts",  // Kredit Macet: 10 kolom
+    "/dashboard/deductions",       // Transaksi Potongan: 11 kolom
+    "/dashboard/deductions/",      // Generate & Posting dan rinciannya
 ]
-const lebarPenuh = (path: string) => HALAMAN_LEBAR.some((p) => (p.endsWith("/") ? path.startsWith(p) : path === p)) || path === "/dashboard/deductions"
+const lebarPenuh = (path: string) => HALAMAN_LEBAR.some((p) => (p.endsWith("/") ? path.startsWith(p) : path === p))
 
 export function DashboardShell({ children, operator, koperasi, lencana = {} }: { children: React.ReactNode; operator: OperatorTampil; koperasi: KoperasiTampil; lencana?: Record<string, number> }) {
     return (
