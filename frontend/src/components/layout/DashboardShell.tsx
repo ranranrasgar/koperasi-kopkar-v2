@@ -33,7 +33,8 @@ function ShellContent({ children, operator }: { children: React.ReactNode; opera
                 
                 <main className={cn(
                     "flex-1 p-4 md:p-6 lg:p-8 w-full animate-in fade-in duration-500",
-                    ["/dashboard/savings", "/dashboard/loans", "/dashboard/accounting/journal"].some((p) => pathname.startsWith(p)) ? "max-w-full" : "max-w-7xl mx-auto"
+                    // Semua halaman selebar layar (tabel dan laporan banyak kolom); hanya beranda dashboard yang dibatasi, dan form/artikel membatasi lebarnya sendiri.
+                    pathname === "/dashboard" ? "max-w-7xl mx-auto" : "max-w-full"
                 )}>
                     {children}
                 </main>
