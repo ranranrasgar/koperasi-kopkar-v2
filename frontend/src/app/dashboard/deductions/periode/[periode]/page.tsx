@@ -4,7 +4,7 @@ import { FormCard } from "@/components/transaksi/common"
 import { ModalPosting, ModalUbah, SaklarDipotong } from "@/components/potongan/FormPotongan"
 import { CetakEksporPotongan, FilterPotongan } from "@/components/potongan/AlatPotongan"
 import { akunKas } from "@/lib/queries/akuntansi"
-import { PERIODE, anggotaPeriode, kasBawaanPotongan, namaPeriode, rekapPotongan, satuPeriode } from "@/lib/queries/potongan-gaji"
+import { NAMA_BAGIAN, PERIODE, STATUS_PERIODE, anggotaPeriode, bagianPeriode, kasBawaanPotongan, namaPeriode, rekapPotongan, satuPeriode } from "@/lib/queries/potongan-gaji"
 import { formatAngka, formatTanggal } from "@/lib/format"
 import { sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
@@ -25,18 +25,22 @@ export default async function DetailPeriodePage(props: PageProps<"/dashboard/ded
     if (!PERIODE.test(periode)) notFound()
     const s = await props.searchParams
     const f = { cari: sp(s, "q"), staff: sp(s, "staff"), tampil: sp(s, "tampil") }
-    const [p, { rows, jumlah }, rekap, akun, kasBawaan] = await Promise.all([satuPeriode(periode), anggotaPeriode(periode, f),
-        rekapPotongan(periode, f.staff), akunKas(), kasBawaanPotongan()])
+    const [p, { rows, jumlah }, rekap, akun, kasBawaan, bagian] = await Promise.all([satuPeriode(periode), anggotaPeriode(periode, f),
+        rekapPotongan(periode, f.staff), akunKas(), kasBawaanPotongan(), bagianPeriode(periode)])
     if (!p) notFound()
     const draf = p.status === "draf"
     const sub = `${p.anggota - p.tidak_dipotong} dari ${p.anggota} anggota dipotong`
+    const sudah = bagian.filter((b) => b.posting)
 
     return (
         <div className="space-y-6">
             <FormCard title={`Potongan Gaji ${namaPeriode(periode)}`}
-                description={draf
-                    ? `Draf, digenerate ${p.digenerate_pada} oleh ${p.dibuat_oleh}. ${sub}. Total dipotong Rp ${formatAngka(p.total)}.`
-                    : `Diposting ${formatTanggal(p.tgl_posting)} ke ${p.kas} oleh ${p.diposting_oleh} (${p.diposting_pada}). ${sub}. Total dipotong Rp ${formatAngka(p.total)}.`}>
+                description={`${STATUS_PERIODE[p.status]}, digenerate ${p.digenerate_pada} oleh ${p.dibuat_oleh}. ${sub}. Total dipotong Rp ${formatAngka(p.total)}.`}>
+                {sudah.length > 0 && (
+                    <ul className="mb-3 space-y-0.5 text-xs text-muted-foreground">
+                        {sudah.map((b) => <li key={b.bagian}><span className="font-medium text-foreground">{NAMA_BAGIAN[b.bagian]}</span>: diposting {formatTanggal(b.posting!.tgl_posting)} ke {b.posting!.kas} oleh {b.posting!.diposting_oleh}, {b.transaksi} transaksi, Rp {formatAngka(Number(b.jumlah))}</li>)}
+                    </ul>
+                )}
                 <div className="flex flex-wrap items-center justify-between gap-3 text-sm">
                     <div className="flex flex-wrap items-center gap-3">
                         <Link href="/dashboard/deductions/periode" className="text-blue-600 dark:text-blue-400 hover:underline">&larr; Semua periode</Link>
@@ -45,8 +49,9 @@ export default async function DetailPeriodePage(props: PageProps<"/dashboard/ded
                     <div className="flex flex-wrap items-center gap-2">
                         {/* Cetak dan Ekspor: anggota yang dipotong, mengikuti filter Staff (seperti desktop). */}
                         <CetakEksporPotongan periode={periode} judulPeriode={namaPeriode(periode)} rows={rekap} staff={f.staff} />
-                        {draf && <ModalPosting periode={periode} akun={akun} kasBawaan={kasBawaan} tanggalBawaan={akhirBulan(periode)}
-                            ringkas={`${sub}, total Rp ${formatAngka(p.total)}. Anggota dengan saklar mati tidak ikut diposting.`} />}
+                        {p.status !== "diposting" && <ModalPosting periode={periode} akun={akun} kasBawaan={kasBawaan} tanggalBawaan={akhirBulan(periode)}
+                            ringkas={`${sub}, total Rp ${formatAngka(p.total)}. Anggota dengan saklar mati tidak ikut diposting.`}
+                            bagian={bagian.map((b) => ({ bagian: b.bagian, nama: NAMA_BAGIAN[b.bagian], transaksi: b.transaksi, jumlah: Number(b.jumlah), posting: b.posting }))} />}
                     </div>
                 </div>
             </FormCard>

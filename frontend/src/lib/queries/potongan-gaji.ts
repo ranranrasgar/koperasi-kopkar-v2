@@ -1,12 +1,22 @@
 import "server-only"
-import { query } from "@/lib/db"
+import { ringkasBagian, type Bagian } from "@kopkar/backend/src/posting/potongan.ts"
+import { pool, query } from "@/lib/db"
 
 const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 export const namaPeriode = (p: string) => `${BULAN[Number(p.slice(5, 7)) - 1]} ${p.slice(0, 4)}`
 export const PERIODE = /^\d{4}-(0[1-9]|1[0-2])$/
 
+export const NAMA_BAGIAN: Record<Bagian, string> = {
+    pokok: "Simpanan Pokok", wajib: "Simpanan Wajib", sukarela: "Simpanan Sukarela",
+    koperasi: "Pinjaman Koperasi", bank: "Pinjaman Bank", kpr: "Pinjaman KPR",
+}
+export const STATUS_PERIODE = { draf: "Draf", sebagian: "Diposting sebagian", diposting: "Diposting" } as const
+
+/** Ringkasan per bagian posting (jumlah transaksi, nominal, dan keterangan posting) untuk modal Posting. */
+export const bagianPeriode = (periode: string) => ringkasBagian(pool, periode)
+
 export interface PeriodePotongan {
-    id: number; periode: string; status: "draf" | "diposting"; dibuat_oleh: string; digenerate_pada: string
+    id: number; periode: string; status: keyof typeof STATUS_PERIODE; dibuat_oleh: string; digenerate_pada: string
     tgl_posting: string | null; kas: string | null; diposting_oleh: string | null; diposting_pada: string | null
     anggota: number; tidak_dipotong: number; total: number
 }
@@ -59,11 +69,14 @@ export interface PinjamanPotongan {
 
 export async function detailAnggotaPeriode(periode: string, kodeAgt: string) {
     // Nominal simpanan sebagai teks: diisikan apa adanya ke form ubah.
-    const [a] = await query<Omit<AnggotaPotongan, "s_wajib" | "s_sukarela"> & { anggota_id: string; s_wajib: string; s_sukarela: string }>(
+    const [a] = await query<Omit<AnggotaPotongan, "s_wajib" | "s_sukarela"> & {
+        anggota_id: string; s_pokok: string; s_wajib: string; s_sukarela: string; bukti_pokok: string | null
+    }>(
         `SELECT g.anggota_id, g.kode_agt, g.nik, g.nama, g.status_staff, g.bank_nama, g.bank_no_rek,
-                g.s_wajib::text s_wajib, g.s_sukarela::text s_sukarela, g.koperasi::float8, g.bank::float8, g.kpr::float8, g.adm::float8,
+                g.s_pokok::text s_pokok, g.s_wajib::text s_wajib, g.s_sukarela::text s_sukarela,
+                g.koperasi::float8, g.bank::float8, g.kpr::float8, g.adm::float8,
                 (g.s_wajib + g.s_sukarela + g.koperasi + g.bank + g.kpr + g.adm)::float8 total,
-                g.dipotong, g.alasan, g.diubah_oleh, g.bukti_wajib, g.bukti_sukarela
+                g.dipotong, g.alasan, g.diubah_oleh, g.bukti_pokok, g.bukti_wajib, g.bukti_sukarela
            FROM potongan_gaji_anggota g JOIN potongan_gaji p ON p.id = g.potongan_gaji_id
           WHERE p.periode = $1 AND g.kode_agt = $2`, [periode, kodeAgt])
     if (!a) return null

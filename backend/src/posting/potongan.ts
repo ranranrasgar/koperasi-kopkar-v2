@@ -1,5 +1,5 @@
 import type { Db } from '../db.ts';
-import { toUnits } from './money.ts';
+import { fromUnits, toUnits } from './money.ts';
 import { setorSimpanan } from './simpanan.ts';
 import { bayarAngsuran } from './pinjaman.ts';
 import { bayarAngsuranKpr } from './kpr.ts';
@@ -38,7 +38,7 @@ function cekPeriode(periode: string) {
 async function kunciPeriode(db: Db, periode: string) {
     const p = (await db.query<{ id: string; status: string }>('SELECT id, status FROM potongan_gaji WHERE periode = $1 FOR UPDATE', [periode])).rows[0];
     if (!p) throw new Error(`Periode ${periode} belum digenerate`);
-    if (p.status !== 'draf') throw new Error(`Periode ${periode} sudah diposting`);
+    if (p.status !== 'draf') throw new Error(`Periode ${periode} sudah ${p.status === 'sebagian' ? 'diposting sebagian' : 'diposting'}; data tidak bisa diubah lagi`);
     return p.id;
 }
 
@@ -70,7 +70,7 @@ export interface RingkasGenerate { periode: string; anggota: number; pinjaman: n
 export async function generatePotongan(db: Db, periode: string, opr: string): Promise<RingkasGenerate> {
     cekPeriode(periode);
     const ada = (await db.query<{ id: string; status: string }>('SELECT id, status FROM potongan_gaji WHERE periode = $1 FOR UPDATE', [periode])).rows[0];
-    if (ada?.status === 'diposting') throw new Error(`Periode ${periode} sudah diposting, tidak bisa digenerate ulang`);
+    if (ada && ada.status !== 'draf') throw new Error(`Periode ${periode} sudah ${ada.status === 'sebagian' ? 'diposting sebagian' : 'diposting'}, tidak bisa digenerate ulang`);
     const id = ada?.id ?? (await db.query<{ id: string }>(
         'INSERT INTO potongan_gaji (periode, dibuat_oleh) VALUES ($1, $2) RETURNING id', [periode, opr])).rows[0].id;
     if (ada) await db.query('UPDATE potongan_gaji SET digenerate_pada = now() WHERE id = $1', [id]);
@@ -86,9 +86,9 @@ export async function generatePotongan(db: Db, periode: string, opr: string): Pr
            FROM (${SQL_ANGSURAN_POTONGAN}) x JOIN anggota a ON a.id = x.anggota_id AND a.aktif`, [id]);
     await db.query(
         `INSERT INTO potongan_gaji_anggota (potongan_gaji_id, anggota_id, kode_agt, nik, nama, status_staff, bank_nama, bank_no_rek, bank_atas_nama,
-            s_wajib, s_sukarela, koperasi, bank, kpr, adm)
+            s_pokok, s_wajib, s_sukarela, koperasi, bank, kpr, adm)
          SELECT $1, a.id, a.kode_agt, a.nik, a.nama, a.status_staff, a.bank_nama, a.bank_no_rek, a.bank_atas_nama,
-                a.simpanan_wajib, a.simpanan_sukarela, COALESCE(j.koperasi, 0), COALESCE(j.bank, 0), COALESCE(j.kpr, 0),
+                a.simpanan_pokok, a.simpanan_wajib, a.simpanan_sukarela, COALESCE(j.koperasi, 0), COALESCE(j.bank, 0), COALESCE(j.kpr, 0),
                 COALESCE((SELECT rp_adm_bank FROM perusahaan ORDER BY id LIMIT 1), 0)
            FROM anggota a
            LEFT JOIN (SELECT anggota_id,
@@ -119,6 +119,7 @@ export const setDipotong = (db: Db, periode: string, kodeAgt: string, dipotong: 
 export interface UbahPotongan {
     dipotong: boolean;
     alasan: string | null;
+    sPokok?: string;
     sWajib?: string;
     sSukarela?: string;
     /** Nominal per pinjaman (id baris potongan_gaji_pinjaman). Semua nol = pinjaman itu tidak dipotong bulan ini. */
@@ -151,6 +152,7 @@ export async function ubahPotongan(db: Db, periode: string, kodeAgt: string, u: 
     await db.query(
         `UPDATE potongan_gaji_anggota g SET dipotong = $2, alasan = $3, diubah_oleh = $4, diubah_pada = now(),
                 s_wajib = COALESCE($5::numeric, g.s_wajib), s_sukarela = COALESCE($6::numeric, g.s_sukarela),
+                s_pokok = COALESCE($9::numeric, g.s_pokok),
                 koperasi = COALESCE(j.koperasi, 0), bank = COALESCE(j.bank, 0), kpr = COALESCE(j.kpr, 0)
            FROM (SELECT SUM(pokok + jasa + adm + provisi) FILTER (WHERE grup = 'KOPERASI') AS koperasi,
                         SUM(pokok + jasa + adm + provisi) FILTER (WHERE grup = 'BANK / PIHAK LAIN') AS bank,
@@ -158,68 +160,131 @@ export async function ubahPotongan(db: Db, periode: string, kodeAgt: string, u: 
                    FROM potongan_gaji_pinjaman WHERE potongan_gaji_id = $7 AND anggota_id = $8) j
           WHERE g.id = $1`,
         [g.id, u.dipotong, u.dipotong ? null : (u.alasan || null), opr, uang(u.sWajib, 'Simpanan wajib') ?? null,
-         uang(u.sSukarela, 'Simpanan sukarela') ?? null, id, g.anggota_id]);
+         uang(u.sSukarela, 'Simpanan sukarela') ?? null, id, g.anggota_id, uang(u.sPokok, 'Simpanan pokok') ?? null]);
     await isiTempPotonganAll(db, id, periode, g.anggota_id);
 }
 
-export interface PostingPotonganInput { periode: string; tanggal: string; kasPerkiraanId: number | string; opr: string }
-export interface RingkasPosting { periode: string; anggota: number; simpanan: number; angsuran: number; kpr: number }
+/** Bagian posting, seperti form posting desktop: Simpanan (centang Pokok/Wajib/Sukarela), Pinjaman Koperasi, Bank, KPR. */
+export const BAGIAN = ['pokok', 'wajib', 'sukarela', 'koperasi', 'bank', 'kpr'] as const;
+export type Bagian = typeof BAGIAN[number];
+const GRUP: Record<string, Bagian> = { KOPERASI: 'koperasi', 'BANK / PIHAK LAIN': 'bank', KPR: 'kpr' };
+const KODE_SIMPANAN = { pokok: '01', wajib: '02', sukarela: '03' } as const;
+/** Bagian yang harus diposting sebelum periode selesai (bila ada nilainya). Simpanan pokok opsional, seperti CheckBox1 desktop. */
+const BAGIAN_WAJIB: Bagian[] = ['wajib', 'sukarela', 'koperasi', 'bank', 'kpr'];
+
+export interface RingkasBagian {
+    bagian: Bagian; transaksi: number; jumlah: string
+    posting: { tgl_posting: string; kas: string; diposting_oleh: string; diposting_pada: string } | null
+}
+
+/** Jumlah transaksi dan nominal per bagian (anggota yang dipotong), beserta keterangan posting bila sudah diposting. */
+export async function ringkasBagian(db: Pick<Db, 'query'>, periode: string): Promise<RingkasBagian[]> {
+    const r = await db.query<{ bagian: Bagian; transaksi: string; jumlah: string; tgl_posting: string | null; kas: string | null;
+        diposting_oleh: string | null; diposting_pada: string | null }>(
+        `WITH p AS (SELECT id FROM potongan_gaji WHERE periode = $1),
+              x AS (
+                SELECT 'pokok' bagian, COUNT(*) FILTER (WHERE g.s_pokok > 0) n, COALESCE(SUM(g.s_pokok), 0) rp FROM potongan_gaji_anggota g, p WHERE g.potongan_gaji_id = p.id AND g.dipotong
+                UNION ALL SELECT 'wajib', COUNT(*) FILTER (WHERE g.s_wajib > 0), COALESCE(SUM(g.s_wajib), 0) FROM potongan_gaji_anggota g, p WHERE g.potongan_gaji_id = p.id AND g.dipotong
+                UNION ALL SELECT 'sukarela', COUNT(*) FILTER (WHERE g.s_sukarela > 0), COALESCE(SUM(g.s_sukarela), 0) FROM potongan_gaji_anggota g, p WHERE g.potongan_gaji_id = p.id AND g.dipotong
+                UNION ALL SELECT CASE x.grup WHEN 'KOPERASI' THEN 'koperasi' WHEN 'KPR' THEN 'kpr' ELSE 'bank' END,
+                       COUNT(*) FILTER (WHERE x.pokok + x.jasa + x.adm + x.provisi > 0), COALESCE(SUM(x.pokok + x.jasa + x.adm + x.provisi), 0)
+                  FROM potongan_gaji_pinjaman x JOIN p ON x.potongan_gaji_id = p.id
+                  JOIN potongan_gaji_anggota g ON g.potongan_gaji_id = p.id AND g.anggota_id = x.anggota_id AND g.dipotong GROUP BY x.grup)
+         SELECT b.bagian, COALESCE(s.transaksi, x.n, 0)::text transaksi, COALESCE(s.jumlah, x.rp, 0)::text jumlah,
+                s.tgl_posting::text tgl_posting, k.kode_perkiraan || ' ' || k.nama_perkiraan kas, s.diposting_oleh,
+                to_char(s.diposting_pada, 'YYYY-MM-DD HH24:MI') diposting_pada
+           FROM unnest($2::text[]) WITH ORDINALITY b(bagian, urut)
+           LEFT JOIN x ON x.bagian = b.bagian
+           LEFT JOIN potongan_gaji_posting s ON s.potongan_gaji_id = (SELECT id FROM p) AND s.bagian = b.bagian
+           LEFT JOIN perkiraan k ON k.id = s.kas_perkiraan_id
+          ORDER BY b.urut`, [periode, [...BAGIAN]]);
+    return r.rows.map((b) => ({
+        bagian: b.bagian, transaksi: Number(b.transaksi), jumlah: b.jumlah,
+        posting: b.tgl_posting ? { tgl_posting: b.tgl_posting, kas: b.kas ?? '', diposting_oleh: b.diposting_oleh ?? '', diposting_pada: b.diposting_pada ?? '' } : null,
+    }));
+}
+
+export interface PostingPotonganInput { periode: string; tanggal: string; kasPerkiraanId: number | string; opr: string; bagian: Bagian[] }
+export interface RingkasPosting { periode: string; bagian: { bagian: Bagian; transaksi: number }[]; selesai: boolean }
 
 /**
- * Posting potongan gaji periode draf: untuk tiap anggota yang dipotong, setoran simpanan wajib dan sukarela lalu angsuran
- * setiap pinjamannya (nominal persis hasil generate), lewat mesin posting yang sama dengan form kasir (nomor bukti dan
- * jurnal sama). Dijalankan di satu transaksi oleh pemanggil: satu galat membatalkan seluruh posting.
- * Adm bank tidak dibukukan (desktop juga tidak): biaya itu milik bank penyalur gaji.
+ * Posting bagian-bagian potongan gaji yang dipilih (seperti tombol Posting di tiap form desktop), dengan tanggal dan akun
+ * kas yang sama untuk bagian-bagian itu. Tiap bagian hanya bisa diposting sekali. Setelah bagian pertama diposting, data
+ * periode terkunci (tidak bisa diubah atau digenerate ulang); setelah semua bagian wajib yang ada nilainya diposting,
+ * periode selesai (diposting).
+ *
+ * Transaksi lewat mesin posting yang sama dengan form kasir: simpanan pokok/wajib/sukarela (SMPM, jurnal kas lawan akun
+ * jenis simpanan), angsuran pinjaman tunai (pokok, jasa, adm, provisi persis hasil generate; jml_cicilan naik; jurnal ke
+ * COA jenis kredit, no_bukti_transaksi = nomor pinjaman), angsuran KPR. Dijalankan di satu transaksi oleh pemanggil:
+ * satu galat membatalkan semua bagian di panggilan ini. Adm bank tidak dibukukan (desktop juga tidak).
  */
 export async function postingPotongan(db: Db, i: PostingPotonganInput): Promise<RingkasPosting> {
     cekPeriode(i.periode);
     if (i.tanggal.slice(0, 7) !== i.periode) throw new Error(`Tanggal posting ${i.tanggal} harus di bulan periode ${i.periode}`);
-    const id = await kunciPeriode(db, i.periode);
+    const pilih = [...new Set(i.bagian)].filter((b): b is Bagian => (BAGIAN as readonly string[]).includes(b));
+    if (pilih.length === 0) throw new Error('Pilih minimal satu bagian yang akan diposting');
+    const per = (await db.query<{ id: string; status: string }>('SELECT id, status FROM potongan_gaji WHERE periode = $1 FOR UPDATE', [i.periode])).rows[0];
+    if (!per) throw new Error(`Periode ${i.periode} belum digenerate`);
+    if (per.status === 'diposting') throw new Error(`Periode ${i.periode} sudah selesai diposting`);
+    const id = per.id;
+    const sudah = (await db.query<{ bagian: Bagian }>('SELECT bagian FROM potongan_gaji_posting WHERE potongan_gaji_id = $1', [id])).rows.map((r) => r.bagian);
+    const dobel = pilih.filter((b) => sudah.includes(b));
+    if (dobel.length) throw new Error(`Bagian ${dobel.join(', ')} sudah diposting`);
     const deskripsi = `Potongan gaji ${i.periode}`;
 
-    const anggota = (await db.query<{ id: string; anggota_id: string; kode_agt: string; s_wajib: string; s_sukarela: string }>(
-        `SELECT id, anggota_id, kode_agt, s_wajib, s_sukarela FROM potongan_gaji_anggota
+    const anggota = (await db.query<{ id: string; anggota_id: string; kode_agt: string; s_pokok: string; s_wajib: string; s_sukarela: string }>(
+        `SELECT id, anggota_id, kode_agt, s_pokok, s_wajib, s_sukarela FROM potongan_gaji_anggota
           WHERE potongan_gaji_id = $1 AND dipotong ORDER BY nama, kode_agt`, [id])).rows;
-    const pinjaman = (await db.query<{ id: string; anggota_id: string; jenis: string; pinjaman_id: string; no_pinjaman: string; angsuran_ke: number;
+    const pinjaman = (await db.query<{ id: string; grup: string; jenis: string; pinjaman_id: string; no_pinjaman: string; angsuran_ke: number;
         pokok: string; jasa: string; adm: string; provisi: string }>(
-        `SELECT p.id, p.anggota_id, p.jenis, p.pinjaman_id, p.no_pinjaman, p.angsuran_ke, p.pokok, p.jasa, p.adm, p.provisi
+        `SELECT p.id, p.grup, p.jenis, p.pinjaman_id, p.no_pinjaman, p.angsuran_ke, p.pokok, p.jasa, p.adm, p.provisi
            FROM potongan_gaji_pinjaman p JOIN potongan_gaji_anggota g ON g.potongan_gaji_id = p.potongan_gaji_id AND g.anggota_id = p.anggota_id
-          WHERE p.potongan_gaji_id = $1 AND g.dipotong ORDER BY p.jenis DESC, p.no_pinjaman`, [id])).rows;
-    const perAnggota = new Map<string, typeof pinjaman>();
-    for (const p of pinjaman) perAnggota.set(p.anggota_id, [...(perAnggota.get(p.anggota_id) ?? []), p]);
+          WHERE p.potongan_gaji_id = $1 AND g.dipotong ORDER BY g.nama, g.kode_agt, p.no_pinjaman`, [id])).rows;
 
-    const n = { simpanan: 0, angsuran: 0, kpr: 0 };
-    for (const a of anggota) {
-        const bukti: Record<string, string | null> = { wajib: null, sukarela: null };
-        for (const [jenis, kode, rp] of [['wajib', '02', a.s_wajib], ['sukarela', '03', a.s_sukarela]] as const) {
-            if (toUnits(rp) <= 0n) continue;
-            bukti[jenis] = (await setorSimpanan(db, { kodeAgt: a.kode_agt, jenisSimpanan: kode, tanggal: i.tanggal, jumlah: rp,
-                kasPerkiraanId: i.kasPerkiraanId, opr: i.opr, deskripsi })).noBukti;
-            n.simpanan++;
-        }
-        await db.query('UPDATE potongan_gaji_anggota SET bukti_wajib = $2, bukti_sukarela = $3 WHERE id = $1', [a.id, bukti.wajib, bukti.sukarela]);
-
-        for (const p of perAnggota.get(a.anggota_id) ?? []) {
-            // Semua nominal nol: operator memutuskan pinjaman ini tidak dipotong bulan ini.
-            if (toUnits(p.pokok) + toUnits(p.jasa) + toUnits(p.adm) + toUnits(p.provisi) === 0n) continue;
-            let noBukti: string;
-            if (p.jenis === 'tunai') {
-                noBukti = (await bayarAngsuran(db, { noPinjaman: p.no_pinjaman, tanggal: i.tanggal, kasPerkiraanId: i.kasPerkiraanId, opr: i.opr,
-                    angsuranKe: p.angsuran_ke, override: { pokok: p.pokok, jasa: p.jasa, adm: p.adm, provisi: p.provisi } })).noBukti;
-                n.angsuran++;
-            } else {
-                const k = (await db.query<{ jml_cicilan: number }>('SELECT jml_cicilan FROM kpr WHERE id = $1', [p.pinjaman_id])).rows[0];
-                if (k?.jml_cicilan + 1 !== p.angsuran_ke)
-                    throw new Error(`KPR ${p.no_pinjaman}: angsuran berikutnya ke-${(k?.jml_cicilan ?? 0) + 1}, bukan ke-${p.angsuran_ke}. Generate ulang periode ini.`);
-                noBukti = (await bayarAngsuranKpr(db, { noPinjaman: p.no_pinjaman, tanggal: i.tanggal, kasPerkiraanId: i.kasPerkiraanId, opr: i.opr,
-                    jumlah: p.pokok })).noBukti;
-                n.kpr++;
+    const hasil: { bagian: Bagian; transaksi: number; jumlah: bigint }[] = [];
+    for (const b of BAGIAN.filter((x) => pilih.includes(x))) {
+        let transaksi = 0, jumlah = 0n;
+        if (b === 'pokok' || b === 'wajib' || b === 'sukarela') {
+            const kolom = `s_${b}` as const;
+            for (const a of anggota) {
+                const rp = a[kolom];
+                if (toUnits(rp) <= 0n) continue;
+                const noBukti = (await setorSimpanan(db, { kodeAgt: a.kode_agt, jenisSimpanan: KODE_SIMPANAN[b], tanggal: i.tanggal, jumlah: rp,
+                    kasPerkiraanId: i.kasPerkiraanId, opr: i.opr, deskripsi })).noBukti;
+                await db.query(`UPDATE potongan_gaji_anggota SET bukti_${b} = $2 WHERE id = $1`, [a.id, noBukti]);
+                transaksi++; jumlah += toUnits(rp);
             }
-            await db.query('UPDATE potongan_gaji_pinjaman SET no_bukti = $2 WHERE id = $1', [p.id, noBukti]);
+        } else {
+            for (const p of pinjaman.filter((x) => GRUP[x.grup] === b)) {
+                const total = toUnits(p.pokok) + toUnits(p.jasa) + toUnits(p.adm) + toUnits(p.provisi);
+                // Semua nominal nol: operator memutuskan pinjaman ini tidak dipotong bulan ini.
+                if (total === 0n) continue;
+                let noBukti: string;
+                if (p.jenis === 'tunai') {
+                    noBukti = (await bayarAngsuran(db, { noPinjaman: p.no_pinjaman, tanggal: i.tanggal, kasPerkiraanId: i.kasPerkiraanId, opr: i.opr,
+                        angsuranKe: p.angsuran_ke, override: { pokok: p.pokok, jasa: p.jasa, adm: p.adm, provisi: p.provisi } })).noBukti;
+                } else {
+                    const k = (await db.query<{ jml_cicilan: number }>('SELECT jml_cicilan FROM kpr WHERE id = $1', [p.pinjaman_id])).rows[0];
+                    if (k?.jml_cicilan + 1 !== p.angsuran_ke)
+                        throw new Error(`KPR ${p.no_pinjaman}: angsuran berikutnya ke-${(k?.jml_cicilan ?? 0) + 1}, bukan ke-${p.angsuran_ke}`);
+                    noBukti = (await bayarAngsuranKpr(db, { noPinjaman: p.no_pinjaman, tanggal: i.tanggal, kasPerkiraanId: i.kasPerkiraanId, opr: i.opr,
+                        jumlah: p.pokok })).noBukti;
+                }
+                await db.query('UPDATE potongan_gaji_pinjaman SET no_bukti = $2 WHERE id = $1', [p.id, noBukti]);
+                transaksi++; jumlah += total;
+            }
         }
+        await db.query(
+            `INSERT INTO potongan_gaji_posting (potongan_gaji_id, bagian, tgl_posting, kas_perkiraan_id, transaksi, jumlah, diposting_oleh)
+             VALUES ($1, $2, $3, $4, $5, $6, $7)`, [id, b, i.tanggal, i.kasPerkiraanId, transaksi, fromUnits(jumlah), i.opr]);
+        hasil.push({ bagian: b, transaksi, jumlah });
     }
+
+    // Selesai bila semua bagian wajib yang ada transaksinya sudah diposting.
+    const ringkas = await ringkasBagian(db, i.periode);
+    const selesai = ringkas.every((r) => !BAGIAN_WAJIB.includes(r.bagian) || r.posting || r.transaksi === 0);
     await db.query(
-        `UPDATE potongan_gaji SET status = 'diposting', tgl_posting = $2, kas_perkiraan_id = $3, diposting_oleh = $4, diposting_pada = now()
-          WHERE id = $1`, [id, i.tanggal, i.kasPerkiraanId, i.opr]);
-    return { periode: i.periode, anggota: anggota.length, ...n };
+        `UPDATE potongan_gaji SET status = $2, tgl_posting = $3, kas_perkiraan_id = $4, diposting_oleh = $5, diposting_pada = now() WHERE id = $1`,
+        [id, selesai ? 'diposting' : 'sebagian', i.tanggal, i.kasPerkiraanId, i.opr]);
+    return { periode: i.periode, bagian: hasil.map((h) => ({ bagian: h.bagian, transaksi: h.transaksi })), selesai };
 }

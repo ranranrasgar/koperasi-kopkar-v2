@@ -1,8 +1,8 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { generatePotongan, postingPotongan, setDipotong, ubahPotongan } from "@kopkar/backend/src/posting/potongan.ts"
-import { detailAnggotaPeriode, satuPeriode } from "@/lib/queries/potongan-gaji"
+import { BAGIAN, generatePotongan, postingPotongan, setDipotong, ubahPotongan, type Bagian } from "@kopkar/backend/src/posting/potongan.ts"
+import { NAMA_BAGIAN, detailAnggotaPeriode, satuPeriode } from "@/lib/queries/potongan-gaji"
 import { modeUji, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif } from "@/lib/operator"
 import { MENU } from "@/config/akses"
@@ -52,7 +52,7 @@ export async function ubahPotonganAction(_: Hasil, f: FormData): Promise<Hasil> 
             id, pokok: uang(f, `pokok_${id}`), jasa: uang(f, `jasa_${id}`), adm: uang(f, `adm_${id}`), provisi: uang(f, `provisi_${id}`),
         }))
         await tx((db) => ubahPotongan(db, p, kode, { dipotong, alasan: teks(f, "alasan") || null,
-            sWajib: uang(f, "sWajib"), sSukarela: uang(f, "sSukarela"), pinjaman }, opr))
+            sPokok: uang(f, "sPokok"), sWajib: uang(f, "sWajib"), sSukarela: uang(f, "sSukarela"), pinjaman }, opr))
         return { ok: true, pesan: `Potongan ${kode} untuk ${p} disimpan${dipotong ? "" : " (tidak dipotong)"}` }
     })
 }
@@ -80,8 +80,10 @@ export async function postingPotonganAction(_: Hasil, f: FormData): Promise<Hasi
         if (teks(f, "konfirmasi") !== p) throw new InputSalah(`Ketik ${p} untuk mengonfirmasi posting`)
         if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) throw new InputSalah("Tanggal posting tidak valid")
         if (!kas) throw new InputSalah("Pilih akun kas/bank")
-        const r = await tx((db) => postingPotongan(db, { periode: p, tanggal, kasPerkiraanId: kas, opr }))
-        return { ok: true, pesan: `Potongan ${p} diposting untuk ${r.anggota} anggota`,
-            rincian: { "Anggota": r.anggota, "Setoran simpanan": r.simpanan, "Angsuran pinjaman": r.angsuran, "Angsuran KPR": r.kpr } }
+        const bagian = f.getAll("bagian").map(String).filter((b): b is Bagian => (BAGIAN as readonly string[]).includes(b))
+        if (bagian.length === 0) throw new InputSalah("Centang minimal satu bagian yang akan diposting")
+        const r = await tx((db) => postingPotongan(db, { periode: p, tanggal, kasPerkiraanId: kas, opr, bagian }))
+        return { ok: true, pesan: `Potongan ${p}: ${r.bagian.map((b) => NAMA_BAGIAN[b.bagian]).join(", ")} diposting${r.selesai ? ". Semua bagian selesai." : ""}`,
+            rincian: Object.fromEntries(r.bagian.map((b) => [NAMA_BAGIAN[b.bagian], `${b.transaksi} transaksi`])) }
     })
 }
