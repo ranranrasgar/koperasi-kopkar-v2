@@ -10,15 +10,17 @@ export const tombolModalUtama = `${tombolModal} bg-blue-600 hover:bg-blue-700 te
 
 /**
  * Form entri di modal (pengganti form yang terbuka di bawah daftar). Dibuka/ditutup oleh pemanggil; isi hanya
- * dirender saat terbuka, sehingga form selalu mulai bersih. Galat tampil di dalam modal dan isian tidak hilang.
+ * dirender saat terbuka, sehingga form selalu mulai bersih. `kunci` (bawaan): tidak tertutup oleh klik di luar atau Esc, hanya tombol X. Galat tampil di dalam modal dan isian tidak hilang.
  */
 // Lebar eksplisit: tema mendefinisikan --spacing-lg (24px) dan --spacing-xl, yang membuat max-w-lg / max-w-xl menjadi selebar itu.
-export function ModalForm({ open, onOpenChange, judul, keterangan, lebar = "sm:max-w-[32rem]", children }: {
-    open: boolean; onOpenChange: (buka: boolean) => void; judul: string; keterangan?: string; lebar?: string; children: React.ReactNode
+export function ModalForm({ open, onOpenChange, judul, keterangan, lebar = "sm:max-w-[32rem]", kunci = true, children }: {
+    open: boolean; onOpenChange: (buka: boolean) => void; judul: string; keterangan?: string; lebar?: string; kunci?: boolean; children: React.ReactNode
 }) {
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className={cn("max-h-[90vh] overflow-y-auto", lebar)}>
+            <DialogContent className={cn("max-h-[90vh] overflow-y-auto", lebar)}
+                // Form entri hanya ditutup lewat tombol X, supaya isian tidak hilang karena klik di luar atau Esc yang tidak sengaja.
+                onInteractOutside={kunci ? (e) => e.preventDefault() : undefined} onEscapeKeyDown={kunci ? (e) => e.preventDefault() : undefined}>
                 <DialogHeader>
                     <DialogTitle>{judul}</DialogTitle>
                     {keterangan && <DialogDescription>{keterangan}</DialogDescription>}

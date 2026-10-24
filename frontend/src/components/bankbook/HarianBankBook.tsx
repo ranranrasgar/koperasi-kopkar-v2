@@ -92,7 +92,7 @@ export function HarianBankBook({ rows, formProps }: { rows: HarianBankBook[]; fo
             <Paginasi className="border-t" page={page} totalPages={totalPages} pageSize={ukuran} total={total}
                 onHalaman={setHalaman} onBaris={(v) => { setUkuran(v === "semua" ? MAKS_SEMUA : Number(v)); setHalaman(1) }} />
             <ModalForm open={tgl !== null} onOpenChange={(b) => !b && setTgl(null)} judul={`Bukti ${tgl ? formatTanggal(tgl, "long") : ""}`}
-                keterangan={`${formProps.akunBank.kode_perkiraan} ${formProps.akunBank.nama_perkiraan}`} lebar="sm:max-w-4xl">
+                keterangan={`${formProps.akunBank.kode_perkiraan} ${formProps.akunBank.nama_perkiraan}`} lebar="sm:max-w-4xl" kunci={false}>
                 {tgl && <IsiHari tgl={tgl} formProps={formProps} versi={hari ? `${hari.debit}|${hari.kredit}|${hari.bukti}` : ""} />}
             </ModalForm>
         </div>
