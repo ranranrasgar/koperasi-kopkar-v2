@@ -1,10 +1,11 @@
 "use client"
 
-import { useEffect, useState, useTransition } from "react"
+import { useEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { bacaBankBookAction, bankBookAction, hapusBankBookAction } from "@/app/actions/transaksi"
 import { Input } from "@/components/ui/input"
+import { AkunBox } from "@/components/bankbook/AkunBox"
 import { TombolModal, tombolModalUtama, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { Field, HasilTransaksi, SubmitButton, selectClass, useAksiForm, type Akun } from "@/components/transaksi/common"
 import { formatRupiah } from "@/lib/format"
@@ -29,8 +30,42 @@ function FormBukti({ akunBank, semuaAkun, hariIni, awal, selesai }: Props & { aw
     const lawanAkun = semuaAkun.filter((a) => a.kode_perkiraan !== akunBank.kode_perkiraan)
     const edit = Boolean(awal)
 
+    // Papan ketik: Enter pindah isian (akun -> keterangan -> debit -> kredit -> baris berikutnya, baris baru otomatis), Ctrl+S simpan.
+    const formRef = useRef<HTMLFormElement>(null)
+    const [fokus, setFokus] = useState<string | null>(null)
+    useEffect(() => {
+        if (!fokus) return
+        formRef.current?.querySelector<HTMLElement>(`[data-f="${fokus}"]`)?.focus()
+        setFokus(null)
+    }, [fokus, baris])
+    const barisBerikut = (id: number) => {
+        const i = baris.findIndex((b) => b.id === id)
+        if (i < baris.length - 1) return setFokus(`${baris[i + 1].id}:akun`)
+        if (!baris[i].kode) return
+        const baru = barisBaru()
+        setBaris((bs) => [...bs, baru])
+        setFokus(`${baru.id}:akun`)
+    }
+    const onKeyDown = (e: React.KeyboardEvent<HTMLFormElement>) => {
+        if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+            e.preventDefault()
+            if (bersih !== 0 && !pending) e.currentTarget.requestSubmit()
+            return
+        }
+        const t = e.target as HTMLInputElement
+        const f = t.dataset?.f
+        if (e.key !== "Enter" || t.tagName !== "INPUT") return
+        e.preventDefault() // Enter tidak menyimpan; simpan hanya lewat tombol atau Ctrl+S
+        if (!f) return setFokus("deskripsi")
+        if (f === "deskripsi") return setFokus(`${baris[0].id}:akun`)
+        const [id, kolom] = [Number(f.split(":")[0]), f.split(":")[1]]
+        if (kolom === "ket") setFokus(`${id}:debit`)
+        else if (kolom === "debit") { if (angka(t.value) > 0) barisBerikut(id); else setFokus(`${id}:kredit`) }
+        else if (kolom === "kredit") barisBerikut(id)
+    }
+
     return (
-        <form onSubmit={onSubmit} className="space-y-4">
+        <form ref={formRef} onSubmit={onSubmit} onKeyDown={onKeyDown} className="space-y-4">
             {edit && <input type="hidden" name="nomorBukti" value={awal!.nomorBukti} />}
             <input type="hidden" name="akunBank" value={akunBank.kode_perkiraan} />
             <div className="grid gap-4 sm:grid-cols-3">
@@ -42,9 +77,9 @@ function FormBukti({ akunBank, semuaAkun, hariIni, awal, selesai }: Props & { aw
                 </Field>
             </div>
             <Field label="Keterangan" htmlFor="deskripsi">
-                <Input id="deskripsi" name="deskripsi" required maxLength={200} defaultValue={awal?.deskripsi} />
+                <Input id="deskripsi" data-f="deskripsi" autoFocus name="deskripsi" required maxLength={200} defaultValue={awal?.deskripsi} />
             </Field>
-            <div className="overflow-x-auto rounded-md border">
+            <div className="rounded-md border">
                 <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-muted-foreground text-xs">
                         <tr>
@@ -59,14 +94,12 @@ function FormBukti({ akunBank, semuaAkun, hariIni, awal, selesai }: Props & { aw
                         {baris.map((b, i) => (
                             <tr key={b.id} className="border-t">
                                 <td className="px-2 py-1.5">
-                                    <select name="lawan" aria-label={`Akun lawan baris ${i + 1}`} className={selectClass} value={b.kode} onChange={(e) => ubah(b.id, "kode", e.target.value)}>
-                                        <option value="">Pilih akun...</option>
-                                        {lawanAkun.map((a) => <option key={a.id} value={a.kode_perkiraan}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
-                                    </select>
+                                    <AkunBox akun={lawanAkun} nilai={b.kode} onUbah={(k) => ubah(b.id, "kode", k)} dataF={`${b.id}:akun`} name="lawan" label={`Akun baris ${i + 1}`}
+                                        onSelesai={() => setFokus(`${b.id}:ket`)} />
                                 </td>
-                                <td className="px-2 py-1.5"><Input name="ketBaris" aria-label={`Keterangan baris ${i + 1}`} maxLength={200} value={b.ket} onChange={(e) => ubah(b.id, "ket", e.target.value)} /></td>
-                                <td className="px-2 py-1.5"><Input name="debit" aria-label={`Debit baris ${i + 1}`} type="number" min="0" step="any" className="text-right" value={b.debit} readOnly={angka(b.kredit) > 0} onChange={(e) => ubah(b.id, "debit", e.target.value)} /></td>
-                                <td className="px-2 py-1.5"><Input name="kredit" aria-label={`Kredit baris ${i + 1}`} type="number" min="0" step="any" className="text-right" value={b.kredit} readOnly={angka(b.debit) > 0} onChange={(e) => ubah(b.id, "kredit", e.target.value)} /></td>
+                                <td className="px-2 py-1.5"><Input data-f={`${b.id}:ket`} name="ketBaris" aria-label={`Keterangan baris ${i + 1}`} maxLength={200} value={b.ket} onChange={(e) => ubah(b.id, "ket", e.target.value)} /></td>
+                                <td className="px-2 py-1.5"><Input data-f={`${b.id}:debit`} name="debit" aria-label={`Debit baris ${i + 1}`} type="number" min="0" step="any" className="text-right" value={b.debit} readOnly={angka(b.kredit) > 0} onChange={(e) => ubah(b.id, "debit", e.target.value)} /></td>
+                                <td className="px-2 py-1.5"><Input data-f={`${b.id}:kredit`} name="kredit" aria-label={`Kredit baris ${i + 1}`} type="number" min="0" step="any" className="text-right" value={b.kredit} readOnly={angka(b.debit) > 0} onChange={(e) => ubah(b.id, "kredit", e.target.value)} /></td>
                                 <td className="px-1 text-center">
                                     <button type="button" title="Hapus baris" disabled={baris.length <= 1} onClick={() => setBaris((bs) => bs.filter((x) => x.id !== b.id))} className="p-1.5 rounded hover:bg-muted disabled:opacity-30">
                                         <Trash2 className="h-4 w-4" />
@@ -91,7 +124,7 @@ function FormBukti({ akunBank, semuaAkun, hariIni, awal, selesai }: Props & { aw
             </div>
             <p className="text-xs text-muted-foreground">{bersih === 0 ? "Sisi kas/bank diisi otomatis dari selisih kredit dan debit." : bersih > 0 ? `Uang masuk ${formatRupiah(bersih / 100)} ke ${akunBank.nama_perkiraan}.` : `Uang keluar ${formatRupiah(-bersih / 100)} dari ${akunBank.nama_perkiraan}.`}</p>
             <HasilTransaksi hasil={hasil} />
-            <div className="flex justify-end"><SubmitButton pending={pending} disabled={bersih === 0}>{edit ? "Simpan Perubahan" : "Simpan Bukti"}</SubmitButton></div>
+            <div className="flex justify-end"><SubmitButton pending={pending} disabled={bersih === 0}>{edit ? "Simpan Perubahan" : "Simpan Bukti"} (Ctrl+S)</SubmitButton></div>
         </form>
     )
 }
