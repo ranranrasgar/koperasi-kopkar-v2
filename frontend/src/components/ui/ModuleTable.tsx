@@ -31,7 +31,11 @@ interface ModuleTableProps {
     actions?: React.ReactNode
     /** Tombol aksi tambahan per baris (komponen klien), di kiri tombol Detail. */
     aksiBaris?: React.ComponentType<{ item: Row }>
-    /** Baris Total di bawah tabel: jumlah per kolom (kunci kolom) untuk SEMUA baris hasil saring, bukan hanya halaman ini. */
+    /**
+     * Jumlah per kolom (kunci kolom) untuk SEMUA baris hasil saring. Bila diisi, tabel bergulir di dalam kotaknya sendiri
+     * dengan judul kolom menempel di atas, dan baris "Subtotal halaman ini" + "Total seluruh data" menempel di bawah
+     * (seperti Rekap Simpanan), jadi total selalu terlihat.
+     */
     jumlah?: Record<string, number>
     /** Catatan tambahan di bawah deskripsi. */
     keterangan?: React.ReactNode
@@ -63,6 +67,22 @@ function Badge({ val, col }: { val: unknown; col: ColumnConfig }) {
         <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider cursor-default ${badgeColorMap[mapping.color] || "bg-muted text-muted-foreground"}`}>
             {mapping.label}
         </span>
+    )
+}
+
+/** Satu baris jumlah: label di kolom sebelum kolom uang pertama yang dijumlahkan, lalu nilai per kolom. */
+function BarisJumlah({ kolom, label, nilai }: { kolom: ColumnConfig[]; label: string; nilai: Record<string, number> }) {
+    const mulai = kolom.findIndex((c) => c.key in nilai)
+    return (
+        <tr className="border-t">
+            <td className="px-4 py-2.5 text-right whitespace-nowrap" colSpan={Math.max(1, mulai + 1)}>{label}</td>
+            {kolom.slice(Math.max(0, mulai)).map((col) => (
+                <td key={col.key} className="px-4 py-2.5 text-right tabular-nums whitespace-nowrap">
+                    {col.key in nilai ? formatValue(nilai[col.key], col.type) : ""}
+                </td>
+            ))}
+            <td className="print:hidden" />
+        </tr>
     )
 }
 
@@ -232,10 +252,10 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                     </div>
                 </div>
 
-                <CardContent className="p-0 overflow-x-auto relative min-h-[300px]">
+                <CardContent className={`p-0 relative min-h-[300px] ${jumlah ? "overflow-auto max-h-[calc(100dvh-20rem)]" : "overflow-x-auto"}`}>
                     <MemuatData aktif={isPending} />
                     <table className="w-full text-left border-collapse text-sm">
-                        <thead>
+                        <thead className={jumlah ? "sticky top-0 z-10 bg-muted" : undefined}>
                             <tr className="border-b bg-muted/40 font-bold text-muted-foreground">
                                 <th className="px-4 py-3.5 w-10 text-center">No.</th>
                                 {activeColumns.map((col) => {
@@ -306,16 +326,10 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                             )}
                         </tbody>
                         {jumlah && data.items.length > 0 && (
-                            <tfoot>
-                                <tr className="border-t-2 bg-muted/40 font-semibold">
-                                    <td className="px-4 py-3 text-right" colSpan={Math.max(1, activeColumns.findIndex((c) => c.key in jumlah) + 1)}>Total</td>
-                                    {activeColumns.slice(Math.max(0, activeColumns.findIndex((c) => c.key in jumlah))).map((col) => (
-                                        <td key={col.key} className="px-4 py-3 text-right tabular-nums whitespace-nowrap">
-                                            {col.key in jumlah ? formatValue(jumlah[col.key], col.type) : ""}
-                                        </td>
-                                    ))}
-                                    <td className="print:hidden" />
-                                </tr>
+                            <tfoot className="sticky bottom-0 z-10 bg-muted font-semibold border-t-2">
+                                <BarisJumlah kolom={activeColumns} label="Subtotal halaman ini"
+                                    nilai={Object.fromEntries(Object.keys(jumlah).map((k) => [k, data.items.reduce((t, x) => t + (Number(x[k]) || 0), 0)]))} />
+                                <BarisJumlah kolom={activeColumns} label="Total seluruh data" nilai={jumlah} />
                             </tfoot>
                         )}
                     </table>
