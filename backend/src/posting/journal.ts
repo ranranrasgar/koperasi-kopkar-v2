@@ -7,6 +7,8 @@ export interface JournalLine {
     kredit?: string | number;
     /** Keterangan baris; bawaan: deskripsi jurnal. */
     deskripsi?: string;
+    /** Tanggal baris bila berbeda dari tanggal jurnal (jurnal tutup buku: penutupan 31-12 dan saldo awal 01-01 dalam satu bukti). */
+    tanggal?: string;
 }
 
 export interface JournalInput {
@@ -14,13 +16,22 @@ export interface JournalInput {
     tanggal: string; // YYYY-MM-DD
     deskripsi: string;
     opr: string;
-    sumberTipe: string;
+    sumberTipe: string | null;
     sumberId: number | string | null;
     /** Awalan kolom tahun, mis. 'JU' untuk jurnal umum desktop (JU261009). */
     tahunPrefix?: string;
     /** Kolom no_bukti_transaksi; bawaan nomorBukti. Desktop mengisi nomor pinjaman untuk jurnal angsuran. */
     noBuktiTransaksi?: string;
     lines: JournalLine[];
+    /** Nomor urut baris jurnal (kolom urut); bawaan: nextval seq_jurnal_urut. Diisi bila nomor bukti memuat urut itu (SHU/yymmdd/urut). */
+    urut?: number;
+    /**
+     * Izinkan jurnal tak seimbang. Hanya untuk jurnal tutup buku: saldo awal tahun baru memindahkan saldo apa adanya, termasuk
+     * selisih dari jurnal lama yang tidak seimbang di data (desktop juga memindahkannya). Selisihnya dikembalikan oleh pemanggil.
+     */
+    izinTakSeimbang?: boolean;
+    /** Tambahkan baris ke nomor bukti yang sudah ada (bawaan: hapus dulu seluruh baris bernomor sama, seperti desktop). */
+    tambah?: boolean;
 }
 
 const yymmdd = (d: string) => d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10);
@@ -35,7 +46,7 @@ export async function postJournal(db: Db, j: JournalInput): Promise<number> {
     const d = lines.reduce((s, l) => s + toUnits(l.debit ?? 0), 0n);
     const k = lines.reduce((s, l) => s + toUnits(l.kredit ?? 0), 0n);
     if (lines.length === 0) throw new Error(`Jurnal ${j.nomorBukti} kosong`);
-    if (d !== k) throw new Error(`Jurnal ${j.nomorBukti} tidak seimbang: debit ${fromUnits(d)} kredit ${fromUnits(k)}`);
+    if (d !== k && !j.izinTakSeimbang) throw new Error(`Jurnal ${j.nomorBukti} tidak seimbang: debit ${fromUnits(d)} kredit ${fromUnits(k)}`);
 
     const kodes = [...new Set(lines.map((l) => l.kodePerkiraan))];
     const acc = await db.query<{ id: string; kode_perkiraan: string }>(
@@ -43,15 +54,15 @@ export async function postJournal(db: Db, j: JournalInput): Promise<number> {
     const idOf = new Map(acc.rows.map((r) => [r.kode_perkiraan, r.id]));
     for (const c of kodes) if (!idOf.has(c)) throw new Error(`Akun ${c} tidak ada di perkiraan`);
 
-    await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [j.nomorBukti]);
-    const urut = Number((await db.query("SELECT nextval('seq_jurnal_urut') v")).rows[0].v);
+    if (!j.tambah) await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [j.nomorBukti]);
+    const urut = j.urut ?? Number((await db.query("SELECT nextval('seq_jurnal_urut') v")).rows[0].v);
     for (const l of lines) {
         const urutan = Number((await db.query("SELECT nextval('seq_jurnal_urutan') v")).rows[0].v);
         await db.query(
             `INSERT INTO jurnal_umum (urutan, tanggal_jurnalumum, nomor_bukti, no_bukti_transaksi, tahun, kode_perkiraan,
                 urut, debit_jurnalumum, kredit_jurnalumum, deskripsi, opr, sumber_tipe, sumber_id, perkiraan_id, tgl_transaksi)
              VALUES ($1,$2,$3,$14,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$2)`,
-            [urutan, j.tanggal, j.nomorBukti, (j.tahunPrefix ?? '') + yymmdd(j.tanggal), l.kodePerkiraan, urut,
+            [urutan, l.tanggal ?? j.tanggal, j.nomorBukti, (j.tahunPrefix ?? '') + yymmdd(l.tanggal ?? j.tanggal), l.kodePerkiraan, urut,
              fromUnits(toUnits(l.debit ?? 0)), fromUnits(toUnits(l.kredit ?? 0)), l.deskripsi || j.deskripsi, j.opr,
              j.sumberTipe, j.sumberId, idOf.get(l.kodePerkiraan), j.noBuktiTransaksi ?? j.nomorBukti]);
     }
