@@ -5,7 +5,7 @@ import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpan
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
 import { postJurnalUmum } from "@kopkar/backend/src/posting/jurnal-umum.ts"
-import { bacaBankBook, hapusBankBook, simpanBankBook, type Arah, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
+import { bacaBankBook, hapusBankBook, simpanBankBook, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
 import { modeUji, pool, query, tx } from "@/lib/db"
@@ -245,16 +245,14 @@ export async function jurnalUmumAction(_: Hasil, f: FormData): Promise<Hasil> {
 /** Simpan bukti Bank Book baru, atau ubah bukti lama bila `nomorBukti` terisi. */
 export async function bankBookAction(_: Hasil, f: FormData): Promise<Hasil> {
     return posting([MENU.bankBook], async ({ nama: opr }) => {
-        const kode = f.getAll("lawan").map(String), jumlah = f.getAll("jumlah").map(String), ket = f.getAll("ketBaris").map(String)
+        const kode = f.getAll("lawan").map(String), debit = f.getAll("debit").map(String), kredit = f.getAll("kredit").map(String), ket = f.getAll("ketBaris").map(String)
         const lawan = kode.map((k, i) => {
-            const j = (jumlah[i] || "0").replace(/,/g, ".")
-            if (!UANG.test(j)) throw new InputSalah(`Baris ${i + 1}: nominal harus angka`)
-            return { kodePerkiraan: k.trim(), jumlah: j, deskripsi: ket[i]?.trim() || undefined }
+            const d = (debit[i] || "0").replace(/,/g, "."), c = (kredit[i] || "0").replace(/,/g, ".")
+            if (!UANG.test(d) || !UANG.test(c)) throw new InputSalah(`Baris ${i + 1}: nominal harus angka`)
+            return { kodePerkiraan: k.trim(), debit: d, kredit: c, deskripsi: ket[i]?.trim() || undefined }
         })
-        const arah = teks(f, "arah")
-        if (arah !== "masuk" && arah !== "keluar") throw new InputSalah("Arah harus uang masuk atau keluar")
         const nomor = teks(f, "nomorBukti", false) || undefined
-        const r = await tx((db) => simpanBankBook(db, { akunBank: teks(f, "akunBank"), arah: arah as Arah, tanggal: tanggal(f),
+        const r = await tx((db) => simpanBankBook(db, { akunBank: teks(f, "akunBank"), tanggal: tanggal(f),
             deskripsi: teks(f, "deskripsi"), lawan, opr, nomorBukti: nomor }))
         return { ok: true, pesan: `Bukti ${r.nomorBukti} ${nomor ? "diubah" : "tercatat"}`, rincian: { "No. Bukti": r.nomorBukti, "Total": rp(r.total) } }
     })

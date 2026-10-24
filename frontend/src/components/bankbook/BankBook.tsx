@@ -10,51 +10,37 @@ import { Field, HasilTransaksi, SubmitButton, selectClass, useAksiForm, type Aku
 import { formatRupiah } from "@/lib/format"
 import type { BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
 
-interface Baris { id: number; kode: string; ket: string; jumlah: string }
+interface Baris { id: number; kode: string; ket: string; debit: string; kredit: string }
 let nextId = 1
-const barisBaru = (b?: Partial<Baris>): Baris => ({ id: nextId++, kode: "", ket: "", jumlah: "", ...b })
+const barisBaru = (b?: Partial<Baris>): Baris => ({ id: nextId++, kode: "", ket: "", debit: "", kredit: "", ...b })
 const angka = (v: string) => Number(v.replace(",", ".")) || 0
 
-interface Props { akunBank: Akun[]; akunBankDipilih: string; semuaAkun: Akun[]; hariIni: string }
+interface Props { akunBank: Akun; semuaAkun: Akun[]; hariIni: string }
 
-function FormBukti({ akunBank, akunBankDipilih, semuaAkun, hariIni, awal, selesai }: Props & { awal?: BuktiBankBook; selesai: () => void }) {
+function FormBukti({ akunBank, semuaAkun, hariIni, awal, selesai }: Props & { awal?: BuktiBankBook; selesai: () => void }) {
     const { hasil, onSubmit, pending } = useAksiForm(bankBookAction)
     useTutupSetelahBerhasil(hasil?.ok, selesai)
-    const [arah, setArah] = useState<"masuk" | "keluar">(awal?.arah ?? "masuk")
     const [baris, setBaris] = useState<Baris[]>(() =>
-        awal?.lawan.length ? awal.lawan.map((l) => barisBaru({ kode: l.kodePerkiraan, ket: l.deskripsi, jumlah: String(Number(l.jumlah)) })) : [barisBaru()])
+        awal?.lawan.length ? awal.lawan.map((l) => barisBaru({ kode: l.kodePerkiraan, ket: l.deskripsi, debit: Number(l.debit) ? String(Number(l.debit)) : "", kredit: Number(l.kredit) ? String(Number(l.kredit)) : "" })) : [barisBaru()])
     const ubah = (id: number, k: keyof Omit<Baris, "id">, v: string) => setBaris((bs) => bs.map((b) => (b.id === id ? { ...b, [k]: v } : b)))
-    const total = baris.reduce((s, b) => s + Math.round(angka(b.jumlah) * 100), 0)
-    const lawanAkun = semuaAkun.filter((a) => a.kode_perkiraan !== (awal?.akunBank ?? akunBankDipilih))
+    const totalD = baris.reduce((s, b) => s + Math.round(angka(b.debit) * 100), 0)
+    const totalK = baris.reduce((s, b) => s + Math.round(angka(b.kredit) * 100), 0)
+    const bersih = totalK - totalD // >0 uang masuk, <0 uang keluar
+    const lawanAkun = semuaAkun.filter((a) => a.kode_perkiraan !== akunBank.kode_perkiraan)
     const edit = Boolean(awal)
 
     return (
         <form onSubmit={onSubmit} className="space-y-4">
             {edit && <input type="hidden" name="nomorBukti" value={awal!.nomorBukti} />}
+            <input type="hidden" name="akunBank" value={akunBank.kode_perkiraan} />
             <div className="grid gap-4 sm:grid-cols-3">
-                <Field label="Akun kas / bank" htmlFor="akunBank" className="sm:col-span-2">
-                    {edit
-                        ? <>
-                            <input type="hidden" name="akunBank" value={awal!.akunBank} />
-                            <select id="akunBank" className={selectClass} value={awal!.akunBank} disabled onChange={() => {}}>
-                                {akunBank.map((a) => <option key={a.id} value={a.kode_perkiraan}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
-                            </select>
-                        </>
-                        : <select id="akunBank" name="akunBank" required className={selectClass} defaultValue={akunBankDipilih}>
-                            {akunBank.map((a) => <option key={a.id} value={a.kode_perkiraan}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
-                        </select>}
+                <Field label="Kas / bank" className="sm:col-span-2">
+                    <div className="flex h-9 items-center rounded-md border bg-muted/40 px-3 text-sm font-semibold">{akunBank.kode_perkiraan} {akunBank.nama_perkiraan}</div>
                 </Field>
                 <Field label="Tanggal" htmlFor="tanggal" hint={edit ? "Tanggal bagian dari nomor bukti; tidak bisa diubah." : undefined}>
                     <Input id="tanggal" name="tanggal" type="date" required defaultValue={awal?.tanggal ?? hariIni} readOnly={edit} />
                 </Field>
             </div>
-            <fieldset className="flex gap-3">
-                {([["masuk", "Uang masuk (debit kas/bank)"], ["keluar", "Uang keluar (kredit kas/bank)"]] as const).map(([v, l]) => (
-                    <label key={v} className={`flex-1 cursor-pointer rounded-md border px-3 py-2 text-sm font-semibold ${arah === v ? (v === "masuk" ? "border-green-500 bg-green-50 text-green-700" : "border-red-500 bg-red-50 text-red-700") : "text-muted-foreground"}`}>
-                        <input type="radio" name="arah" value={v} checked={arah === v} onChange={() => setArah(v)} className="mr-2" />{l}
-                    </label>
-                ))}
-            </fieldset>
             <Field label="Keterangan" htmlFor="deskripsi">
                 <Input id="deskripsi" name="deskripsi" required maxLength={200} defaultValue={awal?.deskripsi} />
             </Field>
@@ -62,9 +48,10 @@ function FormBukti({ akunBank, akunBankDipilih, semuaAkun, hariIni, awal, selesa
                 <table className="w-full text-sm">
                     <thead className="bg-muted/50 text-muted-foreground text-xs">
                         <tr>
-                            <th className="px-2 py-2 text-left w-[40%]">Akun lawan</th>
+                            <th className="px-2 py-2 text-left w-[34%]">Akun</th>
                             <th className="px-2 py-2 text-left">Keterangan baris (opsional)</th>
-                            <th className="px-2 py-2 text-right w-36">Nominal</th>
+                            <th className="px-2 py-2 text-right w-32">Debit</th>
+                            <th className="px-2 py-2 text-right w-32">Kredit</th>
                             <th className="w-10"></th>
                         </tr>
                     </thead>
@@ -78,7 +65,8 @@ function FormBukti({ akunBank, akunBankDipilih, semuaAkun, hariIni, awal, selesa
                                     </select>
                                 </td>
                                 <td className="px-2 py-1.5"><Input name="ketBaris" aria-label={`Keterangan baris ${i + 1}`} maxLength={200} value={b.ket} onChange={(e) => ubah(b.id, "ket", e.target.value)} /></td>
-                                <td className="px-2 py-1.5"><Input name="jumlah" aria-label={`Nominal baris ${i + 1}`} type="number" min="0" step="any" className="text-right" value={b.jumlah} onChange={(e) => ubah(b.id, "jumlah", e.target.value)} /></td>
+                                <td className="px-2 py-1.5"><Input name="debit" aria-label={`Debit baris ${i + 1}`} type="number" min="0" step="any" className="text-right" value={b.debit} readOnly={angka(b.kredit) > 0} onChange={(e) => ubah(b.id, "debit", e.target.value)} /></td>
+                                <td className="px-2 py-1.5"><Input name="kredit" aria-label={`Kredit baris ${i + 1}`} type="number" min="0" step="any" className="text-right" value={b.kredit} readOnly={angka(b.debit) > 0} onChange={(e) => ubah(b.id, "kredit", e.target.value)} /></td>
                                 <td className="px-1 text-center">
                                     <button type="button" title="Hapus baris" disabled={baris.length <= 1} onClick={() => setBaris((bs) => bs.filter((x) => x.id !== b.id))} className="p-1.5 rounded hover:bg-muted disabled:opacity-30">
                                         <Trash2 className="h-4 w-4" />
@@ -94,15 +82,16 @@ function FormBukti({ akunBank, akunBankDipilih, semuaAkun, hariIni, awal, selesa
                                     <Plus className="h-3.5 w-3.5" /> Tambah baris
                                 </button>
                             </td>
-                            <td className="px-2 py-2 text-right tabular-nums">{formatRupiah(total / 100)}</td>
+                            <td className="px-2 py-2 text-right tabular-nums">{formatRupiah(totalD / 100)}</td>
+                            <td className="px-2 py-2 text-right tabular-nums">{formatRupiah(totalK / 100)}</td>
                             <td></td>
                         </tr>
                     </tfoot>
                 </table>
             </div>
-            <p className="text-xs text-muted-foreground">Sisi kas/bank diisi otomatis sebesar total nominal, sehingga jurnal selalu seimbang.</p>
+            <p className="text-xs text-muted-foreground">{bersih === 0 ? "Sisi kas/bank diisi otomatis dari selisih kredit dan debit." : bersih > 0 ? `Uang masuk ${formatRupiah(bersih / 100)} ke ${akunBank.nama_perkiraan}.` : `Uang keluar ${formatRupiah(-bersih / 100)} dari ${akunBank.nama_perkiraan}.`}</p>
             <HasilTransaksi hasil={hasil} />
-            <div className="flex justify-end"><SubmitButton pending={pending} disabled={total <= 0}>{edit ? "Simpan Perubahan" : "Simpan Bukti"}</SubmitButton></div>
+            <div className="flex justify-end"><SubmitButton pending={pending} disabled={bersih === 0}>{edit ? "Simpan Perubahan" : "Simpan Bukti"}</SubmitButton></div>
         </form>
     )
 }
@@ -119,7 +108,7 @@ export function TombolBankBookBaru(props: Props) {
 /** Isi form ubah dibaca dari server saat modal dibuka. */
 function MuatUbah({ nomorBukti, props, selesai }: { nomorBukti: string; props: Props; selesai: () => void }) {
     const [data, setData] = useState<{ bukti: BuktiBankBook } | { error: string } | null>(null)
-    useEffect(() => { void bacaBankBookAction(nomorBukti, props.akunBankDipilih).then(setData) }, [nomorBukti, props.akunBankDipilih])
+    useEffect(() => { void bacaBankBookAction(nomorBukti, props.akunBank.kode_perkiraan).then(setData) }, [nomorBukti, props.akunBank.kode_perkiraan])
     if (!data) return <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
     if ("error" in data) return <p role="alert" className="text-sm text-red-700">{data.error}</p>
     if (data.bukti.terkunci) return <p role="alert" className="text-sm text-amber-700">{data.bukti.terkunci}</p>

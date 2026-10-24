@@ -4,20 +4,17 @@ import { fromUnits, toUnits } from './money.ts';
 
 /**
  * Bank Book (Buku Kas & Bank), pengganti form Bank & Cash Book desktop: satu akun kas/bank lawan satu atau lebih akun.
- * Operator hanya memilih arah (uang masuk atau keluar) dan mengisi akun lawan beserta nominalnya; sisi kas/bank diisi
+ * Operator mengisi akun lawan dengan debit atau kredit; sisi kas/bank diisi
  * sebesar totalnya, sehingga jurnal selalu seimbang. Nomor bukti BB/yymmdd/NNN urut per hari, seperti desktop.
  */
 
 /** Akun yang tampil di Bank Book (perkiraan.keterangan GC atau BANK, sama dengan query desktop). */
 export const SQL_AKUN_BANKBOOK = "SELECT id, kode_perkiraan, nama_perkiraan FROM perkiraan WHERE keterangan IN ('GC', 'BANK') ORDER BY nama_perkiraan";
 
-export type Arah = 'masuk' | 'keluar';
-
-export interface BarisLawan { kodePerkiraan: string; jumlah: string | number; deskripsi?: string | null }
+export interface BarisLawan { kodePerkiraan: string; debit?: string | number; kredit?: string | number; deskripsi?: string | null }
 
 export interface BankBookInput {
     akunBank: string;  // kode_perkiraan akun kas/bank
-    arah: Arah;        // masuk: kas/bank didebit, lawan dikredit; keluar: sebaliknya
     tanggal: string;   // YYYY-MM-DD
     deskripsi: string;
     lawan: BarisLawan[];
@@ -32,26 +29,30 @@ async function cekAkunBank(db: Db, kode: string) {
     if (!r.rows[0]) throw new Error(`Akun ${kode} bukan akun kas/bank`);
 }
 
-/** Baris jurnal dari input; galat bila ada yang tidak sah. */
+/**
+ * Baris jurnal dari input; galat bila ada yang tidak sah. Sisi kas/bank satu baris sebesar selisih: kredit lawan menambah
+ * kas/bank (uang masuk), debit lawan mengurangi (uang keluar).
+ */
 function susunBaris(i: BankBookInput): JournalLine[] {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(i.tanggal)) throw new Error('Tanggal tidak valid');
     if (!i.deskripsi.trim()) throw new Error('Keterangan wajib diisi');
-    const lawan = i.lawan.filter((l) => l.kodePerkiraan || toUnits(l.jumlah || 0) !== 0n);
+    const lawan = i.lawan.filter((l) => l.kodePerkiraan || toUnits(l.debit || 0) !== 0n || toUnits(l.kredit || 0) !== 0n);
     if (lawan.length === 0) throw new Error('Isi minimal satu akun lawan');
-    let total = 0n;
+    let totalD = 0n, totalK = 0n;
     const baris: JournalLine[] = [];
     for (const [n, l] of lawan.entries()) {
         if (!l.kodePerkiraan) throw new Error(`Baris ${n + 1}: pilih akun lawan`);
         if (l.kodePerkiraan === i.akunBank) throw new Error(`Baris ${n + 1}: akun lawan tidak boleh sama dengan akun kas/bank`);
-        const rp = toUnits(l.jumlah || 0);
-        if (rp <= 0n) throw new Error(`Baris ${n + 1}: nominal harus lebih dari nol`);
-        total += rp;
-        const ket = l.deskripsi?.trim() || undefined;
-        baris.push(i.arah === 'masuk'
-            ? { kodePerkiraan: l.kodePerkiraan, kredit: fromUnits(rp), deskripsi: ket }
-            : { kodePerkiraan: l.kodePerkiraan, debit: fromUnits(rp), deskripsi: ket });
+        const d = toUnits(l.debit || 0), k = toUnits(l.kredit || 0);
+        if (d < 0n || k < 0n) throw new Error(`Baris ${n + 1}: nominal tidak boleh negatif`);
+        if (d > 0n && k > 0n) throw new Error(`Baris ${n + 1}: isi debit atau kredit, bukan keduanya`);
+        if (d === 0n && k === 0n) throw new Error(`Baris ${n + 1}: nominal harus lebih dari nol`);
+        totalD += d; totalK += k;
+        baris.push({ kodePerkiraan: l.kodePerkiraan, debit: fromUnits(d), kredit: fromUnits(k), deskripsi: l.deskripsi?.trim() || undefined });
     }
-    const bank: JournalLine = i.arah === 'masuk' ? { kodePerkiraan: i.akunBank, debit: fromUnits(total) } : { kodePerkiraan: i.akunBank, kredit: fromUnits(total) };
+    const bersih = totalK - totalD;
+    if (bersih === 0n) throw new Error('Debit dan kredit sama besar, tidak ada pergerakan kas/bank');
+    const bank: JournalLine = bersih > 0n ? { kodePerkiraan: i.akunBank, debit: fromUnits(bersih) } : { kodePerkiraan: i.akunBank, kredit: fromUnits(-bersih) };
     return [bank, ...baris];
 }
 
@@ -94,14 +95,14 @@ export async function hapusBankBook(db: Db, nomorBukti: string) {
 }
 
 export interface BuktiBankBook {
-    nomorBukti: string; tanggal: string; deskripsi: string; arah: Arah; akunBank: string
-    lawan: { kodePerkiraan: string; namaPerkiraan: string; jumlah: string; deskripsi: string }[]
+    nomorBukti: string; tanggal: string; deskripsi: string; akunBank: string
+    lawan: { kodePerkiraan: string; namaPerkiraan: string; debit: string; kredit: string; deskripsi: string }[]
     terkunci: string | null; // alasan tidak bisa diubah di Bank Book, atau null
 }
 
 /**
- * Baca satu bukti untuk form ubah, dilihat dari akun kas/bank `akunBank`. Bisa diubah di Bank Book bila berbentuk satu baris
- * akun itu lawan baris-baris searah (bentuk yang dibuat form ini dan hampir semua bukti BB desktop).
+ * Baca satu bukti untuk form ubah, dilihat dari akun kas/bank `akunBank`. Bisa diubah di Bank Book bila akun itu satu baris
+ * (selisih lawan-lawannya; bentuk yang dibuat form ini dan bukti BB desktop).
  */
 export async function bacaBankBook(db: Pick<Db, 'query'>, nomorBukti: string, akunBank: string): Promise<BuktiBankBook | null> {
     const r = await db.query<{ kode_perkiraan: string; nama_perkiraan: string | null; d: string; k: string; deskripsi: string | null;
@@ -113,15 +114,13 @@ export async function bacaBankBook(db: Pick<Db, 'query'>, nomorBukti: string, ak
     if (!r.rows.length) return null;
     const bank = r.rows.filter((x) => x.kode_perkiraan === akunBank);
     const lain = r.rows.filter((x) => x.kode_perkiraan !== akunBank);
-    const masuk = bank.length === 1 && toUnits(bank[0].d) > 0n;
     let terkunci: string | null = null;
     if (!nomorBukti.startsWith('BB/')) terkunci = 'Bukan bukti Bank Book (dibuat oleh transaksi lain); ubah dari asal transaksinya.';
     else if (r.rows.some((x) => x.status === 'Reconcile' || x.tgl_rekonsiliasi)) terkunci = 'Sudah direkonsiliasi.';
-    else if (bank.length !== 1 || lain.some((x) => (masuk ? toUnits(x.d) : toUnits(x.k)) !== 0n))
-        terkunci = 'Bentuk jurnal tidak satu kas/bank lawan beberapa akun; ubah lewat Jurnal Umum.';
+    else if (bank.length !== 1) terkunci = 'Akun kas/bank muncul lebih dari satu baris; ubah lewat Jurnal Umum.';
     return {
-        nomorBukti, tanggal: r.rows[0].tanggal, deskripsi: bank[0]?.deskripsi ?? r.rows[0].deskripsi ?? '', arah: masuk ? 'masuk' : 'keluar', akunBank,
-        lawan: lain.map((x) => ({ kodePerkiraan: x.kode_perkiraan, namaPerkiraan: x.nama_perkiraan ?? '', jumlah: masuk ? x.k : x.d, deskripsi: x.deskripsi ?? '' })),
+        nomorBukti, tanggal: r.rows[0].tanggal, deskripsi: bank[0]?.deskripsi ?? r.rows[0].deskripsi ?? '', akunBank,
+        lawan: lain.map((x) => ({ kodePerkiraan: x.kode_perkiraan, namaPerkiraan: x.nama_perkiraan ?? '', debit: x.d, kredit: x.k, deskripsi: x.deskripsi ?? '' })),
         terkunci,
     };
 }

@@ -21,12 +21,12 @@ const ambilAkun = async (db: Db) => {
 test('bank book: uang masuk dua akun lawan, nomor BB urut per hari, jurnal seimbang', async () => {
     await inTx(async (db) => {
         const { bank, x, y } = await ambilAkun(db);
-        const a = await simpanBankBook(db, { akunBank: bank, arah: 'masuk', tanggal: '2031-03-05', deskripsi: 'Uji masuk', opr: 'uji',
-            lawan: [{ kodePerkiraan: x, jumlah: 1500 }, { kodePerkiraan: y, jumlah: '250.5', deskripsi: 'baris dua' }] });
+        const a = await simpanBankBook(db, { akunBank: bank, tanggal: '2031-03-05', deskripsi: 'Uji masuk', opr: 'uji',
+            lawan: [{ kodePerkiraan: x, kredit: 1500 }, { kodePerkiraan: y, kredit: '250.5', deskripsi: 'baris dua' }] });
         assert.equal(a.nomorBukti, 'BB/310305/001');
         assert.equal(a.total, '1750.5000');
-        const b = await simpanBankBook(db, { akunBank: bank, arah: 'keluar', tanggal: '2031-03-05', deskripsi: 'Uji keluar', opr: 'uji',
-            lawan: [{ kodePerkiraan: x, jumlah: 100 }] });
+        const b = await simpanBankBook(db, { akunBank: bank, tanggal: '2031-03-05', deskripsi: 'Uji keluar', opr: 'uji',
+            lawan: [{ kodePerkiraan: x, debit: 100 }] });
         assert.equal(b.nomorBukti, 'BB/310305/002');
         const r = (await db.query(`SELECT kode_perkiraan k, debit_jurnalumum::float d, kredit_jurnalumum::float c, deskripsi, sumber_tipe FROM jurnal_umum
             WHERE nomor_bukti = $1 ORDER BY urutan`, [a.nomorBukti])).rows;
@@ -41,17 +41,16 @@ test('bank book: uang masuk dua akun lawan, nomor BB urut per hari, jurnal seimb
 test('bank book: ubah mengganti isi bukti, tanggal tidak boleh diubah, hapus menghilangkan bukti', async () => {
     await inTx(async (db) => {
         const { bank, x, y } = await ambilAkun(db);
-        const a = await simpanBankBook(db, { akunBank: bank, arah: 'masuk', tanggal: '2031-03-06', deskripsi: 'Awal', opr: 'uji', lawan: [{ kodePerkiraan: x, jumlah: 500 }] });
-        await simpanBankBook(db, { nomorBukti: a.nomorBukti, akunBank: bank, arah: 'keluar', tanggal: '2031-03-06', deskripsi: 'Diubah', opr: 'uji',
-            lawan: [{ kodePerkiraan: y, jumlah: 300 }] });
+        const a = await simpanBankBook(db, { akunBank: bank, tanggal: '2031-03-06', deskripsi: 'Awal', opr: 'uji', lawan: [{ kodePerkiraan: x, kredit: 500 }] });
+        await simpanBankBook(db, { nomorBukti: a.nomorBukti, akunBank: bank, tanggal: '2031-03-06', deskripsi: 'Diubah', opr: 'uji',
+            lawan: [{ kodePerkiraan: y, debit: 300 }] });
         const b = await bacaBankBook(db, a.nomorBukti, bank);
-        assert.equal(b?.arah, 'keluar');
         assert.equal(b?.deskripsi, 'Diubah');
-        assert.deepEqual(b?.lawan.map((l) => [l.kodePerkiraan, Number(l.jumlah)]), [[y, 300]]);
+        assert.deepEqual(b?.lawan.map((l) => [l.kodePerkiraan, Number(l.debit), Number(l.kredit)]), [[y, 300, 0]]);
         assert.equal(b?.terkunci, null);
         await db.query('SAVEPOINT a');
-        await assert.rejects(simpanBankBook(db, { nomorBukti: a.nomorBukti, akunBank: bank, arah: 'masuk', tanggal: '2031-03-07', deskripsi: 'x', opr: 'uji',
-            lawan: [{ kodePerkiraan: x, jumlah: 1 }] }), /Tanggal bukti tidak bisa diubah/);
+        await assert.rejects(simpanBankBook(db, { nomorBukti: a.nomorBukti, akunBank: bank, tanggal: '2031-03-07', deskripsi: 'x', opr: 'uji',
+            lawan: [{ kodePerkiraan: x, kredit: 1 }] }), /Tanggal bukti tidak bisa diubah/);
         await db.query('ROLLBACK TO a');
         await hapusBankBook(db, a.nomorBukti);
         assert.equal(await bacaBankBook(db, a.nomorBukti, bank), null);
@@ -61,21 +60,23 @@ test('bank book: ubah mengganti isi bukti, tanggal tidak boleh diubah, hapus men
 test('bank book: masukan tidak sah dan bukti terkunci ditolak', async () => {
     await inTx(async (db) => {
         const { bank, x } = await ambilAkun(db);
-        const dasar = { akunBank: bank, arah: 'masuk' as const, tanggal: '2031-03-08', deskripsi: 'x', opr: 'uji' };
+        const dasar = { akunBank: bank, tanggal: '2031-03-08', deskripsi: 'x', opr: 'uji' };
         for (const [lawan, pola] of [
             [[], /minimal satu akun lawan/],
-            [[{ kodePerkiraan: bank, jumlah: 5 }], /tidak boleh sama/],
-            [[{ kodePerkiraan: x, jumlah: 0 }], /lebih dari nol/],
-            [[{ kodePerkiraan: '', jumlah: 5 }], /pilih akun lawan/],
+            [[{ kodePerkiraan: bank, kredit: 5 }], /tidak boleh sama/],
+            [[{ kodePerkiraan: x, kredit: 0 }], /lebih dari nol/],
+            [[{ kodePerkiraan: '', kredit: 5 }], /pilih akun lawan/],
+            [[{ kodePerkiraan: x, debit: 5, kredit: 5 }], /bukan keduanya/],
+            [[{ kodePerkiraan: x, debit: 5 }, { kodePerkiraan: x, kredit: 5 }], /tidak ada pergerakan/],
         ] as const) {
             await db.query('SAVEPOINT s');
             await assert.rejects(simpanBankBook(db, { ...dasar, lawan: [...lawan] }), pola);
             await db.query('ROLLBACK TO s');
         }
-        await assert.rejects(simpanBankBook(db, { ...dasar, akunBank: x, lawan: [{ kodePerkiraan: bank, jumlah: 5 }] }), /bukan akun kas\/bank/);
+        await assert.rejects(simpanBankBook(db, { ...dasar, akunBank: x, lawan: [{ kodePerkiraan: bank, kredit: 5 }] }), /bukan akun kas\/bank/);
         await assert.rejects(hapusBankBook(db, 'JU/310308/001'), /bukan bukti Bank Book/);
 
-        const a = await simpanBankBook(db, { ...dasar, lawan: [{ kodePerkiraan: x, jumlah: 5 }] });
+        const a = await simpanBankBook(db, { ...dasar, lawan: [{ kodePerkiraan: x, kredit: 5 }] });
         await db.query("UPDATE jurnal_umum SET status = 'Reconcile' WHERE nomor_bukti = $1 AND kode_perkiraan = $2", [a.nomorBukti, bank]);
         await assert.rejects(hapusBankBook(db, a.nomorBukti), /sudah direkonsiliasi/);
         assert.match((await bacaBankBook(db, a.nomorBukti, bank))?.terkunci ?? '', /rekonsiliasi/);

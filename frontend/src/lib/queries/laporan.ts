@@ -89,7 +89,7 @@ async function saldoAwal(kode: string, dari: string) {
 
 export interface HarianBankBook { tanggal: string; awal: number; debit: number; kredit: number; akhir: number; bukti: number }
 
-/** Ringkasan per hari satu akun kas/bank (semua tanggal dalam rentang, seperti Bank Book desktop), terbaru di atas. */
+/** Ringkasan per hari satu akun kas/bank (semua tanggal dalam rentang), tanggal menaik seperti Bank Book desktop. */
 export async function harianBankBook(kode: string, dari: string, sampai: string) {
     const awal = await saldoAwal(kode, dari)
     const rows = await query<HarianBankBook>(`
@@ -102,7 +102,7 @@ export async function harianBankBook(kode: string, dari: string, sampai: string)
         SELECT tanggal::text, debit, kredit, bukti,
                $4::numeric + COALESCE(SUM(debit - kredit) OVER (ORDER BY tanggal ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS awal,
                $4::numeric + SUM(debit - kredit) OVER (ORDER BY tanggal) AS akhir
-          FROM h ORDER BY tanggal DESC`, [kode, dari, sampai, awal])
+          FROM h ORDER BY tanggal`, [kode, dari, sampai, awal])
     return { awal, rows }
 }
 
