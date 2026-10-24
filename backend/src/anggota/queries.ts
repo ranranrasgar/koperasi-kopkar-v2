@@ -198,9 +198,11 @@ export async function getHistory(db: Pool, anggotaId: number | null, offset: num
             SELECT pp.tgl_realisasi, 'REG-PP', jk.nama_kredit, 'Pengajuan Pinjaman Baru', pp.rp_pinjaman_pokok, 'PENGAJUAN'
               FROM pengajuan_pinjaman pp JOIN jenis_kredit jk ON jk.id = pp.jenis_kredit_id WHERE pp.anggota_id = $1
             UNION ALL
+            -- rp_sukarela, rp_jasa_uang, rp_jasa_barang hanya dasar pembagian (rp_sukarela = saldo sukarela saat tutup
+            -- buku); SHU yang diterima anggota adalah rp_pencairan, sama dengan halaman SHU.
             SELECT t.tgl_tutup_buku, t.no_reff, 'Sisa Hasil Usaha', 'Tahun Buku ' || EXTRACT(YEAR FROM t.tgl_tutup_buku)::int,
-                   t.rp_sukarela + t.rp_jasa_uang + t.rp_jasa_barang, 'SHU'
-              FROM temp_shu_backup t WHERE t.anggota_id = $1
+                   t.rp_pencairan, 'SHU'
+              FROM temp_shu_backup t WHERE t.anggota_id = $1 AND t.rp_pencairan > 0
          ) h ORDER BY tgl DESC, ref DESC OFFSET $2 LIMIT $3`, [anggotaId, offset, limit]);
     return r.rows;
 }
