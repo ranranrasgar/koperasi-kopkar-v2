@@ -8,6 +8,7 @@ import { isiNavbarAction, tandaiDibacaAction, type IsiNavbar, type ItemNavbar } 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { MENU } from "@/config/akses"
 import { useSidebar } from "./SidebarContext"
+import { tanganiVersiLama } from "@/lib/versi-lama"
 
 const JEDA_MS = 10_000
 
@@ -91,7 +92,7 @@ export function Lonceng() {
         let batal = false
         const segarkan = async () => {
             if (document.visibilityState !== "visible") return
-            const n = await jumlahBadgeAction().catch(() => null)
+            const n = await jumlahBadgeAction().catch(tanganiVersiLama)
             if (!batal && n) setAngka(n)
         }
         const t = setInterval(segarkan, JEDA_MS)

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react"
 import { pesanBaruAction } from "@/app/actions/pesan"
 import { tanggal } from "@/lib/format"
+import { tanganiVersiLama } from "@/lib/versi-lama"
 
 export interface PesanTampil { id: number; pengirim: "anggota" | "admin"; isi: string; dibuat_pada: string }
 
@@ -29,7 +30,7 @@ export function PercakapanLangsung({ id, awal }: { id: number; awal: PesanTampil
             terakhir.current = baru[baru.length - 1].id
             dekatBawah.current = window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 200
             setPesan((lama) => [...lama, ...baru.filter((b) => !lama.some((l) => l.id === b.id))])
-        } catch { /* koneksi putus sebentar: coba lagi pada putaran berikutnya */ } finally {
+        } catch (e) { tanganiVersiLama(e) /* galat lain: koneksi putus sebentar, coba lagi pada putaran berikutnya */ } finally {
             sedangAmbil.current = false
         }
     }, [id])

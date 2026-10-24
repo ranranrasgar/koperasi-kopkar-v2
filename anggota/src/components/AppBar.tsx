@@ -6,6 +6,7 @@ import { usePathname } from "next/navigation"
 import { Bell, MessageSquare } from "lucide-react"
 import { statusAppBarAction } from "@/app/actions/appbar"
 import type { StatusAppBar } from "@/lib/status-appbar"
+import { tanganiVersiLama } from "@/lib/versi-lama"
 
 const JUDUL: Record<string, string> = {
     "/beranda": "Beranda", "/simpanan": "Simpanan", "/pinjaman": "Pinjaman", "/ajukan": "Ajukan pinjaman", "/akun": "Akun",
@@ -38,7 +39,7 @@ export function AppBar({ awal, nama, inisial, fotoVersi }: { awal: StatusAppBar 
         let batal = false
         const segarkan = async () => {
             if (document.visibilityState !== "visible") return
-            const s = await statusAppBarAction().catch(() => null)
+            const s = await statusAppBarAction().catch(tanganiVersiLama)
             if (!batal && s) setStatus(s)
         }
         const t = setInterval(segarkan, JEDA_MS)
