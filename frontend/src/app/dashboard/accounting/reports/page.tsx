@@ -103,7 +103,7 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
         isi = (
             <>
                 <KopLaporan judul="Neraca" periode={`Per ${formatTanggal(sampai, "long")}`} />
-                <div data-cetak-kolom className="grid gap-8 md:grid-cols-2">
+                <div data-cetak-kolom data-cetak-polos className="grid gap-8 md:grid-cols-2">
                     <div>
                         <Bagian judul="AKTIVA" akun={aktiva} nilai={(a) => a.akhir} total="Jumlah Aktiva" />
                     </div>
@@ -115,7 +115,7 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
                         </div>
                     </div>
                 </div>
-                <div data-cetak-kolom className="grid gap-8 md:grid-cols-2 border-t-2 pt-2 font-bold">
+                <div data-cetak-kolom data-cetak-polos className="grid gap-8 md:grid-cols-2 border-t-2 pt-2 font-bold">
                     <div className="flex justify-between"><span>TOTAL AKTIVA</span><span className="tabular-nums">{formatAngka(totAktiva)}</span></div>
                     <div className="flex justify-between"><span>TOTAL PASIVA</span><span className="tabular-nums">{formatAngka(totPasiva)}</span></div>
                 </div>
@@ -148,7 +148,7 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
         isi = (
             <>
                 <KopLaporan judul="Laporan Rugi Laba" periode={`${formatTanggal(dari, "long")} s/d ${formatTanggal(sampai, "long")}`} />
-                <div className="max-w-3xl mx-auto">
+                <div data-cetak-polos className="max-w-3xl mx-auto">
                     <div className="font-bold border-b pb-1 mb-2">PENDAPATAN</div>
                     {kelP.map((k) => <KelompokTabel key={k.kode} k={k} />)}
                     <div className="flex justify-between font-bold border-t-2 py-1 mb-4"><span>Jumlah Pendapatan</span><span className="tabular-nums">{formatAngka(totP)}</span></div>

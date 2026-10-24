@@ -72,6 +72,9 @@ body,.kertas,.kertas *{font-family:Arial,Helvetica,sans-serif!important}
 .isi *{break-inside:auto!important}.isi tr,.isi img{break-inside:avoid!important}
 .isi .grid:not([data-cetak-kolom]),.isi [class*="grid-cols"]:not([data-cetak-kolom]){display:block!important}
 .isi .grid:not([data-cetak-kolom])>*{margin-bottom:10px}
+/* Laporan yang tampilannya di halaman sudah rapi tanpa kotak tabel (Neraca, Rugi Laba): sel kembali memakai gaya aslinya (Tailwind),
+   bukan garis, padding, dan latar tabel cetak umum. revert-layer = nilai dari lapisan gaya halaman. */
+.isi [data-cetak-polos] :is(td,th){border:revert-layer!important;padding:revert-layer!important;background:revert-layer!important}
 /* Susunan dua kolom yang memang dipertahankan di cetak (mis. Neraca: aktiva | hutang dan modal); isi kolom tetap boleh terpecah antarhalaman. */
 .isi [data-cetak-kolom]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:20px!important}
 .isi h1,.isi h2,.isi h3,.isi .font-bold,.isi .font-semibold{break-after:avoid}
