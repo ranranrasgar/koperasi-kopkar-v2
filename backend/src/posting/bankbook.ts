@@ -1,0 +1,127 @@
+import type { Db } from '../db.ts';
+import { postJournal, type JournalLine } from './journal.ts';
+import { fromUnits, toUnits } from './money.ts';
+
+/**
+ * Bank Book (Buku Kas & Bank), pengganti form Bank & Cash Book desktop: satu akun kas/bank lawan satu atau lebih akun.
+ * Operator hanya memilih arah (uang masuk atau keluar) dan mengisi akun lawan beserta nominalnya; sisi kas/bank diisi
+ * sebesar totalnya, sehingga jurnal selalu seimbang. Nomor bukti BB/yymmdd/NNN urut per hari, seperti desktop.
+ */
+
+/** Akun yang tampil di Bank Book (perkiraan.keterangan GC atau BANK, sama dengan query desktop). */
+export const SQL_AKUN_BANKBOOK = "SELECT id, kode_perkiraan, nama_perkiraan FROM perkiraan WHERE keterangan IN ('GC', 'BANK') ORDER BY nama_perkiraan";
+
+export type Arah = 'masuk' | 'keluar';
+
+export interface BarisLawan { kodePerkiraan: string; jumlah: string | number; deskripsi?: string | null }
+
+export interface BankBookInput {
+    akunBank: string;  // kode_perkiraan akun kas/bank
+    arah: Arah;        // masuk: kas/bank didebit, lawan dikredit; keluar: sebaliknya
+    tanggal: string;   // YYYY-MM-DD
+    deskripsi: string;
+    lawan: BarisLawan[];
+    opr: string;
+}
+
+const yymmdd = (d: string) => d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10);
+
+async function cekAkunBank(db: Db, kode: string) {
+    const r = await db.query<{ nama_perkiraan: string }>(
+        "SELECT nama_perkiraan FROM perkiraan WHERE kode_perkiraan = $1 AND keterangan IN ('GC', 'BANK')", [kode]);
+    if (!r.rows[0]) throw new Error(`Akun ${kode} bukan akun kas/bank`);
+}
+
+/** Baris jurnal dari input; galat bila ada yang tidak sah. */
+function susunBaris(i: BankBookInput): JournalLine[] {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(i.tanggal)) throw new Error('Tanggal tidak valid');
+    if (!i.deskripsi.trim()) throw new Error('Keterangan wajib diisi');
+    const lawan = i.lawan.filter((l) => l.kodePerkiraan || toUnits(l.jumlah || 0) !== 0n);
+    if (lawan.length === 0) throw new Error('Isi minimal satu akun lawan');
+    let total = 0n;
+    const baris: JournalLine[] = [];
+    for (const [n, l] of lawan.entries()) {
+        if (!l.kodePerkiraan) throw new Error(`Baris ${n + 1}: pilih akun lawan`);
+        if (l.kodePerkiraan === i.akunBank) throw new Error(`Baris ${n + 1}: akun lawan tidak boleh sama dengan akun kas/bank`);
+        const rp = toUnits(l.jumlah || 0);
+        if (rp <= 0n) throw new Error(`Baris ${n + 1}: nominal harus lebih dari nol`);
+        total += rp;
+        const ket = l.deskripsi?.trim() || undefined;
+        baris.push(i.arah === 'masuk'
+            ? { kodePerkiraan: l.kodePerkiraan, kredit: fromUnits(rp), deskripsi: ket }
+            : { kodePerkiraan: l.kodePerkiraan, debit: fromUnits(rp), deskripsi: ket });
+    }
+    const bank: JournalLine = i.arah === 'masuk' ? { kodePerkiraan: i.akunBank, debit: fromUnits(total) } : { kodePerkiraan: i.akunBank, kredit: fromUnits(total) };
+    return [bank, ...baris];
+}
+
+/** Bukti BB yang boleh diubah/dihapus: ada, dibuat lewat Bank Book, dan belum direkonsiliasi. */
+async function cekBisaDiubah(db: Db, nomorBukti: string) {
+    if (!/^BB\/\d{6}\/\d+$/.test(nomorBukti)) throw new Error(`${nomorBukti} bukan bukti Bank Book`);
+    const r = await db.query<{ n: string; rekon: string; tanggal: string }>(
+        `SELECT COUNT(*) n, COUNT(*) FILTER (WHERE status = 'Reconcile' OR tgl_rekonsiliasi IS NOT NULL) rekon, MIN(tanggal_jurnalumum)::text tanggal
+           FROM jurnal_umum WHERE nomor_bukti = $1`, [nomorBukti]);
+    if (Number(r.rows[0].n) === 0) throw new Error(`Bukti ${nomorBukti} tidak ditemukan`);
+    if (Number(r.rows[0].rekon) > 0) throw new Error(`Bukti ${nomorBukti} sudah direkonsiliasi, tidak bisa diubah atau dihapus`);
+    return r.rows[0].tanggal;
+}
+
+/** Simpan bukti baru, atau ubah bukti lama (nomorBukti diisi; tanggal tetap, karena tanggal bagian dari nomor). */
+export async function simpanBankBook(db: Db, i: BankBookInput & { nomorBukti?: string }): Promise<{ nomorBukti: string; total: string }> {
+    await cekAkunBank(db, i.akunBank);
+    const lines = susunBaris(i);
+    let nomorBukti = i.nomorBukti;
+    if (nomorBukti) {
+        const tgl = await cekBisaDiubah(db, nomorBukti);
+        if (tgl !== i.tanggal) throw new Error('Tanggal bukti tidak bisa diubah; hapus lalu buat bukti baru di tanggal lain');
+    } else {
+        // Nomor urut per hari; kunci per hari supaya dua operator tidak mendapat nomor yang sama.
+        const hari = yymmdd(i.tanggal);
+        await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', [`bankbook:${hari}`]);
+        const n = Number((await db.query<{ n: string }>(
+            `SELECT COALESCE(MAX(NULLIF(split_part(nomor_bukti, '/', 3), '')::int), 0) + 1 n FROM jurnal_umum
+              WHERE nomor_bukti LIKE $1 AND split_part(nomor_bukti, '/', 3) ~ '^[0-9]+$'`, [`BB/${hari}/%`])).rows[0].n);
+        nomorBukti = `BB/${hari}/${String(n).padStart(3, '0')}`;
+    }
+    await postJournal(db, { nomorBukti, tanggal: i.tanggal, deskripsi: i.deskripsi.trim(), opr: i.opr,
+        sumberTipe: 'bankbook', sumberId: null, tahunPrefix: 'BB', lines });
+    return { nomorBukti, total: lines[0].debit !== undefined ? String(lines[0].debit) : String(lines[0].kredit) };
+}
+
+export async function hapusBankBook(db: Db, nomorBukti: string) {
+    await cekBisaDiubah(db, nomorBukti);
+    await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [nomorBukti]);
+}
+
+export interface BuktiBankBook {
+    nomorBukti: string; tanggal: string; deskripsi: string; arah: Arah; akunBank: string
+    lawan: { kodePerkiraan: string; namaPerkiraan: string; jumlah: string; deskripsi: string }[]
+    terkunci: string | null; // alasan tidak bisa diubah di Bank Book, atau null
+}
+
+/**
+ * Baca satu bukti untuk form ubah, dilihat dari akun kas/bank `akunBank`. Bisa diubah di Bank Book bila berbentuk satu baris
+ * akun itu lawan baris-baris searah (bentuk yang dibuat form ini dan hampir semua bukti BB desktop).
+ */
+export async function bacaBankBook(db: Pick<Db, 'query'>, nomorBukti: string, akunBank: string): Promise<BuktiBankBook | null> {
+    const r = await db.query<{ kode_perkiraan: string; nama_perkiraan: string | null; d: string; k: string; deskripsi: string | null;
+        tanggal: string; status: string | null; tgl_rekonsiliasi: string | null }>(
+        `SELECT j.kode_perkiraan, p.nama_perkiraan, j.debit_jurnalumum d, j.kredit_jurnalumum k, j.deskripsi, j.tanggal_jurnalumum::text tanggal,
+                j.status, j.tgl_rekonsiliasi::text tgl_rekonsiliasi
+           FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan
+          WHERE j.nomor_bukti = $1 ORDER BY j.urutan`, [nomorBukti]);
+    if (!r.rows.length) return null;
+    const bank = r.rows.filter((x) => x.kode_perkiraan === akunBank);
+    const lain = r.rows.filter((x) => x.kode_perkiraan !== akunBank);
+    const masuk = bank.length === 1 && toUnits(bank[0].d) > 0n;
+    let terkunci: string | null = null;
+    if (!nomorBukti.startsWith('BB/')) terkunci = 'Bukan bukti Bank Book (dibuat oleh transaksi lain); ubah dari asal transaksinya.';
+    else if (r.rows.some((x) => x.status === 'Reconcile' || x.tgl_rekonsiliasi)) terkunci = 'Sudah direkonsiliasi.';
+    else if (bank.length !== 1 || lain.some((x) => (masuk ? toUnits(x.d) : toUnits(x.k)) !== 0n))
+        terkunci = 'Bentuk jurnal tidak satu kas/bank lawan beberapa akun; ubah lewat Jurnal Umum.';
+    return {
+        nomorBukti, tanggal: r.rows[0].tanggal, deskripsi: bank[0]?.deskripsi ?? r.rows[0].deskripsi ?? '', arah: masuk ? 'masuk' : 'keluar', akunBank,
+        lawan: lain.map((x) => ({ kodePerkiraan: x.kode_perkiraan, namaPerkiraan: x.nama_perkiraan ?? '', jumlah: masuk ? x.k : x.d, deskripsi: x.deskripsi ?? '' })),
+        terkunci,
+    };
+}

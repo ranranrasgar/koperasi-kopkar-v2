@@ -1,4 +1,5 @@
 import "server-only"
+import { SQL_AKUN_BANKBOOK } from "@kopkar/backend/src/posting/bankbook.ts"
 import { query } from "@/lib/db"
 
 /*
@@ -73,6 +74,63 @@ export async function bukuBesar(kode: string, dari: string, sampai: string) {
         SELECT COALESCE(SUM(j.debit_jurnalumum), 0) AS debit, COALESCE(SUM(j.kredit_jurnalumum), 0) AS kredit FROM jurnal_umum j
          WHERE j.kode_perkiraan = $1 AND j.tanggal_jurnalumum BETWEEN $2 AND $3 AND NOT ${PEMBUKA}`, [kode, dari, sampai])
     return { awal: awal.s, baris, debit: tot.debit, kredit: tot.kredit }
+}
+
+/** Saldo satu akun pada awal hari `dari` (sebelum mutasi tanggal itu), dengan aturan saldo pembuka yang sama dengan buku besar. */
+async function saldoAwal(kode: string, dari: string) {
+    const o = await pembukaTerakhir(dari)
+    const [r] = await query<{ s: number }>(`
+        SELECT COALESCE(SUM(j.debit_jurnalumum - j.kredit_jurnalumum), 0) AS s FROM jurnal_umum j
+         WHERE j.kode_perkiraan = $1 AND (${o
+            ? `(${PEMBUKA} AND j.tanggal_jurnalumum = $3) OR (NOT ${PEMBUKA} AND j.tanggal_jurnalumum >= $3 AND j.tanggal_jurnalumum < $2)`
+            : `NOT ${PEMBUKA} AND j.tanggal_jurnalumum < $2`})`, o ? [kode, dari, o] : [kode, dari])
+    return r.s
+}
+
+export interface HarianBankBook { tanggal: string; awal: number; debit: number; kredit: number; akhir: number; bukti: number }
+
+/** Ringkasan per hari satu akun kas/bank (semua tanggal dalam rentang, seperti Bank Book desktop), terbaru di atas. */
+export async function harianBankBook(kode: string, dari: string, sampai: string) {
+    const awal = await saldoAwal(kode, dari)
+    const rows = await query<HarianBankBook>(`
+        WITH h AS (
+            SELECT d::date AS tanggal, COALESCE(SUM(j.debit_jurnalumum), 0) AS debit, COALESCE(SUM(j.kredit_jurnalumum), 0) AS kredit,
+                   COUNT(DISTINCT j.nomor_bukti) AS bukti
+              FROM generate_series($2::date, $3::date, interval '1 day') d
+              LEFT JOIN jurnal_umum j ON j.kode_perkiraan = $1 AND j.tanggal_jurnalumum = d::date AND NOT ${PEMBUKA}
+             GROUP BY 1)
+        SELECT tanggal::text, debit, kredit, bukti,
+               $4::numeric + COALESCE(SUM(debit - kredit) OVER (ORDER BY tanggal ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING), 0) AS awal,
+               $4::numeric + SUM(debit - kredit) OVER (ORDER BY tanggal) AS akhir
+          FROM h ORDER BY tanggal DESC`, [kode, dari, sampai, awal])
+    return { awal, rows }
+}
+
+export interface TransaksiBankBook {
+    nomor_bukti: string; tanggal: string; deskripsi: string | null; lawan: string | null; debit: number; kredit: number
+    opr: string | null; rekonsiliasi: boolean; bankbook: boolean
+}
+
+/** Bukti yang menyentuh akun kas/bank pada satu tanggal, dengan nama akun lawannya, urut seperti dicatat. */
+export const transaksiBankBook = (kode: string, tanggal: string) =>
+    query<TransaksiBankBook>(`
+        SELECT j.nomor_bukti, j.tanggal_jurnalumum::text tanggal, MIN(j.deskripsi) deskripsi,
+               (SELECT string_agg(DISTINCT x.kode_perkiraan || ' ' || COALESCE(p.nama_perkiraan, ''), ', ')
+                  FROM jurnal_umum x LEFT JOIN perkiraan p ON p.kode_perkiraan = x.kode_perkiraan
+                 WHERE x.nomor_bukti = j.nomor_bukti AND x.kode_perkiraan <> $1) lawan,
+               SUM(j.debit_jurnalumum) debit, SUM(j.kredit_jurnalumum) kredit, MIN(j.opr) opr,
+               BOOL_OR(j.status = 'Reconcile' OR j.tgl_rekonsiliasi IS NOT NULL) rekonsiliasi, j.nomor_bukti LIKE 'BB/%' bankbook
+          FROM jurnal_umum j
+         WHERE j.kode_perkiraan = $1 AND j.tanggal_jurnalumum = $2 AND NOT ${PEMBUKA}
+         GROUP BY j.nomor_bukti, j.tanggal_jurnalumum ORDER BY MIN(j.urutan)`, [kode, tanggal])
+
+export interface AkunBankBook { id: number; kode_perkiraan: string; nama_perkiraan: string; saldo: number }
+
+/** Akun Bank Book (keterangan GC/BANK, seperti desktop) dengan saldo sampai `per`. */
+export async function akunBankBook(per: string) {
+    const saldo = new Map((await saldoPerAkun(per, per)).map((s) => [s.kode_perkiraan, s.akhir]))
+    const akun = await query<Omit<AkunBankBook, "saldo">>(SQL_AKUN_BANKBOOK)
+    return akun.map((a) => ({ ...a, saldo: saldo.get(a.kode_perkiraan) ?? 0 }))
 }
 
 export interface TutupBuku { nomor_bukti: string; tanggal: string; bagian: string; baris: number; debit: number; kredit: number; opr: string | null }

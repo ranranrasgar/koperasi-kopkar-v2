@@ -113,6 +113,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     // Generate, ubah, dan posting potongan gaji bulanan: menu desktop Potongan Keseluruhan (yang dulu menggabungkan semua potongan).
     "/dashboard/deductions/periode": [MENU.potonganSemua],
     "/dashboard/accounting/ledger": [MENU.bankBook, MENU.bukuBesar],
+    "/dashboard/accounting/bank-book": [MENU.bankBook],
     "/dashboard/accounting/trial-balance": [MENU.neracaSaldo],
     "/dashboard/accounting/reports": [MENU.neraca, MENU.rugiLaba],
     "/dashboard/accounting/closing": [MENU.tutupBuku],

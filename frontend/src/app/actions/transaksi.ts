@@ -5,9 +5,10 @@ import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpan
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
 import { postJurnalUmum } from "@kopkar/backend/src/posting/jurnal-umum.ts"
+import { bacaBankBook, hapusBankBook, simpanBankBook, type Arah, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
-import { modeUji, query, tx } from "@/lib/db"
+import { modeUji, pool, query, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
 import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
 import { cariAnggota, type AnggotaRingkas } from "@/lib/queries/anggota"
@@ -237,4 +238,42 @@ export async function jurnalUmumAction(_: Hasil, f: FormData): Promise<Hasil> {
         return { ok: true, pesan: `Jurnal ${r.nomorBukti} tercatat (${r.baris} baris)`,
             rincian: { "No. Bukti": r.nomorBukti, "Total debit = kredit": rp(total) } }
     })
+}
+
+// ---------- bank book (kas & bank) ----------
+
+/** Simpan bukti Bank Book baru, atau ubah bukti lama bila `nomorBukti` terisi. */
+export async function bankBookAction(_: Hasil, f: FormData): Promise<Hasil> {
+    return posting([MENU.bankBook], async ({ nama: opr }) => {
+        const kode = f.getAll("lawan").map(String), jumlah = f.getAll("jumlah").map(String), ket = f.getAll("ketBaris").map(String)
+        const lawan = kode.map((k, i) => {
+            const j = (jumlah[i] || "0").replace(/,/g, ".")
+            if (!UANG.test(j)) throw new InputSalah(`Baris ${i + 1}: nominal harus angka`)
+            return { kodePerkiraan: k.trim(), jumlah: j, deskripsi: ket[i]?.trim() || undefined }
+        })
+        const arah = teks(f, "arah")
+        if (arah !== "masuk" && arah !== "keluar") throw new InputSalah("Arah harus uang masuk atau keluar")
+        const nomor = teks(f, "nomorBukti", false) || undefined
+        const r = await tx((db) => simpanBankBook(db, { akunBank: teks(f, "akunBank"), arah: arah as Arah, tanggal: tanggal(f),
+            deskripsi: teks(f, "deskripsi"), lawan, opr, nomorBukti: nomor }))
+        return { ok: true, pesan: `Bukti ${r.nomorBukti} ${nomor ? "diubah" : "tercatat"}`, rincian: { "No. Bukti": r.nomorBukti, "Total": rp(r.total) } }
+    })
+}
+
+export async function hapusBankBookAction(nomorBukti: string): Promise<Hasil> {
+    return posting([MENU.bankBook], async () => {
+        await tx((db) => hapusBankBook(db, nomorBukti))
+        return { ok: true, pesan: `Bukti ${nomorBukti} dihapus` }
+    })
+}
+
+/** Isi form ubah: bukti dilihat dari akun kas/bank yang sedang dibuka. */
+export async function bacaBankBookAction(nomorBukti: string, akunBank: string): Promise<{ bukti: BuktiBankBook } | { error: string }> {
+    try {
+        await operatorAktif([MENU.bankBook])
+        const b = await bacaBankBook(pool, nomorBukti, akunBank)
+        return b ? { bukti: b } : { error: `Bukti ${nomorBukti} tidak ditemukan` }
+    } catch (e) {
+        return { error: e instanceof Error ? e.message : "Gagal membaca bukti" }
+    }
 }

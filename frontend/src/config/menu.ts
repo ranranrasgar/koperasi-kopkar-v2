@@ -159,8 +159,13 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/accounting/journal"
             },
             {
-                label: "Buku Kas & Bank",
+                label: "Bank Book",
                 icon: "account_balance",
+                href: "/dashboard/accounting/bank-book"
+            },
+            {
+                label: "Buku Besar",
+                icon: "auto_stories",
                 href: "/dashboard/accounting/ledger"
             },
             {
