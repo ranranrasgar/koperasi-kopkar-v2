@@ -19,6 +19,8 @@ export interface KopCetak {
     alamat: string[]
     /** Email dan website bila diisi. */
     kontak: string[]
+    /** Kota perusahaan, untuk baris tempat dan tanggal di atas tanda tangan. */
+    kota: string
     logo: string
     petugas: string
     waktu: string
@@ -36,7 +38,7 @@ export async function kopCetakAction(): Promise<KopCetak | null> {
         const t = (v: string | null | undefined) => (v ?? "").trim()
         const waktu = new Intl.DateTimeFormat("id-ID", { dateStyle: "long", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date())
         return {
-            nama: k.nama, logo: k.logo, petugas: o.namaLengkap, waktu,
+            nama: k.nama, logo: k.logo, petugas: o.namaLengkap, waktu, kota: t(p?.kota),
             alamat: [t(p?.a1), t(p?.a2), t(p?.kota)].filter(Boolean),
             kontak: [t(p?.email) && `Email: ${t(p?.email)}`, t(p?.http) && t(p?.http)].filter(Boolean) as string[],
         }

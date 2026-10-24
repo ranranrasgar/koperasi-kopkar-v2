@@ -104,8 +104,10 @@ export interface AngsuranInput {
     tanggal: string;
     kasPerkiraanId: number | string;
     opr: string;
-    /** Penyesuaian manual kasir (mis. adm dibebaskan). Bawaan: dihitung dari ketentuan pinjaman. */
-    override?: { jasa?: string | number; adm?: string | number; provisi?: string | number };
+    /** Penyesuaian manual kasir (mis. adm dibebaskan), atau nominal jadwal tagih untuk potongan gaji. Bawaan: dihitung dari ketentuan pinjaman. */
+    override?: { pokok?: string | number; jasa?: string | number; adm?: string | number; provisi?: string | number };
+    /** Bila diisi, galat bila angsuran berikutnya bukan angsuran ke ini (mis. sudah dibayar setelah potongan digenerate). */
+    angsuranKe?: number;
 }
 
 export interface AngsuranResult {
@@ -143,7 +145,10 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
 
     const t: Terms = { pokok: toUnits(p.rp_pinjaman_pokok), persenBunga: persenToMicro(p.persen_bunga), perAngsuran: p.bunga_per === 1,
         lama: p.lama_angsuran, persenAdm: persenToMicro(p.persen_adm), persenProvisi: persenToMicro(p.persen_provisi) };
+    if (i.angsuranKe !== undefined && i.angsuranKe !== ke)
+        throw new Error(`Pinjaman ${i.noPinjaman}: angsuran berikutnya ke-${ke}, bukan ke-${i.angsuranKe}`);
     const c = cicilan(t, ke);
+    if (i.override?.pokok !== undefined) c.pokok = toUnits(i.override.pokok);
     if (i.override?.jasa !== undefined) c.jasa = toUnits(i.override.jasa);
     if (i.override?.adm !== undefined) c.adm = toUnits(i.override.adm);
     if (i.override?.provisi !== undefined) c.provisi = toUnits(i.override.provisi);
@@ -171,7 +176,7 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
         [ke, p.lama_angsuran - ke, i.tanggal, p.id]);
 
     await postJournal(db, {
-        nomorBukti: noBukti, tanggal: i.tanggal, opr: i.opr, sumberTipe: 'pinjaman_tunai_rincian', sumberId: p.id,
+        nomorBukti: noBukti, tanggal: i.tanggal, opr: i.opr, sumberTipe: 'pinjaman_tunai_rincian', sumberId: p.id, noBuktiTransaksi: i.noPinjaman,
         deskripsi: `Setoran ${jk.nama_kredit} a/n: ${p.nama}/${p.nik}`,
         lines: barisJurnalAngsuran(c, { kas: kas.rows[0].kode_perkiraan, kredit: jk.akun_kredit, jasa: jk.akun_jasa, adm: jk.akun_adm, provisi: jk.akun_provisi }),
     });

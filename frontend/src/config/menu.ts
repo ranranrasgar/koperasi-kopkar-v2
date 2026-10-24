@@ -137,6 +137,11 @@ export const allGroups: MenuGroup[] = [
                 label: "Transaksi Potongan",
                 icon: "format_list_numbered",
                 href: "/dashboard/deductions"
+            },
+            {
+                label: "Generate & Posting",
+                icon: "calendar_month",
+                href: "/dashboard/deductions/periode"
             }
         ]
     },

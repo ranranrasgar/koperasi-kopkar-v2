@@ -1,4 +1,4 @@
-// Pasang tabel pengaturan_web dan izin menu Mode Aplikasi untuk grup admin. Aman dijalankan ulang.
+// Pasang tabel pengaturan_web, tabel periode Potongan Gaji, dan izin menu Mode Aplikasi untuk grup admin. Aman dijalankan ulang.
 //
 //   npm run pengaturan:pasang                 nilai awal mode_uji dari KOPKAR_UJI_ROLLBACK di frontend/.env.local (bawaan 0 = live)
 //   npm run pengaturan:pasang -- --mode=uji   nilai awal mode uji (atau --mode=live); tidak mengubah nilai yang sudah ada
@@ -34,6 +34,7 @@ async function main() {
     try {
         await c.query('BEGIN');
         await c.query(fs.readFileSync(path.join(here, 'pengaturan-web.sql'), 'utf8'));
+        await c.query(fs.readFileSync(path.join(here, 'potongan-gaji.sql'), 'utf8')); // periode Potongan Gaji bulanan
         const r = await c.query(`INSERT INTO pengaturan_web (kunci, nilai, diubah_oleh) VALUES ('mode_uji', $1, 'pemasangan')
             ON CONFLICT (kunci) DO NOTHING RETURNING nilai`, [awal]);
         const mode = (await c.query("SELECT nilai FROM pengaturan_web WHERE kunci = 'mode_uji'")).rows[0].nilai;

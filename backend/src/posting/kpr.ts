@@ -93,7 +93,7 @@ export async function bayarAngsuranKpr(db: Db, i: KprAngsuranInput): Promise<Kpr
     await db.query('UPDATE kpr SET jml_cicilan = $1, tgl_akhir_bayar = $2 WHERE id = $3', [ke, i.tanggal, k.id]);
 
     await postJournal(db, {
-        nomorBukti: noBukti, tanggal: i.tanggal, opr: i.opr, sumberTipe: 'kpr_rincian', sumberId: k.id,
+        nomorBukti: noBukti, tanggal: i.tanggal, opr: i.opr, sumberTipe: 'kpr_rincian', sumberId: k.id, noBuktiTransaksi: i.noPinjaman,
         deskripsi: `Setoran ${jk.nama_kredit} a/n: ${k.nama}`,
         lines: [{ kodePerkiraan: kas.rows[0].kode_perkiraan, debit: fromUnits(jumlah) }, { kodePerkiraan: jk.akun_titipan!, kredit: fromUnits(jumlah) }],
     });

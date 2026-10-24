@@ -110,6 +110,8 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/loans/escrow": [MENU.titipan],
     "/dashboard/loans/bad-debts": [MENU.lapTunggakanKoperasi, MENU.lapTunggakanBank, MENU.lapTunggakanKpr, MENU.jenisMacet],
     "/dashboard/deductions": [MENU.potonganSemua, MENU.potonganKoperasi, MENU.potonganBank, MENU.potonganKpr, MENU.potonganSimpanan],
+    // Generate, ubah, dan posting potongan gaji bulanan: menu desktop Potongan Keseluruhan (yang dulu menggabungkan semua potongan).
+    "/dashboard/deductions/periode": [MENU.potonganSemua],
     "/dashboard/accounting/ledger": [MENU.bankBook, MENU.bukuBesar],
     "/dashboard/accounting/trial-balance": [MENU.neracaSaldo],
     "/dashboard/accounting/reports": [MENU.neraca, MENU.rugiLaba],

@@ -1,5 +1,6 @@
 import "server-only"
 import type { PageData } from "@/config/modules"
+import { SQL_ANGSURAN_POTONGAN } from "@kopkar/backend/src/posting/potongan.ts"
 import { query } from "@/lib/db"
 import { ukuranHalaman } from "@/lib/halaman"
 import { sp, type SearchParams } from "@/lib/list"
@@ -66,36 +67,24 @@ export interface Potongan {
 
 /**
  * Proyeksi potongan gaji bulan berjalan untuk anggota aktif, dengan rumus yang cocok dengan hasil desktop
- * (temp_potongan_all): simpanan wajib dan sukarela dari data anggota, angsuran berikutnya dari jadwal tagih
- * pinjaman tunai (per grup), angsuran KPR per bulan (maks. sisa pokok), dan biaya adm bank perusahaan.
+ * (temp_potongan_all): simpanan wajib dan sukarela dari data anggota, angsuran dari SQL_ANGSURAN_POTONGAN (sama dengan
+ * Generate periode potongan gaji), dan biaya adm bank perusahaan.
  */
 export const proyeksiPotongan = () =>
     query<Potongan>(`
-        WITH pt AS (
-            SELECT p.anggota_id,
-                   SUM(t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi) FILTER (WHERE jk.group_pinjaman = 'KOPERASI') AS koperasi,
-                   SUM(t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi) FILTER (WHERE jk.group_pinjaman = 'BANK / PIHAK LAIN') AS bank
-              FROM pinjaman_tunai p JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
-              JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.angsuran_ke = p.jml_cicilan + 1
-              -- LATERAL: saldo hanya dihitung untuk pinjaman yang punya angsuran berikutnya (subquery di WHERE 4x lebih lambat).
-              LEFT JOIN LATERAL (SELECT SUM(r.kredit_pokok - r.debit_pokok) AS sisa FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = p.id) s ON true
-             WHERE p.jml_cicilan < p.lama_angsuran
-               -- Pinjaman yang saldo bukunya sudah habis (dilunasi sekaligus) tidak dipotong lagi, seperti desktop (sisa_pokok > 2000)
-               -- dan Daftar Tunggakan.
-               AND COALESCE(s.sisa, 1000000) > 100
-             GROUP BY 1),
-        k AS (
-            SELECT k.anggota_id, SUM(LEAST(k.rp_angsuran_per_bulan, r.sisa)) AS rp
-              FROM kpr k JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) AS sisa FROM kpr_rincian WHERE kpr_id = k.id) r ON r.sisa > 0
-             GROUP BY 1),
+        WITH j AS (
+            SELECT anggota_id,
+                   SUM(pokok + jasa + adm + provisi) FILTER (WHERE grup = 'KOPERASI') AS koperasi,
+                   SUM(pokok + jasa + adm + provisi) FILTER (WHERE grup = 'BANK / PIHAK LAIN') AS bank,
+                   SUM(pokok) FILTER (WHERE grup = 'KPR') AS kpr
+              FROM (${SQL_ANGSURAN_POTONGAN}) x GROUP BY 1),
         x AS (
             SELECT a.kode_agt, a.nik, a.nama, a.status_staff, a.bank_nama, a.bank_no_rek,
                    0::numeric AS s_pokok, a.simpanan_wajib AS s_wajib, a.simpanan_sukarela AS s_sukarela,
-                   COALESCE(pt.koperasi, 0) AS koperasi, COALESCE(pt.bank, 0) AS bank,
-                   COALESCE(k.rp, 0) AS kpr,
+                   COALESCE(j.koperasi, 0) AS koperasi, COALESCE(j.bank, 0) AS bank, COALESCE(j.kpr, 0) AS kpr,
                    (SELECT rp_adm_bank FROM perusahaan ORDER BY id LIMIT 1) AS adm,
                    t.s_pokok + t.s_wajib + t.s_sukarela + t.rp_koperasi + t.rp_bank + t.rp_kpr + t.rp_adm_bank AS snap_total
-              FROM anggota a LEFT JOIN pt ON pt.anggota_id = a.id LEFT JOIN k ON k.anggota_id = a.id LEFT JOIN temp_potongan_all t ON t.anggota_id = a.id
+              FROM anggota a LEFT JOIN j ON j.anggota_id = a.id LEFT JOIN temp_potongan_all t ON t.anggota_id = a.id
              WHERE a.aktif)
         SELECT *, s_pokok + s_wajib + s_sukarela + koperasi + bank + kpr + adm AS total FROM x ORDER BY nama`)
 
