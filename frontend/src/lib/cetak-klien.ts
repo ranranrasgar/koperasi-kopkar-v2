@@ -96,14 +96,22 @@ const SKRIP = `
   function ukur(){ isi.classList.add('ukur'); isi.style.zoom=''; var w=isi.getBoundingClientRect().width; isi.classList.remove('ukur'); return w; }
   // Skala terkecil yang masih nyaman dibaca; di bawah itu teks panjang dibiarkan turun baris, lalu diperkecil lagi hanya bila masih terpotong.
   var MIN=0.62;
-  function lebihLebar(){ var t=isi.querySelectorAll('table'), a=isi.clientWidth; if(isi.scrollWidth>a+1) return true; for(var i=0;i<t.length;i++){ if(t[i].getBoundingClientRect().width>isi.getBoundingClientRect().width+1) return true; } return false; }
-  function pasang(z){ isi.style.zoom=z<1?String(z):''; isi.style.width=z<1?(100/z)+'%':''; }
+  // Muat = tidak ada tabel atau blok isi yang tepi kanannya melewati tepi kanan kertas (tepi kertas dikurangi bantalannya).
+  function lebihLebar(){
+    var batas=kertas.getBoundingClientRect().right-(parseFloat(getComputedStyle(kertas).paddingRight)||0)+1;
+    if(isi.scrollWidth>isi.clientWidth+1) return true;
+    var el=isi.querySelectorAll('table, .grid, .grid > *, :scope > *');
+    for(var i=0;i<el.length;i++){ if(el[i].getBoundingClientRect().right>batas) return true; }
+    return false;
+  }
+  // Zoom saja: lebar isi mengikuti kertas (auto) dan tata letak dihitung ulang pada lebar kertas/zoom, jadi tidak perlu kompensasi lebar.
+  function pasang(z){ isi.style.zoom=z<1?String(z):''; isi.style.width=''; }
   function atur(o){
     sekarang=o; var maks=LEBAR[o], z=Math.min(1, Math.max(MIN, maks/Math.max(alami,1)));
     gaya.textContent='@page{size:A4 '+(o==='lanskap'?'landscape':'portrait')+';margin:12mm}';
     kertas.style.width=maks+'px';
     pasang(z);
-    for(var i=0;i<6 && lebihLebar() && z>0.2;i++){ z=z*0.92; pasang(z); }
+    for(var i=0;i<24 && lebihLebar() && z>0.25;i++){ z=z*0.95; pasang(z); }
     document.getElementById('b-potret').className=o==='potret'?'aktif':'';
     document.getElementById('b-lanskap').className=o==='lanskap'?'aktif':'';
     document.getElementById('info').textContent=(z<1?'Diperkecil '+Math.round(z*100)+'% agar muat. ':'Ukuran 100%. ')+'Kertas A4 '+(o==='lanskap'?'lanskap':'potret');
