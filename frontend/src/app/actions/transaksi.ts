@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpanan.ts"
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
-import { postJurnalUmum } from "@kopkar/backend/src/posting/jurnal-umum.ts"
+import { bacaJurnalUmum, hapusJurnalUmum, postJurnalUmum, ubahJurnalUmum, type BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { bacaBankBook, hapusBankBook, simpanBankBook, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
@@ -234,9 +234,11 @@ export async function jurnalUmumAction(_: Hasil, f: FormData): Promise<Hasil> {
             return { kodePerkiraan: a.trim(), debit: d, kredit: k, deskripsi: ket[i]?.trim() || undefined }
         }).filter((l) => l.kodePerkiraan && (toUnits(l.debit) > 0n || toUnits(l.kredit) > 0n))
         if (lines.length < 2) throw new InputSalah("Jurnal minimal dua baris berisi nilai")
-        const r = await tx((db) => postJurnalUmum(db, { tanggal: tanggal(f), deskripsi: teks(f, "deskripsi"), opr, lines }))
+        const nomor = teks(f, "nomorBukti", false)
+        const input = { tanggal: tanggal(f), deskripsi: teks(f, "deskripsi"), opr, lines }
+        const r = await tx((db) => nomor ? ubahJurnalUmum(db, nomor, input) : postJurnalUmum(db, input))
         const total = lines.reduce((s, l) => s + toUnits(l.debit), 0n)
-        return { ok: true, pesan: `Jurnal ${r.nomorBukti} tercatat (${r.baris} baris)`,
+        return { ok: true, pesan: `Jurnal ${r.nomorBukti} ${nomor ? "diubah" : "tercatat"} (${r.baris} baris)`,
             rincian: { "No. Bukti": r.nomorBukti, "Total debit = kredit": rp(total) } }
     })
 }
@@ -285,5 +287,40 @@ export async function transaksiBankBookAction(akunBank: string, tgl: string): Pr
         return { items: await transaksiBankBook(akunBank, tgl) }
     } catch (e) {
         return { error: e instanceof Error ? e.message : "Gagal membaca transaksi" }
+    }
+}
+
+// ---------- ubah, hapus, voucher bukti jurnal ----------
+
+const MENU_BUKTI = [MENU.jurnalUmum, MENU.bankBook]
+
+/** Isi form ubah jurnal umum, beserta daftar akun (dimuat saat form dibuka, bukan di tiap baris daftar). */
+export async function bacaJurnalAction(nomorBukti: string): Promise<{ bukti: BuktiJurnal; akun: { id: number; kode_perkiraan: string; nama_perkiraan: string }[] } | { error: string }> {
+    try {
+        await operatorAktif([MENU.jurnalUmum])
+        const bukti = await bacaJurnalUmum(pool, nomorBukti)
+        if (!bukti) return { error: `Bukti ${nomorBukti} tidak ditemukan` }
+        return { bukti, akun: await query("SELECT id, kode_perkiraan, nama_perkiraan FROM perkiraan ORDER BY kode_perkiraan") }
+    } catch (e) {
+        return { error: e instanceof Error ? e.message : "Gagal membaca bukti" }
+    }
+}
+
+/** Hapus bukti JU/ (izin Jurnal Umum) atau BB/ (izin Bank Book) yang belum direkonsiliasi. */
+export async function hapusJurnalAction(nomorBukti: string): Promise<Hasil> {
+    return posting(nomorBukti.startsWith("BB/") ? [MENU.bankBook] : [MENU.jurnalUmum], async () => {
+        await tx((db) => hapusJurnalUmum(db, nomorBukti))
+        return { ok: true, pesan: `Bukti ${nomorBukti} dihapus` }
+    })
+}
+
+/** Data voucher: satu bukti dengan semua barisnya, untuk dicetak. */
+export async function dataVoucherAction(nomorBukti: string): Promise<{ bukti: BuktiJurnal } | { error: string }> {
+    try {
+        await operatorAktif(MENU_BUKTI)
+        const bukti = await bacaJurnalUmum(pool, nomorBukti)
+        return bukti ? { bukti } : { error: `Bukti ${nomorBukti} tidak ditemukan` }
+    } catch (e) {
+        return { error: e instanceof Error ? e.message : "Gagal membaca bukti" }
     }
 }

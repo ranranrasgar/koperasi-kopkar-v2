@@ -6,6 +6,7 @@ import { Loader2 } from "lucide-react"
 import { transaksiBankBookAction } from "@/app/actions/transaksi"
 import { Paginasi } from "@/components/ui/Paginasi"
 import { ModalForm } from "@/components/ui/Modal"
+import { TombolVoucher } from "@/components/akuntansi/AksiJurnal"
 import { TombolBankBookHapus, TombolBankBookUbah } from "@/components/bankbook/BankBook"
 import { MAKS_SEMUA } from "@/lib/halaman"
 import { formatAngka, formatTanggal } from "@/lib/format"
@@ -28,7 +29,7 @@ function IsiHari({ tgl, formProps, versi }: { tgl: string; formProps: FormProps;
             <div className="overflow-x-auto rounded-md border">
                 <table className="w-full text-sm">
                     <thead className="bg-muted text-muted-foreground text-xs">
-                        <tr><th className="px-2 py-2 text-left">No. Bukti</th><th className="px-2 py-2 text-left">Keterangan / lawan</th><th className="px-2 py-2 text-right">Debit</th><th className="px-2 py-2 text-right">Kredit</th><th className="w-20"></th></tr>
+                        <tr><th className="px-2 py-2 text-left">No. Bukti</th><th className="px-2 py-2 text-left">Keterangan / lawan</th><th className="px-2 py-2 text-right">Debit</th><th className="px-2 py-2 text-right">Kredit</th><th className="w-28"></th></tr>
                     </thead>
                     <tbody>
                         {data.items.length === 0 && <tr><td colSpan={5} className="px-2 py-6 text-center text-muted-foreground">Tidak ada transaksi pada tanggal ini</td></tr>}
@@ -39,9 +40,12 @@ function IsiHari({ tgl, formProps, versi }: { tgl: string; formProps: FormProps;
                                 <td className="px-2 py-1.5 text-right tabular-nums">{Number(t.debit) ? formatAngka(t.debit) : ""}</td>
                                 <td className="px-2 py-1.5 text-right tabular-nums">{Number(t.kredit) ? formatAngka(t.kredit) : ""}</td>
                                 <td className="px-1 py-1 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                    <TombolVoucher nomorBukti={t.nomor_bukti} />
                                     {t.rekonsiliasi ? <span className="text-[10px] text-muted-foreground">Rekon</span>
                                         : t.bankbook ? <><TombolBankBookUbah nomorBukti={t.nomor_bukti} {...formProps} /><TombolBankBookHapus nomorBukti={t.nomor_bukti} /></>
                                         : <span className="text-[10px] text-muted-foreground" title="Dibuat transaksi lain; ubah dari asalnya">Sistem</span>}
+                                    </div>
                                 </td>
                             </tr>
                         ))}

@@ -1,12 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import { Plus, Trash2 } from "lucide-react"
+import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { AkunBox } from "@/components/bankbook/AkunBox"
 import { InputUang } from "@/components/ui/InputUang"
 import { TombolModal, tombolModalUtama, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { Input } from "@/components/ui/input"
-import { jurnalUmumAction } from "@/app/actions/transaksi"
+import { bacaJurnalAction, jurnalUmumAction } from "@/app/actions/transaksi"
+import type { BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { formatRupiah } from "@/lib/format"
 import { Field, HasilTransaksi, SubmitButton, useAksiForm, type Akun } from "./common"
 
@@ -16,14 +17,17 @@ let nextId = 1
 const barisBaru = (): Baris => ({ id: nextId++, akun: "", ket: "", debit: "", kredit: "" })
 const angka = (v: string) => Number(v.replace(",", ".")) || 0
 
-function JurnalForm({ akun, hariIni, selesai }: { akun: Akun[]; hariIni: string; selesai: () => void }) {
+function JurnalForm({ akun, hariIni, selesai, awal }: { akun: Akun[]; hariIni: string; selesai: () => void; awal?: BuktiJurnal }) {
     const { hasil, onSubmit, pending } = useAksiForm(jurnalUmumAction)
     useTutupSetelahBerhasil(hasil?.ok, selesai)
-    const [baris, setBaris] = useState<Baris[]>(() => [barisBaru(), barisBaru()])
-    const [deskripsi, setDeskripsi] = useState("")
+    const [baris, setBaris] = useState<Baris[]>(() => awal
+        ? awal.baris.map((b) => ({ id: nextId++, akun: b.kodePerkiraan, ket: b.deskripsi === awal.deskripsi ? "" : b.deskripsi,
+            debit: Number(b.debit) ? String(Number(b.debit)) : "", kredit: Number(b.kredit) ? String(Number(b.kredit)) : "" }))
+        : [barisBaru(), barisBaru()])
+    const [deskripsi, setDeskripsi] = useState(awal?.deskripsi ?? "")
 
     useEffect(() => {
-        if (hasil?.ok) { setBaris([barisBaru(), barisBaru()]); setDeskripsi("") }
+        if (hasil?.ok && !awal) { setBaris([barisBaru(), barisBaru()]); setDeskripsi("") }
     }, [hasil])
 
     const ubah = (id: number, k: keyof Omit<Baris, "id">, v: string) =>
@@ -36,9 +40,10 @@ function JurnalForm({ akun, hariIni, selesai }: { akun: Akun[]; hariIni: string;
     return (
         <>
             <form onSubmit={onSubmit} className="space-y-4">
+                {awal && <input type="hidden" name="nomorBukti" value={awal.nomorBukti} />}
                 <div className="grid gap-4 sm:grid-cols-4">
-                    <Field label="Tanggal" htmlFor="tanggal">
-                        <Input id="tanggal" name="tanggal" type="date" required defaultValue={hariIni} />
+                    <Field label="Tanggal" htmlFor="tanggal" hint={awal ? "Bagian dari nomor bukti; tidak bisa diubah." : undefined}>
+                        <Input id="tanggal" name="tanggal" type="date" required defaultValue={awal?.tanggal ?? hariIni} readOnly={Boolean(awal)} />
                     </Field>
                     <Field label="Keterangan Jurnal" htmlFor="deskripsi" className="sm:col-span-3">
                         <Input id="deskripsi" name="deskripsi" required maxLength={200} value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} />
@@ -103,7 +108,7 @@ function JurnalForm({ akun, hariIni, selesai }: { akun: Akun[]; hariIni: string;
 
                 <HasilTransaksi hasil={hasil} />
                 <div className="flex justify-end">
-                    <SubmitButton pending={pending} disabled={!seimbang}>Simpan Jurnal</SubmitButton>
+                    <SubmitButton pending={pending} disabled={!seimbang}>{awal ? "Simpan Perubahan" : "Simpan Jurnal"}</SubmitButton>
                 </div>
             </form>
         </>
@@ -116,6 +121,24 @@ export function TombolJurnalBaru({ akun, hariIni }: { akun: Akun[]; hariIni: str
         <TombolModal label={<><Plus className="h-4 w-4" /> Jurnal Baru</>} judul="Jurnal Umum Baru" lebar="sm:max-w-4xl" className={tombolModalUtama}
             keterangan="Jurnal memorial; nomor JU/yymmdd/n diberikan mesin posting. Debit dan kredit harus seimbang.">
             {(selesai) => <JurnalForm akun={akun} hariIni={hariIni} selesai={selesai} />}
+        </TombolModal>
+    )
+}
+
+function MuatUbah({ nomorBukti, hariIni, selesai }: { nomorBukti: string; hariIni: string; selesai: () => void }) {
+    const [data, setData] = useState<Awaited<ReturnType<typeof bacaJurnalAction>> | null>(null)
+    useEffect(() => { void bacaJurnalAction(nomorBukti).then(setData) }, [nomorBukti])
+    if (!data) return <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+    if ("error" in data) return <p role="alert" className="text-sm text-red-700">{data.error}</p>
+    if (data.bukti.terkunci) return <p role="alert" className="text-sm text-amber-700">{data.bukti.terkunci}</p>
+    return <JurnalForm akun={data.akun} hariIni={hariIni} awal={data.bukti} selesai={selesai} />
+}
+
+/** Ikon ubah di baris daftar jurnal: form ubah di modal, isinya dibaca saat dibuka. */
+export function TombolJurnalUbah({ nomorBukti, hariIni }: { nomorBukti: string; hariIni: string }) {
+    return (
+        <TombolModal label={<Pencil className="h-4 w-4" />} judul={`Ubah ${nomorBukti}`} lebar="sm:max-w-4xl" className="grid h-8 w-8 place-items-center rounded-md text-blue-600 hover:bg-muted/50">
+            {(selesai) => <MuatUbah nomorBukti={nomorBukti} hariIni={hariIni} selesai={selesai} />}
         </TombolModal>
     )
 }
