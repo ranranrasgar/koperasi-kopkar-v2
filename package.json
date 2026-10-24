@@ -16,6 +16,7 @@
         "email:uji": "node backend/scripts/email-uji.mjs",
         "email:sandi": "node backend/scripts/email-atur.mjs",
         "anggota:pasang": "node database/postgres/anggota-pasang.mjs",
+        "sequences:pasang": "node database/postgres/apply-sequences.mjs",
         "test": "npm run test -w backend && npm run test -w mobile-api"
     }
 }

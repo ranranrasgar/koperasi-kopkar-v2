@@ -25,7 +25,10 @@ Prasyarat: Node 20+, dependensi proyek (`npm install`), PostgreSQL 14 atau lebih
 ```bash
 createdb kopkar
 PG_URL=postgres://user:pass@127.0.0.1:5432/kopkar node database/postgres/migrate.mjs --reset
+PG_URL=postgres://user:pass@127.0.0.1:5432/kopkar npm run sequences:pasang   # WAJIB setelah setiap migrasi
 ```
+
+> **Nomor bukti setelah migrasi**: aplikasi web membuat nomor bukti (SMPM/SMPK, CR-, ANGS-CR-, KPR-, JU/, urut jurnal) dari sequence PostgreSQL, bukan `max()+1`. `--reset` mengisi ulang tabel dari MySQL tetapi tidak menyentuh sequence, jadi bila desktop sudah membuat transaksi baru di MySQL, nomor terbesar di data bisa melewati posisi sequence dan transaksi web berikutnya ditolak (`UNIQUE`). `npm run sequences:pasang` (`apply-sequences.mjs` + `sequences.sql`) menaikkan setiap sequence ke nomor terbesar di data; sequence tidak pernah diturunkan, jadi aman diulang kapan saja.
 
 - `MYSQL_URL` (opsional) default ke Laragon: `mysql://root:@127.0.0.1:3306/kopkar_mjs_2000`.
 - Tanpa `--reset`, skrip berhenti jika tabel hasil migrasi sudah ada. Dengan `--reset`, **hanya** tabel migrasi yang dihapus dan dibuat ulang; tabel lain di database itu tidak disentuh.

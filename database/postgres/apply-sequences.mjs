@@ -1,7 +1,11 @@
-// PG_URL=... node database/postgres/apply-sequences.mjs
+// Samakan sequence nomor bukti dengan data (sequences.sql). Aman dijalankan ulang; sequence tidak pernah diturunkan.
+//   npm run sequences:pasang                  PG_URL dari env atau frontend/.env.local
 import pg from 'pg';
 import { readFileSync } from 'node:fs';
-const c = new pg.Client({ connectionString: process.env.PG_URL });
+import { pgUrl } from './pg-alat.mjs';
+const url = pgUrl();
+if (!url) { console.error('PG_URL tidak diset dan tidak ada di frontend/.env.local'); process.exit(1); }
+const c = new pg.Client({ connectionString: url });
 await c.connect();
 await c.query(readFileSync(new URL('./sequences.sql', import.meta.url), 'utf8'));
 for (const s of ['seq_simpanan_urut', 'seq_jurnal_urutan', 'seq_jurnal_urut', 'seq_pinjaman_rincian_urut', 'seq_pinjaman_tagih_urut', 'seq_pinjaman_no', 'seq_kpr_no', 'seq_kpr_rincian_urut', 'seq_jurnal_umum_no', 'seq_opr_grup_urut', 'seq_opr_hak_akses_urut'])

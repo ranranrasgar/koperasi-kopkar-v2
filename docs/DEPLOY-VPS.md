@@ -31,7 +31,7 @@ Nginx sengaja **di host, bukan di container**: VPS yang direncanakan (`101.50.3.
 
 > **Penting.** Lakukan di luar jam sibuk, dan setelah selesai pastikan aplikasi Android lama masih bisa login (langkah 11).
 
-> **Data**: sistem yang benar-benar dipakai koperasi masih desktop + MySQL. Data yang dipasang dengan panduan ini adalah salinan database PostgreSQL di komputer kantor saat dicadangkan. Untuk pindah sungguhan (cutover), ikuti `database/postgres/README.md` (migrasi ulang dari MySQL) setelah langkah ini berhasil.
+> **Data**: sistem yang benar-benar dipakai koperasi masih desktop + MySQL. Data yang dipasang dengan panduan ini adalah salinan database PostgreSQL di komputer kantor saat dicadangkan. Untuk pindah sungguhan (cutover), ikuti `database/postgres/README.md` (migrasi ulang dari MySQL) setelah langkah ini berhasil, lalu **wajib** `npm run sequences:pasang` supaya nomor bukti web tidak bentrok dengan nomor dari desktop.
 
 Simbol: perintah tanpa tanda = di VPS; **[kantor]** = dikerjakan di komputer kantor.
 

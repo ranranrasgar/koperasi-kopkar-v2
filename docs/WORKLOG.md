@@ -250,6 +250,16 @@ Terakhir diperbarui 24 Oktober 2026 (pagi). Agent baru: baca bagian ini dulu, la
 
 ---
 
+## 2026-10-24 — Audit nomor transaksi dan transaksi bersamaan (multi user)
+
+- Pertanyaan pengguna: aman tidak dari nomor bukti/primary key ganda saat transaksi bersamaan (pengajuan, pembayaran, dll.).
+- Peta pembuatan nomor: semua nomor bukti posting dari **sequence** (`seq_simpanan_urut`, `seq_pinjaman_no`, `seq_pinjaman_rincian_urut`, `seq_pinjaman_tagih_urut`, `seq_kpr_no`, `seq_kpr_rincian_urut`, `seq_jurnal_urut`, `seq_jurnal_urutan`, `seq_jurnal_umum_no`, `seq_opr_hak_akses_urut`); id baris dari identity. Pengunci baris: simpanan dan pengajuan mengunci baris anggota (`FOR UPDATE`) sebelum cek saldo/pengajuan menunggu, angsuran mengunci baris pinjaman. `max()+1` hanya di kode anggota baru BBTT-NNNN dan `anggota_detail.urut` (di bawah `pg_advisory_xact_lock('anggota_baru')`) dan `log_notifikasi.urut` (tanpa kunci, tetapi `catatRiwayat` mengulang hingga 5x bila bentrok UNIQUE). Pengaman database: UNIQUE `simpanan.no_bukti`, `pinjaman_tunai.no_pinjaman`, `kpr.no_pinjaman`, `*_rincian.urut`, `log_notifikasi.urut`.
+- **Uji bersamaan di database uji** (koneksi dan transaksi terpisah, diluncurkan sekaligus), semua LULUS: 30 setoran simpanan anggota yang sama (30 no bukti unik, saldo naik tepat); 10 pengambilan masing-masing 1/4 saldo (tepat 4 berhasil, saldo tidak minus); 8 pencairan pinjaman (nomor unik); 5 angsuran pinjaman yang sama (angsuran ke 11-15 berurutan, tanpa ganda); 10 jurnal umum (nomor unik); 10 pengajuan anggota+jenis sama (tepat 1 tersimpan); 10 notifikasi ke anggota yang sama (10 tercatat). Data uji ini tersimpan di database uji (`opr = 'uji-bersamaan'`); `npm run uji:reset` membuangnya.
+- **Celah yang diperbaiki**: setelah migrasi ulang dari MySQL, sequence tidak disesuaikan (`sequences.sql` hanya mengatur sequence yang belum pernah dipakai, dan `apply-sequences.mjs` tidak disebut di dokumen mana pun). Bila desktop sudah membuat transaksi baru di MySQL, nomor web berikutnya bentrok UNIQUE (ditolak, bukan ganda). Sekarang `sequences.sql` selalu `setval(GREATEST(maks data, posisi sekarang))` (tidak pernah turun), skrip `npm run sequences:pasang`, dan langkahnya dicantumkan di README migrasi, CLAUDE.md, dan panduan deploy. Diuji di database uji: `seq_kpr_no` diturunkan ke 5 -> naik ke 1356 (maks data); sequence lain tidak turun; jalan kedua tanpa perubahan. Di database asli semua sequence saat ini di atas maks data (tidak dijalankan di sana).
+- Bukan nomor tetapi perlu diingat: dua klik Simpan angsuran yang sama membayar dua angsuran berurutan (keduanya sah menurut aturan); tombol dinonaktifkan selama proses di form, tetapi tidak ada pencegah kiriman ganda di server.
+
+---
+
 ## 2026-10-24 — Deploy ke VPS dengan Docker
 
 - Permintaan pengguna: langkah demi langkah deploy didokumentasikan di berkas, memakai Docker. Baru: `docs/DEPLOY-VPS.md`, `Dockerfile` (node:22-bookworm-slim, `npm ci` di dalam image, build kedua aplikasi, `postgresql-client-14` dari PGDG supaya Backup & Restore jalan di container, pengguna `node`), `docker-compose.yml` (`db` postgres:14 dengan volume `db-data`, `admin` dan `anggota` dari image yang sama, port hanya `127.0.0.1`, folder cadangan host `/var/backups/kopkar` = `/backup`), `.env.contoh` (DB_PASSWORD, BACKUP_DIR, KOPKAR_COMMIT), `.dockerignore`.
