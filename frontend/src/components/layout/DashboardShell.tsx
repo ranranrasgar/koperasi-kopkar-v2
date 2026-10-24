@@ -33,8 +33,7 @@ function ShellContent({ children, operator }: { children: React.ReactNode; opera
                 
                 <main className={cn(
                     "flex-1 p-4 md:p-6 lg:p-8 w-full animate-in fade-in duration-500",
-                    // Semua halaman selebar layar (tabel dan laporan banyak kolom); hanya beranda dashboard yang dibatasi, dan form/artikel membatasi lebarnya sendiri.
-                    pathname === "/dashboard" ? "max-w-7xl mx-auto" : "max-w-full"
+                    lebarPenuh(pathname) ? "max-w-full" : "max-w-7xl mx-auto"
                 )}>
                     {children}
                 </main>
@@ -42,6 +41,20 @@ function ShellContent({ children, operator }: { children: React.ReactNode; opera
         </div>
     )
 }
+
+/**
+ * Halaman tabel/laporan yang banyak kolomnya dibuat selebar layar; halaman lain (form, kartu, detail, grafik) dibatasi supaya tetap proporsional.
+ * Awalan dengan "/" di akhir berlaku untuk seluruh turunannya; tanpa itu hanya alamat persis.
+ */
+const HALAMAN_LEBAR = [
+    "/dashboard/members/", "/dashboard/members",
+    "/dashboard/savings", "/dashboard/savings/ledger",
+    "/dashboard/loans", "/dashboard/loans/apply", "/dashboard/loans/bad-debts",
+    "/dashboard/deductions/",
+    "/dashboard/accounting/journal", "/dashboard/accounting/trial-balance", "/dashboard/accounting/bank-book",
+    "/dashboard/attendance",
+]
+const lebarPenuh = (path: string) => HALAMAN_LEBAR.some((p) => (p.endsWith("/") ? path.startsWith(p) : path === p)) || path === "/dashboard/deductions"
 
 export function DashboardShell({ children, operator, koperasi, lencana = {} }: { children: React.ReactNode; operator: OperatorTampil; koperasi: KoperasiTampil; lencana?: Record<string, number> }) {
     return (
