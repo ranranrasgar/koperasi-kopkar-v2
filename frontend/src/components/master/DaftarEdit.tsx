@@ -2,14 +2,15 @@
 
 import { useCallback, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Pencil, Plus, X } from "lucide-react"
+import { Pencil, Plus } from "lucide-react"
 import { FormCard } from "@/components/transaksi/common"
+import { ModalForm } from "@/components/ui/Modal"
 import type { HasilSimpan } from "@/app/actions/master"
 import { FormEdit, type FieldSpec } from "./FormEdit"
 
 type Nilai = Record<string, string | number | boolean | null>
 
-/** Tabel data master dengan form ubah (dan tambah) di bawahnya. */
+/** Tabel data master dengan form ubah (dan tambah) di modal. */
 export function DaftarEdit({ title, description, kolom, baris, fields, fieldsBaru, aksi, kunci = "id" }: {
     title: string
     description: string
@@ -23,7 +24,8 @@ export function DaftarEdit({ title, description, kolom, baris, fields, fieldsBar
 }) {
     const router = useRouter()
     const [edit, setEdit] = useState<Nilai | "baru" | null>(null)
-    const selesai = useCallback(() => router.refresh(), [router])
+    // Tersimpan: muat ulang tabel, lalu tutup modal setelah pesan berhasil sempat terlihat.
+    const selesai = useCallback(() => { router.refresh(); setTimeout(() => setEdit(null), 1200) }, [router])
     const tampil = (v: Nilai[string], f?: string) => {
         if (v === null || v === undefined || v === "") return "-"
         if (f === "persen") return `${Number(v).toLocaleString("id-ID", { maximumFractionDigits: 4 })}%`
@@ -71,18 +73,12 @@ export function DaftarEdit({ title, description, kolom, baris, fields, fieldsBar
                     </div>
                 </div>
             </FormCard>
-            {edit && (
-                <div className="relative">
-                    <button type="button" onClick={() => setEdit(null)} className="absolute right-4 top-4 z-10 p-1 rounded hover:bg-muted" title="Tutup">
-                        <X className="h-4 w-4" />
-                    </button>
-                    <FormCard title={edit === "baru" ? `Tambah ${title}` : `Ubah ${title}`} description="Perubahan berlaku untuk transaksi berikutnya.">
-                        <FormEdit key={edit === "baru" ? "baru" : String(edit[kunci])}
-                            fields={edit === "baru" ? [...(fieldsBaru ?? []), ...fields] : [{ name: kunci, label: "", hidden: true } as FieldSpec, ...fields]}
-                            nilai={edit === "baru" ? {} : edit} aksi={aksi} onSelesai={selesai} kolom={3} />
-                    </FormCard>
-                </div>
-            )}
+            <ModalForm open={edit !== null} onOpenChange={(buka) => { if (!buka) setEdit(null) }} lebar="sm:max-w-3xl"
+                judul={edit === "baru" ? `Tambah ${title}` : `Ubah ${title}`} keterangan="Perubahan berlaku untuk transaksi berikutnya.">
+                {edit && <FormEdit key={edit === "baru" ? "baru" : String(edit[kunci])}
+                    fields={edit === "baru" ? [...(fieldsBaru ?? []), ...fields] : [{ name: kunci, label: "", hidden: true } as FieldSpec, ...fields]}
+                    nilai={edit === "baru" ? {} : edit} aksi={aksi} onSelesai={selesai} kolom={2} />}
+            </ModalForm>
         </div>
     )
 }

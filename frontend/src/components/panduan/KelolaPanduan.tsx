@@ -1,10 +1,11 @@
 "use client"
 
-import React, { useActionState, useEffect, useState, useTransition } from "react"
+import React, { useActionState, useCallback, useEffect, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AlertCircle, CheckCircle2, Eye, EyeOff, Loader2, Pencil, Plus, Trash2, X } from "lucide-react"
+import { AlertCircle, CheckCircle2, Eye, EyeOff, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { ModalForm } from "@/components/ui/Modal"
 import { Input } from "@/components/ui/input"
 import { Field } from "@/components/transaksi/common"
 import { aturTerbitAction, hapusArtikelAction, hapusKategoriAction, simpanKategoriAction, type HasilPanduan } from "@/app/actions/panduan"
@@ -37,6 +38,7 @@ export function KelolaPanduan({ kategori, namaMenu }: { kategori: KategoriKelola
     const [sibuk, setSibuk] = useState<string | null>(null)
     const [, startTransition] = useTransition()
     const [ubahKategori, setUbahKategori] = useState<number | "baru" | null>(null)
+    const tutupKategori = useCallback(() => setUbahKategori(null), [])
 
     const jalan = (kunci: string, fn: () => Promise<HasilPanduan>, tanya?: string) => {
         if (tanya && !confirm(tanya)) return
@@ -58,7 +60,11 @@ export function KelolaPanduan({ kategori, namaMenu }: { kategori: KategoriKelola
                 <Button asChild variant="outline"><Link href="/dashboard/panduan"><Eye className="h-4 w-4" /> Lihat Pusat Panduan</Link></Button>
             </div>
             <Pesan hasil={hasil} />
-            {ubahKategori === "baru" && <FormKategori onSelesai={() => setUbahKategori(null)} />}
+            <ModalForm open={ubahKategori !== null} onOpenChange={(buka) => { if (!buka) setUbahKategori(null) }} lebar="sm:max-w-2xl"
+                judul={ubahKategori === "baru" ? "Kategori baru" : `Ubah kategori ${kategori.find((k) => k.id === ubahKategori)?.nama ?? ""}`}>
+                {ubahKategori !== null && <FormKategori key={String(ubahKategori)} kategori={ubahKategori === "baru" ? undefined : kategori.find((k) => k.id === ubahKategori)}
+                    onSelesai={tutupKategori} />}
+            </ModalForm>
 
             {kategori.map((k) => (
                 <section key={k.id} className="rounded-xl border bg-background">
@@ -68,13 +74,12 @@ export function KelolaPanduan({ kategori, namaMenu }: { kategori: KategoriKelola
                             <h2 className="font-semibold">{k.nama} <span className="text-xs font-normal text-muted-foreground">urutan {k.urutan} · {k.artikel.length} artikel</span></h2>
                             {k.keterangan && <p className="text-xs text-muted-foreground">{k.keterangan}</p>}
                         </div>
-                        <Button variant="ghost" size="sm" onClick={() => setUbahKategori(ubahKategori === k.id ? null : k.id)}><Pencil className="h-4 w-4" /> Ubah</Button>
+                        <Button variant="ghost" size="sm" onClick={() => setUbahKategori(k.id)}><Pencil className="h-4 w-4" /> Ubah</Button>
                         <Button variant="ghost" size="sm" className="text-destructive" disabled={sibuk === `k${k.id}`}
                             onClick={() => jalan(`k${k.id}`, () => hapusKategoriAction(k.id), `Hapus kategori "${k.nama}"?`)}>
                             <Trash2 className="h-4 w-4" /> Hapus
                         </Button>
                     </div>
-                    {ubahKategori === k.id && <div className="border-b p-4"><FormKategori kategori={k} onSelesai={() => setUbahKategori(null)} /></div>}
                     {k.artikel.length === 0 ? (
                         <p className="px-4 py-6 text-sm text-muted-foreground">Belum ada artikel di kategori ini.</p>
                     ) : (
@@ -150,13 +155,9 @@ function FormKategori({ kategori, onSelesai }: { kategori?: KategoriKelola; onSe
         startTransition(() => jalankan(data))
     }
     return (
-        <form onSubmit={onSubmit} className="rounded-lg border bg-muted/20 p-4 space-y-3">
-            <div className="flex items-center justify-between">
-                <h3 className="font-semibold text-sm">{kategori ? `Ubah kategori ${kategori.nama}` : "Kategori baru"}</h3>
-                <Button type="button" variant="ghost" size="icon-sm" onClick={onSelesai} aria-label="Tutup"><X className="h-4 w-4" /></Button>
-            </div>
+        <form onSubmit={onSubmit} className="space-y-3">
             {kategori && <input type="hidden" name="id" value={kategori.id} />}
-            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-2">
                 <Field label="Nama" htmlFor={`k-nama-${kategori?.id ?? "baru"}`}>
                     <Input id={`k-nama-${kategori?.id ?? "baru"}`} name="nama" required maxLength={100} value={nama}
                         onChange={(e) => { setNama(e.target.value); if (!slugManual) setSlug(slugTeks(e.target.value)) }} />

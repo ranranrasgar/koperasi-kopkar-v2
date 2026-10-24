@@ -1,15 +1,31 @@
 "use client"
 
 import { useState } from "react"
+import { Send } from "lucide-react"
 import { kirimNotifikasiAction } from "@/app/actions/notifikasi"
+import { TombolModal, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import type { AnggotaRingkas } from "@/lib/queries/anggota"
 import { PilihGambar } from "./PilihGambar"
 import { AnggotaPicker, Field, HasilTransaksi, SubmitButton, useAksiForm } from "@/components/transaksi/common"
 
-export function KirimNotifikasi({ anggotaAktif, maksJudul, maksIsi }: { anggotaAktif: number; maksJudul: number; maksIsi: number }) {
+type Batas = { anggotaAktif: number; maksJudul: number; maksIsi: number }
+
+/** Tombol Kirim notifikasi yang membuka form di modal; terkirim: daftar Pesan terakhir dimuat ulang dan modal ditutup. */
+export function ModalKirimNotifikasi(b: Batas) {
+    return (
+        <TombolModal label={<><Send className="h-4 w-4" /> Kirim notifikasi</>} judul="Kirim Notifikasi" lebar="sm:max-w-2xl"
+            keterangan="Pengumuman, promo, atau kabar pribadi ke HP anggota. Muncul di layar HP walau aplikasi ditutup, dan bila diketuk membuka isi pesan.">
+            {(selesai) => <KirimNotifikasi {...b} selesai={selesai} />}
+        </TombolModal>
+    )
+}
+
+export function KirimNotifikasi({ anggotaAktif, maksJudul, maksIsi, selesai }: Batas & { selesai: () => void }) {
     const { hasil, onSubmit, pending } = useAksiForm(kirimNotifikasiAction)
+    // Jeda lebih lama: hasil kiriman (jumlah penerima dan perangkat) perlu sempat dibaca.
+    useTutupSetelahBerhasil(hasil?.ok, selesai, 2500)
     const [sasaran, setSasaran] = useState<"semua" | "satu">("semua")
     const [anggota, setAnggota] = useState<AnggotaRingkas | null>(null)
     const [isi, setIsi] = useState("")
@@ -36,7 +52,7 @@ export function KirimNotifikasi({ anggotaAktif, maksJudul, maksIsi }: { anggotaA
                 <PilihGambar />
             </Field>
             <HasilTransaksi hasil={hasil} />
-            <SubmitButton pending={pending} disabled={sasaran === "satu" && !anggota}>Kirim notifikasi</SubmitButton>
+            <SubmitButton pending={pending} disabled={(sasaran === "satu" && !anggota) || !!hasil?.ok}>Kirim notifikasi</SubmitButton>
         </form>
     )
 }

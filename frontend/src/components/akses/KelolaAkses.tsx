@@ -1,8 +1,10 @@
 "use client"
 
 import { useActionState, useEffect, useState, useTransition } from "react"
-import { AlertCircle, CheckCircle2, KeyRound, Loader2, Search } from "lucide-react"
+import { useRouter } from "next/navigation"
+import { AlertCircle, CheckCircle2, KeyRound, Loader2, Plus, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { TombolModal } from "@/components/ui/Modal"
 import {
     resetPasswordAction, setAksesAction, tambahOperatorAction, ubahAktifOperatorAction, ubahGrupOperatorAction, type HasilKelola,
 } from "@/app/actions/akses"
@@ -122,7 +124,6 @@ export function KelolaOperator({ operator, grup, sayaId }: { operator: OperatorB
     const [hasil, setHasil] = useState<HasilKelola | null>(null)
     const [sibuk, setSibuk] = useState<number | null>(null)
     const [, startTransition] = useTransition()
-    const [hasilTambah, tambah, menambah] = useActionState(tambahOperatorAction, null)
     // Salinan terkontrol: berubah hanya bila aksi berhasil, dan ikut data baru dari server.
     const [daftar, setDaftar] = useState(operator)
     useEffect(() => setDaftar(operator), [operator])
@@ -141,6 +142,12 @@ export function KelolaOperator({ operator, grup, sayaId }: { operator: OperatorB
         <div className="space-y-6">
             <FormCard title="Operator" description="Atur grup, status aktif, dan password sementara. Perubahan berlaku pada request berikutnya operator.">
                 <div className="space-y-3">
+                    <div className="flex justify-end">
+                        <TombolModal label={<><Plus className="h-4 w-4" /> Tambah operator</>} judul="Tambah Operator"
+                            keterangan="Operator baru mendapat password sementara yang wajib diganti saat login pertama. Catat passwordnya sebelum menutup jendela ini.">
+                            {() => <FormTambahOperator grup={grup} />}
+                        </TombolModal>
+                    </div>
                     <Pesan hasil={hasil} />
                     <div className="overflow-x-auto rounded-md border">
                         <table className="w-full text-sm">
@@ -197,26 +204,33 @@ export function KelolaOperator({ operator, grup, sayaId }: { operator: OperatorB
                 </div>
             </FormCard>
 
-            <FormCard title="Tambah Operator" description="Operator baru mendapat password sementara yang wajib diganti saat login pertama.">
-                <form action={tambah} className="grid gap-4 sm:grid-cols-4 items-end">
-                    <Field label="Nama Login" htmlFor="nama">
-                        <Input id="nama" name="nama" required pattern="[a-z0-9._\-]{3,30}" placeholder="huruf kecil, mis. budi" />
-                    </Field>
-                    <Field label="Nama Lengkap" htmlFor="namaLengkap">
-                        <Input id="namaLengkap" name="namaLengkap" required />
-                    </Field>
-                    <Field label="Grup" htmlFor="grupId">
-                        <select id="grupId" name="grupId" className={selectClass}>
-                            {grup.map((g) => <option key={g.id} value={g.id}>{g.nama_grup}</option>)}
-                        </select>
-                    </Field>
-                    <button type="submit" disabled={menambah}
-                        className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-60">
-                        {menambah && <Loader2 className="h-4 w-4 animate-spin" />} Tambah
-                    </button>
-                    <div className="sm:col-span-4"><Pesan hasil={hasilTambah} /></div>
-                </form>
-            </FormCard>
         </div>
+    )
+}
+
+/** Form tambah operator di modal. Tidak menutup sendiri: hasilnya memuat password sementara yang harus dicatat dulu. */
+function FormTambahOperator({ grup }: { grup: Grup[] }) {
+    const router = useRouter()
+    const [hasilTambah, tambah, menambah] = useActionState(tambahOperatorAction, null)
+    useEffect(() => { if (hasilTambah?.ok) router.refresh() }, [hasilTambah, router])
+    return (
+        <form action={tambah} className="space-y-4">
+            <Field label="Nama Login" htmlFor="nama">
+                <Input id="nama" name="nama" required pattern="[a-z0-9._\-]{3,30}" placeholder="huruf kecil, mis. budi" />
+            </Field>
+            <Field label="Nama Lengkap" htmlFor="namaLengkap">
+                <Input id="namaLengkap" name="namaLengkap" required />
+            </Field>
+            <Field label="Grup" htmlFor="grupId">
+                <select id="grupId" name="grupId" className={selectClass}>
+                    {grup.map((g) => <option key={g.id} value={g.id}>{g.nama_grup}</option>)}
+                </select>
+            </Field>
+            <button type="submit" disabled={menambah || !!hasilTambah?.ok}
+                className="inline-flex items-center justify-center gap-2 h-9 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold disabled:opacity-60">
+                {menambah && <Loader2 className="h-4 w-4 animate-spin" />} Tambah
+            </button>
+            <Pesan hasil={hasilTambah} />
+        </form>
     )
 }

@@ -11,21 +11,25 @@ import type { Sasaran } from "@kopkar/backend/src/anggota/sasaran.ts"
 import { PilihGambar } from "./PilihGambar"
 import { PilihSasaran, ringkasSasaran, SASARAN_AWAL, type OpsiGrup, type OpsiStatus } from "./PilihSasaran"
 import { Field, HasilTransaksi, SubmitButton, useAksiForm } from "@/components/transaksi/common"
+import { ModalForm } from "@/components/ui/Modal"
 
 export interface Pengumuman { id: number; judul: string; isi: string; aktif: boolean; gambar: string | null; sasaran: Sasaran }
 
 const MAKS = 255
 
-function FormPengumuman({ jenis, awal, opsiStatus, opsiGrup, onSelesai }: { jenis: JenisPengumuman; awal: Pengumuman | null; opsiStatus: OpsiStatus[]; opsiGrup: OpsiGrup[]; onSelesai: () => void }) {
+/** Form di modal; tersimpan: modal ditutup dan pesan berhasil tampil di atas daftar. */
+function FormPengumuman({ jenis, awal, opsiStatus, opsiGrup, onSelesai }: {
+    jenis: JenisPengumuman; awal: Pengumuman | null; opsiStatus: OpsiStatus[]; opsiGrup: OpsiGrup[]; onSelesai: (h?: Hasil) => void
+}) {
     const router = useRouter()
     const { hasil, onSubmit, pending } = useAksiForm(async (p: Hasil, f: FormData) => {
         const h = await simpanPengumumanAction(p, f)
-        if (h?.ok) { router.refresh(); onSelesai() }
+        if (h?.ok) { router.refresh(); onSelesai(h) }
         return h
     })
     const [isi, setIsi] = useState(awal?.isi ?? "")
     return (
-        <form onSubmit={onSubmit} className="space-y-3 rounded-lg border bg-muted/30 p-4">
+        <form onSubmit={onSubmit} className="space-y-3">
             <input type="hidden" name="jenis" value={jenis} />
             {awal && <input type="hidden" name="id" value={awal.id} />}
             <Field label="Judul" htmlFor={`judul-${jenis}`}>
@@ -45,7 +49,7 @@ function FormPengumuman({ jenis, awal, opsiStatus, opsiGrup, onSelesai }: { jeni
             <HasilTransaksi hasil={hasil} />
             <div className="flex gap-2">
                 <SubmitButton pending={pending}>{awal ? "Simpan" : "Tambahkan"}</SubmitButton>
-                <button type="button" onClick={onSelesai} className="h-9 rounded-md px-4 text-sm text-muted-foreground hover:bg-muted">Batal</button>
+                <button type="button" onClick={() => onSelesai()} className="h-9 rounded-md px-4 text-sm text-muted-foreground hover:bg-muted">Batal</button>
             </div>
         </form>
     )
@@ -61,13 +65,15 @@ export function KelolaPengumuman({ jenis, nama, daftar, opsiStatus, opsiGrup }: 
 
     return (
         <div className="space-y-3">
-            {form === null && (
-                <button type="button" onClick={() => { setHasil(null); setForm("baru") }}
-                    className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-semibold hover:bg-muted">
-                    <Plus className="h-4 w-4" /> Tambah {nama.toLowerCase()}
-                </button>
-            )}
-            {form !== null && <FormPengumuman key={form === "baru" ? "baru" : form.id} jenis={jenis} awal={form === "baru" ? null : form} opsiStatus={opsiStatus} opsiGrup={opsiGrup} onSelesai={() => setForm(null)} />}
+            <button type="button" onClick={() => { setHasil(null); setForm("baru") }}
+                className="inline-flex h-9 items-center gap-2 rounded-md border px-3 text-sm font-semibold hover:bg-muted">
+                <Plus className="h-4 w-4" /> Tambah {nama.toLowerCase()}
+            </button>
+            <ModalForm open={form !== null} onOpenChange={(buka) => { if (!buka) setForm(null) }} lebar="sm:max-w-2xl"
+                judul={form === "baru" ? `Tambah ${nama.toLowerCase()}` : `Ubah ${nama.toLowerCase()}`}>
+                {form !== null && <FormPengumuman key={form === "baru" ? "baru" : form.id} jenis={jenis} awal={form === "baru" ? null : form}
+                    opsiStatus={opsiStatus} opsiGrup={opsiGrup} onSelesai={(h) => { if (h) setHasil(h); setForm(null) }} />}
+            </ModalForm>
             <HasilTransaksi hasil={form === null ? hasil : null} />
             {daftar.length === 0 ? <p className="text-sm text-muted-foreground">Belum ada {nama.toLowerCase()}.</p> : (
                 <ul className="divide-y rounded-lg border">
