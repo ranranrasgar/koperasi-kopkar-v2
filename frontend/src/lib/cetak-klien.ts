@@ -70,8 +70,10 @@ body,.kertas,.kertas *{font-family:Arial,Helvetica,sans-serif!important}
 /* Blok besar tidak boleh "tidak terpecah" (tabel panjang terlempar ke halaman berikutnya dan menyisakan halaman kosong); tata letak
    kolom/grid diubah menjadi bertumpuk supaya mengalir antarhalaman. Hanya baris tabel yang dijaga utuh. */
 .isi *{break-inside:auto!important}.isi tr,.isi img{break-inside:avoid!important}
-.isi .grid,.isi [class*="grid-cols"]{display:block!important}
-.isi .grid>*{margin-bottom:10px}
+.isi .grid:not([data-cetak-kolom]),.isi [class*="grid-cols"]:not([data-cetak-kolom]){display:block!important}
+.isi .grid:not([data-cetak-kolom])>*{margin-bottom:10px}
+/* Susunan dua kolom yang memang dipertahankan di cetak (mis. Neraca: aktiva | hutang dan modal); isi kolom tetap boleh terpecah antarhalaman. */
+.isi [data-cetak-kolom]{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:20px!important}
 .isi h1,.isi h2,.isi h3,.isi .font-bold,.isi .font-semibold{break-after:avoid}
 .isi td.kanan,.isi th.kanan,.isi .text-right,.isi .tabular-nums,.isi .whitespace-nowrap,.isi td.no,.isi .mono{white-space:nowrap}
 .isi.ukur{width:max-content}

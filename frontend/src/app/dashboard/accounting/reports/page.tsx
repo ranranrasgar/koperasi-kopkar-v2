@@ -103,7 +103,7 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
         isi = (
             <>
                 <KopLaporan judul="Neraca" periode={`Per ${formatTanggal(sampai, "long")}`} />
-                <div className="grid gap-8 md:grid-cols-2">
+                <div data-cetak-kolom className="grid gap-8 md:grid-cols-2">
                     <div>
                         <Bagian judul="AKTIVA" akun={aktiva} nilai={(a) => a.akhir} total="Jumlah Aktiva" />
                     </div>
@@ -115,7 +115,7 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
                         </div>
                     </div>
                 </div>
-                <div className="grid gap-8 md:grid-cols-2 border-t-2 pt-2 font-bold">
+                <div data-cetak-kolom className="grid gap-8 md:grid-cols-2 border-t-2 pt-2 font-bold">
                     <div className="flex justify-between"><span>TOTAL AKTIVA</span><span className="tabular-nums">{formatAngka(totAktiva)}</span></div>
                     <div className="flex justify-between"><span>TOTAL PASIVA</span><span className="tabular-nums">{formatAngka(totPasiva)}</span></div>
                 </div>
