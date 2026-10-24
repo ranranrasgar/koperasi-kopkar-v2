@@ -14,7 +14,7 @@ export function TombolCetak({ label = "Cetak", orientasi = "auto" }: { label?: s
     const [sibuk, setSibuk] = useState(false)
     const cetak = async () => {
         const kop = document.querySelector<HTMLElement>("[data-kop-laporan]")
-        const area = kop?.parentElement ?? document.querySelector<HTMLElement>("[data-area-cetak]")
+        const area = kop?.parentElement ?? document.querySelector<HTMLElement>("[data-area-cetak]") ?? document.querySelector<HTMLElement>("main")
         if (!area) { window.print(); return }
         const judul = kop?.dataset.judul ?? area.dataset.judulCetak ?? document.title
         const subjudul = kop?.dataset.periode ?? area.dataset.subjudulCetak
