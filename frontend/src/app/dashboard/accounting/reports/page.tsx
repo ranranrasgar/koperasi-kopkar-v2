@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { FormCard } from "@/components/transaksi/common"
+import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
 import { FormPeriode, KopLaporan } from "@/components/laporan/Periode"
 import { query } from "@/lib/db"
 import { saldoPerAkun, type SaldoAkun } from "@/lib/queries/laporan"
@@ -33,6 +33,45 @@ function Bagian({ judul, akun, nilai, total }: { judul: string; akun: SaldoAkun[
     )
 }
 
+interface Butir { kode: string; nama: string; nilai: number }
+interface Kelompok { kode: string; nama: string; butir: Butir[] }
+
+/** Kelompokkan akun menurut akun induknya (kelompok perkiraan), urut kode induk; akun tanpa induk masuk kelompok sendiri. */
+function kelompokkan(akun: SaldoAkun[], induk: Map<string, { kode: string; nama: string }>, nilai: (a: SaldoAkun) => number): Kelompok[] {
+    const peta = new Map<string, Kelompok>()
+    for (const a of akun) {
+        const i = induk.get(a.kode_perkiraan) ?? { kode: a.kode_perkiraan, nama: a.nama_perkiraan }
+        const k = peta.get(i.kode) ?? { kode: i.kode, nama: i.nama, butir: [] }
+        k.butir.push({ kode: a.kode_perkiraan, nama: a.nama_perkiraan, nilai: nilai(a) })
+        peta.set(i.kode, k)
+    }
+    return [...peta.values()].sort((x, y) => x.kode.localeCompare(y.kode))
+}
+
+function KelompokTabel({ k }: { k: Kelompok }) {
+    const jumlah = k.butir.reduce((t, b) => t + b.nilai, 0)
+    return (
+        <div className="mb-3 break-inside-avoid">
+            <div className="font-semibold text-sm py-1">{k.nama}</div>
+            <table className="w-full text-sm">
+                <tbody>
+                    {k.butir.map((b) => (
+                        <tr key={b.kode}>
+                            <td className="py-0.5 pl-4 pr-2 font-mono text-xs w-28">{b.kode}</td>
+                            <td className="py-0.5">{b.nama}</td>
+                            <td className="py-0.5 text-right tabular-nums w-40">{formatAngka(b.nilai)}</td>
+                        </tr>
+                    ))}
+                    <tr className="border-t font-semibold">
+                        <td colSpan={2} className="py-1 pl-4">Total {k.nama}</td>
+                        <td className="py-1 text-right tabular-nums">{formatAngka(jumlah)}</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    )
+}
+
 const ada = (a: SaldoAkun, v: number) => Math.abs(v) >= 0.005
 
 export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/accounting/reports">) {
@@ -43,10 +82,12 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
     const sampai = isTanggal(sp(s, "sampai")) ? sp(s, "sampai") : hariIni()
     const dari = isTanggal(sp(s, "dari")) ? sp(s, "dari") : `${sampai.slice(0, 4)}-01-01`
     const tab = (k: string, label: string, boleh: boolean) => boleh && (
-        <Link href={`?lap=${k}`} className={cn("px-3 py-1.5 rounded-md text-sm", lap === k ? "bg-primary text-primary-foreground" : "hover:bg-muted")}>{label}</Link>
+        <Link href={`?lap=${k}`} className={cn("px-3 py-1 rounded text-sm font-medium", lap === k ? "bg-primary text-primary-foreground" : "hover:bg-muted")}>{label}</Link>
     )
 
     let isi: React.ReactNode
+    const ekspor: string[][] = [["Kelompok", "Kode", "Nama Akun", "Nilai"]]
+    const nilai = (n: number) => String(Math.round(n * 100) / 100)
     if (lap === "neraca") {
         const akun = await saldoPerAkun(`${sampai.slice(0, 4)}-01-01`, sampai)
         const klas = (k: number) => akun.filter((a) => a.kode_klasifikasi === k && ada(a, a.akhir))
@@ -56,6 +97,9 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
         const lain = akun.filter((a) => a.kode_klasifikasi === null && ada(a, a.akhir))
         const totAktiva = aktiva.reduce((t, a) => t + a.akhir, 0)
         const totPasiva = -[...hutang, ...modal].reduce((t, a) => t + a.akhir, 0) + shu
+        for (const [nama, daftar, f] of [["AKTIVA", aktiva, (a: SaldoAkun) => a.akhir], ["HUTANG", hutang, (a: SaldoAkun) => -a.akhir], ["MODAL", modal, (a: SaldoAkun) => -a.akhir]] as const)
+            for (const a of daftar) ekspor.push([nama, a.kode_perkiraan, a.nama_perkiraan, nilai(f(a))])
+        ekspor.push(["SHU Tahun Berjalan", "", "", nilai(shu)], ["TOTAL AKTIVA", "", "", nilai(totAktiva)], ["TOTAL PASIVA", "", "", nilai(totPasiva)])
         isi = (
             <>
                 <KopLaporan judul="Neraca" periode={`Per ${formatTanggal(sampai, "long")}`} />
@@ -93,12 +137,24 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
         const [{ persen }] = await query<{ persen: number }>("SELECT COALESCE(MAX(persen_pajak_pendapatan), 0)::float8 AS persen FROM perusahaan")
         const sebelumPajak = totP - totB
         const pajak = Math.max(0, sebelumPajak) * persen / 100
+        const parent = await query<{ kode: string; ik: string; inama: string }>(
+            "SELECT p.kode_perkiraan AS kode, pp.kode_perkiraan AS ik, pp.nama_perkiraan AS inama FROM perkiraan p JOIN perkiraan pp ON pp.id = p.parent_id")
+        const induk = new Map(parent.map((r) => [r.kode, { kode: r.ik, nama: r.inama }]))
+        const kelP = kelompokkan(pendapatan, induk, (a) => a.kredit - a.debit), kelB = kelompokkan(biaya, induk, (a) => a.debit - a.kredit)
+        for (const [bagian, kel] of [["PENDAPATAN", kelP], ["BIAYA", kelB]] as const)
+            for (const k of kel) for (const b of k.butir) ekspor.push([`${bagian} - ${k.nama}`, b.kode, b.nama, nilai(b.nilai)])
+        ekspor.push(["Jumlah Pendapatan", "", "", nilai(totP)], ["Jumlah Biaya", "", "", nilai(totB)], ["Pendapatan sebelum pajak", "", "", nilai(sebelumPajak)],
+            [`Pajak pendapatan (${persen}%)`, "", "", nilai(pajak)], ["Pendapatan setelah pajak (SHU)", "", "", nilai(sebelumPajak - pajak)])
         isi = (
             <>
                 <KopLaporan judul="Laporan Rugi Laba" periode={`${formatTanggal(dari, "long")} s/d ${formatTanggal(sampai, "long")}`} />
                 <div className="max-w-3xl mx-auto">
-                    <Bagian judul="PENDAPATAN" akun={pendapatan} nilai={(a) => a.kredit - a.debit} total="Jumlah Pendapatan" />
-                    <Bagian judul="BIAYA" akun={biaya} nilai={(a) => a.debit - a.kredit} total="Jumlah Biaya" />
+                    <div className="font-bold border-b pb-1 mb-2">PENDAPATAN</div>
+                    {kelP.map((k) => <KelompokTabel key={k.kode} k={k} />)}
+                    <div className="flex justify-between font-bold border-t-2 py-1 mb-4"><span>Jumlah Pendapatan</span><span className="tabular-nums">{formatAngka(totP)}</span></div>
+                    <div className="font-bold border-b pb-1 mb-2">BIAYA</div>
+                    {kelB.map((k) => <KelompokTabel key={k.kode} k={k} />)}
+                    <div className="flex justify-between font-bold border-t-2 py-1 mb-4"><span>Jumlah Biaya</span><span className="tabular-nums">{formatAngka(totB)}</span></div>
                     <div className="flex justify-between border-t-2 pt-2 font-bold">
                         <span>PENDAPATAN SEBELUM PAJAK</span><span className="tabular-nums">{formatAngka(sebelumPajak)}</span>
                     </div>
@@ -114,13 +170,16 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
         )
     }
 
+    const tabs = (
+        <div className="flex gap-1 rounded-md border p-0.5">{tab("neraca", "Neraca", bolehNeraca)}{tab("rugilaba", "Rugi Laba", bolehRL)}</div>
+    )
     return (
-        <FormCard title="Laporan Keuangan" description="Neraca dan rugi laba dari jurnal umum, dengan saldo awal tahun dari jurnal tutup buku.">
-            <div className="flex gap-2 mb-3 print:hidden">{tab("neraca", "Neraca", bolehNeraca)}{tab("rugilaba", "Rugi Laba", bolehRL)}</div>
-            <FormPeriode dari={dari} sampai={sampai} satuTanggal={lap === "neraca"}>
-                <input type="hidden" name="lap" value={lap} />
-            </FormPeriode>
-            <div className="mt-4">{isi}</div>
-        </FormCard>
+        <HalamanLaporan title={lap === "neraca" ? "Neraca" : "Laporan Rugi Laba"}
+            description={lap === "neraca" ? "Posisi aktiva, hutang, dan modal per tanggal, dari jurnal umum dengan saldo awal tahun dari jurnal tutup buku."
+                : "Pendapatan dan biaya per kelompok perkiraan, lengkap dengan pajak pendapatan menurut Pengaturan Perusahaan."}
+            ekspor={{ nama: `${lap === "neraca" ? "neraca" : "rugi-laba"}_${sampai}`, baris: ekspor }}
+            filter={<>{tabs}<FormPeriode dari={dari} sampai={sampai} satuTanggal={lap === "neraca"} tanpaCetak><input type="hidden" name="lap" value={lap} /></FormPeriode></>}>
+            {isi}
+        </HalamanLaporan>
     )
 }

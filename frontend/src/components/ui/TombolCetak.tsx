@@ -2,6 +2,7 @@
 
 import { useState } from "react"
 import { Loader2, Printer } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { bukaCetak, type Orientasi } from "@/lib/cetak-klien"
 
 /**
@@ -23,9 +24,8 @@ export function TombolCetak({ label = "Cetak", orientasi = "auto" }: { label?: s
         if (galat) alert(galat)
     }
     return (
-        <button type="button" onClick={cetak} disabled={sibuk}
-            className="h-9 px-3 inline-flex items-center gap-1.5 rounded-md border text-sm font-medium hover:bg-muted disabled:opacity-60 print:hidden">
-            {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />} {label}
-        </button>
+        <Button type="button" onClick={cetak} disabled={sibuk} variant="outline" size="sm" className="h-9 font-medium shadow-sm print:hidden">
+            {sibuk ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Printer className="mr-1.5 h-4 w-4" />} {label}
+        </Button>
     )
 }

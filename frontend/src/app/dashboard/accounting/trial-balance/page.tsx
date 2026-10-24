@@ -1,4 +1,4 @@
-import { FormCard } from "@/components/transaksi/common"
+import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
 import { FormPeriode, KopLaporan } from "@/components/laporan/Periode"
 import { saldoPerAkun } from "@/lib/queries/laporan"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
@@ -21,9 +21,11 @@ export default async function NeracaSaldoPage(props: PageProps<"/dashboard/accou
     const selisih = Math.round((tot.zd - tot.zk) * 100) / 100
 
     return (
-        <FormCard title="Neraca Saldo (Trial Balance)" description="Saldo awal, mutasi, dan saldo akhir per akun dari jurnal umum. Saldo awal tahun diambil dari jurnal tutup buku (TBT).">
-            <FormPeriode dari={dari} sampai={sampai} />
-            <div className="mt-4">
+        <HalamanLaporan title="Neraca Saldo (Trial Balance)" description="Saldo awal, mutasi, dan saldo akhir per akun dari jurnal umum. Saldo awal tahun diambil dari jurnal tutup buku (TBT)."
+            filter={<FormPeriode dari={dari} sampai={sampai} tanpaCetak />}
+            ekspor={{ nama: `neraca-saldo_${sampai}`, baris: [["Kode", "Nama Akun", "Awal Debit", "Awal Kredit", "Mutasi Debit", "Mutasi Kredit", "Akhir Debit", "Akhir Kredit"],
+                ...akun.map((a) => { const aw = sisi(a.awal), ak = sisi(a.akhir); return [a.kode_perkiraan, a.nama_perkiraan, aw.d, aw.k, a.debit, a.kredit, ak.d, ak.k].map(String) })] }}>
+            <div>
                 <KopLaporan judul="Neraca Saldo" periode={`${formatTanggal(dari, "long")} s/d ${formatTanggal(sampai, "long")}`} />
                 {selisih !== 0 && (
                     <div role="alert" className="mb-3 rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
@@ -66,6 +68,6 @@ export default async function NeracaSaldoPage(props: PageProps<"/dashboard/accou
                     </table>
                 </div>
             </div>
-        </FormCard>
+        </HalamanLaporan>
     )
 }

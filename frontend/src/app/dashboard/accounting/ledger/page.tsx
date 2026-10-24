@@ -1,4 +1,5 @@
-import { FormCard, selectClass } from "@/components/transaksi/common"
+import { selectClass } from "@/components/transaksi/common"
+import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
 import { FormPeriode, KopLaporan } from "@/components/laporan/Periode"
 import { bukuBesar } from "@/lib/queries/laporan"
 import { akunKas, semuaAkun } from "@/lib/queries/akuntansi"
@@ -20,16 +21,20 @@ export default async function BukuKasBankPage(props: PageProps<"/dashboard/accou
     const akhir = awal + totD - totK
 
     return (
-        <FormCard title="Buku Kas & Bank" description="Mutasi satu akun dengan saldo berjalan (debit menambah, kredit mengurangi).">
-            <FormPeriode dari={dari} sampai={sampai}>
-                <label className="text-xs text-muted-foreground space-y-1">
-                    <span className="block font-semibold">Akun</span>
-                    <select name="akun" defaultValue={kode} className={`${selectClass} w-72`}>
-                        {daftar.map((a) => <option key={a.id} value={a.kode_perkiraan}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
-                    </select>
-                </label>
-            </FormPeriode>
-            <div className="mt-4">
+        <HalamanLaporan title="Buku Besar" description="Mutasi satu akun dengan saldo berjalan (debit menambah, kredit mengurangi)."
+            ekspor={{ nama: `buku-besar_${kode}_${sampai}`, baris: [["Tanggal", "No. Bukti", "Keterangan", "Debit", "Kredit", "Saldo"], ["", "", "Saldo awal", "", "", String(awal)],
+                ...baris.map((b) => [b.tanggal_jurnalumum, b.nomor_bukti, b.deskripsi ?? "", String(b.debit), String(b.kredit), String(b.saldo)]),
+                ["", "", "Total mutasi / saldo akhir", String(totD), String(totK), String(akhir)]] }}
+            filter={
+                <FormPeriode dari={dari} sampai={sampai} tanpaCetak>
+                    <label className="flex items-center gap-1.5">
+                        <span className="text-xs font-medium text-muted-foreground">Akun</span>
+                        <select name="akun" defaultValue={kode} className={`${selectClass} w-72`}>
+                            {daftar.map((a) => <option key={a.id} value={a.kode_perkiraan}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
+                        </select>
+                    </label>
+                </FormPeriode>}>
+            <div>
                 <KopLaporan judul={`Buku ${akun ? `${akun.kode_perkiraan} ${akun.nama_perkiraan}` : kode}`}
                     periode={`${formatTanggal(dari, "long")} s/d ${formatTanggal(sampai, "long")}`} />
                 <div className="overflow-x-auto">
@@ -72,6 +77,6 @@ export default async function BukuKasBankPage(props: PageProps<"/dashboard/accou
                     {baris.length === 5000 && <p className="mt-2 text-xs text-amber-700">Hanya 5.000 baris pertama yang ditampilkan (total dan saldo akhir tetap untuk seluruh periode); persempit periode untuk melihat semua baris.</p>}
                 </div>
             </div>
-        </FormCard>
+        </HalamanLaporan>
     )
 }
