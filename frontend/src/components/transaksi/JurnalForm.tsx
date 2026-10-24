@@ -2,10 +2,12 @@
 
 import { useEffect, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
+import { AkunBox } from "@/components/bankbook/AkunBox"
+import { TombolModal, tombolModalUtama, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { Input } from "@/components/ui/input"
 import { jurnalUmumAction } from "@/app/actions/transaksi"
 import { formatRupiah } from "@/lib/format"
-import { Field, FormCard, HasilTransaksi, SubmitButton, selectClass, useAksiForm, type Akun } from "./common"
+import { Field, HasilTransaksi, SubmitButton, useAksiForm, type Akun } from "./common"
 
 interface Baris { id: number; akun: string; ket: string; debit: string; kredit: string }
 
@@ -13,8 +15,9 @@ let nextId = 1
 const barisBaru = (): Baris => ({ id: nextId++, akun: "", ket: "", debit: "", kredit: "" })
 const angka = (v: string) => Number(v.replace(",", ".")) || 0
 
-export function JurnalForm({ akun, hariIni }: { akun: Akun[]; hariIni: string }) {
+function JurnalForm({ akun, hariIni, selesai }: { akun: Akun[]; hariIni: string; selesai: () => void }) {
     const { hasil, onSubmit, pending } = useAksiForm(jurnalUmumAction)
+    useTutupSetelahBerhasil(hasil?.ok, selesai)
     const [baris, setBaris] = useState<Baris[]>(() => [barisBaru(), barisBaru()])
     const [deskripsi, setDeskripsi] = useState("")
 
@@ -30,8 +33,7 @@ export function JurnalForm({ akun, hariIni }: { akun: Akun[]; hariIni: string })
     const seimbang = totalD > 0 && totalD === totalK
 
     return (
-        <FormCard title="Jurnal Umum Baru"
-            description="Jurnal memorial; nomor JU/yymmdd/n diberikan mesin posting. Debit dan kredit harus seimbang.">
+        <>
             <form onSubmit={onSubmit} className="space-y-4">
                 <div className="grid gap-4 sm:grid-cols-4">
                     <Field label="Tanggal" htmlFor="tanggal">
@@ -42,7 +44,7 @@ export function JurnalForm({ akun, hariIni }: { akun: Akun[]; hariIni: string })
                     </Field>
                 </div>
 
-                <div className="overflow-x-auto rounded-md border">
+                <div className="rounded-md border">
                     <table className="w-full text-sm">
                         <thead className="bg-muted/50 text-muted-foreground text-xs">
                             <tr>
@@ -57,10 +59,7 @@ export function JurnalForm({ akun, hariIni }: { akun: Akun[]; hariIni: string })
                             {baris.map((b, i) => (
                                 <tr key={b.id} className="border-t">
                                     <td className="px-2 py-1.5">
-                                        <select name="akun" aria-label={`Akun baris ${i + 1}`} className={selectClass} value={b.akun} onChange={(e) => ubah(b.id, "akun", e.target.value)}>
-                                            <option value="">Pilih akun...</option>
-                                            {akun.map((a) => <option key={a.id} value={a.kode_perkiraan}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
-                                        </select>
+                                        <AkunBox akun={akun} nilai={b.akun} onUbah={(k) => ubah(b.id, "akun", k)} dataF={`${b.id}:akun`} name="akun" label={`Akun baris ${i + 1}`} />
                                     </td>
                                     <td className="px-2 py-1.5">
                                         <Input name="ketBaris" aria-label={`Keterangan baris ${i + 1}`} maxLength={200} value={b.ket} onChange={(e) => ubah(b.id, "ket", e.target.value)} />
@@ -108,6 +107,16 @@ export function JurnalForm({ akun, hariIni }: { akun: Akun[]; hariIni: string })
                     <SubmitButton pending={pending} disabled={!seimbang}>Simpan Jurnal</SubmitButton>
                 </div>
             </form>
-        </FormCard>
+        </>
+    )
+}
+
+/** Tombol "Jurnal Baru" di daftar jurnal: form di modal. */
+export function TombolJurnalBaru({ akun, hariIni }: { akun: Akun[]; hariIni: string }) {
+    return (
+        <TombolModal label={<><Plus className="h-4 w-4" /> Jurnal Baru</>} judul="Jurnal Umum Baru" lebar="sm:max-w-4xl" className={tombolModalUtama}
+            keterangan="Jurnal memorial; nomor JU/yymmdd/n diberikan mesin posting. Debit dan kredit harus seimbang.">
+            {(selesai) => <JurnalForm akun={akun} hariIni={hariIni} selesai={selesai} />}
+        </TombolModal>
     )
 }

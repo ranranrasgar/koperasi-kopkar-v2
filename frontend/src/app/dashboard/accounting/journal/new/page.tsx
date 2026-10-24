@@ -1,9 +1,6 @@
-import { JurnalForm } from "@/components/transaksi/JurnalForm"
-import { semuaAkun } from "@/lib/queries/akuntansi"
-import { hariIni } from "@/lib/format"
-import { wajibIzin } from "@/lib/operator"
+import { redirect } from "next/navigation"
 
-export default async function Page() {
-    await wajibIzin("/dashboard/accounting/journal/new") // layout tidak dijalankan ulang pada navigasi antarhalaman
-    return <JurnalForm akun={await semuaAkun()} hariIni={hariIni()} />
+// Form jurnal baru sekarang berupa modal di daftar jurnal; alamat lama dialihkan.
+export default function Page() {
+    redirect("/dashboard/accounting/journal")
 }
