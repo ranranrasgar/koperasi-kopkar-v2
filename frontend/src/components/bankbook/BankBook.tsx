@@ -6,6 +6,7 @@ import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { bacaBankBookAction, bankBookAction, hapusBankBookAction } from "@/app/actions/transaksi"
 import { Input } from "@/components/ui/input"
 import { AkunBox } from "@/components/bankbook/AkunBox"
+import { InputUang } from "@/components/ui/InputUang"
 import { TombolModal, tombolModalUtama, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { Field, HasilTransaksi, SubmitButton, selectClass, useAksiForm, type Akun } from "@/components/transaksi/common"
 import { formatRupiah } from "@/lib/format"
@@ -60,7 +61,7 @@ function FormBukti({ akunBank, semuaAkun, hariIni, awal, selesai }: Props & { aw
         if (f === "deskripsi") return setFokus(`${baris[0].id}:akun`)
         const [id, kolom] = [Number(f.split(":")[0]), f.split(":")[1]]
         if (kolom === "ket") setFokus(`${id}:debit`)
-        else if (kolom === "debit") { if (angka(t.value) > 0) barisBerikut(id); else setFokus(`${id}:kredit`) }
+        else if (kolom === "debit") { if (angka(baris.find((b) => b.id === id)?.debit ?? "") > 0) barisBerikut(id); else setFokus(`${id}:kredit`) }
         else if (kolom === "kredit") barisBerikut(id)
     }
 
@@ -98,8 +99,8 @@ function FormBukti({ akunBank, semuaAkun, hariIni, awal, selesai }: Props & { aw
                                         onSelesai={() => setFokus(`${b.id}:ket`)} />
                                 </td>
                                 <td className="px-2 py-1.5"><Input data-f={`${b.id}:ket`} name="ketBaris" aria-label={`Keterangan baris ${i + 1}`} maxLength={200} value={b.ket} onChange={(e) => ubah(b.id, "ket", e.target.value)} /></td>
-                                <td className="px-2 py-1.5"><Input data-f={`${b.id}:debit`} name="debit" aria-label={`Debit baris ${i + 1}`} type="number" min="0" step="any" className="text-right" value={b.debit} readOnly={angka(b.kredit) > 0} onChange={(e) => ubah(b.id, "debit", e.target.value)} /></td>
-                                <td className="px-2 py-1.5"><Input data-f={`${b.id}:kredit`} name="kredit" aria-label={`Kredit baris ${i + 1}`} type="number" min="0" step="any" className="text-right" value={b.kredit} readOnly={angka(b.debit) > 0} onChange={(e) => ubah(b.id, "kredit", e.target.value)} /></td>
+                                <td className="px-2 py-1.5"><InputUang data-f={`${b.id}:debit`} name="debit" aria-label={`Debit baris ${i + 1}`} className="text-right" value={b.debit} readOnly={angka(b.kredit) > 0} onChange={(v) => ubah(b.id, "debit", v)} /></td>
+                                <td className="px-2 py-1.5"><InputUang data-f={`${b.id}:kredit`} name="kredit" aria-label={`Kredit baris ${i + 1}`} className="text-right" value={b.kredit} readOnly={angka(b.debit) > 0} onChange={(v) => ubah(b.id, "kredit", v)} /></td>
                                 <td className="px-1 text-center">
                                     <button type="button" title="Hapus baris" disabled={baris.length <= 1} onClick={() => setBaris((bs) => bs.filter((x) => x.id !== b.id))} className="p-1.5 rounded hover:bg-muted disabled:opacity-30">
                                         <Trash2 className="h-4 w-4" />

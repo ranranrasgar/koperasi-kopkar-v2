@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Plus, Trash2 } from "lucide-react"
 import { AkunBox } from "@/components/bankbook/AkunBox"
+import { InputUang } from "@/components/ui/InputUang"
 import { TombolModal, tombolModalUtama, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { Input } from "@/components/ui/input"
 import { jurnalUmumAction } from "@/app/actions/transaksi"
@@ -65,12 +66,10 @@ function JurnalForm({ akun, hariIni, selesai }: { akun: Akun[]; hariIni: string;
                                         <Input name="ketBaris" aria-label={`Keterangan baris ${i + 1}`} maxLength={200} value={b.ket} onChange={(e) => ubah(b.id, "ket", e.target.value)} />
                                     </td>
                                     <td className="px-2 py-1.5">
-                                        <Input name="debit" aria-label={`Debit baris ${i + 1}`} type="number" min="0" step="any" className="text-right"
-                                            value={b.debit} readOnly={angka(b.kredit) > 0} onChange={(e) => ubah(b.id, "debit", e.target.value)} />
+                                        <InputUang name="debit" aria-label={`Debit baris ${i + 1}`} className="text-right" value={b.debit} readOnly={angka(b.kredit) > 0} onChange={(v) => ubah(b.id, "debit", v)} />
                                     </td>
                                     <td className="px-2 py-1.5">
-                                        <Input name="kredit" aria-label={`Kredit baris ${i + 1}`} type="number" min="0" step="any" className="text-right"
-                                            value={b.kredit} readOnly={angka(b.debit) > 0} onChange={(e) => ubah(b.id, "kredit", e.target.value)} />
+                                        <InputUang name="kredit" aria-label={`Kredit baris ${i + 1}`} className="text-right" value={b.kredit} readOnly={angka(b.debit) > 0} onChange={(v) => ubah(b.id, "kredit", v)} />
                                     </td>
                                     <td className="px-1 text-center">
                                         <button type="button" title="Hapus baris" disabled={baris.length <= 2}
