@@ -13,6 +13,7 @@ hasil-periksa/
 /backup/
 
 # Aplikasi Android (android/): rahasia penandatanganan dan konfigurasi lokal tidak pernah masuk git
+/android/keystore.properties
 /android/**/*.jks
 /android/**/*.keystore
 /android/**/*.pem
