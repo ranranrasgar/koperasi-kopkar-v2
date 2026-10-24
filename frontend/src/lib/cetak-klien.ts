@@ -67,6 +67,12 @@ body,.kertas,.kertas *{font-family:Arial,Helvetica,sans-serif!important}
 .isi th{background:#eef0f3!important;font-weight:700;text-align:left}
 .isi thead{display:table-header-group}.isi tfoot{display:table-row-group}
 .isi tr{break-inside:avoid}
+/* Blok besar tidak boleh "tidak terpecah" (tabel panjang terlempar ke halaman berikutnya dan menyisakan halaman kosong); tata letak
+   kolom/grid diubah menjadi bertumpuk supaya mengalir antarhalaman. Hanya baris tabel yang dijaga utuh. */
+.isi *{break-inside:auto!important}.isi tr,.isi img{break-inside:avoid!important}
+.isi .grid,.isi [class*="grid-cols"]{display:block!important}
+.isi .grid>*{margin-bottom:10px}
+.isi h1,.isi h2,.isi h3,.isi .font-bold,.isi .font-semibold{break-after:avoid}
 .isi td.kanan,.isi th.kanan,.isi .text-right,.isi .tabular-nums,.isi .whitespace-nowrap,.isi td.no,.isi .mono{white-space:nowrap}
 .isi.ukur{width:max-content}
 .isi.ukur table{width:auto!important}
