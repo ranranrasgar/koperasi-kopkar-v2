@@ -16,6 +16,7 @@ Internet ──> Nginx di host (HTTPS, certbot) ──┬─> 127.0.0.1:3100  co
 | --- | --- | --- |
 | `https://admin.kopkarmjsmattel.com` | Aplikasi admin | `admin` (port host 127.0.0.1:3100) |
 | `https://anggota.kopkarmjsmattel.com` | PWA anggota | `anggota` (127.0.0.1:3200) |
+| `https://api.kopkarmjsmattel.com` | API aplikasi Android anggota (pengganti API PHP lama, `mobile-api/`) | `mobile` (127.0.0.1:8099) |
 | `https://kopkarmjsmattel.com` (+ `www`) | Landing page (HTML statis, folder `landing/`) | tidak ada: dilayani langsung oleh Nginx dari `/srv/kopkar/landing` |
 
 Berkas Docker di akar repo:
@@ -184,7 +185,7 @@ Lalu:
 
 ```bash
 cd /srv/kopkar
-docker compose pull admin anggota        # unduh image jadi (beberapa ratus MB)
+docker compose pull admin anggota mobile # unduh image jadi (beberapa ratus MB)
 docker compose up -d db
 docker compose ps                        # db: healthy
 ```
@@ -248,6 +249,7 @@ Di pengelola DNS `kopkarmjsmattel.com`:
 | `www` | CNAME | `kopkarmjsmattel.com` |
 | `anggota` | A | IP VPS |
 | `admin` | A | IP VPS |
+| `api` | A | IP VPS |
 
 Tunggu sampai `ping anggota.kopkarmjsmattel.com` menunjukkan IP VPS.
 
@@ -311,6 +313,20 @@ server {
     }
 }
 
+# API aplikasi Android (mobile-api). Wajib HTTPS (certbot di langkah 9): token login dikirim di setiap permintaan.
+server {
+    listen 80;
+    server_name api.kopkarmjsmattel.com;
+    client_max_body_size 8m;                 # foto profil maks. 5 MB
+    location / {
+        proxy_pass http://127.0.0.1:8099;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
 # Admin: sebaiknya hanya dari IP kantor / VPN
 server {
     listen 80;
@@ -344,7 +360,7 @@ sudo nginx -t && sudo systemctl reload nginx
 Cookie sesi di produksi bertanda `secure`, jadi **login hanya tersimpan lewat HTTPS**. Membuka `http://...` membuat login seolah berhasil lalu kembali ke halaman login.
 
 ```bash
-sudo certbot --nginx -d kopkarmjsmattel.com -d www.kopkarmjsmattel.com -d anggota.kopkarmjsmattel.com -d admin.kopkarmjsmattel.com
+sudo certbot --nginx -d kopkarmjsmattel.com -d www.kopkarmjsmattel.com -d anggota.kopkarmjsmattel.com -d admin.kopkarmjsmattel.com -d api.kopkarmjsmattel.com
 sudo certbot renew --dry-run
 ```
 
@@ -398,18 +414,18 @@ Cadangan otomatis tampil juga di menu Backup & Restore (folder yang sama). Simpa
 cd /srv/kopkar
 docker compose exec -T -w /app admin npm run backup -- --ke /backup     # cadangan sebelum memperbarui
 git pull                                   # skrip database, Nginx, landing page
-docker compose pull admin anggota          # image dari GitHub Actions (tunggu centang hijau di tab Actions)
+docker compose pull admin anggota mobile   # image dari GitHub Actions (tunggu centang hijau di tab Actions)
 docker compose run --rm -w /app admin npm run anggota:pasang
 docker compose run --rm -w /app admin npm run indeks:pasang
 docker compose run --rm -w /app admin npm run pengaturan:pasang
 docker compose run --rm -w /app admin npm run panduan:pasang
-docker compose up -d                       # mengganti container admin dan anggota dengan image baru (putus beberapa detik)
+docker compose up -d                       # mengganti container admin, anggota, dan mobile dengan image baru (putus beberapa detik)
 docker image prune -f                      # buang image lama supaya disk tidak penuh
 ```
 
 Database (container `db` dan volumenya) tidak tersentuh oleh pembaruan aplikasi. Perubahan yang hanya di `docs/`, `landing/`, atau berkas `.md` tidak membuat image baru: cukup `git pull`.
 
-**Kembali ke versi sebelumnya**: isi `KOPKAR_IMAGE=ghcr.io/ranranrasgar/koperasi-kopkar-v2:<commit-lama>` di `.env` (daftar tag: GitHub -> repo -> Packages), lalu `docker compose pull admin anggota && docker compose up -d admin anggota`. Hapus baris itu untuk kembali ke `latest`. Bila data ikut rusak, pulihkan cadangan sebelum pembaruan (langkah 14).
+**Kembali ke versi sebelumnya**: isi `KOPKAR_IMAGE=ghcr.io/ranranrasgar/koperasi-kopkar-v2:<commit-lama>` di `.env` (daftar tag: GitHub -> repo -> Packages), lalu `docker compose pull admin anggota mobile && docker compose up -d admin anggota mobile`. Hapus baris itu untuk kembali ke `latest`. Bila data ikut rusak, pulihkan cadangan sebelum pembaruan (langkah 14).
 
 ## 14. Memindahkan data berikutnya (kantor <-> VPS)
 

@@ -2,8 +2,12 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import type { AddressInfo } from 'node:net';
+import { buatTokenApi } from '../src/auth.js';
 import { createPool } from '../src/db.js';
 import { createServer } from '../src/server.js';
+
+// Token dibuat dan dibaca di proses uji ini saja; rahasia asli tidak diperlukan.
+process.env.ANGGOTA_SESSION_SECRET ||= 'rahasia-uji-mobile-api-minimal-32-karakter';
 
 // Bentuk respons (nama kunci dan tipe) harus sama dengan mobile-api-shapes.json, yaitu apa yang dibaca Android.
 const expected = JSON.parse(fs.readFileSync(new URL('../../database/contract/mobile-api-shapes.json', import.meta.url), 'utf8'));
@@ -18,17 +22,21 @@ await new Promise<void>((r) => server.listen(0, '127.0.0.1', r));
 const base = `http://127.0.0.1:${(server.address() as AddressInfo).port}`;
 test.after(() => { server.close(); return pool.end(); });
 
-const get = async (p: string) => (await fetch(base + p)).json() as Promise<any>;
+// Token login (Authorization: Bearer) untuk anggota yang sedang diuji; dibuat langsung tanpa password.
+let token = '';
+const get = async (p: string) => (await fetch(base + p, { headers: token ? { authorization: `Bearer ${token}` } : {} })).json() as Promise<any>;
 
-// anggota dengan pinjaman aktif; getpinjaman sendiri yang menentukan "aktif"
+// anggota beraplikasi dengan pinjaman aktif; getpinjaman sendiri yang menentukan "aktif"
 const pick = async () => {
-    const c = (await pool.query(`SELECT DISTINCT a.kode_agt FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id
-        WHERE p.jml_cicilan < p.lama_angsuran AND p.lama_angsuran > 1 ORDER BY 1 DESC LIMIT 30`)).rows;
-    for (const { kode_agt } of c) {
+    const c = (await pool.query(`SELECT DISTINCT a.kode_agt, u.id::int user_id, u.password_hash FROM pinjaman_tunai p
+        JOIN anggota a ON a.id = p.anggota_id JOIN app_user u ON u.anggota_id = a.id
+        WHERE p.jml_cicilan < p.lama_angsuran AND p.lama_angsuran > 1 AND a.aktif AND u.status ORDER BY 1 DESC LIMIT 30`)).rows;
+    for (const { kode_agt, user_id, password_hash } of c) {
+        token = buatTokenApi(user_id, password_hash);
         const pj = (await get(`/v1/Api.php?apicall=getpinjaman&kdAnggota=${kode_agt}`)).pinjaman;
         if (pj?.length) return { kd: kode_agt as string, no: pj[0].no_pinjaman as string };
     }
-    throw new Error('tidak ada anggota dengan pinjaman aktif');
+    throw new Error('tidak ada anggota beraplikasi dengan pinjaman aktif');
 };
 
 test('bentuk JSON semua endpoint baca = kontrak Android', async () => {
@@ -66,8 +74,9 @@ test('bentuk JSON semua endpoint baca = kontrak Android', async () => {
 });
 
 test('nama apicall tidak peka huruf besar-kecil; parameter wajib dan apicall tak dikenal ditolak seperti server lama', async () => {
-    const a = await get('/v1/Api.php?apicall=getSaldoJenisPinjaman&kdAnggota=x');
-    const b = await get('/v1/Api.php?apicall=getsaldojenispinjaman&kdAnggota=x');
+    const { kd } = await pick();
+    const a = await get(`/v1/Api.php?apicall=getSaldoJenisPinjaman&kdAnggota=${kd}`);
+    const b = await get(`/v1/Api.php?apicall=getsaldojenispinjaman&kdAnggota=${kd}`);
     assert.deepEqual(a, b);
     assert.deepEqual(await get('/v1/Api.php?apicall=getsimpanan'), { error: true, message: 'Parameter kdAnggota tidak valid/tidak ditemukan' });
     assert.deepEqual(await get('/v1/Api.php?apicall=xyz'), { error: true, message: "API call 'xyz' tidak dikenali" });

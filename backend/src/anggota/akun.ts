@@ -318,20 +318,31 @@ export async function pertanyaanUntuk(db: pg.Pool | pg.PoolClient, username: str
     return semua[h[0] % semua.length].pertanyaan;
 }
 
-/** Atur password baru bila jawaban keamanan cocok. Pesan gagal seragam (username salah atau jawaban salah). */
-export async function resetLewatJawaban(db: pg.PoolClient, username: string, jawaban: string, baru: string, ulangi: string): Promise<HasilAkun> {
-    if (baru !== ulangi) return { ok: false, error: 'Ulangi password baru dengan sama persis' };
-    const salah = cekPasswordBaruAnggota(baru);
-    if (salah) return { ok: false, error: salah };
-    const u = (await db.query<{ id: string; jawaban_hash: string | null }>(
-        `SELECT id::text, jawaban_hash FROM app_user WHERE lower(trim(username)) = lower(trim($1)) AND status`, [username])).rows[0];
+/**
+ * Jawaban keamanan untuk lupa password. Pesan gagal seragam (username salah atau jawaban salah). Dipakai oleh
+ * resetLewatJawaban (PWA, satu langkah) dan verifyjawaban mobile-api (Android: jawaban dulu, lalu password baru).
+ */
+export async function periksaJawaban(db: pg.Pool | pg.PoolClient, username: string, jawaban: string):
+    Promise<{ ok: true; userId: number; passwordHash: string | null } | { ok: false; error: string }> {
+    const u = (await db.query<{ id: string; jawaban_hash: string | null; password_hash: string | null }>(
+        `SELECT id::text, jawaban_hash, password_hash FROM app_user WHERE lower(trim(username)) = lower(trim($1)) AND status`, [username])).rows[0];
     if (!(await cocokJawaban(jawaban, u?.jawaban_hash ?? null)) || !u) return { ok: false, error: 'Username atau jawaban tidak cocok' };
     // Pertanyaan keamanan hanya untuk akun lama tanpa email terverifikasi; yang punya email wajib lewat tautan email.
     const verif = (await db.query(
         `SELECT 1 FROM app_user a JOIN app_user_email_verif v ON v.app_user_id = a.id
           WHERE a.id = $1 AND v.terverifikasi_pada IS NOT NULL AND v.email = lower(trim(a.email))`, [u.id])).rowCount;
     if (verif) return { ok: false, error: 'Akun ini punya email terverifikasi. Gunakan "Lewat email" untuk membuat password baru.' };
-    await aturPassword(db, Number(u.id), baru);
+    return { ok: true, userId: Number(u.id), passwordHash: u.password_hash };
+}
+
+/** Atur password baru bila jawaban keamanan cocok. Pesan gagal seragam (username salah atau jawaban salah). */
+export async function resetLewatJawaban(db: pg.PoolClient, username: string, jawaban: string, baru: string, ulangi: string): Promise<HasilAkun> {
+    if (baru !== ulangi) return { ok: false, error: 'Ulangi password baru dengan sama persis' };
+    const salah = cekPasswordBaruAnggota(baru);
+    if (salah) return { ok: false, error: salah };
+    const j = await periksaJawaban(db, username, jawaban);
+    if (!j.ok) return j;
+    await aturPassword(db, j.userId, baru);
     return { ok: true, pesan: 'Password berhasil diganti. Silakan masuk dengan password baru.' };
 }
 

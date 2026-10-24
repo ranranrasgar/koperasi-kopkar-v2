@@ -81,5 +81,20 @@ services:
     ports:
       - "127.0.0.1:3200:3200"
 
+  # API aplikasi Android anggota (pengganti API PHP lama). Rahasia sesi dan ANGGOTA_URL dari anggota/.env.local: token
+  # login Android ditandatangani dengan ANGGOTA_SESSION_SECRET yang sama dengan PWA. Nginx: api.kopkarmjsmattel.com.
+  mobile:
+    <<: *aplikasi
+    working_dir: /app/mobile-api
+    command: ["node", "/app/node_modules/tsx/dist/cli.mjs", "src/server.ts"]
+    env_file: [anggota/.env.local]
+    environment:
+      PG_URL: postgres://kopkar:${DB_PASSWORD}@db:5432/kopkar_mjs_2000
+      HOST: 0.0.0.0
+      PORT: "8099"
+    volumes: []
+    ports:
+      - "127.0.0.1:8099:8099"
+
 volumes:
   db-data:

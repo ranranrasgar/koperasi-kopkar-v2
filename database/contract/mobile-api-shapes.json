@@ -58,7 +58,9 @@
   },
   "isuserexist": {
     "error": "boolean",
-    "message": "string"
+    "message": "string",
+    "username_exist": "boolean",
+    "pertanyaan": "string"
   },
   "getsimpanan": {
     "error": "boolean",
@@ -267,12 +269,14 @@
     "total_potongan": "number",
     "total_shu": "number",
     "himbauan": "null",
-    "promos": []
+    "promos": [],
+    "foto": "string"
   },
   "_catatan": {
     "getSaldoJenisPinjaman": "Server PHP saat ini TIDAK mengenali nama ini (huruf besar) dan hanya membalas error. Bentuk di atas adalah yang dibaca Android (PengajuanKreditActivity); server lama memakai getsaldojenispinjaman.",
     "gettahunshu": "Tidak ada di server PHP saat ini. Bentuk di atas adalah yang dibaca Android (ShuActivity): daftar tahun buku SHU.",
-    "isuserexist": "Bentuk untuk username yang TIDAK ada. Untuk username ada: username_exist, pertanyaan, dan jawaban (jawaban tidak boleh dikirim lagi pada API baru).",
-    "download_slip.php": "Server PHP saat ini hanya mengembalikan teks placeholder, bukan PDF."
+    "isuserexist": "API baru (mobile-api) membalas pertanyaan untuk username apa pun, termasuk yang tidak ada (tidak membocorkan akun, sama dengan PWA); bentuknya bentuk server lama untuk username ada, tanpa jawaban.",
+    "download_slip.php": "Server PHP saat ini hanya mengembalikan teks placeholder, bukan PDF.",
+    "dashboard.php": "foto: tambahan API baru (nama berkas foto profil relatif terhadap IMAGE_PATH, atau kosong); MainActivity sudah membacanya bila ada. Semua endpoint data wajib Authorization: Bearer <api_token> dari login.php."
   }
 }

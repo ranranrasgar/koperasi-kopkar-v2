@@ -11,3 +11,20 @@ hasil-periksa/
 
 # Cadangan database (npm run backup), berisi data anggota
 /backup/
+
+# Aplikasi Android (android/): rahasia penandatanganan dan konfigurasi lokal tidak pernah masuk git
+/android/**/*.jks
+/android/**/*.keystore
+/android/**/*.pem
+/android/**/google-services.json
+/android/**/local.properties
+/android/**/build/
+/android/**/release/
+/android/.gradle/
+/android/.idea/
+/android/.junie/
+/android/new_gradle/
+/android/hs_err_pid*.log
+/android/replay_pid*.log
+/android/output.txt
+/android/cleaned.txt

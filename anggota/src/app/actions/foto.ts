@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { anggotaSesi } from "@/lib/anggota"
 import { pool } from "@/lib/db"
-import { jenisFoto, MAKS_FOTO, tabelBelumAda } from "@/lib/foto"
+import { jenisFoto, MAKS_FOTO, simpanFoto, tabelBelumAda } from "@/lib/foto"
 
 export type HasilFoto = { ok: true } | { ok: false; error: string } | null
 
@@ -18,10 +18,7 @@ export async function fotoAction(_: HasilFoto, f: FormData): Promise<HasilFoto> 
     const jenis = jenisFoto(isi)
     if (!jenis) return { ok: false, error: "Foto harus berformat JPG, PNG, atau WEBP" }
     try {
-        await pool.query(
-            `INSERT INTO app_user_foto (app_user_id, isi, jenis, diubah_pada) VALUES ($1, $2, $3, now())
-             ON CONFLICT (app_user_id) DO UPDATE SET isi = EXCLUDED.isi, jenis = EXCLUDED.jenis, diubah_pada = now()`,
-            [a.userId, Buffer.from(isi), jenis])
+        await simpanFoto(pool, a.userId, isi, jenis)
     } catch (e) {
         if (tabelBelumAda(e)) return { ok: false, error: "Fitur foto belum dipasang di server" }
         throw e

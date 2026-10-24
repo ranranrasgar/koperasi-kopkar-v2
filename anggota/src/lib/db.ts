@@ -1,7 +1,8 @@
 import "server-only"
 import type pg from "pg"
 import { connection } from "next/server"
-import { createPool, withTx, type Db } from "@kopkar/backend/src/db.ts"
+import { createPool, type Db } from "@kopkar/backend/src/db.ts"
+import { modeUji as modeUjiDb, txUji } from "@kopkar/backend/src/mode-uji.ts"
 
 // Satu pool per proses; di mode dev modul dimuat ulang, jadi pool disimpan di globalThis.
 const g = globalThis as unknown as { kopkarAnggotaPool?: pg.Pool }
@@ -41,28 +42,8 @@ export const serverUji = process.env.KOPKAR_SERVER_UJI || null
 
 /**
  * Transaksi tulis (pengajuan, profil). Mode uji admin (pengaturan_web.mode_uji / KOPKAR_UJI_ROLLBACK) berlaku juga di sini:
- * dijalankan penuh lalu di-rollback.
+ * dijalankan penuh lalu di-rollback. Implementasinya dipakai bersama mobile-api (backend/src/mode-uji.ts).
  */
-export async function tx<T>(fn: (db: Db) => Promise<T>): Promise<T> {
-    if (!(await modeUji())) return withTx(pool, fn)
-    const BATAL = Symbol("rollback-uji")
-    let hasil: T | undefined
-    try {
-        await withTx(pool, async (db) => { hasil = await fn(db); throw BATAL })
-    } catch (e) {
-        if (e !== BATAL) throw e
-    }
-    return hasil as T
-}
+export const tx = <T>(fn: (db: Db) => Promise<T>): Promise<T> => txUji(pool, fn)
 
-export async function modeUji() {
-    if (process.env.KOPKAR_UJI_ROLLBACK === "1") return true
-    if (process.env.KOPKAR_UJI_ROLLBACK === "0") return false
-    try {
-        const r = await pool.query<{ nilai: string }>("SELECT nilai FROM pengaturan_web WHERE kunci = 'mode_uji'")
-        return r.rows[0]?.nilai === "1"
-    } catch (e) {
-        if ((e as { code?: string }).code === "42P01") return false
-        throw e
-    }
-}
+export const modeUji = () => modeUjiDb(pool)
