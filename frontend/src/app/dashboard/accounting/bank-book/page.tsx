@@ -37,8 +37,8 @@ export default async function BankBookPage(props: PageProps<"/dashboard/accounti
     return (
         <FormCard title="Bank Book" description="Buku kas & bank harian per akun, lengkap dengan entri, ubah, dan hapus bukti BB.">
             <div className="grid gap-4 lg:grid-cols-[17rem_minmax(0,1fr)]">
-                <nav aria-label="Akun kas dan bank" className="max-h-[40rem] overflow-auto rounded-md border print:hidden">
-                    <div className="sticky top-0 border-b bg-muted px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kas / Bank</div>
+                <nav aria-label="Akun kas dan bank" className="self-start rounded-md border print:hidden">
+                    <div className="border-b bg-muted px-3 py-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Kas / Bank</div>
                     <ul>
                         {daftar.map((a) => (
                             <li key={a.id}>
@@ -78,19 +78,19 @@ export default async function BankBookPage(props: PageProps<"/dashboard/accounti
                         ))}
                     </dl>
 
-                    <div className="max-h-[22rem] overflow-auto rounded-md border">
+                    <div className="overflow-x-auto rounded-md border">
                         <table className="w-full text-sm">
-                            <thead className="sticky top-0 bg-muted text-muted-foreground text-xs">
+                            <thead className="bg-muted text-muted-foreground text-xs">
                                 <tr><th className="px-2 py-2 text-left">Tanggal</th><th className="px-2 py-2 text-right">Saldo Awal</th><th className="px-2 py-2 text-right">Debit</th><th className="px-2 py-2 text-right">Kredit</th><th className="px-2 py-2 text-right">Saldo Akhir</th></tr>
                             </thead>
                             <tbody>
                                 {rows.map((r) => (
                                     <tr key={r.tanggal} className={`border-t ${r.tanggal === tgl ? "bg-blue-50 dark:bg-blue-500/10" : ""}`}>
-                                        <td className="px-2 py-1 whitespace-nowrap"><Link href={ke({ tgl: r.tanggal })} className="hover:underline">{formatTanggal(r.tanggal)}</Link>{r.bukti > 0 && <span className="ml-1 text-[10px] text-muted-foreground">{r.bukti} bukti</span>}</td>
-                                        <td className="px-2 py-1 text-right tabular-nums">{formatAngka(r.awal)}</td>
-                                        <td className="px-2 py-1 text-right tabular-nums">{formatAngka(r.debit)}</td>
-                                        <td className="px-2 py-1 text-right tabular-nums">{formatAngka(r.kredit)}</td>
-                                        <td className="px-2 py-1 text-right tabular-nums">{formatAngka(r.akhir)}</td>
+                                        <td className="px-2 py-0.5 whitespace-nowrap"><Link href={ke({ tgl: r.tanggal })} className="hover:underline">{formatTanggal(r.tanggal)}</Link>{r.bukti > 0 && <span className="ml-1 text-[10px] text-muted-foreground">{r.bukti} bukti</span>}</td>
+                                        <td className="px-2 py-0.5 text-right tabular-nums">{formatAngka(r.awal)}</td>
+                                        <td className="px-2 py-0.5 text-right tabular-nums">{formatAngka(r.debit)}</td>
+                                        <td className="px-2 py-0.5 text-right tabular-nums">{formatAngka(r.kredit)}</td>
+                                        <td className="px-2 py-0.5 text-right tabular-nums">{formatAngka(r.akhir)}</td>
                                     </tr>
                                 ))}
                             </tbody>
