@@ -466,3 +466,36 @@ Pulihkan menimpa seluruh data di server tujuan, termasuk akun operator. Minta se
 | Disk penuh | `docker system df`, `docker image prune -f`, hapus cadangan lama di `/var/backups/kopkar`. |
 | Notifikasi HP tidak muncul | Bukan HTTPS, atau `VAPID_*` berbeda dari sebelumnya (anggota perlu mengaktifkan ulang). |
 | Email tidak terkirim | `SMTP_*` salah atau SPF belum diatur; cek dengan `npm run email:uji` (langkah 11). |
+
+## 17. Keamanan Server (Anti-DDoS, Anti-Malware, Anti-Shell & Auto-Restart)
+
+Untuk menjaga VPS tetap stabil dan tidak down karena serangan bot, brute-force, malware, atau exploit:
+
+### 1. Firewall (UFW) & Isolasi Port
+- Port yang dibuka publik hanya `22` (SSH), `80` (HTTP), dan `443` (HTTPS).
+- Port sensitif seperti `3306` (MySQL) dan `5432` (PostgreSQL) serta port internal container `3100`/`3200` di-bind hanya ke `127.0.0.1`.
+- Port tidak terpakai seperti `111` (rpcbind) telah dimatikan/di-mask, dan `25` (postfix) di-bind ke loopback-only.
+
+### 2. Fail2ban (Anti-Brute Force & Anti-Flood)
+- Mengawasi log SSH (`sshd`, `sshd-ddos`) dan Nginx (`nginx-http-auth`, `nginx-botsearch`, `nginx-limit-req`).
+- IP penyerang otomatis diblokir via iptables jika melakukan request berulang atau mencari kelemahan web.
+- Periksa status jail: `fail2ban-client status`.
+
+### 3. Nginx Rate Limiting & Anti-Slowloris
+- Konfigurasi `/etc/nginx/conf.d/anti-ddos.conf` membatasi request maksimum 20 req/detik per IP dan batas 25 koneksi simultan.
+- Timeout `client_body_timeout 10s`, `client_header_timeout 10s`, `send_timeout 10s` untuk mencegah serangan Slowloris.
+- Menyembunyikan versi Nginx (`server_tokens off`).
+- Pemblokiran bot berbahaya (sqlmap, nikto, wpscan, dirbuster, masscan, dll.) langsung diputus (HTTP 444).
+
+### 4. Anti-Web Shell & Pengamanan PHP
+- Fungsi eksekusi sistem berbahaya dimatikan di `/etc/php/7.0/fpm/php.ini` (`exec`, `passthru`, `shell_exec`, `system`, `proc_open`, `curl_multi_exec`, `show_source`).
+- File `.php` di dalam folder upload/media/images (`/var/www/html/...`) diblokir total dari eksekusi via Nginx (HTTP 403 Forbidden).
+- File rahasia (`.env`, `.git`, `.sql`, `.bak`, `.conf`) diblokir otomatis.
+
+### 5. Anti-Malware / Rootkit (Rkhunter)
+- Menggunakan `rkhunter` dengan update database malware otomatis dan pemindaian berkala via cron `/etc/cron.daily/rkhunter` dengan prioritas `nice -n 19` tanpa membebani RAM/CPU.
+
+### 6. Auto-Recovery Layanan (Systemd)
+- Service `nginx` dan `php7.0-fpm` dilengkapi drop-in `Restart=on-failure` dan `RestartSec=5s` di systemd. Jika layanan mati tidak normal, server akan menyalakannya kembali secara otomatis dalam 5 detik.
+- Container Docker dilengkapi `restart: unless-stopped`.
+
