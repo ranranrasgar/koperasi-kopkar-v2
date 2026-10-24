@@ -1,7 +1,10 @@
 # Produksi di VPS: PostgreSQL 14 + aplikasi admin + aplikasi anggota. Nginx dan HTTPS di host (lihat docs/DEPLOY-VPS.md).
 #
 #   cp .env.contoh .env               lalu isi DB_PASSWORD (dan BACKUP_DIR bila perlu)
-#   docker compose up -d --build
+#   docker compose pull admin anggota  image dibuat GitHub Actions (.github/workflows/image.yml), bukan di VPS
+#   docker compose up -d
+#
+# Build di mesin sendiri tetap bisa (`docker compose build`), tetapi jangan di VPS 2 GB: next build menghabiskan RAM.
 #
 # Rahasia aplikasi dibaca dari frontend/.env.local dan anggota/.env.local (tidak ikut image). PG_URL di berkas itu
 # diabaikan: alamat database diatur di bawah supaya selalu menunjuk layanan db.
@@ -13,7 +16,8 @@ x-aplikasi: &aplikasi
     context: .
     args:
       KOPKAR_COMMIT: ${KOPKAR_COMMIT:-}
-  image: kopkar-app:latest
+  # Tag tertentu (mis. ghcr.io/...:a1b2c3d) di .env untuk kembali ke versi lama.
+  image: ${KOPKAR_IMAGE:-ghcr.io/ranranrasgar/koperasi-kopkar-v2:latest}
   restart: unless-stopped
   depends_on:
     db:
@@ -24,7 +28,7 @@ x-aplikasi: &aplikasi
 
 services:
   db:
-    image: postgres:14
+    image: postgres:14-alpine
     restart: unless-stopped
     environment:
       POSTGRES_USER: kopkar
@@ -32,7 +36,20 @@ services:
       POSTGRES_DB: kopkar_mjs_2000
       TZ: Asia/Jakarta
       PGTZ: Asia/Jakarta
-    command: ["postgres", "-c", "timezone=Asia/Jakarta"]
+    command:
+      - "postgres"
+      - "-c"
+      - "timezone=Asia/Jakarta"
+      - "-c"
+      - "shared_buffers=256MB"
+      - "-c"
+      - "work_mem=16MB"
+      - "-c"
+      - "maintenance_work_mem=64MB"
+      - "-c"
+      - "effective_cache_size=768MB"
+      - "-c"
+      - "random_page_cost=1.1"
     volumes:
       - db-data:/var/lib/postgresql/data
     healthcheck:

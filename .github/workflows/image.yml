@@ -1,0 +1,49 @@
+# Build image aplikasi (admin + anggota) di GitHub, bukan di VPS: VPS (OpenVZ, RAM 2 GB, tanpa swap) kehabisan memori
+# saat next build dan mematikan MySQL milik API PHP lama. VPS cukup `docker compose pull`. Panduan: docs/DEPLOY-VPS.md.
+name: Image Docker
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "landing/**"
+      - "**/*.md"
+  workflow_dispatch:
+
+concurrency:
+  group: image-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Commit pendek
+        id: commit
+        run: echo "pendek=$(git rev-parse --short HEAD)" >> "$GITHUB_OUTPUT"
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          build-args: KOPKAR_COMMIT=${{ steps.commit.outputs.pendek }}
+          tags: |
+            ghcr.io/${{ github.repository }}:latest
+            ghcr.io/${{ github.repository }}:${{ steps.commit.outputs.pendek }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

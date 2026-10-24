@@ -167,17 +167,27 @@ Catatan:
 - Untuk menguji tanpa mengirim email sungguhan, kosongkan `SMTP_HOST` (email hanya dicatat di log).
 - Kedua aplikasi menjalankan pekerja pengiriman email; itu aman (antrean memakai `SKIP LOCKED`).
 
-## 5. Build image dan nyalakan database
+## 5. Ambil image dan nyalakan database
+
+Image **tidak dibuat di VPS**. `next build` butuh RAM 1-2 GB; di VPS ini (OpenVZ, RAM 2 GB, tidak bisa swap) build menghabiskan memori dan Linux mematikan MySQL milik API PHP lama (`OOM killed process (mysqld)`). Image dibuat GitHub Actions (`.github/workflows/image.yml`) setiap push ke `main` dan disimpan di GitHub Container Registry: `ghcr.io/ranranrasgar/koperasi-kopkar-v2`, tag `latest` dan commit pendek. Progres build: tab **Actions** di repo GitHub (±5-10 menit).
+
+Sekali saja, izinkan VPS mengambil image dari repo privat:
+
+1. **[kantor]** GitHub -> Settings -> Developer settings -> Personal access tokens -> **Tokens (classic)** -> Generate new token. Centang **hanya `read:packages`**, beri masa berlaku (mis. 1 tahun), salin token.
+2. **[VPS]** login (token diketik saat diminta, tidak tersimpan di riwayat shell):
+
+```bash
+docker login ghcr.io -u ranranrasgar
+```
+
+Lalu:
 
 ```bash
 cd /srv/kopkar
-echo "KOPKAR_COMMIT=$(git rev-parse --short HEAD)" >> .env     # commit dicatat di manifest cadangan
-docker compose build                     # 5-15 menit pertama kali (butuh internet: paket npm, font Google, pg client)
+docker compose pull admin anggota        # unduh image jadi (beberapa ratus MB)
 docker compose up -d db
 docker compose ps                        # db: healthy
 ```
-
-Bila build berhenti karena memori (`JavaScript heap out of memory` atau container dihentikan), tambah swap (langkah 1) lalu ulangi.
 
 ## 6. Pindahkan data (pertama kali, lewat perintah)
 
@@ -387,9 +397,8 @@ Cadangan otomatis tampil juga di menu Backup & Restore (folder yang sama). Simpa
 ```bash
 cd /srv/kopkar
 docker compose exec -T -w /app admin npm run backup -- --ke /backup     # cadangan sebelum memperbarui
-git pull
-sed -i "s/^KOPKAR_COMMIT=.*/KOPKAR_COMMIT=$(git rev-parse --short HEAD)/" .env
-docker compose build
+git pull                                   # skrip database, Nginx, landing page
+docker compose pull admin anggota          # image dari GitHub Actions (tunggu centang hijau di tab Actions)
 docker compose run --rm -w /app admin npm run anggota:pasang
 docker compose run --rm -w /app admin npm run indeks:pasang
 docker compose run --rm -w /app admin npm run pengaturan:pasang
@@ -398,9 +407,9 @@ docker compose up -d                       # mengganti container admin dan anggo
 docker image prune -f                      # buang image lama supaya disk tidak penuh
 ```
 
-Database (container `db` dan volumenya) tidak tersentuh oleh pembaruan aplikasi.
+Database (container `db` dan volumenya) tidak tersentuh oleh pembaruan aplikasi. Perubahan yang hanya di `docs/`, `landing/`, atau berkas `.md` tidak membuat image baru: cukup `git pull`.
 
-**Kembali ke versi sebelumnya**: `git log --oneline` -> `git checkout <commit-lama>` -> `docker compose build` -> `docker compose up -d`. Bila data ikut rusak, pulihkan cadangan sebelum pembaruan (langkah 14).
+**Kembali ke versi sebelumnya**: isi `KOPKAR_IMAGE=ghcr.io/ranranrasgar/koperasi-kopkar-v2:<commit-lama>` di `.env` (daftar tag: GitHub -> repo -> Packages), lalu `docker compose pull admin anggota && docker compose up -d admin anggota`. Hapus baris itu untuk kembali ke `latest`. Bila data ikut rusak, pulihkan cadangan sebelum pembaruan (langkah 14).
 
 ## 14. Memindahkan data berikutnya (kantor <-> VPS)
 
@@ -436,7 +445,8 @@ Pulihkan menimpa seluruh data di server tujuan, termasuk akun operator. Minta se
 | `EACCES` saat membuat cadangan | Folder cadangan di host belum milik uid 1000: `sudo chown -R 1000:1000 /var/backups/kopkar`. |
 | `password authentication failed` | `DB_PASSWORD` di `.env` diubah setelah volume database dibuat; kembalikan atau ubah sandi di PostgreSQL. |
 | `PostgreSQL tujuan versi X lebih lama dari sumber` | Server sumber memakai PostgreSQL lebih baru dari 14; samakan versinya. |
-| Build gagal kehabisan memori | Tambah swap (langkah 1), lalu `docker compose build` lagi. |
+| MySQL mati saat `docker compose build` di VPS (`dmesg`: `OOM killed process (mysqld)`) | Jangan build di VPS; pakai `docker compose pull` (langkah 5). Bila terpaksa: `docker compose stop admin anggota db` dulu, lalu `nice -n 19 docker compose build`. |
+| `pull`: `denied` atau `unauthorized` | Belum `docker login ghcr.io`, atau token kedaluwarsa / tanpa `read:packages` (langkah 5). |
 | Disk penuh | `docker system df`, `docker image prune -f`, hapus cadangan lama di `/var/backups/kopkar`. |
 | Notifikasi HP tidak muncul | Bukan HTTPS, atau `VAPID_*` berbeda dari sebelumnya (anggota perlu mengaktifkan ulang). |
 | Email tidak terkirim | `SMTP_*` salah atau SPF belum diatur; cek dengan `npm run email:uji` (langkah 11). |
