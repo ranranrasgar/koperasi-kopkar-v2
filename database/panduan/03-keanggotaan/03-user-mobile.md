@@ -32,7 +32,7 @@ Anggota memakai **aplikasi anggota** (di browser HP, dan aplikasi Android lama) 
 | Centang hijau (**Setujui**) | Baris Menunggu | Mengaktifkan akun. Karyawan Mattel yang belum anggota otomatis dijadikan anggota. Hanya bisa bila email pendaftar sudah terverifikasi. |
 | Silang oranye (**Tolak**) | Baris Menunggu | Akun tetap nonaktif; pendaftar diberi tahu lewat email. |
 | Ikon tambah orang (**Jadikan anggota**) | Akun aktif yang belum terhubung ke anggota | Membuat data anggota (atau menautkan ke anggota dengan NIK yang sama). |
-| Tempat sampah (**Hapus**) | Semua baris | Menghapus akun beserta data aplikasinya. Akun yang sudah terhubung ke anggota hanya boleh dihapus **superadmin atau grup admin**. |
+| Tempat sampah (**Hapus**) | Semua baris | Menghapus akun beserta data aplikasinya. Akun yang sudah terhubung ke anggota hanya boleh dihapus **superadmin atau grup admin**. Untuk akun beranggota, ketik kode anggota pada kotak verifikasi bila keanggotaannya ikut dihapus (hanya bila belum ada transaksi); status karyawan kembali bukan anggota. |
 | Mata (**Detail**) | Semua baris | Melihat semua kolom baris itu. |
 
 ## Yang perlu diketahui

@@ -301,6 +301,37 @@ export async function hapusAkunAplikasi(db: pg.PoolClient, userId: number): Prom
     return { ok: true, pesan: `Akun ${u.username} dan data aplikasinya dihapus`, punyaAnggota: !!u.anggota_id };
 }
 
+/** Tabel yang menandakan anggota sudah punya transaksi pembukuan; anggota seperti itu tidak boleh dihapus (nonaktifkan lewat data anggota). */
+const TABEL_TRANSAKSI: [string, string][] = [
+    ['simpanan', 'simpanan'], ['pinjaman_tunai', 'pinjaman'], ['kpr', 'KPR'], ['potongan_gaji_anggota', 'potongan gaji'],
+    ['potongan_gaji_pinjaman', 'potongan angsuran'], ['shu_anggota', 'SHU'],
+];
+/** Tabel kerja dan riwayat milik anggota yang ikut dihapus bersama keanggotaan. */
+const TABEL_IKUT_HAPUS = ['pengajuan_pinjaman', 'log_notifikasi', 'temp_potongan_all', 'temp_potongan_bank', 'temp_potongan_koperasi', 'temp_potongan_kpr', 'temp_shu', 'temp_shu_backup', 'temp_simpanan'];
+
+/**
+ * Hapus keanggotaan (baris anggota + detail) beserta pengajuan, notifikasi, dan tabel kerja miliknya, sehingga data karyawan Mattel
+ * kembali berstatus belum anggota. Ditolak bila anggota sudah punya transaksi pembukuan (simpanan, pinjaman, KPR, potongan, SHU) atau masih
+ * dipakai akun aplikasi lain. Pemanggil menghapus akun aplikasinya lebih dulu, dan memeriksa hak serta konfirmasi. Jalankan di dalam transaksi.
+ */
+export async function hapusKeanggotaan(db: pg.PoolClient, anggotaId: number | string): Promise<{ ok: true; kode: string; pesan: string } | { ok: false; error: string }> {
+    const a = (await db.query<{ kode_agt: string; nama: string }>('SELECT kode_agt, nama FROM anggota WHERE id = $1 FOR UPDATE', [anggotaId])).rows[0];
+    if (!a) return { ok: false, error: 'Anggota tidak ditemukan' };
+    const pakai: string[] = [];
+    for (const [t, label] of TABEL_TRANSAKSI) {
+        const n = Number((await db.query(`SELECT count(*) FROM ${t} WHERE anggota_id = $1`, [anggotaId])).rows[0].count);
+        if (n > 0) pakai.push(`${n} ${label}`);
+    }
+    if (pakai.length) return { ok: false, error: `Keanggotaan ${a.kode_agt} tidak bisa dihapus karena sudah punya transaksi (${pakai.join(', ')}). Nonaktifkan lewat data anggota.` };
+    const akun = Number((await db.query('SELECT count(*) FROM app_user WHERE anggota_id = $1', [anggotaId])).rows[0].count);
+    if (akun > 0) return { ok: false, error: `Anggota ${a.kode_agt} masih dipakai ${akun} akun aplikasi lain; hapus akun itu lebih dulu.` };
+    await db.query('DELETE FROM pesan_percakapan WHERE anggota_id = $1', [anggotaId]);
+    for (const t of TABEL_IKUT_HAPUS) await db.query(`DELETE FROM ${t} WHERE anggota_id = $1`, [anggotaId]);
+    await db.query('DELETE FROM anggota_detail WHERE anggota_id = $1', [anggotaId]);
+    await db.query('DELETE FROM anggota WHERE id = $1', [anggotaId]);
+    return { ok: true, kode: a.kode_agt, pesan: `keanggotaan ${a.kode_agt} (${a.nama}) dihapus, status karyawan kembali bukan anggota` };
+}
+
 // ---------- Lupa password lewat pertanyaan keamanan ----------
 
 /**

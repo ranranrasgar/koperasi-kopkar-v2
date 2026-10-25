@@ -16,6 +16,25 @@ export function AksiUserMobile({ item }: { item: Record<string, unknown> }) {
     const menunggu = item.menunggu_admin === true
     const verif = Boolean(item.email) // keputusan akhir ada di server (email harus terverifikasi)
 
+    /** Hapus akun; untuk akun beranggota, kode anggota yang diketik (verifikasi) juga menghapus keanggotaan dan mengembalikan status karyawan. */
+    const hapus = () => {
+        const punya = item.punya_anggota === true
+        if (!confirm(punya
+            ? `Hapus akun ${nama} beserta semua data aplikasinya (foto, notifikasi, pesan)? Akun ini terhubung ke anggota, hanya superadmin/admin yang boleh. Tidak bisa dibatalkan.`
+            : `Hapus akun ${nama}? Tidak bisa dibatalkan.`)) return
+        let kode: string | undefined
+        if (punya) {
+            const kodeAgt = String(item.kode_agt ?? "")
+            const k = prompt(`Hapus juga KEANGGOTAAN ${nama} (${kodeAgt}) beserta pengajuan dan notifikasinya, sehingga data karyawan kembali bukan anggota?\n\nKetik kode anggota ${kodeAgt} untuk menghapusnya juga. Kosongkan bila anggota harus tetap ada. Ditolak otomatis bila anggota sudah punya transaksi (simpanan, pinjaman, dll).`)
+            if (k === null) return
+            kode = k.trim() || undefined
+        }
+        mulai(async () => {
+            const h = await hapusUserMobileAction(id, kode)
+            setPesan(h); alert(h.ok ? h.pesan : h.error); router.refresh()
+        })
+    }
+
     const jalankan = (konfirmasi: string, fn: () => Promise<HasilPendaftaran>) => {
         if (!confirm(konfirmasi)) return
         mulai(async () => {
@@ -48,11 +67,7 @@ export function AksiUserMobile({ item }: { item: Record<string, unknown> }) {
                 </Button>
             )}
             <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700" title="Hapus akun"
-                onClick={() => jalankan(
-                    item.punya_anggota === true
-                        ? `Hapus akun ${nama} beserta semua data aplikasinya (foto, notifikasi, pesan)? Akun ini terhubung ke anggota, hanya superadmin/admin yang boleh. Tidak bisa dibatalkan.`
-                        : `Hapus akun ${nama}? Tidak bisa dibatalkan.`,
-                    () => hapusUserMobileAction(id))}>
+                onClick={hapus}>
                 <Trash2 className="h-4 w-4" />
             </Button>
             {pesan?.ok && <span className="sr-only" role="status">{pesan.pesan}</span>}

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import {
-    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, hapusAkunAplikasi, jadikanAnggota, putuskanPendaftaran, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
+    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
     hashJawaban, hashPasswordAnggota, masukAnggota, pertanyaanUntuk, resetLewatJawaban,
 } from '../src/anggota/akun.ts';
 
@@ -325,5 +325,34 @@ test('pertanyaan keamanan hanya untuk akun tanpa email terverifikasi; daftar bar
         const ditolak = await resetLewatJawaban(db, nama.username, 'kucing', 'Baru12345', 'Baru12345');
         assert.equal(ditolak.ok, false);
         if (!ditolak.ok) assert.match(ditolak.error, /Lewat email/);
+    });
+});
+
+test('hapus keanggotaan: anggota baru dari karyawan Mattel hilang, karyawan kembali bukan anggota; anggota bertransaksi ditolak', async () => {
+    await inTx(async (db) => {
+        const k = (await db.query(`SELECT k.id, k.nik FROM karyawan_mattel k WHERE length(k.nik) = 6
+            AND NOT EXISTS (SELECT 1 FROM anggota a WHERE a.nik = k.nik) AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.kode_agt = k.nik) LIMIT 1`)).rows[0];
+        const r = await daftarAkun(db, { username: 'uji_hapus_agt', password: 'Rahasia123', ulangi: 'Rahasia123', nik: k.nik, email: 'uji.hapus.agt@contoh.id' }, { sub: 'sub-uji-hapus-agt' });
+        const id = Number((r as { userId: number }).userId);
+        const oleh = (await db.query('SELECT id, nama FROM opr ORDER BY id LIMIT 1')).rows[0];
+        assert.equal((await putuskanPendaftaran(db, id, true, { id: Number(oleh.id), nama: oleh.nama })).ok, true);
+        const anggotaId = (await cariAkun(db, { id }))!.anggota_id!;
+        const tertaut = async () => Number((await db.query('SELECT count(*) n FROM anggota WHERE karyawan_mattel_id = $1', [k.id])).rows[0].n);
+        assert.equal(await tertaut(), 1);
+
+        // Akun masih memakai anggota: ditolak. Setelah akun dihapus, keanggotaan terhapus.
+        assert.equal((await hapusKeanggotaan(db, anggotaId)).ok, false);
+        assert.equal((await hapusAkunAplikasi(db, id)).ok, true);
+        const h = await hapusKeanggotaan(db, anggotaId);
+        assert.equal(h.ok, true);
+        assert.equal(await tertaut(), 0, 'karyawan kembali bukan anggota');
+        assert.equal((await db.query('SELECT count(*)::int n FROM anggota_detail WHERE anggota_id = $1', [anggotaId])).rows[0].n, 0);
+        assert.equal((await hapusKeanggotaan(db, anggotaId)).ok, false, 'sudah terhapus');
+
+        // Anggota yang sudah punya simpanan tidak boleh dihapus.
+        const a = (await db.query('SELECT anggota_id::text id FROM simpanan GROUP BY anggota_id LIMIT 1')).rows[0];
+        const tolak = await hapusKeanggotaan(db, a.id);
+        assert.equal(tolak.ok, false);
+        assert.match((tolak as { error: string }).error, /simpanan/);
     });
 });

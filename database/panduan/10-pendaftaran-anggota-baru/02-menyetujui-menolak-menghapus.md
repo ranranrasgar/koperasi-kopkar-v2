@@ -32,5 +32,7 @@ Klik **tempat sampah**, lalu konfirmasi. Tindakan ini **tidak bisa dibatalkan**.
 | Akun, foto profil, langganan notifikasi, pengantar, verifikasi email, tautan Google, dan percakapan pesan anggota itu | Data **anggota** dan semua data keuangan (simpanan, pinjaman, jurnal) |
 
 - Akun yang **sudah terhubung ke anggota** hanya boleh dihapus oleh **superadmin atau grup admin**. Operator lain menerima penolakan.
-- Menghapus akun tidak menghapus keanggotaan. Anggota bisa mendaftar lagi dengan NIK yang sama.
+- Menghapus akun **secara bawaan tidak menghapus keanggotaan**. Anggota bisa mendaftar lagi dengan NIK yang sama.
+- **Menghapus keanggotaan sekaligus** (untuk anggota yang keliru dibuat dari pendaftaran): setelah konfirmasi hapus akun, muncul kotak verifikasi. **Ketik kode anggota** untuk juga menghapus data anggota beserta pengajuan, notifikasi, dan tabel kerjanya; data karyawan di menu Karyawan Mattel kembali berstatus **Belum** anggota. Kosongkan kotak itu bila anggota harus tetap ada.
+- Keanggotaan **tidak bisa dihapus** bila sudah punya transaksi pembukuan (simpanan, pinjaman, KPR, potongan gaji, SHU); seluruh penghapusan dibatalkan dan pesan menyebut jumlah transaksinya. Anggota seperti itu cukup dinonaktifkan lewat data anggota supaya laporan keuangan tetap utuh.
 - Dalam **mode uji**, hasilnya tidak tersimpan (lihat artikel *Mode uji dan database uji*).

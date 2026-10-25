@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { hapusAkunAplikasi, jadikanAnggota, putuskanPendaftaran } from "@kopkar/backend/src/anggota/akun.ts"
+import { hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran } from "@kopkar/backend/src/anggota/akun.ts"
 import { antreEmail } from "@kopkar/backend/src/email/antrean.ts"
 import { modeUji, query, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, type Operator } from "@/lib/operator"
@@ -85,13 +85,23 @@ export async function jadikanAnggotaAction(id: number): Promise<HasilPendaftaran
  * Hapus akun aplikasi anggota beserta data aplikasinya. Akun yang sudah terhubung ke anggota hanya boleh dihapus
  * superadmin atau grup admin; data keuangan anggota tidak ikut terhapus.
  */
-export async function hapusUserMobileAction(id: number): Promise<HasilPendaftaran> {
+export async function hapusUserMobileAction(id: number, kodeHapusAnggota?: string): Promise<HasilPendaftaran> {
     try {
         const o = await operatorAktif(MENU_USER)
-        const [u] = await query<{ anggota_id: string | null }>("SELECT anggota_id::text FROM app_user WHERE id = $1", [id])
+        const [u] = await query<{ anggota_id: string | null; kode: string | null }>(
+            "SELECT u.anggota_id::text, a.kode_agt AS kode FROM app_user u LEFT JOIN anggota a ON a.id = u.anggota_id WHERE u.id = $1", [id])
         if (!u) return { ok: false, error: "Akun tidak ditemukan" }
         if (u.anggota_id && !bolehHapusAkunAnggota(o)) throw new GalatSesi("Akun yang sudah terhubung ke anggota hanya boleh dihapus oleh superadmin atau admin")
-        const r = await tx((db) => hapusAkunAplikasi(db as never, id))
+        // Menghapus keanggotaan juga: verifikasi dengan mengetikkan kode anggota; ditolak bila anggota sudah punya transaksi pembukuan.
+        const hapusAnggota = !!kodeHapusAnggota?.trim()
+        if (hapusAnggota && (!u.anggota_id || kodeHapusAnggota!.trim().toLowerCase() !== (u.kode ?? "").toLowerCase())) throw new GalatSesi("Kode anggota yang diketik tidak sama; tidak ada yang dihapus")
+        const r = await tx(async (db) => {
+            const h = await hapusAkunAplikasi(db as never, id)
+            if (!h.ok || !hapusAnggota) return h
+            const k = await hapusKeanggotaan(db as never, u.anggota_id!)
+            if (!k.ok) throw new GalatSesi(k.error) // batalkan juga penghapusan akunnya
+            return { ...h, pesan: `${h.pesan}; ${k.pesan}` }
+        })
         if (!r.ok) return r
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
         revalidatePath("/dashboard/members", "layout")
