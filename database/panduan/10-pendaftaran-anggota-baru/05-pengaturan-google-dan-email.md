@@ -20,7 +20,7 @@ Galat `redirect_uri_mismatch` berarti alamat balik belum terdaftar di client yan
 - Isi `SMTP_HOST`, `SMTP_PORT`, `SMTP_SECURE`, `SMTP_USER`, `SMTP_PASS`, dan `SMTP_FROM` di `anggota/.env.local` **dan** `frontend/.env.local`.
 - Uji: `npm run email:uji -- alamat@penerima.com`. Atur sandi dengan `npm run email:sandi`.
 - Agar email tidak ditolak Gmail, domain pengirim butuh **record SPF** (dan sebaiknya DKIM) di DNS. Rinciannya ada di `docs/smtp-email.md`.
-- Server uji tidak mengirim email sungguhan kecuali `EMAIL_UJI_KIRIM=1`; selama itu aktif jangan kirim siaran.
+- Server uji tidak mengirim email sungguhan. Cara aman mencobanya: isi `EMAIL_UJI_KE=alamat-anda@contoh.com` (hanya penerima itu yang dikirimi; lihat artikel *Notifikasi admin, nomor WhatsApp, dan email*). `EMAIL_UJI_KIRIM=1` membuka pengiriman ke semua anggota di salinan; jangan dipakai bersama siaran.
 
 ## Tabel database
 
