@@ -1,4 +1,6 @@
-import { selectClass } from "@/components/transaksi/common"
+import { PilihAkun } from "@/components/laporan/PilihAkun"
+import { PaginasiUrl } from "@/components/ui/PaginasiUrl"
+import { ukuranHalaman } from "@/lib/halaman"
 import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
 import { FormPeriode, KopLaporan } from "@/components/laporan/Periode"
 import { bukuBesar } from "@/lib/queries/laporan"
@@ -17,22 +19,26 @@ export default async function BukuKasBankPage(props: PageProps<"/dashboard/accou
     const sampai = isTanggal(sp(s, "sampai")) ? sp(s, "sampai") : hariIni()
     const dari = isTanggal(sp(s, "dari")) ? sp(s, "dari") : `${sampai.slice(0, 7)}-01`
     const akun = daftar.find((a) => a.kode_perkiraan === kode)
-    const { awal, baris, debit: totD, kredit: totK } = await bukuBesar(kode, dari, sampai)
+    const pageSize = ukuranHalaman(sp(s, "pageSize"), 100)
+    const hal = await bukuBesar(kode, dari, sampai, { page: 1, pageSize })
+    const totalPages = Math.max(1, Math.ceil(hal.jumlahBaris / pageSize))
+    const page = Math.min(totalPages, Math.max(1, parseInt(sp(s, "page") || "1", 10) || 1))
+    // Halaman 1 sudah dibaca di atas; halaman lain dibaca ulang. Ekspor selalu seluruh periode (maks. 5.000 baris), bukan hanya halaman ini.
+    const { awal, baris, debit: totD, kredit: totK } = page === 1 ? hal : await bukuBesar(kode, dari, sampai, { page, pageSize })
     const akhir = awal + totD - totK
+    const semua = hal.jumlahBaris <= pageSize ? hal.baris : (await bukuBesar(kode, dari, sampai)).baris
+    // Saldo yang dibawa dari halaman sebelumnya = saldo setelah baris terakhir halaman itu.
+    const bawa = page > 1 && baris[0] ? Number(baris[0].saldo) - Number(baris[0].debit) + Number(baris[0].kredit) : awal
 
     return (
         <HalamanLaporan title="Buku Besar" description="Mutasi satu akun dengan saldo berjalan (debit menambah, kredit mengurangi)."
             ekspor={{ nama: `buku-besar_${kode}_${sampai}`, baris: [["Tanggal", "No. Bukti", "Keterangan", "Debit", "Kredit", "Saldo"], ["", "", "Saldo awal", "", "", String(awal)],
-                ...baris.map((b) => [b.tanggal_jurnalumum, b.nomor_bukti, b.deskripsi ?? "", String(b.debit), String(b.kredit), String(b.saldo)]),
+                ...semua.map((b) => [b.tanggal_jurnalumum, b.nomor_bukti, b.deskripsi ?? "", String(b.debit), String(b.kredit), String(b.saldo)]),
                 ["", "", "Total mutasi / saldo akhir", String(totD), String(totK), String(akhir)]] }}
             filter={
                 <FormPeriode dari={dari} sampai={sampai} tanpaCetak>
-                    <label className="flex items-center gap-1.5">
-                        <span className="text-xs font-medium text-muted-foreground">Akun</span>
-                        <select name="akun" defaultValue={kode} className={`${selectClass} w-72`}>
-                            {daftar.map((a) => <option key={a.id} value={a.kode_perkiraan}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
-                        </select>
-                    </label>
+                    <PilihAkun akun={daftar} awal={kode} />
+                    <input type="hidden" name="pageSize" value={sp(s, "pageSize") || String(pageSize)} />
                 </FormPeriode>}>
             <div>
                 <KopLaporan judul={`Buku ${akun ? `${akun.kode_perkiraan} ${akun.nama_perkiraan}` : kode}`}
@@ -51,8 +57,8 @@ export default async function BukuKasBankPage(props: PageProps<"/dashboard/accou
                         </thead>
                         <tbody>
                             <tr className="border-t bg-muted/20 italic">
-                                <td colSpan={5} className="px-2 py-1.5">Saldo awal</td>
-                                <td className="px-2 py-1.5 text-right tabular-nums">{formatAngka(awal)}</td>
+                                <td colSpan={5} className="px-2 py-1.5">{page === 1 ? "Saldo awal" : `Saldo dari halaman sebelumnya (halaman ${page - 1})`}</td>
+                                <td className="px-2 py-1.5 text-right tabular-nums">{formatAngka(page === 1 ? awal : bawa)}</td>
                             </tr>
                             {baris.map((b, i) => (
                                 <tr key={i} className="border-t">
@@ -74,8 +80,9 @@ export default async function BukuKasBankPage(props: PageProps<"/dashboard/accou
                             </tr>
                         </tfoot>
                     </table>
-                    {baris.length === 5000 && <p className="mt-2 text-xs text-amber-700">Hanya 5.000 baris pertama yang ditampilkan (total dan saldo akhir tetap untuk seluruh periode); persempit periode untuk melihat semua baris.</p>}
+                    {pageSize >= 5000 && hal.jumlahBaris > pageSize && <p className="mt-2 text-xs text-amber-700">Pilihan Semua dibatasi 5.000 baris; gunakan halaman untuk melihat sisanya.</p>}
                 </div>
+                <PaginasiUrl className="border-t" page={page} totalPages={totalPages} pageSize={pageSize} total={hal.jumlahBaris} />
             </div>
         </HalamanLaporan>
     )

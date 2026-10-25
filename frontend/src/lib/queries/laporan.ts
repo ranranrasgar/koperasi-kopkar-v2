@@ -56,7 +56,7 @@ export interface BarisBukuBesar {
 }
 
 /** Buku besar satu akun dengan saldo berjalan (bertanda debit - kredit). */
-export async function bukuBesar(kode: string, dari: string, sampai: string) {
+export async function bukuBesar(kode: string, dari: string, sampai: string, halaman: { page: number; pageSize: number } = { page: 1, pageSize: 5000 }) {
     const o = await pembukaTerakhir(dari)
     const [awal] = await query<{ s: number }>(`
         SELECT COALESCE(SUM(j.debit_jurnalumum - j.kredit_jurnalumum), 0) AS s FROM jurnal_umum j
@@ -68,12 +68,13 @@ export async function bukuBesar(kode: string, dari: string, sampai: string) {
                $4::numeric + SUM(j.debit_jurnalumum - j.kredit_jurnalumum) OVER (ORDER BY j.tanggal_jurnalumum, j.urutan) AS saldo
           FROM jurnal_umum j
          WHERE j.kode_perkiraan = $1 AND j.tanggal_jurnalumum BETWEEN $2 AND $3 AND NOT ${PEMBUKA}
-         ORDER BY j.tanggal_jurnalumum, j.urutan LIMIT 5000`, [kode, dari, sampai, awal.s])
-    // Total dihitung terpisah supaya tetap benar bila baris dibatasi 5.000.
-    const [tot] = await query<{ debit: number; kredit: number }>(`
-        SELECT COALESCE(SUM(j.debit_jurnalumum), 0) AS debit, COALESCE(SUM(j.kredit_jurnalumum), 0) AS kredit FROM jurnal_umum j
+         ORDER BY j.tanggal_jurnalumum, j.urutan LIMIT $5 OFFSET $6`, [kode, dari, sampai, awal.s, halaman.pageSize, (halaman.page - 1) * halaman.pageSize])
+    // Saldo berjalan dihitung atas seluruh baris lalu dipotong per halaman (window sebelum LIMIT), jadi saldo tiap halaman benar.
+    // Total dan jumlah baris dihitung terpisah untuk seluruh periode.
+    const [tot] = await query<{ debit: number; kredit: number; n: number }>(`
+        SELECT COALESCE(SUM(j.debit_jurnalumum), 0) AS debit, COALESCE(SUM(j.kredit_jurnalumum), 0) AS kredit, COUNT(*) AS n FROM jurnal_umum j
          WHERE j.kode_perkiraan = $1 AND j.tanggal_jurnalumum BETWEEN $2 AND $3 AND NOT ${PEMBUKA}`, [kode, dari, sampai])
-    return { awal: awal.s, baris, debit: tot.debit, kredit: tot.kredit }
+    return { awal: awal.s, baris, debit: tot.debit, kredit: tot.kredit, jumlahBaris: tot.n }
 }
 
 /** Saldo satu akun pada awal hari `dari` (sebelum mutasi tanggal itu), dengan aturan saldo pembuka yang sama dengan buku besar. */
