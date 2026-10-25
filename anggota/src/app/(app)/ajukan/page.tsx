@@ -1,5 +1,6 @@
 import type { Metadata } from "next"
 import { jenisKreditUntuk, pengajuanSaya } from "@kopkar/backend/src/anggota/pengajuan.ts"
+import { batasPlafon } from "@kopkar/backend/src/posting/plafon.ts"
 import { Kartu, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { poolAngka } from "@/lib/db"
@@ -28,10 +29,11 @@ export default async function AjukanPage() {
             <div className="px-5 pt-2">
                 {jenis.length === 0
                     ? <Kartu><Kosong judul="Belum ada jenis pinjaman" isi="Saat ini belum ada jenis pinjaman yang bisa diajukan lewat aplikasi." /></Kartu>
-                    : <FormAjukan hariIni={hari} batasTanggal={batas} plafon={data?.rp_grade ?? 0}
+                    : <FormAjukan hariIni={hari} batasTanggal={batas}
                         namaMenunggu={daftar.filter((x) => x.status === "P").map((x) => x.nama_kredit ?? "")}
                         produk={jenis.map((j) => ({ kode: j.kode, nama: j.nama, persenBunga: j.persenBunga, perAngsuran: j.perAngsuran,
-                            maksCicilan: j.maksCicilan, persenAdm: j.persenAdm, persenProvisi: j.persenProvisi, kunciGrade: j.kunciGrade }))} />}
+                            maksCicilan: j.maksCicilan, persenAdm: j.persenAdm, persenProvisi: j.persenProvisi,
+                            batas: batasPlafon(j, data?.rp_grade ?? 0)?.batas ?? null, sumberBatas: batasPlafon(j, data?.rp_grade ?? 0)?.sumber ?? null }))} />}
 
                 <h2 className="mb-1 mt-9 text-[0.9375rem] font-semibold">Pengajuan saya</h2>
                 {daftar.length === 0 ? <Kartu><Kosong judul="Belum ada pengajuan" /></Kartu> : (

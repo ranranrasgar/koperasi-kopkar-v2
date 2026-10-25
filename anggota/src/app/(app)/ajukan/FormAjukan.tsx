@@ -8,7 +8,9 @@ import { rupiah, tanggal } from "@/lib/format"
 
 export interface Produk {
     kode: string; nama: string; persenBunga: string; perAngsuran: boolean; maksCicilan: number
-    persenAdm: string; persenProvisi: string; kunciGrade: boolean
+    persenAdm: string; persenProvisi: string
+    /** Batas plafond untuk anggota ini pada jenis ini (rupiah) dan asalnya; null = tidak dibatasi. Grade diutamakan atas Maksimal Plafond. */
+    batas: number | null; sumberBatas: "grade" | "maksimal" | null
 }
 
 const kolom = "h-13 w-full rounded-xl border border-garis bg-permukaan px-4 text-base outline-none transition " +
@@ -26,8 +28,8 @@ const KEPERLUAN = ["Renovasi rumah", "Biaya pendidikan", "Keperluan medis", "Mod
  * Form pengajuan kredit. Validasi di sini hanya membantu anggota; semua aturan dicek ulang di server
  * (backend/src/anggota/pengajuan.ts). Estimasi memakai jadwal mesin posting yang sama.
  */
-export function FormAjukan({ produk, plafon, hariIni, batasTanggal, namaMenunggu }: {
-    produk: Produk[]; plafon: number; hariIni: string; batasTanggal: string; namaMenunggu: string[]
+export function FormAjukan({ produk, hariIni, batasTanggal, namaMenunggu }: {
+    produk: Produk[]; hariIni: string; batasTanggal: string; namaMenunggu: string[]
 }) {
     const [hasil, kirim, proses] = useActionState(ajukanAction, null)
     const [kode, setKode] = useState(produk[0]?.kode ?? "")
@@ -41,7 +43,8 @@ export function FormAjukan({ produk, plafon, hariIni, batasTanggal, namaMenunggu
     const p = produk.find((x) => x.kode === kode)
     const besar = Number(besarTeks.replace(/\D/g, "") || "0")
     const est = useMemo(() => (p ? estimasiAngsuran(p, besar, lama) : null), [p, besar, lama])
-    const lewatGrade = !!p?.kunciGrade && besar > plafon
+    const batas = p?.batas ?? null
+    const lewatGrade = batas !== null && besar > batas
     const sudahMenunggu = !!p && namaMenunggu.includes(p.nama)
     const tglSah = tgl >= hariIni && tgl <= batasTanggal
     const lamaSah = !!p && lama >= 1 && lama <= p.maksCicilan
@@ -51,9 +54,11 @@ export function FormAjukan({ produk, plafon, hariIni, batasTanggal, namaMenunggu
     const syarat: { ok: boolean | null; judul: string; ket: string }[] = [
         { ok: true, judul: "Jenis pinjaman sesuai status keanggotaan", ket: "Hanya jenis yang boleh Anda ajukan yang ditampilkan." },
         {
-            ok: !p?.kunciGrade ? true : besar === 0 ? null : !lewatGrade,
-            judul: p?.kunciGrade ? "Besar pinjaman dalam plafon" : "Tidak dibatasi plafon grade",
-            ket: p?.kunciGrade ? `Maksimal ${rupiah(plafon)} untuk jenis ini.` : "Jenis ini tidak memakai batas plafon.",
+            ok: batas === null ? true : besar === 0 ? null : !lewatGrade,
+            judul: batas !== null ? "Besar pinjaman dalam plafon" : "Tidak dibatasi plafon",
+            ket: batas === null ? "Jenis ini tidak memakai batas plafon."
+                : batas === 0 ? "Nominal grade Anda belum diisi; hubungi pengurus."
+                : `Maksimal ${rupiah(batas)} ${p?.sumberBatas === "grade" ? "sesuai grade Anda" : "untuk jenis ini"}.`,
         },
         { ok: lamaSah, judul: "Lama pinjaman dalam batas", ket: `Maksimal ${p?.maksCicilan ?? "-"} bulan untuk jenis ini.` },
         { ok: tglSah, judul: "Tanggal realisasi sah", ket: "Mulai hari ini sampai paling lambat satu tahun ke depan." },
@@ -61,7 +66,7 @@ export function FormAjukan({ produk, plafon, hariIni, batasTanggal, namaMenunggu
     ]
     const siap = syarat.filter((s) => s.ok === true).length
 
-    const maksGeser = p?.kunciGrade ? Math.max(plafon, LANGKAH_GESER * 2) : BATAS_GESER
+    const maksGeser = batas !== null ? Math.max(batas, LANGKAH_GESER * 2) : BATAS_GESER
     const tenorPilihan = useMemo(() => {
         const maks = p?.maksCicilan ?? 1
         return [...new Set([...TENOR_UMUM.filter((n) => n <= maks), ...(maks <= 60 ? [maks] : [])])].sort((a, b) => a - b).slice(0, 8)
@@ -109,14 +114,14 @@ export function FormAjukan({ produk, plafon, hariIni, batasTanggal, namaMenunggu
                     <div className="hero relative overflow-hidden rounded-[var(--radius-kartu)] p-5">
                         <ShieldCheck size={84} strokeWidth={1} className="absolute -right-3 -top-2 opacity-15" aria-hidden="true" />
                         <p className="flex items-center gap-1.5 text-xs font-semibold uppercase tracking-[0.1em] opacity-80"><ShieldCheck size={14} />Plafon kredit anggota</p>
-                        {p?.kunciGrade ? (
+                        {batas !== null ? (
                             <>
-                                <p className="angka mt-2 text-[1.75rem] font-bold leading-tight tracking-tight"><span className="text-base font-medium opacity-80">Maks. </span>{rupiah(plafon)}</p>
-                                <p className="mt-1.5 text-sm leading-relaxed opacity-80">Sesuai grade Anda untuk jenis pinjaman ini.</p>
+                                <p className="angka mt-2 text-[1.75rem] font-bold leading-tight tracking-tight"><span className="text-base font-medium opacity-80">Maks. </span>{rupiah(batas)}</p>
+                                <p className="mt-1.5 text-sm leading-relaxed opacity-80">{p?.sumberBatas === "grade" ? "Sesuai grade Anda untuk jenis pinjaman ini." : "Batas maksimal plafond untuk jenis pinjaman ini."}</p>
                             </>
                         ) : (
                             <>
-                                <p className="mt-2 text-xl font-bold leading-tight">Tanpa batas plafon grade</p>
+                                <p className="mt-2 text-xl font-bold leading-tight">Tanpa batas plafon</p>
                                 <p className="mt-1.5 text-sm leading-relaxed opacity-80">Maksimal lama pinjaman {p?.maksCicilan ?? "-"} bulan untuk jenis ini.</p>
                             </>
                         )}
@@ -166,7 +171,7 @@ export function FormAjukan({ produk, plafon, hariIni, batasTanggal, namaMenunggu
                                 </button>
                             ))}
                         </div>
-                        {p?.kunciGrade && lewatGrade && <p className="text-xs font-medium text-keluar">Melebihi plafon Anda: {rupiah(plafon)}</p>}
+                        {batas !== null && lewatGrade && <p className="text-xs font-medium text-keluar">Melebihi plafon {p?.sumberBatas === "grade" ? "Anda" : "jenis ini"}: {rupiah(batas)}</p>}
                     </section>
 
                     <section className="space-y-3">
