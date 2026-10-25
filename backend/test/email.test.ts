@@ -230,3 +230,16 @@ test('kuota kirim per jam: email biasa dibatasi, verifikasi tidak', async () => 
         delete process.env.EMAIL_MAKS_PER_JAM;
     }
 });
+
+test('templat: kop koperasi, subjudul, poin, dan tabel rincian; teks polos tanpa penanda', () => {
+    const teks = 'Halo\n\n## Informasi akun\n\nUsername | budi\nKode anggota | 0523-1\n\n- satu\n- <dua>';
+    const h = htmlEmail({ judul: 'J', teks, kop: { nama: 'Kopkar X', alamat: 'Jl. A, Bekasi' } });
+    assert.match(h, /KOPKAR X/);
+    assert.match(h, /Jl\. A, Bekasi/);
+    assert.match(h, /<h2[^>]*>Informasi akun<\/h2>/);
+    assert.match(h, /<table/);
+    assert.match(h, /<li[^>]*>&lt;dua&gt;<\/li>/);
+    const t = teksEmail({ judul: 'J', teks });
+    assert.doesNotMatch(t, /## /);
+    assert.match(t, /Username: budi/);
+});

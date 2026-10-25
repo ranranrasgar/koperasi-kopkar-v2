@@ -30,7 +30,24 @@ export async function putuskanPendaftaranAction(id: number, setuju: boolean): Pr
             await tx((db) => antreEmail(db, setuju
                 ? {
                     jenis: "pendaftaran", ke: r.email!, judul: "Akun aplikasi anggota Anda sudah aktif",
-                    teks: `Halo ${r.username},\n\nPendaftaran Anda di aplikasi anggota Kopkar MJS sudah diverifikasi dan akun Anda sekarang aktif${r.kodeAnggota ? ` dan Anda tercatat sebagai anggota dengan kode ${r.kodeAnggota}` : ""}. Silakan masuk dengan username Anda atau lewat Google.`,
+                    teks: [
+                        `Yth. ${r.username},`,
+                        `Dengan hormat, pendaftaran akun Anda di aplikasi anggota koperasi telah diverifikasi dan disetujui oleh pengurus. Akun Anda kini aktif dan dapat digunakan.`,
+                        "## Informasi akun",
+                        [`Username | ${r.username}`, `Email terdaftar | ${r.email}`, ...(r.kodeAnggota ? [`Kode anggota | ${r.kodeAnggota}`] : []), "Status akun | Aktif"].join("\n"),
+                        "## Cara masuk",
+                        ["- Buka aplikasi anggota lewat tombol di bawah, atau alamat yang tertera di bagian akhir email ini.",
+                            "- Masukkan username dan password yang Anda buat saat mendaftar, atau pilih Masuk dengan Google bila akun Google Anda sudah dihubungkan.",
+                            "- Setelah masuk, Anda dapat melihat simpanan, pinjaman, potongan gaji, SHU, riwayat transaksi, dan notifikasi, serta mengajukan kredit."].join("\n"),
+                        "## Keamanan password",
+                        ["- Gunakan password yang kuat dan hanya Anda yang mengetahuinya. Pengurus koperasi tidak pernah meminta password Anda.",
+                            "- Mengganti password: masuk ke aplikasi, buka menu Akun, pilih Ganti password, isi password lama lalu password baru. Perangkat lain akan otomatis keluar dari akun Anda.",
+                            "- Bila password diberikan atau diatur oleh pengurus (bukan Anda sendiri), segera gantilah dengan langkah di atas pada saat masuk pertama kali.",
+                            "- Lupa password: pada halaman masuk pilih Lupa password, lalu ikuti tautan yang dikirim ke email Anda (berlaku 30 menit)."].join("\n"),
+                        "## Bantuan",
+                        "Bila ada data yang tidak sesuai atau Anda mengalami kendala saat masuk, hubungi pengurus koperasi melalui menu Pesan di aplikasi atau langsung ke sekretariat koperasi.",
+                        "Hormat kami,\nPengurus Koperasi",
+                    ].join("\n\n"),
                     tautan: dasar ? `${dasar}/masuk` : null,
                 }
                 : {

@@ -12,7 +12,7 @@ Anggota dan karyawan Mattel mendaftar akun sendiri di **aplikasi anggota**. Akun
 3. Email dibuktikan: lewat **kode 6 angka** yang dikirim ke email, atau otomatis bila memakai **Google**.
 4. Pendaftar melihat halaman **Pendaftaran diterima** (akun menunggu verifikasi admin), dengan tombol WhatsApp ke koperasi.
 5. Admin mendapat pemberitahuan, lalu memutuskan di **Keanggotaan → User Mobile** (filter *Anggota baru*).
-6. **Disetujui**: akun aktif, anggota dapat email pemberitahuan dan bisa masuk. **Ditolak**: akun tetap nonaktif, anggota dapat email penolakan.
+6. **Disetujui**: akun aktif, anggota dapat email resmi berkop koperasi berisi informasi akun (username, email, kode anggota), cara masuk, cara mengganti password, dan cara pemulihan bila lupa, lalu bisa masuk. **Ditolak**: akun tetap nonaktif, anggota dapat email penolakan.
 
 ## Aturan yang berlaku
 

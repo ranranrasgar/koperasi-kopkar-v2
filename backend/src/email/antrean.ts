@@ -1,5 +1,5 @@
 import nodemailer, { type Transporter } from 'nodemailer';
-import { htmlEmail, teksEmail } from './templat.ts';
+import { htmlEmail, teksEmail, type KopEmail } from './templat.ts';
 
 // Antrean email keluar (tabel email_antrean, anggota-web.sql). Penulis (aplikasi anggota dan admin) hanya memasukkan
 // baris ke antrean; pengiriman bertahap oleh pekerja (pekerja.ts) atau prosesAntrean. Tanpa SMTP (SMTP_HOST dan SMTP_FROM
@@ -86,6 +86,16 @@ export async function sisaKuota(db: Db): Promise<number> {
     return Math.max(0, Math.min(jam ? jam - r.jam : Infinity, hari ? hari - r.hari : Infinity));
 }
 
+/** Kop email resmi dari identitas koperasi; null bila tabel kosong atau gagal dibaca (email tetap terkirim dengan kop bawaan). */
+async function kopKoperasi(db: Db): Promise<KopEmail | null> {
+    try {
+        const k = (await db.query('SELECT nama_perusahaan, alamat_perusahaan1, kota_perusahaan FROM perusahaan ORDER BY id LIMIT 1')).rows[0];
+        const nama = String(k?.nama_perusahaan ?? '').trim();
+        if (!nama) return null;
+        return { nama, alamat: [k.alamat_perusahaan1, k.kota_perusahaan].map((x) => String(x ?? '').trim()).filter(Boolean).join(', ') };
+    } catch { return null; }
+}
+
 export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: number } = {}): Promise<HasilProses> {
     const batas = opsi.batas ?? 20;
     const ambil = async (prioritas: boolean, limit: number) => limit <= 0 ? [] : (await db.query(
@@ -99,6 +109,7 @@ export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: num
     const diambil = [...penting, ...biasa];
     const hasil: HasilProses = { terkirim: 0, gagal: 0, dicatat: 0, sisa: 0 };
     const t = ambilTransport();
+    const kop = diambil.length && t ? await kopKoperasi(db) : null;
 
     for (const r of diambil.sort((a, b) => Number(a.id) - Number(b.id))) {
         if (!t) {
@@ -110,7 +121,7 @@ export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: num
         try {
             await t.sendMail({
                 from: process.env.SMTP_FROM ?? 'Kopkar MJS <no-reply@localhost>', to: r.ke, subject: r.judul,
-                text: teksEmail({ judul: r.judul, teks: r.teks, tautan: r.tautan }), html: htmlEmail({ judul: r.judul, teks: r.teks, tautan: r.tautan }),
+                text: teksEmail({ judul: r.judul, teks: r.teks, tautan: r.tautan }), html: htmlEmail({ judul: r.judul, teks: r.teks, tautan: r.tautan, kop }),
                 attachments: r.lampiran ? [{ filename: r.lampiran_nama || 'lampiran.pdf', content: r.lampiran, contentType: /\.pdf$/i.test(r.lampiran_nama ?? '') ? 'application/pdf' : undefined }] : undefined,
             });
             await db.query(`UPDATE email_antrean SET status = 'terkirim', dikirim_pada = now(), galat = NULL, lampiran = NULL WHERE id = $1`, [r.id]);
