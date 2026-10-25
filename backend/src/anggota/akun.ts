@@ -216,13 +216,109 @@ async function kodeAnggotaBaru(db: pg.PoolClient) {
     return { urut: Number(r.urut), kode: `${r.bulan}-${String(r.urut).padStart(4, '0')}` };
 }
 
+/** Data kelengkapan anggota baru yang diisi admin saat menyetujui pendaftaran (semua string dari form; divalidasi di bersihkanLengkap). */
+export interface LengkapAnggota {
+    nama: string; jnsKelamin: string; alamat: string; kota: string; kodepos: string; hp: string; telpRmh: string;
+    bankNama: string; bankNoRek: string; bankAtasNama: string; grade: string; statusStaff: string;
+    rpGrade: string; pokok: string; wajib: string; sukarela: string;
+}
+
+/** Kunci pengaturan_web untuk nilai awal simpanan anggota baru (diatur di Pengaturan Perusahaan). */
+export const KUNCI_NILAI_AWAL = { pokok: 'anggota_baru_pokok', wajib: 'anggota_baru_wajib', sukarela: 'anggota_baru_sukarela' } as const;
+
+/** Angka rupiah tak negatif dari form (titik ribuan sudah dibuang pengirim), atau null bila tidak sah. */
+const uang = (s: string) => {
+    const n = Number(String(s ?? '').trim().replace(',', '.') || '0');
+    return Number.isFinite(n) && n >= 0 && n < 1e12 ? String(n) : null;
+};
+
+/** Rapikan dan periksa data kelengkapan; mengembalikan data bersih atau pesan galat. */
+export function bersihkanLengkap(x: LengkapAnggota): LengkapAnggota | string {
+    const t = (v: unknown, maks: number, label: string): string => {
+        const s = String(v ?? '').trim();
+        if (s.length > maks) throw new Error(`${label} maksimal ${maks} karakter`);
+        return s;
+    };
+    try {
+        const nama = t(x.nama, 50, 'Nama');
+        if (!nama) return 'Nama wajib diisi';
+        const jk = t(x.jnsKelamin, 1, 'Jenis kelamin').toUpperCase();
+        if (jk && jk !== 'L' && jk !== 'P') return 'Jenis kelamin harus L atau P';
+        const pos = t(x.kodepos, 6, 'Kode pos') || '0';
+        if (!/^\d+$/.test(pos)) return 'Kode pos harus angka';
+        const duit = (v: string, label: string) => { const u = uang(v); if (u === null) throw new Error(`${label} harus angka 0 atau lebih`); return u; };
+        return {
+            nama, jnsKelamin: jk, alamat: t(x.alamat, 100, 'Alamat'), kota: t(x.kota, 50, 'Kota'), kodepos: pos, hp: t(x.hp, 20, 'HP'), telpRmh: t(x.telpRmh, 20, 'Telepon rumah'),
+            bankNama: t(x.bankNama, 15, 'Nama bank'), bankNoRek: t(x.bankNoRek, 15, 'Nomor rekening'), bankAtasNama: t(x.bankAtasNama, 50, 'Atas nama rekening'),
+            grade: t(x.grade, 15, 'Grade'), statusStaff: t(x.statusStaff, 15, 'Status staff'),
+            rpGrade: duit(x.rpGrade, 'Nominal grade'), pokok: duit(x.pokok, 'Simpanan pokok'), wajib: duit(x.wajib, 'Simpanan wajib'), sukarela: duit(x.sukarela, 'Simpanan sukarela'),
+        };
+    } catch (e) {
+        return e instanceof Error ? e.message : 'Data tidak valid';
+    }
+}
+
+/**
+ * Nilai awal simpanan anggota baru: dari pengaturan koperasi bila diisi (Pengaturan Perusahaan), selain itu tebakan dari anggota baru
+ * (sekitar 400 terakhir) yang bergrade sama, nilai yang paling sering dipakai. `dariPengaturan` memberi tahu mana yang berasal dari pengaturan.
+ */
+export async function nilaiAwalAnggotaBaru(db: Pick<pg.PoolClient, 'query'>, grade: string) {
+    const set = new Map((await db.query<{ kunci: string; nilai: string }>(
+        'SELECT kunci, nilai FROM pengaturan_web WHERE kunci = ANY($1::text[])', [Object.values(KUNCI_NILAI_AWAL)])).rows.map((r) => [r.kunci, r.nilai]));
+    const tebakan = (await db.query<{ rp_grade: string; pokok: string; wajib: string; sukarela: string }>(
+        `WITH terbaru AS (SELECT * FROM anggota WHERE aktif AND agt_non_agt AND urut > (SELECT max(urut) - 400 FROM anggota)),
+              pilih AS (SELECT * FROM terbaru WHERE grade = $1 UNION ALL SELECT * FROM terbaru WHERE NOT EXISTS (SELECT 1 FROM terbaru WHERE grade = $1))
+         SELECT mode() WITHIN GROUP (ORDER BY rp_grade) rp_grade, mode() WITHIN GROUP (ORDER BY simpanan_pokok) pokok,
+                mode() WITHIN GROUP (ORDER BY simpanan_wajib) wajib, mode() WITHIN GROUP (ORDER BY simpanan_sukarela) sukarela FROM pilih`, [grade])).rows[0];
+    const ambil = (kunci: string, cadangan: string | undefined) => {
+        const s = set.get(kunci);
+        const n = s !== undefined && s !== '' ? uang(s) : null;
+        return { nilai: Number(n ?? cadangan ?? 0), pengaturan: n !== null };
+    };
+    const p = ambil(KUNCI_NILAI_AWAL.pokok, tebakan?.pokok), w = ambil(KUNCI_NILAI_AWAL.wajib, tebakan?.wajib), s = ambil(KUNCI_NILAI_AWAL.sukarela, tebakan?.sukarela);
+    return {
+        rpGrade: Number(tebakan?.rp_grade ?? 0), pokok: p.nilai, wajib: w.nilai, sukarela: s.nilai,
+        dariPengaturan: { pokok: p.pengaturan, wajib: w.pengaturan, sukarela: s.pengaturan },
+    };
+}
+
+export type DataLengkapi =
+    | { ok: true; sudahAnggota: true; username: string; kode: string }
+    | { ok: true; sudahAnggota: false; username: string; nik: string; form: LengkapAnggota; dariPengaturan: { pokok: boolean; wajib: boolean; sukarela: boolean } }
+    | { ok: false; error: string };
+
+/**
+ * Bahan form kelengkapan anggota untuk akun yang akan disetujui atau dijadikan anggota: data karyawan Mattel sebagai isian awal beserta nilai awal
+ * simpanan. Bila akun sudah punya anggota, atau NIK-nya sudah ada di data anggota (hanya ditautkan), tidak ada form (sudahAnggota).
+ */
+export async function dataLengkapiAnggota(db: Pick<pg.PoolClient, 'query'>, userId: number): Promise<DataLengkapi> {
+    const u = (await db.query<{ username: string; anggota_id: string | null; kode_agt: string; karyawan_mattel_id: string | null }>(
+        'SELECT username, anggota_id::text, kode_agt, karyawan_mattel_id::text FROM app_user WHERE id = $1', [userId])).rows[0];
+    if (!u) return { ok: false, error: 'Akun tidak ditemukan' };
+    if (u.anggota_id) return { ok: true, sudahAnggota: true, username: u.username, kode: u.kode_agt };
+    if (!u.karyawan_mattel_id) return { ok: false, error: 'Akun ini bukan akun karyawan Mattel, tidak ada data untuk membuat anggota.' };
+    const k = (await db.query<{ nik: string; nama: string | null; sts: string | null; grade: string | null; emphone: string | null; emadd1: string | null; no_rek: string | null }>(
+        'SELECT nik, nama, sts, grade, emphone, emadd1, no_rek FROM karyawan_mattel WHERE id = $1', [u.karyawan_mattel_id])).rows[0];
+    if (!k) return { ok: false, error: 'Data karyawan Mattel tidak ditemukan' };
+    const ada = (await db.query<{ kode_agt: string }>('SELECT kode_agt FROM anggota WHERE nik = $1 AND aktif ORDER BY id DESC LIMIT 1', [k.nik])).rows[0];
+    if (ada) return { ok: true, sudahAnggota: true, username: u.username, kode: ada.kode_agt };
+    const grade = (k.grade ?? '').trim();
+    const awal = await nilaiAwalAnggotaBaru(db, grade);
+    const nama = (k.nama ?? '').trim();
+    return {
+        ok: true, sudahAnggota: false, username: u.username, nik: k.nik, dariPengaturan: awal.dariPengaturan,
+        form: { nama, jnsKelamin: '', alamat: (k.emadd1 ?? '').trim(), kota: '', kodepos: '0', hp: (k.emphone ?? '').trim(), telpRmh: '', bankNama: '', bankNoRek: (k.no_rek ?? '').trim(),
+            bankAtasNama: nama, grade, statusStaff: (k.sts ?? '').trim(), rpGrade: String(awal.rpGrade), pokok: String(awal.pokok), wajib: String(awal.wajib), sukarela: String(awal.sukarela) },
+    };
+}
+
 /**
  * Jadikan akun karyawan Mattel sebagai anggota koperasi: bila NIK-nya sudah ada di data anggota (aktif), akun ditautkan ke sana;
  * bila belum, dibuat baris anggota baru (+ anggota_detail kosong) dengan kode anggota berformat lama, data dari karyawan_mattel,
  * dan nilai grade/simpanan bawaan mengikuti anggota aktif terbaru berGrade sama (nilai yang paling sering dipakai).
  * Akun yang sudah punya anggota tidak diubah. Jalankan di dalam transaksi.
  */
-export async function jadikanAnggota(db: pg.PoolClient, userId: number, oleh: Pelaksana):
+export async function jadikanAnggota(db: pg.PoolClient, userId: number, oleh: Pelaksana, lengkap?: LengkapAnggota):
     Promise<{ ok: true; kode: string; dibuat: boolean } | { ok: false; error: string }> {
     const u = (await db.query<{ anggota_id: string | null; kode_agt: string; karyawan_mattel_id: string | null }>(
         'SELECT anggota_id::text, kode_agt, karyawan_mattel_id::text FROM app_user WHERE id = $1 FOR UPDATE', [userId])).rows[0];
@@ -241,20 +337,28 @@ export async function jadikanAnggota(db: pg.PoolClient, userId: number, oleh: Pe
         if (!ada.aktif) return { ok: false, error: 'Keanggotaan dengan NIK ini tidak aktif. Aktifkan lewat data anggota.' };
         anggotaId = ada.id; kode = ada.kode_agt;
     } else {
+        // Data dari form kelengkapan admin; tanpa form, dipakai data karyawan Mattel dan nilai awal dari pengaturan (atau tebakan).
         const grade = (k.grade ?? '').trim();
-        const bawaan = (await db.query<{ rp_grade: string; pokok: string; wajib: string; sukarela: string }>(
-            `WITH terbaru AS (SELECT * FROM anggota WHERE aktif AND agt_non_agt AND urut > (SELECT max(urut) - 400 FROM anggota)),
-                  pilih AS (SELECT * FROM terbaru WHERE grade = $1 UNION ALL SELECT * FROM terbaru WHERE NOT EXISTS (SELECT 1 FROM terbaru WHERE grade = $1))
-             SELECT mode() WITHIN GROUP (ORDER BY rp_grade) rp_grade, mode() WITHIN GROUP (ORDER BY simpanan_pokok) pokok,
-                    mode() WITHIN GROUP (ORDER BY simpanan_wajib) wajib, mode() WITHIN GROUP (ORDER BY simpanan_sukarela) sukarela FROM pilih`, [grade])).rows[0];
+        const awal = await nilaiAwalAnggotaBaru(db, grade);
+        let l: LengkapAnggota;
+        if (lengkap) {
+            const b = bersihkanLengkap(lengkap);
+            if (typeof b === 'string') return { ok: false, error: b };
+            l = b;
+        } else {
+            l = { nama: (k.nama ?? '').trim().slice(0, 50), jnsKelamin: '', alamat: (k.emadd1 ?? '').trim().slice(0, 100), kota: '', kodepos: '0',
+                hp: (k.emphone ?? '').trim().slice(0, 20), telpRmh: '', bankNama: '', bankNoRek: (k.no_rek ?? '').trim().slice(0, 15), bankAtasNama: '',
+                grade: grade.slice(0, 15), statusStaff: (k.sts ?? '').trim().slice(0, 15), rpGrade: String(awal.rpGrade), pokok: String(awal.pokok),
+                wajib: String(awal.wajib), sukarela: String(awal.sukarela) };
+        }
         const { urut, kode: kodeBaru } = await kodeAnggotaBaru(db);
         anggotaId = (await db.query<{ id: string }>(
-            `INSERT INTO anggota (urut, status_staff, aktif, agt_non_agt, grade, rp_grade, kode_agt, nik, nama, alamat, hp, bank_no_rek, tglpencatatan,
-                                  simpanan_pokok, simpanan_wajib, simpanan_sukarela, opr, karyawan_mattel_id, operator_id)
-             VALUES ($1, $2, true, true, $3, $4, $5, $6, $7, $8, $9, $10, (now() AT TIME ZONE 'Asia/Jakarta')::date, $11, $12, $13, $14, $15, $16) RETURNING id::text`,
-            [urut, (k.sts ?? '').trim().slice(0, 15), grade.slice(0, 15), bawaan?.rp_grade ?? 0, kodeBaru, k.nik, (k.nama ?? '').trim().slice(0, 50),
-                (k.emadd1 ?? '').trim().slice(0, 100), (k.emphone ?? '').trim().slice(0, 20), (k.no_rek ?? '').trim().slice(0, 15),
-                bawaan?.pokok ?? 0, bawaan?.wajib ?? 0, bawaan?.sukarela ?? 0, oleh.nama.slice(0, 15), k.id, oleh.id])).rows[0].id;
+            `INSERT INTO anggota (urut, status_staff, aktif, agt_non_agt, grade, rp_grade, kode_agt, nik, nama, jns_kelamin, alamat, kota, kodepos, hp, telp_rmh,
+                                  bank_nama, bank_no_rek, bank_atas_nama, tglpencatatan, simpanan_pokok, simpanan_wajib, simpanan_sukarela, opr, karyawan_mattel_id, operator_id)
+             VALUES ($1, $2, true, true, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, (now() AT TIME ZONE 'Asia/Jakarta')::date, $17, $18, $19, $20, $21, $22)
+             RETURNING id::text`,
+            [urut, l.statusStaff, l.grade, l.rpGrade, kodeBaru, k.nik, l.nama, l.jnsKelamin, l.alamat, l.kota, Number(l.kodepos), l.hp, l.telpRmh,
+                l.bankNama, l.bankNoRek, l.bankAtasNama, l.pokok, l.wajib, l.sukarela, oleh.nama.slice(0, 15), k.id, oleh.id])).rows[0].id;
         await db.query('INSERT INTO anggota_detail (anggota_id, urut, kode_agt) SELECT $1, coalesce(max(urut), 0) + 1, $2 FROM anggota_detail', [anggotaId, kodeBaru]);
         kode = kodeBaru; dibuat = true;
     }
@@ -266,7 +370,7 @@ export async function jadikanAnggota(db: pg.PoolClient, userId: number, oleh: Pe
  * Setujui (akun aktif) atau tolak (akun tetap nonaktif) pendaftaran yang menunggu. Penyetujuan mensyaratkan email
  * terverifikasi, supaya pemberitahuan dan lupa password tidak jatuh ke alamat yang belum terbukti milik pendaftar.
  */
-export async function putuskanPendaftaran(db: pg.PoolClient, userId: number, setuju: boolean, oleh?: Pelaksana): Promise<HasilPutusan> {
+export async function putuskanPendaftaran(db: pg.PoolClient, userId: number, setuju: boolean, oleh?: Pelaksana, lengkap?: LengkapAnggota): Promise<HasilPutusan> {
     const u = (await db.query<{ username: string; email: string | null; verif: boolean }>(
         `SELECT u.username, u.email, coalesce(v.terverifikasi_pada IS NOT NULL AND v.email = lower(trim(u.email)), false) verif
            FROM app_user u LEFT JOIN app_user_email_verif v ON v.app_user_id = u.id
@@ -277,7 +381,7 @@ export async function putuskanPendaftaran(db: pg.PoolClient, userId: number, set
     // Disetujui: karyawan Mattel yang belum anggota otomatis dijadikan anggota (kode anggota baru), pendaftar anggota lama tinggal aktif.
     let kodeAnggota: string | undefined;
     if (setuju && oleh) {
-        const a = await jadikanAnggota(db, userId, oleh);
+        const a = await jadikanAnggota(db, userId, oleh, lengkap);
         if (!a.ok) throw new Error(a.error);
         kodeAnggota = a.kode;
     }

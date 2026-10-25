@@ -8,8 +8,21 @@ Semua keputusan dilakukan di **Keanggotaan → User Mobile**. Pilih filter **Ang
 ## Menyetujui
 
 1. Periksa baris pendaftar: nama, NIK (kolom KPK), dan email.
-2. Klik **centang hijau (Setujui)**, lalu konfirmasi.
-3. Akun menjadi aktif. Bila pendaftar karyawan Mattel yang belum anggota, data anggota dibuat otomatis dan **kode anggota** tampil di pesan hasil. Kode itu juga dikirim ke email pendaftar.
+2. Klik **centang hijau (Setujui)**.
+3. **Pendaftar yang belum anggota:** muncul form **Kelengkapan data anggota baru**. Isiannya sudah terisi dari data Karyawan Mattel dan nilai awal simpanan dari Pengaturan Perusahaan; periksa, lengkapi, dan ubah bila perlu (lihat bagian di bawah), lalu klik **Setujui dan jadikan anggota**.
+4. **Pendaftar yang sudah punya anggota** (NIK sudah terdaftar): tidak ada form, cukup konfirmasi; akun ditautkan ke anggota itu.
+5. Akun menjadi aktif, dan **kode anggota** tampil di pesan hasil serta dikirim ke email pendaftar.
+
+### Form kelengkapan data anggota baru
+
+| Bagian | Isi |
+| --- | --- |
+| Identitas | Nama lengkap (wajib), jenis kelamin, alamat, kota, kode pos, HP, telepon rumah |
+| Rekening | Bank, nomor rekening, atas nama rekening |
+| Kepegawaian | Grade, status staff (Staff atau No Staff), dan nominal grade (dasar plafon pinjaman) |
+| **Simpanan awal** | **Pokok, wajib, dan sukarela** yang dipotong tiap bulan. Di bawah tiap kolom tertulis asal nilainya: *Dari Pengaturan Perusahaan* atau *Tebakan dari anggota baru* |
+
+Nilai simpanan boleh diubah admin untuk anggota ini saja; pengaturan umumnya tidak ikut berubah. Bila ada isian yang tidak sah (misalnya nama kosong, angka negatif, atau teks melebihi batas), pesan galat muncul di form dan **tidak ada yang tersimpan**, jadi akun tetap menunggu keputusan.
 
 > **Syarat:** email pendaftar harus sudah terverifikasi. Bila belum, tombol Setujui tidak aktif.
 
@@ -21,7 +34,7 @@ Klik **silang oranye (Tolak)**. Akun tetap nonaktif, statusnya menjadi **Ditolak
 
 ## Menjadikan anggota (akun yang sudah aktif)
 
-Akun karyawan Mattel yang sudah aktif tetapi belum anggota (misalnya disetujui sebelum fitur ini ada) punya tombol **ikon tambah orang (Jadikan anggota)**. Hasilnya sama dengan persetujuan: data anggota dibuat dengan kode baru, atau akun ditautkan ke anggota dengan NIK yang sama.
+Akun karyawan Mattel yang sudah aktif tetapi belum anggota (misalnya disetujui sebelum fitur ini ada) punya tombol **ikon tambah orang (Jadikan anggota)**. Form kelengkapan yang sama muncul untuk dilengkapi sebelum data anggota dibuat dengan kode baru. Bila NIK sudah punya anggota, akun hanya ditautkan.
 
 ## Menghapus akun
 

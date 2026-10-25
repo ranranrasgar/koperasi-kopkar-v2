@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import {
-    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
+    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, bersihkanLengkap, dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
     hashJawaban, hashPasswordAnggota, masukAnggota, pertanyaanUntuk, resetLewatJawaban,
 } from '../src/anggota/akun.ts';
 
@@ -354,5 +354,41 @@ test('hapus keanggotaan: anggota baru dari karyawan Mattel hilang, karyawan kemb
         const tolak = await hapusKeanggotaan(db, a.id);
         assert.equal(tolak.ok, false);
         assert.match((tolak as { error: string }).error, /simpanan/);
+    });
+});
+
+test('kelengkapan anggota baru: nilai awal dari pengaturan, diubah admin saat menyetujui, validasi data', async () => {
+    await inTx(async (db) => {
+        const k = (await db.query(`SELECT k.nik FROM karyawan_mattel k WHERE length(k.nik) = 6
+            AND NOT EXISTS (SELECT 1 FROM anggota a WHERE a.nik = k.nik) AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.kode_agt = k.nik) LIMIT 1`)).rows[0];
+        const r = await daftarAkun(db, { username: 'uji_lengkap', password: 'Rahasia123', ulangi: 'Rahasia123', nik: k.nik, email: 'uji.lengkap@contoh.id' }, { sub: 'sub-uji-lengkap' });
+        const id = Number((r as { userId: number }).userId);
+        const oleh = (await db.query('SELECT id, nama FROM opr ORDER BY id LIMIT 1')).rows[0];
+        for (const [kunci, nilai] of [['anggota_baru_pokok', '100000'], ['anggota_baru_wajib', '50000'], ['anggota_baru_sukarela', '25000']]) {
+            await db.query(`INSERT INTO pengaturan_web (kunci, nilai) VALUES ($1, $2) ON CONFLICT (kunci) DO UPDATE SET nilai = EXCLUDED.nilai`, [kunci, nilai]);
+        }
+        const d = await dataLengkapiAnggota(db, id);
+        assert.equal(d.ok, true);
+        assert.equal((d as { sudahAnggota: boolean }).sudahAnggota, false);
+        const form = (d as { form: Parameters<typeof bersihkanLengkap>[0] }).form;
+        assert.deepEqual([form.pokok, form.wajib, form.sukarela], ['100000', '50000', '25000']);
+        assert.deepEqual((d as { dariPengaturan: object }).dariPengaturan, { pokok: true, wajib: true, sukarela: true });
+
+        assert.equal(typeof bersihkanLengkap({ ...form, nama: '' }), 'string');
+        assert.equal(typeof bersihkanLengkap({ ...form, pokok: '-5' }), 'string');
+        assert.equal(typeof bersihkanLengkap({ ...form, jnsKelamin: 'X' }), 'string');
+
+        // Admin mengubah nilai dan melengkapi data saat menyetujui.
+        const h = await putuskanPendaftaran(db, id, true, { id: Number(oleh.id), nama: oleh.nama },
+            { ...form, nama: 'Nama Uji Lengkap', jnsKelamin: 'p', kota: 'Bekasi', kodepos: '17530', bankNama: 'BCA', wajib: '75000', sukarela: '0' });
+        assert.equal(h.ok, true);
+        const a = (await db.query('SELECT * FROM anggota WHERE kode_agt = $1', [(h as { kodeAnggota: string }).kodeAnggota])).rows[0];
+        assert.equal(a.nama, 'Nama Uji Lengkap');
+        assert.equal(a.jns_kelamin, 'P');
+        assert.equal(a.kota, 'Bekasi');
+        assert.equal(a.kodepos, 17530);
+        assert.equal(Number(a.simpanan_pokok), 100000);
+        assert.equal(Number(a.simpanan_wajib), 75000);
+        assert.equal(Number(a.simpanan_sukarela), 0);
     });
 });

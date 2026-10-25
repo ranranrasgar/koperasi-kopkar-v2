@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { modeUji, tx } from "@/lib/db"
 import type { Db } from "@kopkar/backend/src/db.ts"
+import { KUNCI_NILAI_AWAL } from "@kopkar/backend/src/anggota/akun.ts"
 import { GalatSesi, operatorAktif } from "@/lib/operator"
 import { jenisGambar } from "@/lib/gambar"
 import { MENU } from "@/config/akses"
@@ -83,6 +84,24 @@ export async function simpanKontakWaAction(_: HasilSimpan, f: FormData): Promise
         else await db.query(`INSERT INTO pengaturan_web (kunci, nilai, diubah_pada) VALUES ('wa_kontak', $1, now())
             ON CONFLICT (kunci) DO UPDATE SET nilai = EXCLUDED.nilai, diubah_pada = now()`, [nomor])
         return nomor ? "Nomor WhatsApp disimpan" : "Nomor WhatsApp dihapus"
+    })
+}
+
+/**
+ * Nilai awal simpanan pokok, wajib, dan sukarela untuk anggota baru dari pendaftaran (pengaturan_web). Admin masih bisa mengubahnya di form
+ * kelengkapan saat menyetujui. Kosong = kunci dihapus, sehingga dipakai tebakan dari anggota baru bergrade sama.
+ */
+export async function simpanNilaiAwalAnggotaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
+    return simpan(MENU.company, "/dashboard/settings", async (db) => {
+        for (const [bidang, label] of [["pokok", "Simpanan pokok"], ["wajib", "Simpanan wajib"], ["sukarela", "Simpanan sukarela"]] as const) {
+            const mentah = String(f.get(bidang) ?? "").trim()
+            const kunci = KUNCI_NILAI_AWAL[bidang]
+            if (!mentah) { await db.query("DELETE FROM pengaturan_web WHERE kunci = $1", [kunci]); continue }
+            const n = angka(f, bidang, label, { min: 0, maks: 999_999_999_999 })
+            await db.query(`INSERT INTO pengaturan_web (kunci, nilai, diubah_pada) VALUES ($1, $2, now())
+                ON CONFLICT (kunci) DO UPDATE SET nilai = EXCLUDED.nilai, diubah_pada = now()`, [kunci, n])
+        }
+        return "Nilai awal anggota baru disimpan"
     })
 }
 

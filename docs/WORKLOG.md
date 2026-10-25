@@ -301,6 +301,12 @@ Desktop sudah tidak dipakai, jadi web mengambil alih Generate dan Posting potong
 
 ---
 
+## 2026-10-25 — Form kelengkapan anggota baru dan nilai awal simpanan
+
+- Menyetujui pendaftaran (dan tombol Jadikan anggota) di User Mobile membuka modal `FormLengkapiAnggota` bila akun belum punya anggota: data karyawan Mattel + nilai awal simpanan, semua bisa diubah. Backend: `dataLengkapiAnggota`, `bersihkanLengkap`, `nilaiAwalAnggotaBaru`, `LengkapAnggota` di `backend/src/anggota/akun.ts`; `putuskanPendaftaran` dan `jadikanAnggota` menerima `lengkap` opsional (tanpa itu, perilaku lama dengan nilai awal dari pengaturan).
+- Nilai awal pokok/wajib/sukarela disimpan di `pengaturan_web` (`anggota_baru_pokok|wajib|sukarela`), diatur di kartu baru Pengaturan Perusahaan; kosong = tebakan modus lama. Menu Pengaturan Perusahaan dipindah ke grup Sistem di `config/menu.ts`.
+- Uji: `anggota-akun.test.ts` 16/16 (database uji). Belum dicoba lewat tampilan browser (butuh login operator).
+
 ## 2026-10-25 — Panduan khusus admin, hapus keanggotaan, email resmi, EMAIL_UJI_KE
 
 - **Panduan khusus admin**: kolom `panduan_kategori.khusus_admin` (di `panduan.sql`), diisi dari `khusus: admin` di `_kategori.md`; `adminPanduan(o)` (superadmin atau grup admin) di `lib/operator.ts` disaring pada `pohonPanduan`, `artikelPanduan`, `panduanUntukHalaman`, `cariPanduan`. Kategori baru `11-teknologi-aplikasi` (3 artikel: teknologi, database/keamanan, layanan/pemeliharaan). Layar Kelola tetap memuat semua.

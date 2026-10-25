@@ -210,11 +210,6 @@ export const allGroups: MenuGroup[] = [
         groupLabel: "Data Master",
         items: [
             {
-                label: "Pengaturan Perusahaan",
-                icon: "business",
-                href: "/dashboard/settings"
-            },
-            {
                 label: "Jenis Pinjaman",
                 icon: "sell",
                 href: "/dashboard/settings/jenis-pinjaman"
@@ -244,6 +239,11 @@ export const allGroups: MenuGroup[] = [
     {
         groupLabel: "Sistem",
         items: [
+            {
+                label: "Pengaturan Perusahaan",
+                icon: "business",
+                href: "/dashboard/settings"
+            },
             {
                 label: "Operator",
                 icon: "manage_accounts",

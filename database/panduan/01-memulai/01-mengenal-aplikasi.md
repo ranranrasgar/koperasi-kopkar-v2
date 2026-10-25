@@ -17,9 +17,9 @@ Menu samping disusun dari yang paling sering dipakai sehari-hari ke yang jarang,
 | Potongan Gaji | Potongan gaji bulanan anggota | Generate & Posting, Transaksi Potongan |
 | Akuntansi | Jurnal, kas dan bank, buku besar, neraca saldo, laporan keuangan, bagan akun | Jurnal Umum, Bank Book, Buku Besar, Trial Balance, Laporan Keuangan, Chart of Accounts |
 | Tutup Buku & SHU | Proses akhir tahun, berurutan: tutup buku lalu SHU | Tutup Buku, Sisa Hasil Usaha (SHU) |
-| Data Master | Aturan produk dan identitas koperasi | Pengaturan Perusahaan, Jenis Pinjaman, Jenis Simpanan |
+| Data Master | Aturan produk | Jenis Pinjaman, Jenis Simpanan |
 | Komunikasi | Pesan ke aplikasi anggota | Kirim Notifikasi, Himbauan & Promo |
-| Sistem | Hak akses, operator, cadangan, mode uji, panduan | Operator, Kelola Hak Akses, Backup & Restore, Mode Uji / Live, Kelola Panduan |
+| Sistem | Identitas koperasi, nilai awal anggota baru, hak akses, operator, cadangan, mode uji, panduan | Pengaturan Perusahaan, Operator, Kelola Hak Akses, Backup & Restore, Mode Uji / Live, Kelola Panduan |
 
 ## Alur data dari transaksi ke laporan
 

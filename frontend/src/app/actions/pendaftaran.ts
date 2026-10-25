@@ -1,9 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran } from "@kopkar/backend/src/anggota/akun.ts"
+import { dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, type DataLengkapi, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
 import { antreEmail } from "@kopkar/backend/src/email/antrean.ts"
-import { modeUji, query, tx } from "@/lib/db"
+import { modeUji, pool, query, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, type Operator } from "@/lib/operator"
 import { MENU } from "@/config/akses"
 
@@ -18,10 +18,10 @@ const bolehHapusAkunAnggota = (o: Pick<Operator, "superadmin" | "grup">) => o.su
  * Setujui atau tolak pendaftaran akun baru dari aplikasi anggota. Lewat tx() supaya ikut di-rollback di mode uji.
  * Pendaftar diberi tahu lewat email (ke email yang sudah terverifikasi); gagal kirim tidak membatalkan keputusan.
  */
-export async function putuskanPendaftaranAction(id: number, setuju: boolean): Promise<HasilPendaftaran> {
+export async function putuskanPendaftaranAction(id: number, setuju: boolean, lengkap?: LengkapAnggota): Promise<HasilPendaftaran> {
     try {
         const o = await operatorAktif(MENU_USER)
-        const r = await tx((db) => putuskanPendaftaran(db as never, id, setuju, { id: o.id, nama: o.nama }))
+        const r = await tx((db) => putuskanPendaftaran(db as never, id, setuju, { id: o.id, nama: o.nama }, lengkap))
         if (!r.ok) return r
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
         revalidatePath("/dashboard/members", "layout")
@@ -62,14 +62,25 @@ export async function putuskanPendaftaranAction(id: number, setuju: boolean): Pr
     }
 }
 
+/** Bahan form kelengkapan anggota (isian awal dari data karyawan Mattel dan nilai awal simpanan) untuk akun yang akan disetujui atau dijadikan anggota. */
+export async function dataLengkapiAnggotaAction(id: number): Promise<DataLengkapi> {
+    try {
+        await operatorAktif(MENU_USER)
+        return await dataLengkapiAnggota({ query: (t: string, p?: unknown[]) => pool.query(t, p) } as never, id)
+    } catch (e) {
+        if (!(e instanceof GalatSesi)) console.error("data kelengkapan anggota gagal:", e)
+        return { ok: false, error: e instanceof Error ? e.message : "Gagal memuat data" }
+    }
+}
+
 /**
  * Jadikan akun karyawan Mattel yang sudah aktif (disetujui sebelum ada fitur ini) sebagai anggota: dibuatkan data anggota
  * dengan kode anggota berformat lama, atau ditautkan ke data anggota yang sudah ada untuk NIK itu.
  */
-export async function jadikanAnggotaAction(id: number): Promise<HasilPendaftaran> {
+export async function jadikanAnggotaAction(id: number, lengkap?: LengkapAnggota): Promise<HasilPendaftaran> {
     try {
         const o = await operatorAktif(MENU_USER)
-        const r = await tx((db) => jadikanAnggota(db as never, id, { id: o.id, nama: o.nama }))
+        const r = await tx((db) => jadikanAnggota(db as never, id, { id: o.id, nama: o.nama }, lengkap))
         if (!r.ok) return r
         const pesan = r.dibuat ? `Akun dijadikan anggota, kode anggota ${r.kode}` : `Akun ditautkan ke anggota ${r.kode}`
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
