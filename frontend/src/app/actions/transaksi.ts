@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache"
 import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpanan.ts"
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
+import { kirimInfoPencairan } from "@kopkar/backend/src/anggota/info-pinjaman.ts"
 import { bacaJurnalUmum, hapusJurnalUmum, postJurnalUmum, ubahJurnalUmum, type BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { bacaBankBook, hapusBankBook, simpanBankBook, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
@@ -163,7 +164,14 @@ export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasi
             pokok: uang(f, "pokok", "Pokok pinjaman"), lama: bulat(f, "lama", "Lama angsuran"), kasPerkiraanId: teks(f, "kas"), opr,
             persenBunga: bolehUbahBunga(o) ? bungaIsian : undefined,
         }))
-        return { ok: true, pesan: `Pinjaman ${r.noPinjaman} dicairkan`,
+        // Kabari anggota: notifikasi di aplikasi dan email berisi informasi kredit, jadwal angsuran, dan PDF-nya. Mode uji tidak menyimpan
+        // apa pun, jadi tidak mengirim; kegagalan kirim tidak membatalkan pencairan yang sudah tersimpan.
+        let kabar = ""
+        if (!(await modeUji())) {
+            const h = await kirimInfoPencairan(pool, r.noPinjaman).catch((e) => { console.error("kirim info pencairan gagal:", e); return null })
+            kabar = h ? (h.email > 0 ? "; notifikasi dan email jadwal angsuran dikirim ke anggota" : "; notifikasi dikirim ke anggota (tanpa email: belum ada email terverifikasi)") : "; notifikasi ke anggota gagal dikirim"
+        }
+        return { ok: true, pesan: `Pinjaman ${r.noPinjaman} dicairkan${kabar}`,
             rincian: { "No. Pinjaman": r.noPinjaman, "Total jasa": rp(r.jasaTotal) },
             jadwal: r.jadwal.map((j) => ({ ke: j.ke, tanggal: j.tanggal, pokok: rp(j.pokok), jasa: rp(j.jasa), adm: 0, provisi: 0 })) }
     })

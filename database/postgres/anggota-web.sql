@@ -135,6 +135,9 @@ CREATE TABLE IF NOT EXISTS email_antrean (
     coba_lagi_pada timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS ix_email_antrean_status ON email_antrean (status, coba_lagi_pada);
+-- Lampiran satu berkas (mis. PDF jadwal angsuran) disimpan sampai email terkirim, lalu dikosongkan.
+ALTER TABLE email_antrean ADD COLUMN IF NOT EXISTS lampiran_nama varchar(150);
+ALTER TABLE email_antrean ADD COLUMN IF NOT EXISTS lampiran bytea;
 
 -- Verifikasi kepemilikan email per akun. Kode 6 angka (disimpan sebagai hash), berlaku 15 menit, maks. 5 salah.
 -- aktivasi = akun dibuat lewat pendaftaran dan baru aktif (app_user.status) setelah email terverifikasi.

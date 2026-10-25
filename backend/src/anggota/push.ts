@@ -19,6 +19,10 @@ export interface IsiNotifikasi {
     email?: boolean
     /** Kategori email di antrean: himbauan, promo, status_pengajuan, dst. */
     jenisEmail?: string
+    /** Isi email yang lebih panjang dari notifikasi (setelah sapaan). Bawaan: isi notifikasi. */
+    teksEmail?: string
+    /** Lampiran email (mis. PDF jadwal angsuran); tidak ikut push. */
+    lampiran?: { nama: string; isi: Buffer }
 }
 export interface HasilKirim { penerima: number; perangkat: number; dikirim: number; gagal: number; email: number }
 
@@ -186,7 +190,7 @@ async function emailKeAnggota(db: Db, anggotaIds: number[], n: IsiNotifikasi): P
         const tautan = dasar ? `${dasar}${n.url ?? '/notifikasi'}` : null;
         return await antreEmailBanyak(db, penerima.map((p) => ({
             jenis: n.jenisEmail ?? 'notifikasi', ke: p.email, judul: n.judul, tautan,
-            teks: `Yth. ${p.nama || 'anggota'},\n\n${n.isi}`,
+            teks: `Yth. ${p.nama || 'anggota'},\n\n${n.teksEmail ?? n.isi}`, lampiran: n.lampiran ?? null,
         })));
     } catch (e) {
         console.error('antre email notifikasi gagal:', (e as Error).message);

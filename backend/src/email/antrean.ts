@@ -12,7 +12,8 @@ import { htmlEmail, teksEmail } from './templat.ts';
 
 interface Db { query: (sql: string, params?: unknown[]) => Promise<{ rows: any[]; rowCount?: number | null }> }
 
-export interface EmailKeluar { jenis: string; ke: string; judul: string; teks: string; tautan?: string | null }
+/** lampiran: satu berkas (mis. PDF); disimpan di antrean sampai email terkirim. */
+export interface EmailKeluar { jenis: string; ke: string; judul: string; teks: string; tautan?: string | null; lampiran?: { nama: string; isi: Buffer } | null }
 
 const MAKS_PERCOBAAN = 3;
 /** Jenis yang isinya (mis. kode verifikasi) ikut ditulis ke log saat SMTP belum diatur, untuk pengujian di komputer pengembang. */
@@ -45,8 +46,8 @@ const alamatSah = (a: string) => /^[^\s@,;<>]+@[^\s@,;<>]+\.[^\s@,;<>]+$/.test(a
 /** Masukkan satu email ke antrean; alamat tidak sah diabaikan (mengembalikan false). */
 export async function antreEmail(db: Db, e: EmailKeluar) {
     if (!alamatSah(e.ke)) return false;
-    await db.query('INSERT INTO email_antrean (jenis, ke, judul, teks, tautan) VALUES ($1, $2, $3, $4, $5)',
-        [e.jenis.slice(0, 30), e.ke, e.judul.slice(0, 200), e.teks, e.tautan?.slice(0, 300) ?? null]);
+    await db.query('INSERT INTO email_antrean (jenis, ke, judul, teks, tautan, lampiran_nama, lampiran) VALUES ($1, $2, $3, $4, $5, $6, $7)',
+        [e.jenis.slice(0, 30), e.ke, e.judul.slice(0, 200), e.teks, e.tautan?.slice(0, 300) ?? null, e.lampiran?.nama.slice(0, 150) ?? null, e.lampiran?.isi ?? null]);
     return true;
 }
 
@@ -54,6 +55,11 @@ export async function antreEmail(db: Db, e: EmailKeluar) {
 export async function antreEmailBanyak(db: Db, daftar: EmailKeluar[]) {
     const sah = daftar.filter((e) => alamatSah(e.ke));
     if (sah.length === 0) return 0;
+    // Email berlampiran dimasukkan satu per satu; lainnya sekaligus.
+    if (sah.some((e) => e.lampiran)) {
+        for (const e of sah) await antreEmail(db, e);
+        return sah.length;
+    }
     await db.query(
         `INSERT INTO email_antrean (jenis, ke, judul, teks, tautan)
          SELECT * FROM unnest($1::text[], $2::text[], $3::text[], $4::text[], $5::text[])`,
@@ -86,7 +92,7 @@ export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: num
         `UPDATE email_antrean SET percobaan = percobaan + 1, coba_lagi_pada = now() + interval '5 minutes'
           WHERE id IN (SELECT id FROM email_antrean WHERE status = 'menunggu' AND coba_lagi_pada <= now()
                           AND (jenis = ANY($2::text[])) = $3 ORDER BY id LIMIT $1 FOR UPDATE SKIP LOCKED)
-          RETURNING id, jenis, ke, judul, teks, tautan, percobaan`, [limit, JENIS_PRIORITAS, prioritas])).rows;
+          RETURNING id, jenis, ke, judul, teks, tautan, percobaan, lampiran_nama, lampiran`, [limit, JENIS_PRIORITAS, prioritas])).rows;
     // Verifikasi/sistem didahulukan dan tidak kena kuota; email biasa hanya sebanyak sisa kuota.
     const penting = await ambil(true, batas);
     const biasa = await ambil(false, Math.min(batas - penting.length, await sisaKuota(db)));
@@ -97,7 +103,7 @@ export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: num
     for (const r of diambil.sort((a, b) => Number(a.id) - Number(b.id))) {
         if (!t) {
             console.info(`[email dicatat, SMTP belum diatur] jenis=${r.jenis} ke=${r.ke} judul="${r.judul}"${JENIS_LOG_PENUH.has(r.jenis) ? `\n${r.teks}${r.tautan ? `\n${r.tautan}` : ''}` : ''}`);
-            await db.query(`UPDATE email_antrean SET status = 'dicatat', galat = 'SMTP belum diatur' WHERE id = $1`, [r.id]);
+            await db.query(`UPDATE email_antrean SET status = 'dicatat', galat = 'SMTP belum diatur', lampiran = NULL WHERE id = $1`, [r.id]);
             hasil.dicatat++;
             continue;
         }
@@ -105,8 +111,9 @@ export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: num
             await t.sendMail({
                 from: process.env.SMTP_FROM ?? 'Kopkar MJS <no-reply@localhost>', to: r.ke, subject: r.judul,
                 text: teksEmail({ judul: r.judul, teks: r.teks, tautan: r.tautan }), html: htmlEmail({ judul: r.judul, teks: r.teks, tautan: r.tautan }),
+                attachments: r.lampiran ? [{ filename: r.lampiran_nama || 'lampiran.pdf', content: r.lampiran, contentType: /\.pdf$/i.test(r.lampiran_nama ?? '') ? 'application/pdf' : undefined }] : undefined,
             });
-            await db.query(`UPDATE email_antrean SET status = 'terkirim', dikirim_pada = now(), galat = NULL WHERE id = $1`, [r.id]);
+            await db.query(`UPDATE email_antrean SET status = 'terkirim', dikirim_pada = now(), galat = NULL, lampiran = NULL WHERE id = $1`, [r.id]);
             hasil.terkirim++;
         } catch (e) {
             const habis = Number(r.percobaan) >= MAKS_PERCOBAAN;
