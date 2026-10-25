@@ -122,6 +122,18 @@ export async function simpanJenisSimpananAction(_: HasilSimpan, f: FormData): Pr
 
 // ---------- jenis pinjaman ----------
 
+/** Akun COA dari kode perkiraan (pilihan AkunBox): id perkiraan beserta pr_id lama (kolom coa_* desktop menyimpan pr_id). */
+async function akunKode(db: Db, f: FormData, k: string, label: string) {
+    const { rows: [p] } = await db.query<{ id: string; pr_id: string }>("SELECT id, pr_id FROM perkiraan WHERE kode_perkiraan = $1", [String(f.get(k) ?? "")])
+    if (!p) throw new Salah(`${label} wajib dipilih`)
+    return p
+}
+
+/**
+ * Simpan jenis pinjaman (jenis_kredit) dengan semua isian layar desktop "Jenis Pinjaman (Credit)": grup, jenis, kode, nama, maks. lama cicilan,
+ * tanggal jatuh tempo, jasa dan per, biaya provisi/adm/denda (kotak centang + persen; tidak dicentang = 0), empat akun COA, dan Pengaturan Umum
+ * (UM jika melebihi grade, kunci jika melebihi grade, staff, kunci jika ada tunggakan, hitung SHU, tidak untuk mobile), ditambah Maksimal Plafond.
+ */
 export async function simpanJenisPinjamanAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
     return simpan(MENU.jenisPinjaman, "/dashboard/settings/jenis-pinjaman", async (db) => {
         const id = Number(f.get("id") || 0)
@@ -132,27 +144,49 @@ export async function simpanJenisPinjamanAction(_: HasilSimpan, f: FormData): Pr
         const jenis = teks(f, "jenis_pinjaman", "Jenis", true)
         if (!["Pinjaman Uang", "Pinjaman Barang"].includes(jenis)) throw new Salah("Jenis tidak dikenal")
         // Berurutan: satu koneksi transaksi tidak bisa menjalankan query paralel.
-        const k = await akun(db, f, "coa_kredit_id", "Akun piutang/titipan"), j = await akun(db, f, "coa_jasa_id", "Akun jasa")
-        const a = await akun(db, f, "coa_adm_id", "Akun adm"), p = await akun(db, f, "coa_provisi_id", "Akun provisi")
-        const v = [teks(f, "nama_kredit", "Nama", true, 50), grup, jenis, bungaPer,
-            angka(f, "bunga_kredit", "Bunga (%)", { min: 0, maks: 100 }), angka(f, "persen_adm", "Adm (%)", { min: 0, maks: 100 }),
-            angka(f, "persen_provisi", "Provisi (%)", { min: 0, maks: 100 }), angka(f, "mak_cicilan", "Maks. cicilan", { min: 0, bulat: true }),
-            angka(f, "jatuh_tempo", "Tanggal jatuh tempo", { min: 1, maks: 31, bulat: true }), f.get("hide") === "on",
-            k.id, k.pr_id, j.id, j.pr_id, a.id, a.pr_id, p.id, p.pr_id]
+        const k = await akunKode(db, f, "coa_kredit", "COA Kredit"), j = await akunKode(db, f, "coa_jasa", "COA Jasa")
+        const a = await akunKode(db, f, "coa_adm", "COA Adm"), p = await akunKode(db, f, "coa_provisi", "COA Provisi")
+        const cek = (n: string) => f.get(n) === "on"
+        // Biaya: kotak tidak dicentang berarti tidak dipungut, jadi persennya disimpan 0 (mesin posting memakai persen).
+        const adm = cek("pakai_adm"), provisi = cek("pakai_provisi"), denda = cek("pakai_denda")
+        const persen = (n: string, label: string, aktif: boolean) => (aktif ? angka(f, n, label, { min: 0, maks: 100 }) : "0")
+        const maksPlafond = angka(f, "maks_plafond", "Maksimal plafond", { min: 0, maks: 1_000_000_000_000 })
+        const v = [teks(f, "nama_kredit", "Nama kredit", true, 50), grup, jenis, bungaPer,
+            angka(f, "bunga_kredit", "Jasa pinjaman (%)", { min: 0, maks: 100 }), persen("persen_adm", "Biaya adm (%)", adm), persen("persen_provisi", "Biaya provisi (%)", provisi),
+            angka(f, "mak_cicilan", "Maks. lama cicilan", { min: 0, bulat: true }), angka(f, "jatuh_tempo", "Tgl. jatuh tempo", { min: 1, maks: 31, bulat: true }),
+            cek("hide"), k.id, k.pr_id, j.id, j.pr_id, a.id, a.pr_id, p.id, p.pr_id,
+            adm ? 1 : 0, denda ? 1 : 0, persen("persen_denda", "Denda (%)", denda), cek("pakai_um") ? 1 : 0, cek("kunci_jika_melebihi_grade") ? 1 : 0,
+            cek("kunci_hanya_untuk_staff") ? 1 : 0, cek("kunci_jika_sisa") ? 1 : 0, cek("hitung_shu") ? 1 : 0, maksPlafond]
         if (id) {
             const { rows: r } = await db.query(`UPDATE jenis_kredit SET nama_kredit=$1, group_pinjaman=$2, jenis_pinjaman=$3, bunga_per=$4, bunga_kredit=$5,
                 persen_adm=$6, persen_provisi=$7, mak_cicilan=$8, jatuh_tempo=$9, hide=$10, coa_kredit_id=$11, coa_kredit=$12, coa_jasa_id=$13,
-                coa_jasa=$14, coa_adm_id=$15, coa_adm=$16, coa_provisi_id=$17, coa_provisi=$18 WHERE id=$19 RETURNING kode_kredit`, [...v, id])
+                coa_jasa=$14, coa_adm_id=$15, coa_adm=$16, coa_provisi_id=$17, coa_provisi=$18, pakai_adm=$19, pakai_denda=$20, persen_denda=$21,
+                pakai_um=$22, kunci_jika_melebihi_grade=$23, kunci_hanya_untuk_staff=$24, kunci_jika_sisa=$25, hitung_shu=$26, maks_plafond=$27
+                WHERE id=$28 RETURNING kode_kredit`, [...v, id])
             if (r.length === 0) throw new Salah("Jenis pinjaman tidak ada")
             return "Jenis pinjaman disimpan"
         }
-        const kode = teks(f, "kode_kredit", "Kode", true, 10).toUpperCase()
-        if (!/^[A-Z0-9]{2,10}$/.test(kode)) throw new Salah("Kode: 2-10 huruf/angka, mis. C37")
+        const kode = teks(f, "kode_kredit", "Kode kredit", true, 10).toUpperCase()
+        if (!/^[A-Z0-9]{2,10}$/.test(kode)) throw new Salah("Kode kredit: 2-10 huruf/angka, mis. C37")
         const { rows: [ada] } = await db.query("SELECT 1 FROM jenis_kredit WHERE kode_kredit = $1", [kode])
         if (ada) throw new Salah(`Kode ${kode} sudah dipakai`)
         await db.query(`INSERT INTO jenis_kredit (nama_kredit, group_pinjaman, jenis_pinjaman, bunga_per, bunga_kredit, persen_adm, persen_provisi,
             mak_cicilan, jatuh_tempo, hide, coa_kredit_id, coa_kredit, coa_jasa_id, coa_jasa, coa_adm_id, coa_adm, coa_provisi_id, coa_provisi,
-            kode_kredit, type_angsuran) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,'BULANAN')`, [...v, kode])
+            pakai_adm, pakai_denda, persen_denda, pakai_um, kunci_jika_melebihi_grade, kunci_hanya_untuk_staff, kunci_jika_sisa, hitung_shu, maks_plafond,
+            kode_kredit, type_angsuran) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,'BULANAN')`, [...v, kode])
         return `Jenis pinjaman ${kode} ditambahkan`
+    })
+}
+
+/** Hapus jenis pinjaman yang belum pernah dipakai (pinjaman tunai, KPR, atau pengajuan); yang sudah dipakai cukup disembunyikan (Tidak untuk mobile). */
+export async function hapusJenisPinjamanAction(id: number): Promise<HasilSimpan> {
+    return simpan(MENU.jenisPinjaman, "/dashboard/settings/jenis-pinjaman", async (db) => {
+        const { rows: [pakai] } = await db.query<{ n: string }>(
+            `SELECT (SELECT COUNT(*) FROM pinjaman_tunai WHERE jenis_kredit_id = $1) + (SELECT COUNT(*) FROM kpr WHERE jenis_kredit_id = $1)
+                  + (SELECT COUNT(*) FROM pengajuan_pinjaman WHERE jenis_kredit_id = $1) AS n`, [id])
+        if (Number(pakai.n) > 0) throw new Salah(`Jenis ini sudah dipakai ${pakai.n} transaksi/pengajuan, jadi tidak bisa dihapus. Centang "Tidak untuk mobile" untuk menyembunyikannya.`)
+        const { rows: r } = await db.query("DELETE FROM jenis_kredit WHERE id = $1 RETURNING kode_kredit", [id])
+        if (r.length === 0) throw new Salah("Jenis pinjaman tidak ada")
+        return `Jenis pinjaman ${r[0].kode_kredit} dihapus`
     })
 }
