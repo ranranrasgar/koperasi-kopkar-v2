@@ -1,5 +1,6 @@
 import type pg from 'pg';
 import type { Db } from '../db.ts';
+import { batasPlafon, pesanPlafon } from '../posting/plafon.ts';
 
 // Pengajuan kredit oleh anggota (PWA). Aplikasi lama hanya memvalidasi di HP dan server menerima persen bunga/biaya
 // dari HP (docs/analisis-aplikasi-mobile-lama.md bagian 4). Di sini semua aturan dicek di server dengan urutan yang
@@ -13,12 +14,14 @@ const MAKS_HARI_REALISASI = 365;
 export interface JenisKreditAnggota {
     id: string; kode: string; nama: string; persenBunga: string; perAngsuran: boolean; maksCicilan: number;
     persenAdm: string; persenProvisi: string; persenDenda: string; kunciStaff: boolean; kunciGrade: boolean; kunciSisa: boolean;
+    maksPlafond: string; pakaiUm: boolean;
 }
 
 const KOLOM_JENIS = `id::text, kode_kredit kode, nama_kredit nama, bunga_kredit::text "persenBunga",
     upper(bunga_per) = 'PER ANGSURAN' "perAngsuran", mak_cicilan "maksCicilan", COALESCE(persen_adm, 0)::text "persenAdm",
     COALESCE(persen_provisi, 0)::text "persenProvisi", COALESCE(persen_denda, 0)::text "persenDenda",
-    kunci_hanya_untuk_staff = 1 "kunciStaff", kunci_jika_melebihi_grade = 1 "kunciGrade", kunci_jika_sisa = 1 "kunciSisa"`;
+    kunci_hanya_untuk_staff = 1 "kunciStaff", kunci_jika_melebihi_grade = 1 "kunciGrade", kunci_jika_sisa = 1 "kunciSisa",
+    COALESCE(maks_plafond, 0)::text "maksPlafond", pakai_um = 1 "pakaiUm"`;
 
 const isStaff = (statusStaff: string | null) => (statusStaff ?? '').trim() === 'Staff';
 
@@ -65,7 +68,9 @@ export async function ajukanPinjaman(db: Db, anggotaId: number, i: IsianPengajua
     const staff = isStaff(a.status_staff);
     if (j.kunciStaff && !staff) return gagal('Pinjaman ini hanya untuk staff.');
     if (!j.kunciStaff && staff) return gagal('Pinjaman ini bukan untuk staff.');
-    if (j.kunciGrade && i.besar > Number(a.rp_grade ?? 0)) return gagal('Pinjaman ini tidak boleh melebihi grade (plafon) Anda.');
+    // Grade anggota diutamakan; Maksimal Plafond jenis kredit berlaku bila grade tidak dikunci atau nominal grade anggota kosong.
+    const salahPlafon = pesanPlafon(i.besar, batasPlafon(j, a.rp_grade));
+    if (salahPlafon) return gagal(salahPlafon);
     if (j.kunciSisa) {
         const sisa = (await db.query(
             `SELECT 1 FROM pinjaman_tunai pt JOIN pinjaman_tunai_rincian r ON r.pinjaman_tunai_id = pt.id

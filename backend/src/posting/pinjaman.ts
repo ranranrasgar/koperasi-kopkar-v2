@@ -1,6 +1,7 @@
 import type { Db } from '../db.ts';
 import { postJournal, type JournalLine } from './journal.ts';
 import { fromUnits, round2, toUnits } from './money.ts';
+import { batasPlafon, pesanPlafon } from './plafon.ts';
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from './pinjaman-calc.ts';
 
 export interface PencairanInput {
@@ -26,13 +27,14 @@ const mmyy = (d: string) => d.slice(5, 7) + d.slice(2, 4);
 
 interface JenisKredit {
     id: string; nama_kredit: string; bunga_kredit: string; bunga_per: string; jatuh_tempo: number; mak_cicilan: number;
-    persen_adm: string; persen_provisi: string;
+    persen_adm: string; persen_provisi: string; kunci_grade: boolean; maks_plafond: string;
     akun_kredit: string; akun_jasa: string; akun_adm: string; akun_provisi: string;
 }
 
 async function jenisKredit(db: Db, by: { kode?: string; id?: string }): Promise<JenisKredit> {
     const r = await db.query<JenisKredit>(
         `SELECT jk.id, jk.nama_kredit, jk.bunga_kredit, jk.bunga_per, jk.jatuh_tempo, jk.mak_cicilan, jk.persen_adm, jk.persen_provisi,
+                jk.kunci_jika_melebihi_grade = 1 AS kunci_grade, COALESCE(jk.maks_plafond, 0)::text AS maks_plafond,
                 p1.kode_perkiraan akun_kredit, p2.kode_perkiraan akun_jasa, p3.kode_perkiraan akun_adm, p4.kode_perkiraan akun_provisi
            FROM jenis_kredit jk
            LEFT JOIN perkiraan p1 ON p1.id = jk.coa_kredit_id LEFT JOIN perkiraan p2 ON p2.id = jk.coa_jasa_id
@@ -44,7 +46,7 @@ async function jenisKredit(db: Db, by: { kode?: string; id?: string }): Promise<
 
 /** Pencairan pinjaman tunai: header, baris pencairan di rincian, jadwal tagih, dan jurnal dalam satu transaksi. */
 export async function cairkanPinjaman(db: Db, i: PencairanInput): Promise<PencairanResult> {
-    const a = await db.query<{ id: string; nama: string; nik: string }>('SELECT id, nama, nik FROM anggota WHERE kode_agt = $1 FOR UPDATE', [i.kodeAgt]);
+    const a = await db.query<{ id: string; nama: string; nik: string; rp_grade: string | null }>('SELECT id, nama, nik, rp_grade::text FROM anggota WHERE kode_agt = $1 FOR UPDATE', [i.kodeAgt]);
     if (!a.rows[0]) throw new Error(`Anggota ${i.kodeAgt} tidak ditemukan`);
     const jk = await jenisKredit(db, { kode: i.kodeKredit });
     if (!Number.isInteger(i.lama) || i.lama < 1) throw new Error('Lama angsuran harus bilangan bulat >= 1');
@@ -53,6 +55,8 @@ export async function cairkanPinjaman(db: Db, i: PencairanInput): Promise<Pencai
     if (!kas.rows[0]) throw new Error(`Akun kas ${i.kasPerkiraanId} tidak ada`);
     const pokok = toUnits(i.pokok);
     if (pokok <= 0n) throw new Error('Pokok harus lebih dari nol');
+    const salahPlafon = pesanPlafon(Number(fromUnits(pokok)), batasPlafon({ kunciGrade: jk.kunci_grade, maksPlafond: jk.maks_plafond }, a.rows[0].rp_grade), 'anggota');
+    if (salahPlafon) throw new Error(salahPlafon);
 
     const perAngsuran = jk.bunga_per.toUpperCase() === 'PER ANGSURAN';
     const persenBunga = i.persenBunga ?? jk.bunga_kredit;

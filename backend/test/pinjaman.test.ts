@@ -35,7 +35,7 @@ test('paritas: jurnal angsuran dari nilai rincian = jurnal produksi', async () =
 });
 
 test('alur penuh: cairkan lalu bayar semua angsuran; saldo nol dan jurnal seimbang', async () => {
-    const a = (await pool.query(`SELECT kode_agt FROM anggota ORDER BY id LIMIT 1`)).rows[0];
+    const a = (await pool.query(`SELECT kode_agt FROM anggota WHERE rp_grade >= 1000000 ORDER BY id LIMIT 1`)).rows[0]; // jenis C01 mengunci grade: anggota harus berplafon cukup
     await inTx(async (db) => {
         const kas = (await db.query(`SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'`)).rows[0].id;
         const c = await cairkanPinjaman(db, { kodeAgt: a.kode_agt, kodeKredit: 'C01', tglPinjaman: '2026-10-22', pokok: 1000000, lama: 6, kasPerkiraanId: kas, opr: 'uji' });

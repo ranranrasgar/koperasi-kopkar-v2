@@ -1,4 +1,5 @@
 import type { Db } from '../db.ts';
+import { batasPlafon, pesanPlafon } from './plafon.ts';
 import { postJournal } from './journal.ts';
 import { fromUnits, toUnits } from './money.ts';
 
@@ -20,8 +21,9 @@ export interface KprPencairanInput {
 }
 
 async function jenis(db: Db, by: { kode?: string; id?: string }) {
-    const r = await db.query<{ id: string; nama_kredit: string; jatuh_tempo: number; mak_cicilan: number; akun_titipan: string | null }>(
-        `SELECT jk.id, jk.nama_kredit, jk.jatuh_tempo, jk.mak_cicilan, p.kode_perkiraan akun_titipan
+    const r = await db.query<{ id: string; nama_kredit: string; jatuh_tempo: number; mak_cicilan: number; akun_titipan: string | null; kunci_grade: boolean; maks_plafond: string }>(
+        `SELECT jk.id, jk.nama_kredit, jk.jatuh_tempo, jk.mak_cicilan, p.kode_perkiraan akun_titipan,
+                jk.kunci_jika_melebihi_grade = 1 AS kunci_grade, COALESCE(jk.maks_plafond, 0)::text AS maks_plafond
            FROM jenis_kredit jk LEFT JOIN perkiraan p ON p.id = jk.coa_kredit_id
           WHERE ${by.kode ? 'jk.kode_kredit = $1' : 'jk.id = $1'}`, [by.kode ?? by.id]);
     if (!r.rows[0]) throw new Error(`Jenis kredit ${by.kode ?? by.id} tidak ada`);
@@ -30,13 +32,15 @@ async function jenis(db: Db, by: { kode?: string; id?: string }) {
 }
 
 export async function cairkanKpr(db: Db, i: KprPencairanInput): Promise<{ id: number; noPinjaman: string; angsuranPerBulan: string }> {
-    const a = await db.query<{ id: string }>('SELECT id FROM anggota WHERE kode_agt = $1 FOR UPDATE', [i.kodeAgt]);
+    const a = await db.query<{ id: string; rp_grade: string | null }>('SELECT id, rp_grade::text FROM anggota WHERE kode_agt = $1 FOR UPDATE', [i.kodeAgt]);
     if (!a.rows[0]) throw new Error(`Anggota ${i.kodeAgt} tidak ditemukan`);
     const jk = await jenis(db, { kode: i.kodeKredit });
     if (!Number.isInteger(i.lama) || i.lama < 1) throw new Error('Lama angsuran harus bilangan bulat >= 1');
     if (jk.mak_cicilan > 0 && i.lama > jk.mak_cicilan) throw new Error(`Lama ${i.lama} melebihi maksimum ${jk.mak_cicilan} untuk ${jk.nama_kredit}`);
     const pokok = toUnits(i.pokok);
     if (pokok <= 0n) throw new Error('Pokok harus lebih dari nol');
+    const salahPlafon = pesanPlafon(Number(fromUnits(pokok)), batasPlafon({ kunciGrade: jk.kunci_grade, maksPlafond: jk.maks_plafond }, a.rows[0].rp_grade), 'anggota');
+    if (salahPlafon) throw new Error(salahPlafon);
     const n = BigInt(i.lama);
     const angsuran = i.angsuranPerBulan !== undefined ? toUnits(i.angsuranPerBulan) : ((pokok * 2n + n * 10000n) / (n * 20000n)) * 10000n;
 
