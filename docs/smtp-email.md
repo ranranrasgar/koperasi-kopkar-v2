@@ -65,6 +65,7 @@ Port 465 dengan `SMTP_SECURE=1` juga bisa. Untuk uji di komputer sendiri, `ANGGO
 ## 3. Menguji di komputer pengembang
 
 - **Server uji (`npm run dev:anggota:uji`, port 3201) tidak pernah mengirim email sungguhan**, karena databasenya salinan data asli dengan email anggota. Kode verifikasi muncul di terminal tempat server berjalan, pada baris `[email dicatat, SMTP belum diatur] jenis=verifikasi ...`.
+- **Cara teraman mencoba email di server uji: `EMAIL_UJI_KE=alamat1@x.com,@domainsaya.com` di `frontend/.env.local` dan `anggota/.env.local`** (lalu jalankan ulang server). Hanya penerima itu yang dikirimi sungguhan; email ke anggota lain tetap dicatat (status `dicatat`, galat "Server uji: penerima di luar EMAIL_UJI_KE").
 - Untuk mencoba pengiriman sungguhan di server uji, isi `EMAIL_UJI_KIRIM=1` hanya sementara. Kode verifikasi hanya dikirim ke alamat yang diketik saat mendaftar, tetapi notifikasi siaran akan ikut ke email anggota terverifikasi di salinan itu, jadi jangan kirim siaran selama opsi ini aktif.
 - Server utama (`npm run dev:anggota`, port 3200) memakai database asli dan mengirim email sungguhan bila SMTP diisi.
 

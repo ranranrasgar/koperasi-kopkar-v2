@@ -24,7 +24,12 @@ const JENIS_PRIORITAS = ['verifikasi', 'sistem'];
 // sungguhan, walau SMTP diisi di .env.local bersama; email hanya dicatat. EMAIL_UJI_KIRIM=1 mengizinkan (hati-hati).
 const serverUji = () => !!process.env.KOPKAR_SERVER_UJI && process.env.EMAIL_UJI_KIRIM !== '1';
 
-export const smtpSiap = () => process.env.EMAIL_UJI_JSON === '1' || (!serverUji() && !!process.env.SMTP_HOST && !!process.env.SMTP_FROM);
+// EMAIL_UJI_KE (alamat atau @domain, dipisah koma): di server uji hanya penerima ini yang benar-benar dikirimi; selebihnya tetap dicatat.
+const aman = (ke: string) => (process.env.EMAIL_UJI_KE ?? '').toLowerCase().split(',').map((x) => x.trim()).filter(Boolean)
+    .some((x) => (x.startsWith('@') ? ke.toLowerCase().endsWith(x) : ke.toLowerCase() === x));
+const bolehKirim = (ke: string) => !serverUji() || aman(ke);
+
+export const smtpSiap = () => process.env.EMAIL_UJI_JSON === '1' || ((!serverUji() || !!process.env.EMAIL_UJI_KE) && !!process.env.SMTP_HOST && !!process.env.SMTP_FROM);
 
 let transport: Transporter | null = null;
 function ambilTransport(): Transporter | null {
@@ -112,9 +117,9 @@ export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: num
     const kop = diambil.length && t ? await kopKoperasi(db) : null;
 
     for (const r of diambil.sort((a, b) => Number(a.id) - Number(b.id))) {
-        if (!t) {
+        if (!t || !bolehKirim(r.ke)) {
             console.info(`[email dicatat, SMTP belum diatur] jenis=${r.jenis} ke=${r.ke} judul="${r.judul}"${JENIS_LOG_PENUH.has(r.jenis) ? `\n${r.teks}${r.tautan ? `\n${r.tautan}` : ''}` : ''}`);
-            await db.query(`UPDATE email_antrean SET status = 'dicatat', galat = 'SMTP belum diatur', lampiran = NULL WHERE id = $1`, [r.id]);
+            await db.query(`UPDATE email_antrean SET status = 'dicatat', galat = $2, lampiran = NULL WHERE id = $1`, [r.id, t ? 'Server uji: penerima di luar EMAIL_UJI_KE tidak dikirimi' : 'SMTP belum diatur']);
             hasil.dicatat++;
             continue;
         }
