@@ -410,6 +410,14 @@ Cadangan otomatis tampil juga di menu Backup & Restore (folder yang sama). Simpa
 
 ## 13. Memperbarui aplikasi (setiap ada perubahan di GitHub)
 
+**Cara cepat (satu perintah)** - menjalankan semua langkah di bawah, termasuk membangun image di VPS dan cadangan:
+
+```bash
+cd /srv/kopkar && git pull && ./update-vps.sh
+```
+
+Langkah manualnya (bila image datang dari GitHub Actions, bukan dibangun di VPS):
+
 ```bash
 cd /srv/kopkar
 docker compose exec -T -w /app admin npm run backup -- --ke /backup     # cadangan sebelum memperbarui
@@ -418,6 +426,7 @@ docker compose pull admin anggota mobile   # image dari GitHub Actions (tunggu c
 docker compose run --rm -w /app admin npm run anggota:pasang
 docker compose run --rm -w /app admin npm run indeks:pasang
 docker compose run --rm -w /app admin npm run pengaturan:pasang
+docker compose run --rm -w /app admin npm run shu:pasang
 docker compose run --rm -w /app admin npm run panduan:pasang
 docker compose up -d                       # mengganti container admin, anggota, dan mobile dengan image baru (putus beberapa detik)
 docker image prune -f                      # buang image lama supaya disk tidak penuh
