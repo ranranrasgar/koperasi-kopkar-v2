@@ -10,7 +10,8 @@ Anggota mengajukan pinjaman lewat **aplikasi anggota** (aplikasi Android lama, a
 Pengajuan dari aplikasi anggota baru diperiksa di server sebelum masuk ke daftar ini:
 
 - Jenis kredit sesuai status anggota: anggota staff hanya bisa memilih produk staff, non staff hanya produk non staff.
-- Besar pinjaman tidak melebihi plafon (grade) anggota, untuk jenis kredit yang dikunci grade.
+- Besar pinjaman tidak melebihi **batas plafon**: nominal **grade anggota** bila jenis kredit mengunci grade (grade diutamakan), selain itu **Maksimal Plafond** jenis kredit bila diisi. Aturan lengkapnya ada di panduan *Jenis pinjaman*.
+- Jenis kredit yang bertanda **Tidak untuk mobile** tidak ditampilkan di aplikasi anggota.
 - Untuk jenis kredit yang dikunci sisa: tidak ada pinjaman jenis yang sama yang masih bersisa lebih dari **Rp 100**. Sisa receh pembulatan Rp 100 ke bawah dianggap lunas.
 - Lama pinjaman 1 sampai maksimal cicilan jenis kredit; tanggal realisasi tidak sebelum hari ini dan paling lambat satu tahun ke depan.
 - Persen bunga, adm, provisi, dan denda **diambil dari data jenis kredit**, bukan dari isian anggota.
@@ -35,6 +36,8 @@ Pilih status di kotak di atas tabel untuk melihat pengajuan per status, atau **S
 3. Tekan **Setujui** atau **Tolak**, lalu konfirmasi.
 
 > **Penting:** Keputusan **tidak bisa dibatalkan** dari web. Hanya pengajuan berstatus Menunggu yang bisa diputuskan; jika dua petugas memutuskan bersamaan, yang kedua mendapat pesan *Pengajuan tidak ada atau sudah diputuskan*.
+
+Anggota dikabari keputusan lewat notifikasi aplikasi (dan email bila emailnya terverifikasi).
 
 Menyetujui pengajuan **belum mencairkan uang**. Tidak ada jurnal yang terbentuk sampai pencairan dicatat.
 

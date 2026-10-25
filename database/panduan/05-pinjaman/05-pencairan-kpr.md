@@ -28,3 +28,13 @@ Menu: **Pinjaman → Input Pinjaman KPR**. Membutuhkan izin pencairan KPR.
 | Jurnal | **Tidak ada** |
 
 Angsurannya dicatat lewat **Setoran Angsuran**, tab KPR.
+
+## Informasi untuk anggota
+
+Setelah KPR dicatat, anggota dikabari lewat **notifikasi aplikasi** dan **email** (bila emailnya terverifikasi) yang berisi ringkasan KPR dan **lampiran PDF jadwal angsuran**. Karena KPR berangsuran tetap, jadwalnya dihitung dari angsuran per bulan: jatuh tempo tiap bulan pada tanggal yang diatur di jenis kredit, dan angsuran terakhir melunasi sisa pokok. Gagal mengirim tidak membatalkan pencatatan KPR.
+
+Untuk mengirim ulang, buka **Pinjaman → Setoran Angsuran**, tab **KPR**, pilih anggota dan KPR-nya, lalu tekan **Kirim info ke anggota**.
+
+## Batas plafon
+
+Bila jenis KPR mengunci grade atau punya **Maksimal Plafond**, pokok yang melebihi batas ditolak, dengan aturan yang sama seperti pinjaman tunai (lihat panduan *Jenis pinjaman*).

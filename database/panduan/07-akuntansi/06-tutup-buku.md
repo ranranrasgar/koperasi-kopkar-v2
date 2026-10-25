@@ -20,10 +20,13 @@ Baris saldo pembuka tidak pernah dihitung sebagai mutasi. Model ini sudah dicoco
 
 ## Halaman Tutup Buku di web
 
-**Akuntansi → Tutup Buku** punya tiga bagian:
+**Akuntansi → Tutup Buku** (kini satu grup dengan menu SHU, berurutan sesuai alur akhir tahun) punya empat bagian:
 
+- **Alur lima langkah** di bagian atas: periksa pratinjau, proses tutup buku, hitung SHU, posting SHU, pencairan. Langkah selesai bertanda hijau dan langkah berikutnya disorot; keterangannya mengikuti data (misalnya jumlah anggota yang sudah dicairkan). Tombol **Lanjut ke SHU** muncul setelah tahun ditutup.
 - **Pratinjau** tahun yang dipilih: pendapatan sebelum pajak, pajak (persen dari Pengaturan Perusahaan), laba ditahan setelah pajak, dan nominal tiap pos SHU.
 - **Proses tutup buku**: memposting jurnal TBT persis seperti desktop. Hanya untuk **superadmin atau admin**, dan hanya untuk tahun sebelum tahun berjalan.
+
+**Kenapa tahun berjalan tidak bisa ditutup?** Seperti aplikasi desktop, tahun yang sama dengan tahun ini (misalnya 2026 sampai 31 Desember 2026) tidak boleh ditutup buku karena transaksinya belum selesai. Tahun berjalan tetap bisa dipilih untuk **pratinjau** (diberi tanda *berjalan*): angkanya sementara, sampai hari ini. Tutup buku 2026 baru bisa diproses mulai 1 Januari 2027.
 - **Riwayat Tutup Buku**: setiap jurnal TBT per tahun, bagian, jumlah baris, total debit/kredit, dan operatornya.
 
 Urutan prosesnya:

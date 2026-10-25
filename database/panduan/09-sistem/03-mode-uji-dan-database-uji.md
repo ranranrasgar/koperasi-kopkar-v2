@@ -38,3 +38,7 @@ Bila saklar tampil terkunci, mode sedang dikunci oleh baris `KOPKAR_UJI_ROLLBACK
 4. Untuk mulai bersih lagi, jalankan `npm run uji:reset` kapan saja, bahkan saat server uji masih berjalan.
 
 > **Penting:** Selalu periksa tanda di layar sebelum mencatat transaksi. Tanpa banner kuning atau ungu, Anda sedang bekerja di **data asli**.
+
+## Notifikasi dan email di mode uji
+
+**Mode Uji** (transaksi dibatalkan setelah dijalankan) tidak menyimpan dan tidak mengirim apa pun ke anggota. **Server uji** (`npm run dev:uji`, database salinan) memakai data anggota asli, jadi tidak pernah mengirim **push ke HP** maupun **email** (email hanya dicatat; riwayat notifikasi tetap tercatat di database uji). Pengiriman sungguhan, termasuk informasi pencairan pinjaman dan PDF jadwal angsuran, hanya terjadi di server utama.

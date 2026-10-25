@@ -26,3 +26,7 @@ menu: /dashboard/loans
 | Tunggakan | Angsuran yang sudah lewat jatuh tempo tetapi belum dibayar |
 
 Untuk melihat tunggakan secara rinci per pinjaman, buka **Pinjaman → Kredit Macet**.
+
+## Detail pinjaman dan kirim info ke anggota
+
+Klik **nomor pinjaman** untuk membuka detail: jadwal angsuran dan riwayat pembayaran. Di kanan atas detail ada tombol **Kirim info ke anggota** yang mengirim ulang notifikasi dan email (dengan PDF jadwal angsuran) ke anggota pemilik pinjaman. Tombol ini memakai izin yang sama dengan melihat detail pinjaman grup itu; di mode uji tidak ada yang dikirim.

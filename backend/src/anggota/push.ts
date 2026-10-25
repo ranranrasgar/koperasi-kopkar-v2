@@ -30,7 +30,14 @@ export const kunciPublikPush = () => process.env.VAPID_PUBLIC_KEY || null;
 export const MAKS_JUDUL = 50;
 export const MAKS_ISI = 500;
 
+/**
+ * Server uji (KOPKAR_SERVER_UJI) memakai salinan database asli beserta langganan push HP anggota sungguhan, jadi tidak pernah mengirim push
+ * (riwayat notifikasi di database uji tetap tercatat), sama seperti email. PUSH_UJI_KIRIM=1 mengizinkan (hati-hati).
+ */
+const serverUji = () => !!process.env.KOPKAR_SERVER_UJI && process.env.PUSH_UJI_KIRIM !== '1';
+
 function siapkanVapid() {
+    if (serverUji()) return false;
     const { VAPID_PUBLIC_KEY: pub, VAPID_PRIVATE_KEY: priv, VAPID_SUBJECT: subjek } = process.env;
     if (!pub || !priv || !subjek) return false;
     webpush.setVapidDetails(subjek, pub, priv);

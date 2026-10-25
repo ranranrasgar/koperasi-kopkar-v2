@@ -3,7 +3,7 @@ judul: Neraca saldo (trial balance)
 ringkasan: Saldo awal, mutasi, dan saldo akhir setiap akun; cara membaca peringatan selisih.
 menu: /dashboard/accounting/trial-balance
 ---
-**Akuntansi → Trial Balance** menampilkan setiap akun yang punya saldo atau mutasi pada periode yang dipilih, dengan enam kolom angka:
+**Akuntansi → Trial Balance** (satu susunan halaman dengan laporan lain: **Cetak** dan **Ekspor** di kanan atas, filter periode di satu baris) menampilkan setiap akun yang punya saldo atau mutasi pada periode yang dipilih, dengan enam kolom angka:
 
 | Kolom | Arti |
 | --- | --- |

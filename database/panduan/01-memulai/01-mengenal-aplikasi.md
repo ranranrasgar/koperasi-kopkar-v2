@@ -7,21 +7,26 @@ Aplikasi ini adalah versi web dari sistem Koperasi Karyawan Mattel MJS 2000. Dat
 
 ## Modul utama
 
-| Modul | Isi | Menu |
+Menu samping disusun dari yang paling sering dipakai sehari-hari ke yang jarang, dan di tiap grup transaksi harian ada di atas, lalu laporan.
+
+| Grup menu | Isi | Menu |
 | --- | --- | --- |
-| Keanggotaan | Data anggota, karyawan Mattel dari HR, akun aplikasi Android | Daftar Anggota, Karyawan Mattel, User Mobile |
-| Simpanan | Setoran dan pengambilan lima jenis simpanan, laporan saldo | Rekap, Buku, Setoran, Pengambilan, Kartu, Grafik, Berjangka |
-| Pinjaman | Pengajuan, pencairan pinjaman tunai dan KPR, angsuran, tunggakan | Daftar Pinjaman sampai Kredit Macet |
-| Potongan Gaji | Proyeksi potongan gaji bulanan anggota | Transaksi Potongan |
-| Akuntansi | Bagan akun, jurnal, buku besar, neraca saldo, laporan keuangan, tutup buku | Chart of Accounts sampai Tutup Buku |
-| SHU | Pembagian Sisa Hasil Usaha per pos dan per anggota | Sisa Hasil Usaha |
-| Sistem | Hak akses, operator, data perusahaan, jenis simpanan dan pinjaman, panduan | Sistem & Pengaturan |
+| Keanggotaan | Data anggota, karyawan Mattel dari HR, akun aplikasi anggota, absensi | Daftar Anggota, Karyawan Mattel, User Mobile, Absensi Fingerprint |
+| Simpanan | Setoran dan pengambilan lima jenis simpanan, laporan saldo | Setoran, Pengambilan, Rekap, Buku, Kartu, Berjangka, Grafik |
+| Pinjaman | Pengajuan, pencairan pinjaman tunai dan KPR, angsuran, titipan, tunggakan | Setoran Angsuran, Pengajuan Kredit, Input Pinjaman Tunai dan KPR, Titipan, Daftar Pinjaman, Cari Pinjaman, Kredit Macet |
+| Potongan Gaji | Potongan gaji bulanan anggota | Generate & Posting, Transaksi Potongan |
+| Akuntansi | Jurnal, kas dan bank, buku besar, neraca saldo, laporan keuangan, bagan akun | Jurnal Umum, Bank Book, Buku Besar, Trial Balance, Laporan Keuangan, Chart of Accounts |
+| Tutup Buku & SHU | Proses akhir tahun, berurutan: tutup buku lalu SHU | Tutup Buku, Sisa Hasil Usaha (SHU) |
+| Data Master | Aturan produk dan identitas koperasi | Pengaturan Perusahaan, Jenis Pinjaman, Jenis Simpanan |
+| Komunikasi | Pesan ke aplikasi anggota | Kirim Notifikasi, Himbauan & Promo |
+| Sistem | Hak akses, operator, cadangan, mode uji, panduan | Operator, Kelola Hak Akses, Backup & Restore, Mode Uji / Live, Kelola Panduan |
 
 ## Alur data dari transaksi ke laporan
 
 1. Kasir mencatat transaksi, misalnya setoran simpanan atau pencairan pinjaman.
 2. Sistem menyimpan dokumen transaksi **dan** jurnal debit/kredit dalam satu langkah. Jika salah satu gagal, semuanya dibatalkan, sehingga tidak pernah ada transaksi tanpa jurnal.
-3. Jurnal itu langsung terlihat di **Jurnal Umum**, **Buku Kas & Bank**, **Trial Balance**, dan **Laporan Keuangan**.
+3. Anggota yang bersangkutan dikabari lewat **notifikasi aplikasi** dan **email** pada transaksi tertentu, misalnya pencairan pinjaman (lengkap dengan PDF jadwal angsuran).
+4. Jurnal itu langsung terlihat di **Jurnal Umum**, **Bank Book**, **Buku Besar**, **Trial Balance**, dan **Laporan Keuangan**.
 
 > **Catatan:** Laporan tidak perlu diproses atau di-*generate* lebih dulu. Semua laporan dihitung langsung dari data saat halaman dibuka.
 
@@ -48,5 +53,8 @@ Aplikasi ini adalah versi web dari sistem Koperasi Karyawan Mattel MJS 2000. Dat
 | Pencairan KPR | `KPR-mmyy-urut` | `KPR-1026-450` |
 | Angsuran KPR | `ANGS-KPR-mmyy-urut` | `ANGS-KPR-1026-9100` |
 | Jurnal umum (memorial) | `JU/yymmdd/n` | `JU/261022/1205` |
+| Bank Book (kas dan bank) | `BB/yymmdd/NNN` | `BB/261022/003` |
+| Pencairan SHU anggota | `SHU/yymmdd/urut` | `SHU/260218/28916` |
+| Tutup buku tahunan | `TBT/yymmdd/NNN` | `TBT/251231/001` |
 
 Perhatikan bahwa simpanan memakai **tahun lalu bulan** (`yymm`), sedangkan pinjaman memakai **bulan lalu tahun** (`mmyy`). Ini mengikuti format aplikasi desktop supaya nomor lama dan baru tetap konsisten. Nomor urut diambil dari penghitung database sehingga tidak pernah dobel walaupun beberapa kasir menyimpan bersamaan.

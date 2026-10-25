@@ -38,4 +38,4 @@ Tambah, ganti nama, ubah ikon dan urutan kategori di bagian **Kategori**. Katego
 
 ## Mengembalikan isi bawaan
 
-Isi panduan awal tersimpan di repositori (`database/panduan`). Perintah `npm run panduan:pasang` hanya **menambahkan** artikel bawaan yang belum ada, jadi suntingan Anda aman. Perintah `npm run panduan:pasang -- --timpa` mengembalikan **semua** panduan ke isi bawaan dan menghapus suntingan serta artikel buatan sendiri; jalankan hanya bila benar-benar diperlukan.
+Isi panduan awal tersimpan di repositori (`database/panduan`). Perintah `npm run panduan:pasang` (dijalankan otomatis saat pembaruan server) **menambahkan** artikel bawaan yang belum ada dan **memperbarui artikel bawaan yang belum pernah Anda sunting** mengikuti isi terbaru di repositori, jadi panduan ikut berubah saat aplikasi diperbarui. Artikel yang sudah Anda sunting **tidak disentuh** (dilaporkan sebagai *dilewati*), jadi suntingan Anda aman. Perintah `npm run panduan:pasang -- --timpa` mengembalikan **semua** panduan ke isi bawaan dan menghapus suntingan serta artikel buatan sendiri; jalankan hanya bila benar-benar diperlukan.

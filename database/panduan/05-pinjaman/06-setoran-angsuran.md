@@ -48,3 +48,7 @@ Contoh angsuran ke-1 pinjaman C01 Rp 6.000.000:
 - Jumlah harus lebih dari nol dan **tidak boleh melebihi sisa pokok** (*Jumlah ... melebihi sisa pokok ...*).
 - Bila jumlah dikosongkan, **angsuran terakhir** otomatis mengambil sisa pokok persis sehingga KPR pas lunas.
 - Nomor bukti `ANGS-KPR-mmyy-urut`. Jurnal: **Debit** kas/bank, **Kredit** akun titipan KPR.
+
+## Mengirim ulang informasi kredit
+
+Di tab **KPR**, di bawah ringkasan KPR yang dipilih ada tautan **Kirim info ke anggota**: mengirim ulang notifikasi dan email berisi ringkasan serta PDF jadwal angsuran ke anggota pemilik KPR itu. Untuk pinjaman tunai, tombolnya ada di halaman detail pinjaman.
