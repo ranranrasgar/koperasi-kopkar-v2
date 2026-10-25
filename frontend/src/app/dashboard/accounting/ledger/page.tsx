@@ -43,6 +43,8 @@ export default async function BukuKasBankPage(props: PageProps<"/dashboard/accou
             <div>
                 <KopLaporan judul={`Buku ${akun ? `${akun.kode_perkiraan} ${akun.nama_perkiraan}` : kode}`}
                     periode={`${formatTanggal(dari, "long")} s/d ${formatTanggal(sampai, "long")}`} />
+                {/* Paginasi di atas dan di bawah tabel, seperti halaman daftar lain, supaya pindah halaman tidak perlu menggulir. */}
+                <PaginasiUrl className="border-b" page={page} totalPages={totalPages} pageSize={pageSize} total={hal.jumlahBaris} />
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
                         <thead className="bg-muted text-muted-foreground text-xs">
@@ -82,7 +84,7 @@ export default async function BukuKasBankPage(props: PageProps<"/dashboard/accou
                     </table>
                     {pageSize >= 5000 && hal.jumlahBaris > pageSize && <p className="mt-2 text-xs text-amber-700">Pilihan Semua dibatasi 5.000 baris; gunakan halaman untuk melihat sisanya.</p>}
                 </div>
-                <PaginasiUrl className="border-t" page={page} totalPages={totalPages} pageSize={pageSize} total={hal.jumlahBaris} />
+                <PaginasiUrl className="sticky bottom-0 z-10 border-t border-outline-variant bg-background/95 backdrop-blur" page={page} totalPages={totalPages} pageSize={pageSize} total={hal.jumlahBaris} />
             </div>
         </HalamanLaporan>
     )
