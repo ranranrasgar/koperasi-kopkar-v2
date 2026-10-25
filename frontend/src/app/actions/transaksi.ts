@@ -13,6 +13,7 @@ import { GalatSesi, operatorAktif, wajibLogin, wajibMenu, type Operator } from "
 import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
 import { cariAnggota, type AnggotaRingkas } from "@/lib/queries/anggota"
 import { transaksiBankBook, type TransaksiBankBook } from "@/lib/queries/laporan"
+import { riwayatAnggota, type RiwayatAnggota } from "@/lib/queries/pinjaman-riwayat"
 import { kprBerjalan, pinjamanBerjalan, type KprBerjalan, type PinjamanBerjalan } from "@/lib/queries/pinjaman"
 
 export type Hasil = { ok: true; pesan: string; rincian?: Record<string, string | number>; jadwal?: Jadwal[] } | { ok: false; error: string } | null
@@ -122,6 +123,9 @@ export async function ambilSimpananAction(_: Hasil, f: FormData) { return simpan
 
 // ---------- pinjaman tunai ----------
 
+/** Hanya superadmin atau grup admin yang boleh mengubah bunga saat pencairan; operator lain memakai bunga dari pengaturan jenis kredit. */
+const bolehUbahBunga = (o: Operator) => o.superadmin || o.grup?.trim().toLowerCase() === "admin"
+
 /** Pratinjau pencairan dengan rumus mesin posting yang sama (tanpa menulis ke database). */
 export async function pratinjauPinjamanAction(p: { kodeKredit: string; tglPinjaman: string; pokok: string; lama: number; persenBunga?: string }) {
     const o = await wajibLogin() // sesi habis: alihkan ke login
@@ -129,10 +133,11 @@ export async function pratinjauPinjamanAction(p: { kodeKredit: string; tglPinjam
     try {
         if (!UANG.test(p.pokok) || toUnits(p.pokok) <= 0n || !Number.isInteger(p.lama) || p.lama < 1 || !TANGGAL.test(p.tglPinjaman)) return null
         if (p.persenBunga && !UANG.test(p.persenBunga)) return null
+        const persenBunga = bolehUbahBunga(o) ? p.persenBunga : undefined
         const [jk] = await query<{ bunga_kredit: string; bunga_per: string; persen_adm: string; persen_provisi: string; jatuh_tempo: number; mak_cicilan: number }>(
             "SELECT bunga_kredit::text, bunga_per, persen_adm::text, persen_provisi::text, jatuh_tempo, mak_cicilan FROM jenis_kredit WHERE kode_kredit = $1", [p.kodeKredit])
         if (!jk) return null
-        const t: Terms = { pokok: toUnits(p.pokok), persenBunga: persenToMicro(p.persenBunga || jk.bunga_kredit),
+        const t: Terms = { pokok: toUnits(p.pokok), persenBunga: persenToMicro(persenBunga || jk.bunga_kredit),
             perAngsuran: jk.bunga_per.toUpperCase() === "PER ANGSURAN", lama: p.lama,
             persenAdm: persenToMicro(jk.persen_adm), persenProvisi: persenToMicro(jk.persen_provisi) }
         const baris: Jadwal[] = jadwal(t).map((c) => ({ ke: c.ke, tanggal: jatuhTempo(p.tglPinjaman, jk.jatuh_tempo, c.ke),
@@ -146,14 +151,17 @@ export async function pratinjauPinjamanAction(p: { kodeKredit: string; tglPinjam
 export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasil> {
     return posting([MENU.cairKoperasi, MENU.cairBank], async (o) => {
         const opr = o.nama
-        const [jk] = await query<{ group_pinjaman: string }>("SELECT group_pinjaman FROM jenis_kredit WHERE kode_kredit = $1", [teks(f, "kodeKredit")])
+        const [jk] = await query<{ group_pinjaman: string; bunga_kredit: string }>("SELECT group_pinjaman, bunga_kredit::text FROM jenis_kredit WHERE kode_kredit = $1", [teks(f, "kodeKredit")])
         if (!jk) throw new InputSalah("Jenis kredit tidak ada")
+        // Bunga hanya bisa diubah admin/superadmin: dari operator lain, isian yang berbeda dari bunga jenis kredit ditolak (bukan diam-diam diabaikan).
+        const bungaIsian = uangOpsional(f, "persenBunga", "Persen bunga")
+        if (bungaIsian !== undefined && !bolehUbahBunga(o) && Number(bungaIsian) !== Number(jk.bunga_kredit)) throw new InputSalah("Bunga hanya bisa diubah oleh admin atau superadmin")
         if (!MENU_CAIR_GRUP[jk.group_pinjaman]) throw new InputSalah(`Jenis kredit grup ${jk.group_pinjaman} dicairkan lewat form KPR`)
         wajibMenu(o, [MENU_CAIR_GRUP[jk.group_pinjaman]])
         const r = await tx((db) => cairkanPinjaman(db, {
             kodeAgt: teks(f, "kodeAgt"), kodeKredit: teks(f, "kodeKredit"), tglPinjaman: tanggal(f),
             pokok: uang(f, "pokok", "Pokok pinjaman"), lama: bulat(f, "lama", "Lama angsuran"), kasPerkiraanId: teks(f, "kas"), opr,
-            persenBunga: uangOpsional(f, "persenBunga", "Persen bunga"),
+            persenBunga: bolehUbahBunga(o) ? bungaIsian : undefined,
         }))
         return { ok: true, pesan: `Pinjaman ${r.noPinjaman} dicairkan`,
             rincian: { "No. Pinjaman": r.noPinjaman, "Total jasa": rp(r.jasaTotal) },
@@ -323,4 +331,11 @@ export async function dataVoucherAction(nomorBukti: string): Promise<{ bukti: Bu
     } catch (e) {
         return { error: e instanceof Error ? e.message : "Gagal membaca bukti" }
     }
+}
+
+/** Profil dan riwayat pinjaman anggota untuk keputusan pencairan (sisa utang, tunggakan, keterlambatan dulu, pernah macet). */
+export async function riwayatAnggotaAction(kodeAgt: string): Promise<RiwayatAnggota | null> {
+    const o = await wajibLogin() // sesi habis: alihkan ke login
+    if (!punyaIzin(o.izin, [MENU.cairKoperasi, MENU.cairBank, MENU.cairKpr, MENU.angsurKoperasi, MENU.angsurBank, MENU.angsurKpr])) return null
+    return riwayatAnggota(kodeAgt)
 }

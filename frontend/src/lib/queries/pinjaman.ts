@@ -10,9 +10,11 @@ export const GRUP_PINJAMAN = ["KOPERASI", "BANK / PIHAK LAIN", "KPR"]
 // Semua jenis ditampilkan; hide=true (mis. seluruh jenis KPR) ditaruh di bawah dan ditandai di form.
 export const jenisKredit = (grup?: string) =>
     query<{ kode_kredit: string; nama_kredit: string; group_pinjaman: string; bunga_kredit: number; bunga_per: string;
-        mak_cicilan: number; persen_adm: number; persen_provisi: number; jatuh_tempo: number; hide: boolean }>(
+        mak_cicilan: number; persen_adm: number; persen_provisi: number; jatuh_tempo: number; hide: boolean
+        kunci_staff: boolean; kunci_sisa: boolean; kunci_grade: boolean; maks_plafond: number }>(
         `SELECT kode_kredit, nama_kredit, group_pinjaman, bunga_kredit, bunga_per, mak_cicilan, persen_adm, persen_provisi, jatuh_tempo,
-                COALESCE(hide, false) AS hide
+                COALESCE(hide, false) AS hide, kunci_hanya_untuk_staff = 1 AS kunci_staff, kunci_jika_sisa = 1 AS kunci_sisa,
+                kunci_jika_melebihi_grade = 1 AS kunci_grade, COALESCE(maks_plafond, 0) AS maks_plafond
            FROM jenis_kredit WHERE ($1::text IS NULL OR group_pinjaman = $1)
           ORDER BY COALESCE(hide, false), kode_kredit`, [grup && grup !== "All" ? grup : null])
 

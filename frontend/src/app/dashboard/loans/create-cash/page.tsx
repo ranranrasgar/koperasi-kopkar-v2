@@ -16,5 +16,6 @@ export default async function Page(props: PageProps<"/dashboard/loans/create-cas
     const [awal] = idPengajuan ? await query<AwalPinjaman>(`SELECT a.kode_agt, a.nik, a.nama, a.aktif, pp.kd_kredit AS kode_kredit,
         pp.rp_pinjaman_pokok::text AS pokok, pp.lama_angsuran AS lama, pp.persen_bunga::text AS persen_bunga
         FROM pengajuan_pinjaman pp JOIN anggota a ON a.id = pp.anggota_id WHERE pp.id = $1 AND pp.status = 'Y'`, [idPengajuan]) : []
-    return <PinjamanForm awal={awal} jenis={boleh} akunKas={kas} hariIni={hariIni()} />
+    return <PinjamanForm awal={awal} jenis={boleh} akunKas={kas} hariIni={hariIni()}
+        bolehUbahBunga={o.superadmin || o.grup?.trim().toLowerCase() === "admin"} />
 }
