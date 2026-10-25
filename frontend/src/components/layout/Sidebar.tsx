@@ -55,7 +55,7 @@ export function Sidebar({ className, onClose }: SidebarProps) {
                             <h1 className="font-headline-lg text-headline-lg font-black text-on-background dark:text-on-primary-container break-words">
                                 {koperasi.nama}
                             </h1>
-                            <p className="font-label-md text-label-md text-on-surface-variant">Management System</p>
+                            <p className="whitespace-nowrap text-[11px] leading-tight text-on-surface-variant">Management System</p>
                         </div>
                     </div>
                 </div>
