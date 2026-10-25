@@ -301,6 +301,14 @@ Desktop sudah tidak dipakai, jadi web mengambil alih Generate dan Posting potong
 
 ---
 
+## 2026-10-25 — Pengaturan Tampilan (tema warna per operator)
+
+**Dikerjakan:** halaman `/dashboard/settings/tampilan` (ikon palet di dasar sidebar, antara Logout dan mode gelap). Enam warna (aksen, kanvas, kartu, header, sidebar, tulisan sidebar), 8 preset profesional, pratinjau, peringatan kontras WCAG, Reset = hapus baris. Tersimpan per operator di tabel `opr_tampilan` (`pengaturan-web.sql`, dipasang oleh `npm run pengaturan:pasang`; sudah dijalankan di database asli dan uji). `backend/src/tampilan.ts` (murni, diuji 4/4), `frontend/src/lib/tampilan.ts`, `app/actions/tampilan.ts`, `components/settings/EditorTampilan.tsx`. Layout menyisipkan `<style>` dari `cssTema()`: variabel `--tema-*`/`--aksen`, latar hanya di `:root:not(.dark)`, dan penggantian kelas `bg-blue-600`, `text-blue-600` dst ke aksen. Kelas menu samping (`.item-menu`, `.aktif`, dll) di `globals.css` punya fallback ke warna lama, jadi tanpa tema tampilan tidak berubah. Nilai divalidasi ketat `#rrggbb` (disisipkan ke `<style>`). Preferensi pribadi, tidak ikut mode uji.
+
+**Verifikasi:** tes backend tampilan 4/4, `tsc --noEmit` frontend bersih. **Belum** dicek di browser di balik login (agent tidak memakai password operator): periksa tampilan tiap preset, sidebar gelap, simpan, reset.
+
+**Jebakan:** warna biru yang ditulis hardcoded selain kelas yang diganti di `cssTema` tidak ikut tema; tambahkan di sana bila ketemu.
+
 ## 2026-10-24 — Audit nomor transaksi dan transaksi bersamaan (multi user)
 
 - Pertanyaan pengguna: aman tidak dari nomor bukti/primary key ganda saat transaksi bersamaan (pengajuan, pembayaran, dll.).

@@ -26,7 +26,7 @@ export function ThemeToggle() {
             variant="ghost"
             size="icon"
             onClick={() => setTheme(isDark ? "light" : "dark")}
-            className="h-9 w-9 rounded-md text-sidebar-foreground/60 hover:text-sidebar-foreground hover:bg-sidebar-accent transition-all"
+            className="h-9 w-9 rounded-md ikon-sidebar transition-all"
             title={isDark ? "Mode Terang" : "Mode Gelap"}
         >
             {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}

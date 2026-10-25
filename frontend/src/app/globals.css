@@ -464,3 +464,17 @@ html[data-theme="default"].dark {
 @media (prefers-reduced-motion: reduce) {
     .animate-\[memuat_1\.1s_ease-in-out_infinite\] { animation: none; width: 100%; opacity: 0.6; }
 }
+
+/* Menu samping: warna mengikuti tema operator (variabel --tema-* dari layout); tanpa tema memakai warna bawaan seperti sebelumnya. */
+.judul-sidebar { color: var(--tema-sidebar-kuat, rgb(var(--theme-on-background))); }
+.dark .judul-sidebar { color: rgb(var(--theme-on-primary-container)); }
+.teks-sidebar { color: var(--tema-sidebar-teks, rgb(var(--theme-on-surface-variant))); }
+.teks-sidebar-redup { color: color-mix(in srgb, var(--tema-sidebar-teks, rgb(var(--theme-on-surface-variant))) 75%, transparent); }
+.judul-grup-menu { color: color-mix(in srgb, var(--tema-sidebar-teks, rgb(var(--theme-on-surface-variant))) 65%, transparent); }
+.judul-grup-menu:hover, .ikon-sidebar:hover { background: var(--tema-item-hover, color-mix(in srgb, var(--muted) 50%, transparent)); color: var(--tema-sidebar-kuat, var(--foreground)); }
+.item-menu { color: var(--tema-sidebar-teks, var(--muted-foreground)); }
+.item-menu:hover { background: var(--tema-item-hover, color-mix(in srgb, var(--muted) 50%, transparent)); color: var(--tema-sidebar-kuat, var(--foreground)); }
+.item-menu.aktif { background: var(--tema-item-aktif, var(--muted)); color: var(--tema-sidebar-kuat, var(--foreground)); font-weight: 700; }
+.ikon-sidebar { color: var(--tema-sidebar-teks, var(--muted-foreground)); }
+.logout-sidebar { color: var(--tema-logout, var(--color-error)); }
+.logout-sidebar:hover { background: color-mix(in srgb, var(--tema-logout, var(--color-error)) 12%, transparent); }

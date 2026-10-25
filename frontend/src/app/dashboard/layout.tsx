@@ -3,22 +3,26 @@ import { Suspense } from "react"
 import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
 import { hitungNotifAdminBaru } from "@kopkar/backend/src/anggota/notif-admin.ts"
 import { hitungPengumumanBaru } from "@kopkar/backend/src/anggota/sasaran.ts"
+import { cssTema } from "@kopkar/backend/src/tampilan.ts"
 import { BilahProgres } from "@/components/layout/BilahProgres"
 import { DashboardShell } from "@/components/layout/DashboardShell"
 import { modeAplikasi, pool, serverUji } from "@/lib/db"
 import { identitasKoperasi } from "@/lib/koperasi"
+import { temaOperator } from "@/lib/tampilan"
 import { wajibLogin } from "@/lib/operator"
 import { MENU } from "@/config/akses"
 
 export default async function Layout({ children }: { children: React.ReactNode }) {
     const o = await wajibLogin()
-    const [k, mode, pesanBaru, pengumumanBaru] = await Promise.all([
-        identitasKoperasi(), modeAplikasi(),
+    const [k, mode, tema, pesanBaru, pengumumanBaru] = await Promise.all([
+        identitasKoperasi(), modeAplikasi(), temaOperator(o.id),
         o.izin.includes(MENU.pesanAnggota) ? hitungBelumDibaca(pool, "admin") : 0,
         Promise.all([hitungPengumumanBaru(pool, o.id), hitungNotifAdminBaru(pool, o.id)]).then(([a, b]) => a + b),
     ])
     return (
         <DashboardShell operator={{ nama: o.nama, namaLengkap: o.namaLengkap, grup: o.grup, izin: o.izin }} koperasi={{ nama: k.nama, logo: k.logo }} lencana={{ "/dashboard/pesan": pesanBaru, "/dashboard/pengumuman": pengumumanBaru }}>
+            {/* Tema operator (Pengaturan Tampilan): variabel warna dan penggantian kelas biru; nilainya sudah divalidasi #rrggbb. */}
+            {tema && <style dangerouslySetInnerHTML={{ __html: cssTema(tema) }} />}
             <Suspense fallback={null}><BilahProgres /></Suspense>
             {serverUji && (
                 <div role="status" className="mb-4 rounded-md border border-violet-400 bg-violet-50 dark:bg-violet-500/10 px-4 py-2 text-sm text-violet-800 dark:text-violet-300">

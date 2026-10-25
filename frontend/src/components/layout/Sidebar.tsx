@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { ChevronDown, ChevronsDownUp, ChevronsUpDown } from "lucide-react"
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown, Palette } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { getMenuGroups } from "@/config/menu"
@@ -46,27 +46,27 @@ export function Sidebar({ className, onClose }: SidebarProps) {
     const toggle = (label: string) => simpan(tertutup.includes(label) ? tertutup.filter((x) => x !== label) : [...tertutup, label])
 
     return (
-        <aside className={cn("fixed left-0 top-0 h-screen w-64 bg-background z-50 flex flex-col transition-transform duration-300 md:translate-x-0 border-r border-outline-variant", className)}>
+        <aside className={cn("fixed left-0 top-0 h-screen w-64 bg-[var(--tema-sidebar,var(--background))] z-50 flex flex-col transition-transform duration-300 md:translate-x-0 border-r border-outline-variant", className)}>
             <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <div className="mb-lg px-sm">
                     <div className="flex items-center gap-2">
                         <img src={koperasi.logo} alt={`Logo ${koperasi.nama}`} className="h-10 w-10 shrink-0 object-contain" />
                         <div className="min-w-0">
-                            <h1 className="font-headline-lg text-headline-lg font-black text-on-background dark:text-on-primary-container break-words">
+                            <h1 className="font-headline-lg text-headline-lg font-black judul-sidebar break-words">
                                 {koperasi.nama}
                             </h1>
-                            <p className="whitespace-nowrap text-[11px] leading-tight text-on-surface-variant">Management System</p>
+                            <p className="whitespace-nowrap text-[11px] leading-tight teks-sidebar">Management System</p>
                         </div>
                     </div>
                 </div>
                 
-                <div className="flex items-center justify-between px-3 text-[11px] text-on-surface-variant/70">
+                <div className="flex items-center justify-between px-3 text-[11px] teks-sidebar-redup">
                     <span className="font-semibold uppercase tracking-wider">Menu</span>
                     <span className="flex items-center gap-0.5">
                         <button type="button" onClick={() => simpan([])} title="Buka semua grup" aria-label="Buka semua grup"
-                            className="rounded p-1 hover:bg-muted hover:text-foreground"><ChevronsUpDown className="h-4 w-4" /></button>
+                            className="rounded p-1 ikon-sidebar"><ChevronsUpDown className="h-4 w-4" /></button>
                         <button type="button" onClick={() => simpan(bisaDikerutkan)} title="Kerutkan semua grup" aria-label="Kerutkan semua grup"
-                            className="rounded p-1 hover:bg-muted hover:text-foreground"><ChevronsDownUp className="h-4 w-4" /></button>
+                            className="rounded p-1 ikon-sidebar"><ChevronsDownUp className="h-4 w-4" /></button>
                     </span>
                 </div>
                 <nav className="flex flex-col gap-1">
@@ -78,7 +78,7 @@ export function Sidebar({ className, onClose }: SidebarProps) {
                             <div key={group.groupLabel} className={isMain ? "mb-2" : "mb-2"}>
                                 {!isMain && (
                                     <button type="button" onClick={() => toggle(group.groupLabel)} aria-expanded={!tutup}
-                                        className="mt-2 mb-1 flex w-full items-center gap-1 rounded px-3 py-1 text-left text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 hover:bg-muted/50 hover:text-on-surface-variant">
+                                        className="mt-2 mb-1 flex w-full items-center gap-1 rounded px-3 py-1 text-left text-xs font-bold uppercase tracking-wider judul-grup-menu">
                                         <span className="flex-1">{group.groupLabel}</span>
                                         {tutup && jumlahLencana > 0 && (
                                             <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white normal-case">{jumlahLencana > 99 ? "99+" : jumlahLencana}</span>
@@ -106,12 +106,7 @@ export function Sidebar({ className, onClose }: SidebarProps) {
                                                 key={item.href}
                                                 href={item.href}
                                                 onClick={onClose}
-                                                className={cn(
-                                                    "font-label-md text-label-md px-3 py-2 flex items-center gap-2 transition-colors rounded-md",
-                                                    item.active
-                                                        ? "bg-muted font-bold text-foreground"
-                                                        : "text-muted-foreground hover:bg-muted/50 hover:text-foreground"
-                                                )}
+                                                className={cn("font-label-md text-label-md px-3 py-2 flex items-center gap-2 transition-colors rounded-md item-menu", item.active && "aktif")}
                                             >
                                                 <span className="material-symbols-outlined text-[1rem]">{item.icon}</span>
                                                 {item.label}
@@ -135,11 +130,13 @@ export function Sidebar({ className, onClose }: SidebarProps) {
             <div className="flex shrink-0 items-center gap-1 border-t border-outline-variant p-3">
                 <form action={logoutAction} className="min-w-0 flex-1">
                     <button type="submit"
-                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 font-label-md text-error transition-colors hover:bg-error/10">
+                        className="flex w-full items-center gap-2 rounded-md px-3 py-2 font-label-md logout-sidebar transition-colors">
                         <span className="material-symbols-outlined text-[1rem]">logout</span>
                         <span>Logout</span>
                     </button>
                 </form>
+                <Link href="/dashboard/settings/tampilan" title="Pengaturan tampilan (warna dan tema)" aria-label="Pengaturan tampilan"
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-md ikon-sidebar transition-colors"><Palette className="h-5 w-5" /></Link>
                 <ThemeToggle />
             </div>
         </aside>

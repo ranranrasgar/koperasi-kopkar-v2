@@ -11,7 +11,7 @@ Menu dikelompokkan per fungsi (Keanggotaan, Simpanan, Pinjaman, dan seterusnya).
 - **Dua ikon kecil di sebelah tulisan MENU** membuka semua grup atau mengerutkan semua grup sekaligus.
 - Pilihan Anda **diingat di perangkat ini**. Grup halaman yang sedang Anda buka otomatis terbuka saat berpindah halaman, jadi lokasi Anda selalu terlihat.
 - Grup yang dikerutkan tetap menampilkan lencana merah bila ada isi yang belum dibaca (misalnya pesan anggota).
-- Tombol ☰ di kiri atas menyembunyikan atau menampilkan menu samping. Di dasar menu ada **Logout** dan ikon **mode terang/gelap** yang selalu terlihat tanpa menggulir.
+- Tombol ☰ di kiri atas menyembunyikan atau menampilkan menu samping. Di dasar menu ada **Logout** dan ikon **palet warna** (mengubah warna dan tema, lihat artikel *Mengubah warna dan tema tampilan*) dan ikon **mode terang/gelap** yang selalu terlihat tanpa menggulir.
 
 ## Lebar halaman
 
