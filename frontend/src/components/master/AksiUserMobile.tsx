@@ -50,7 +50,7 @@ export function AksiUserMobile({ item }: { item: Record<string, unknown> }) {
             setPesan(h); alert(h.ok ? h.pesan : h.error); router.refresh()
             return
         }
-        setBahan({ setuju, data: { username: d.username, nik: d.nik, form: d.form, dariPengaturan: d.dariPengaturan } })
+        setBahan({ setuju, data: { username: d.username, nik: d.nik, form: d.form, dariPengaturan: d.dariPengaturan, daftarGrade: d.daftarGrade, gradeKaryawan: d.gradeKaryawan } })
     })
 
     const jalankan = (konfirmasi: string, fn: () => Promise<HasilPendaftaran>) => {

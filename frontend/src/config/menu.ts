@@ -218,6 +218,11 @@ export const allGroups: MenuGroup[] = [
                 label: "Jenis Simpanan",
                 icon: "sell",
                 href: "/dashboard/settings/jenis-simpanan"
+            },
+            {
+                label: "Grade Anggota",
+                icon: "military_tech",
+                href: "/dashboard/settings/grade"
             }
         ]
     },

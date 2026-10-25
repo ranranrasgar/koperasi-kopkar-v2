@@ -19,10 +19,10 @@ Semua keputusan dilakukan di **Keanggotaan → User Mobile**. Pilih filter **Ang
 | --- | --- |
 | Identitas | Nama lengkap (wajib), jenis kelamin, alamat, kota, kode pos, HP, telepon rumah |
 | Rekening | Bank, nomor rekening, atas nama rekening |
-| Kepegawaian | Grade, status staff (Staff atau No Staff), dan nominal grade (dasar plafon pinjaman) |
+| Kepegawaian | **Grade** (pilihan dari tabel Grade; grade di data karyawan terpilih otomatis bila ada), status staff (Staff atau No Staff). **Nominal plafon** ditampilkan dari tabel Grade dan tidak diketik |
 | **Simpanan awal** | **Pokok, wajib, dan sukarela** yang dipotong tiap bulan. Di bawah tiap kolom tertulis asal nilainya: *Dari Pengaturan Perusahaan* atau *Tebakan dari anggota baru* |
 
-Nilai simpanan boleh diubah admin untuk anggota ini saja; pengaturan umumnya tidak ikut berubah. Bila ada isian yang tidak sah (misalnya nama kosong, angka negatif, atau teks melebihi batas), pesan galat muncul di form dan **tidak ada yang tersimpan**, jadi akun tetap menunggu keputusan.
+Grade harus ada di tabel **Data Master → Grade Anggota**; bila belum ada, tambahkan dulu di sana. Nilai simpanan boleh diubah admin untuk anggota ini saja; pengaturan umumnya tidak ikut berubah. Bila ada isian yang tidak sah (misalnya nama kosong, angka negatif, atau teks melebihi batas), pesan galat muncul di form dan **tidak ada yang tersimpan**, jadi akun tetap menunggu keputusan.
 
 > **Syarat:** email pendaftar harus sudah terverifikasi. Bila belum, tombol Setujui tidak aktif.
 

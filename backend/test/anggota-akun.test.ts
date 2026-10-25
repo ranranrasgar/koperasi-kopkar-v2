@@ -392,3 +392,44 @@ test('kelengkapan anggota baru: nilai awal dari pengaturan, diubah admin saat me
         assert.equal(Number(a.simpanan_sukarela), 0);
     });
 });
+
+test('grade: anggota baru tertaut ke tabel grade, nominal mengikuti tabel, perubahan grade menjalar ke anggota', async () => {
+    await inTx(async (db) => {
+        const k = (await db.query(`SELECT k.nik, btrim(k.grade) grade FROM karyawan_mattel k JOIN grade g ON g.nama = btrim(k.grade)
+            WHERE length(k.nik) = 6 AND NOT EXISTS (SELECT 1 FROM anggota a WHERE a.nik = k.nik) AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.kode_agt = k.nik) LIMIT 1`)).rows[0];
+        const r = await daftarAkun(db, { username: 'uji_grade', password: 'Rahasia123', ulangi: 'Rahasia123', nik: k.nik, email: 'uji.grade@contoh.id' }, { sub: 'sub-uji-grade' });
+        const id = Number((r as { userId: number }).userId);
+        const oleh = (await db.query('SELECT id, nama FROM opr ORDER BY id LIMIT 1')).rows[0];
+        const g = (await db.query('SELECT id, nominal FROM grade WHERE nama = $1', [k.grade])).rows[0];
+
+        const d = await dataLengkapiAnggota(db, id);
+        assert.equal((d as { form: { grade: string } }).form.grade, k.grade, 'grade karyawan terpilih otomatis');
+        assert.ok((d as { daftarGrade: unknown[] }).daftarGrade.length > 10);
+
+        const tolak = await putuskanPendaftaran(db, id, true, { id: Number(oleh.id), nama: oleh.nama }, { ...(d as { form: Parameters<typeof bersihkanLengkap>[0] }).form, grade: 'ZZ99' }).catch((e) => e);
+        assert.match(String(tolak.message ?? tolak.error), /tidak ada di tabel grade/);
+    });
+    await inTx(async (db) => {
+        const k = (await db.query(`SELECT k.nik, btrim(k.grade) grade FROM karyawan_mattel k JOIN grade g ON g.nama = btrim(k.grade)
+            WHERE length(k.nik) = 6 AND NOT EXISTS (SELECT 1 FROM anggota a WHERE a.nik = k.nik) AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.kode_agt = k.nik) LIMIT 1`)).rows[0];
+        const r = await daftarAkun(db, { username: 'uji_grade2', password: 'Rahasia123', ulangi: 'Rahasia123', nik: k.nik, email: 'uji.grade2@contoh.id' }, { sub: 'sub-uji-grade2' });
+        const id = Number((r as { userId: number }).userId);
+        const oleh = (await db.query('SELECT id, nama FROM opr ORDER BY id LIMIT 1')).rows[0];
+        const h = await putuskanPendaftaran(db, id, true, { id: Number(oleh.id), nama: oleh.nama });
+        const kode = (h as { kodeAnggota: string }).kodeAnggota;
+        const a = (await db.query('SELECT a.grade, a.rp_grade, a.grade_id, g.nominal FROM anggota a LEFT JOIN grade g ON g.id = a.grade_id WHERE a.kode_agt = $1', [kode])).rows[0];
+        assert.equal(a.grade, k.grade);
+        assert.ok(a.grade_id, 'tertaut ke grade');
+        assert.equal(Number(a.rp_grade), Number(a.nominal), 'nominal mengikuti tabel grade');
+
+        // Mengubah nominal grade menjalar ke anggota bergrade itu.
+        await db.query('UPDATE grade SET nominal = 7777000 WHERE id = $1', [a.grade_id]);
+        assert.equal(Number((await db.query('SELECT rp_grade FROM anggota WHERE kode_agt = $1', [kode])).rows[0].rp_grade), 7777000);
+        // Mengganti grade_id anggota menyalin nama dan nominal grade baru.
+        const lain = (await db.query('SELECT id, nama, nominal FROM grade WHERE id <> $1 LIMIT 1', [a.grade_id])).rows[0];
+        await db.query('UPDATE anggota SET grade_id = $2 WHERE kode_agt = $1', [kode, lain.id]);
+        const b = (await db.query('SELECT grade, rp_grade FROM anggota WHERE kode_agt = $1', [kode])).rows[0];
+        assert.equal(b.grade, lain.nama);
+        assert.equal(Number(b.rp_grade), Number(lain.nominal));
+    });
+});

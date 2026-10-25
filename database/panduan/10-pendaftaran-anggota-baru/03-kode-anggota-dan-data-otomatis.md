@@ -24,7 +24,7 @@ Contoh: `0626-2033` artinya anggota ke-2033, dicatat Juni 2026. Kode tidak perna
 | Operator | Nama operator yang menyetujui |
 | Status | Aktif, jenis **Anggota** |
 | Simpanan pokok, wajib, sukarela | **Nilai awal di Sistem → Pengaturan Perusahaan → Nilai Awal Anggota Baru.** Bila kolom itu dikosongkan, dipakai tebakan: nilai yang paling sering dipakai anggota aktif terbaru dengan grade yang sama |
-| Nominal grade | Tebakan dari anggota terbaru bergrade sama (dasar plafon pinjaman) |
+| Grade dan nominal grade | Grade dari data karyawan (dipilih bila ada di tabel **Grade Anggota**); nominal plafon otomatis dari tabel itu, dan anggota tertaut ke grade tersebut |
 | Jenis kelamin, kota, kode pos, telepon rumah, nama bank, atas nama | Kosong atau mengikuti nama karyawan; diisi admin di form |
 
 Data karyawan ditandai pada anggota baru, sehingga daftar **Karyawan Mattel** menunjukkan mereka sudah menjadi anggota. Akun aplikasi otomatis terhubung ke anggota baru, dan kode anggota akun diperbarui.

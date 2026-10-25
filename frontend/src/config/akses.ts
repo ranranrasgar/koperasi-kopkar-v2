@@ -101,6 +101,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/settings": [MENU.company],
     "/dashboard/settings/jenis-pinjaman": [MENU.jenisPinjaman],
     "/dashboard/settings/jenis-simpanan": [MENU.jenisSimpanan],
+    "/dashboard/settings/grade": [MENU.jenisPinjaman], // grade menentukan plafon pinjaman, jadi hak yang sama dengan Jenis Pinjaman
     "/dashboard/members/karyawan-mattel": [MENU.karyawanMattel, MENU.daftarKaryawan, MENU.lapDaftarKaryawan],
     "/dashboard/members/mobile-users": [MENU.user, MENU.requestUser],
     "/dashboard/savings/cards": [MENU.lapBukuSimpanan],

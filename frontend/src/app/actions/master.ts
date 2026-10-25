@@ -105,6 +105,51 @@ export async function simpanNilaiAwalAnggotaAction(_: HasilSimpan, f: FormData):
     })
 }
 
+// ---------- grade ----------
+
+/** Tambah atau ubah grade (tabel grade). Mengubah nama atau nominal berlaku untuk semua anggota bergrade itu (trigger database). */
+export async function simpanGradeAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
+    return simpan(MENU.jenisPinjaman, "/dashboard/settings/grade", async (db) => {
+        const id = Number(f.get("id") || 0)
+        const nama = teks(f, "nama", "Nama grade", true, 15)
+        if (/\s/.test(nama)) throw new Salah("Nama grade tidak boleh memakai spasi (contoh: M06)")
+        const nominal = angka(f, "nominal", "Nominal", { min: 0, maks: 999_999_999_999 })
+        const { rows: dobel } = await db.query("SELECT 1 FROM grade WHERE lower(nama) = lower($1) AND id <> $2", [nama, id])
+        if (dobel.length) throw new Salah(`Grade ${nama} sudah ada`)
+        if (id) {
+            const { rows } = await db.query("UPDATE grade SET nama = $1, nominal = $2 WHERE id = $3 RETURNING id", [nama, nominal, id])
+            if (!rows.length) throw new Salah("Grade tidak ada")
+            return `Grade ${nama} disimpan; anggota bergrade ini ikut diperbarui`
+        }
+        await db.query("INSERT INTO grade (nama, nominal) VALUES ($1, $2)", [nama, nominal])
+        return `Grade ${nama} ditambahkan`
+    })
+}
+
+/** Hapus grade yang belum dipakai anggota mana pun. */
+export async function hapusGradeAction(id: number): Promise<HasilSimpan> {
+    return simpan(MENU.jenisPinjaman, "/dashboard/settings/grade", async (db) => {
+        const { rows: [g] } = await db.query<{ nama: string; n: string }>(
+            "SELECT g.nama, (SELECT count(*) FROM anggota a WHERE a.grade_id = g.id) n FROM grade g WHERE g.id = $1", [id])
+        if (!g) throw new Salah("Grade tidak ada")
+        if (Number(g.n) > 0) throw new Salah(`Grade ${g.nama} masih dipakai ${g.n} anggota; tidak bisa dihapus`)
+        await db.query("DELETE FROM grade WHERE id = $1", [id])
+        return `Grade ${g.nama} dihapus`
+    })
+}
+
+/**
+ * Terapkan tabel grade ke anggota: anggota yang namanya cocok dengan sebuah grade ditautkan (grade_id), dan nominal grade mereka (rp_grade)
+ * disamakan dengan tabel. Mengubah plafon pinjaman anggota yang nilainya berbeda, jadi hanya dijalankan atas permintaan admin.
+ */
+export async function terapkanGradeAction(): Promise<HasilSimpan> {
+    return simpan(MENU.jenisPinjaman, "/dashboard/settings/grade", async (db) => {
+        const tautan = await db.query("UPDATE anggota a SET grade_id = g.id FROM grade g WHERE a.grade_id IS NULL AND a.grade = g.nama")
+        const sama = await db.query("UPDATE anggota a SET rp_grade = g.nominal FROM grade g WHERE a.grade_id = g.id AND a.rp_grade <> g.nominal")
+        return `${tautan.rowCount ?? 0} anggota ditautkan ke grade, ${sama.rowCount ?? 0} nominal grade anggota disamakan dengan tabel`
+    })
+}
+
 const MAKS_LOGO = 500 * 1024
 
 /** Unggah logo koperasi ke perusahaan.logo, atau hapus (aksi=hapus) supaya web memakai logo bawaan. */

@@ -220,7 +220,22 @@ async function kodeAnggotaBaru(db: pg.PoolClient) {
 export interface LengkapAnggota {
     nama: string; jnsKelamin: string; alamat: string; kota: string; kodepos: string; hp: string; telpRmh: string;
     bankNama: string; bankNoRek: string; bankAtasNama: string; grade: string; statusStaff: string;
-    rpGrade: string; pokok: string; wajib: string; sukarela: string;
+    pokok: string; wajib: string; sukarela: string;
+}
+
+export interface GradeRow { id: string; nama: string; nominal: string }
+
+/** Semua grade (tabel grade), urut nama; kosong bila tabel belum dipasang (npm run pengaturan:pasang). */
+export async function daftarGrade(db: Pick<pg.PoolClient, 'query'>): Promise<GradeRow[]> {
+    if (!(await db.query("SELECT to_regclass('public.grade') AS t")).rows[0].t) return [];
+    return (await db.query<GradeRow>('SELECT id::text, nama, nominal::text FROM grade ORDER BY nama')).rows;
+}
+
+/** Grade menurut nama, atau null (juga bila nama kosong atau tabel belum ada). */
+export async function cariGrade(db: Pick<pg.PoolClient, 'query'>, nama: string): Promise<GradeRow | null> {
+    const n = nama.trim();
+    if (!n) return null;
+    return (await daftarGrade(db)).find((g) => g.nama === n) ?? null;
 }
 
 /** Kunci pengaturan_web untuk nilai awal simpanan anggota baru (diatur di Pengaturan Perusahaan). */
@@ -251,7 +266,7 @@ export function bersihkanLengkap(x: LengkapAnggota): LengkapAnggota | string {
             nama, jnsKelamin: jk, alamat: t(x.alamat, 100, 'Alamat'), kota: t(x.kota, 50, 'Kota'), kodepos: pos, hp: t(x.hp, 20, 'HP'), telpRmh: t(x.telpRmh, 20, 'Telepon rumah'),
             bankNama: t(x.bankNama, 15, 'Nama bank'), bankNoRek: t(x.bankNoRek, 15, 'Nomor rekening'), bankAtasNama: t(x.bankAtasNama, 50, 'Atas nama rekening'),
             grade: t(x.grade, 15, 'Grade'), statusStaff: t(x.statusStaff, 15, 'Status staff'),
-            rpGrade: duit(x.rpGrade, 'Nominal grade'), pokok: duit(x.pokok, 'Simpanan pokok'), wajib: duit(x.wajib, 'Simpanan wajib'), sukarela: duit(x.sukarela, 'Simpanan sukarela'),
+            pokok: duit(x.pokok, 'Simpanan pokok'), wajib: duit(x.wajib, 'Simpanan wajib'), sukarela: duit(x.sukarela, 'Simpanan sukarela'),
         };
     } catch (e) {
         return e instanceof Error ? e.message : 'Data tidak valid';
@@ -276,15 +291,16 @@ export async function nilaiAwalAnggotaBaru(db: Pick<pg.PoolClient, 'query'>, gra
         return { nilai: Number(n ?? cadangan ?? 0), pengaturan: n !== null };
     };
     const p = ambil(KUNCI_NILAI_AWAL.pokok, tebakan?.pokok), w = ambil(KUNCI_NILAI_AWAL.wajib, tebakan?.wajib), s = ambil(KUNCI_NILAI_AWAL.sukarela, tebakan?.sukarela);
+    const g = await cariGrade(db, grade); // nominal grade dari tabel grade; tebakan hanya untuk grade yang belum ada di tabel
     return {
-        rpGrade: Number(tebakan?.rp_grade ?? 0), pokok: p.nilai, wajib: w.nilai, sukarela: s.nilai,
+        rpGrade: g ? Number(g.nominal) : Number(tebakan?.rp_grade ?? 0), pokok: p.nilai, wajib: w.nilai, sukarela: s.nilai,
         dariPengaturan: { pokok: p.pengaturan, wajib: w.pengaturan, sukarela: s.pengaturan },
     };
 }
 
 export type DataLengkapi =
     | { ok: true; sudahAnggota: true; username: string; kode: string }
-    | { ok: true; sudahAnggota: false; username: string; nik: string; form: LengkapAnggota; dariPengaturan: { pokok: boolean; wajib: boolean; sukarela: boolean } }
+    | { ok: true; sudahAnggota: false; username: string; nik: string; form: LengkapAnggota; dariPengaturan: { pokok: boolean; wajib: boolean; sukarela: boolean }; daftarGrade: GradeRow[]; gradeKaryawan: string }
     | { ok: false; error: string };
 
 /**
@@ -302,13 +318,14 @@ export async function dataLengkapiAnggota(db: Pick<pg.PoolClient, 'query'>, user
     if (!k) return { ok: false, error: 'Data karyawan Mattel tidak ditemukan' };
     const ada = (await db.query<{ kode_agt: string }>('SELECT kode_agt FROM anggota WHERE nik = $1 AND aktif ORDER BY id DESC LIMIT 1', [k.nik])).rows[0];
     if (ada) return { ok: true, sudahAnggota: true, username: u.username, kode: ada.kode_agt };
-    const grade = (k.grade ?? '').trim();
+    const daftar = await daftarGrade(db);
+    const grade = daftar.find((x) => x.nama === (k.grade ?? '').trim())?.nama ?? ''; // grade karyawan dipilih otomatis bila ada di tabel grade
     const awal = await nilaiAwalAnggotaBaru(db, grade);
     const nama = (k.nama ?? '').trim();
     return {
-        ok: true, sudahAnggota: false, username: u.username, nik: k.nik, dariPengaturan: awal.dariPengaturan,
+        ok: true, sudahAnggota: false, username: u.username, nik: k.nik, dariPengaturan: awal.dariPengaturan, daftarGrade: daftar, gradeKaryawan: (k.grade ?? '').trim(),
         form: { nama, jnsKelamin: '', alamat: (k.emadd1 ?? '').trim(), kota: '', kodepos: '0', hp: (k.emphone ?? '').trim(), telpRmh: '', bankNama: '', bankNoRek: (k.no_rek ?? '').trim(),
-            bankAtasNama: nama, grade, statusStaff: (k.sts ?? '').trim(), rpGrade: String(awal.rpGrade), pokok: String(awal.pokok), wajib: String(awal.wajib), sukarela: String(awal.sukarela) },
+            bankAtasNama: nama, grade, statusStaff: (k.sts ?? '').trim(), pokok: String(awal.pokok), wajib: String(awal.wajib), sukarela: String(awal.sukarela) },
     };
 }
 
@@ -348,17 +365,22 @@ export async function jadikanAnggota(db: pg.PoolClient, userId: number, oleh: Pe
         } else {
             l = { nama: (k.nama ?? '').trim().slice(0, 50), jnsKelamin: '', alamat: (k.emadd1 ?? '').trim().slice(0, 100), kota: '', kodepos: '0',
                 hp: (k.emphone ?? '').trim().slice(0, 20), telpRmh: '', bankNama: '', bankNoRek: (k.no_rek ?? '').trim().slice(0, 15), bankAtasNama: '',
-                grade: grade.slice(0, 15), statusStaff: (k.sts ?? '').trim().slice(0, 15), rpGrade: String(awal.rpGrade), pokok: String(awal.pokok),
+                grade: grade.slice(0, 15), statusStaff: (k.sts ?? '').trim().slice(0, 15), pokok: String(awal.pokok),
                 wajib: String(awal.wajib), sukarela: String(awal.sukarela) };
         }
+        // Grade harus ada di tabel grade (relasi anggota.grade_id); nominal plafonnya dari tabel itu. Grade karyawan yang belum ada di tabel (tanpa form)
+        // tetap dicatat sebagai teks dengan nominal tebakan, dan bisa ditautkan kemudian lewat halaman Grade.
+        const g = await cariGrade(db, l.grade);
+        if (lengkap && l.grade && !g) return { ok: false, error: `Grade ${l.grade} tidak ada di tabel grade. Pilih grade yang tersedia atau tambahkan lebih dulu di Data Master → Grade.` };
+        const rpGrade = g ? g.nominal : lengkap ? '0' : String(awal.rpGrade);
         const { urut, kode: kodeBaru } = await kodeAnggotaBaru(db);
         anggotaId = (await db.query<{ id: string }>(
             `INSERT INTO anggota (urut, status_staff, aktif, agt_non_agt, grade, rp_grade, kode_agt, nik, nama, jns_kelamin, alamat, kota, kodepos, hp, telp_rmh,
-                                  bank_nama, bank_no_rek, bank_atas_nama, tglpencatatan, simpanan_pokok, simpanan_wajib, simpanan_sukarela, opr, karyawan_mattel_id, operator_id)
-             VALUES ($1, $2, true, true, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, (now() AT TIME ZONE 'Asia/Jakarta')::date, $17, $18, $19, $20, $21, $22)
+                                  bank_nama, bank_no_rek, bank_atas_nama, tglpencatatan, simpanan_pokok, simpanan_wajib, simpanan_sukarela, opr, karyawan_mattel_id, operator_id, grade_id)
+             VALUES ($1, $2, true, true, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, (now() AT TIME ZONE 'Asia/Jakarta')::date, $17, $18, $19, $20, $21, $22, $23)
              RETURNING id::text`,
-            [urut, l.statusStaff, l.grade, l.rpGrade, kodeBaru, k.nik, l.nama, l.jnsKelamin, l.alamat, l.kota, Number(l.kodepos), l.hp, l.telpRmh,
-                l.bankNama, l.bankNoRek, l.bankAtasNama, l.pokok, l.wajib, l.sukarela, oleh.nama.slice(0, 15), k.id, oleh.id])).rows[0].id;
+            [urut, l.statusStaff, l.grade, rpGrade, kodeBaru, k.nik, l.nama, l.jnsKelamin, l.alamat, l.kota, Number(l.kodepos), l.hp, l.telpRmh,
+                l.bankNama, l.bankNoRek, l.bankAtasNama, l.pokok, l.wajib, l.sukarela, oleh.nama.slice(0, 15), k.id, oleh.id, g?.id ?? null])).rows[0].id;
         await db.query('INSERT INTO anggota_detail (anggota_id, urut, kode_agt) SELECT $1, coalesce(max(urut), 0) + 1, $2 FROM anggota_detail', [anggotaId, kodeBaru]);
         kode = kodeBaru; dibuat = true;
     }

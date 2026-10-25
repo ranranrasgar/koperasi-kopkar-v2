@@ -14,6 +14,9 @@ export interface BahanLengkapi {
     nik: string
     form: LengkapAnggota
     dariPengaturan: { pokok: boolean; wajib: boolean; sukarela: boolean }
+    /** Grade yang tersedia (tabel grade) dan grade di data karyawan Mattel (bisa belum ada di tabel). */
+    daftarGrade: { id: string; nama: string; nominal: string }[]
+    gradeKaryawan: string
 }
 
 /**
@@ -39,7 +42,7 @@ function Isi({ bahan, tombol, onTutup, onSimpan }: { bahan: BahanLengkapi; tombo
     const [galat, setGalat] = useState("")
     const [sibuk, mulai] = useTransition()
     const ubah = (k: keyof LengkapAnggota) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setV((x) => ({ ...x, [k]: e.target.value }))
-    const uang = (k: "rpGrade" | "pokok" | "wajib" | "sukarela") => (m: string) => setV((x) => ({ ...x, [k]: m }))
+    const uang = (k: "pokok" | "wajib" | "sukarela") => (m: string) => setV((x) => ({ ...x, [k]: m }))
     const kirim = (e: React.FormEvent) => {
         e.preventDefault()
         setGalat("")
@@ -49,6 +52,7 @@ function Isi({ bahan, tombol, onTutup, onSimpan }: { bahan: BahanLengkapi; tombo
             onTutup()
         })
     }
+    const grade = bahan.daftarGrade.find((g) => g.nama === v.grade)
     const hint = (dari: boolean) => (dari ? "Dari Pengaturan Perusahaan" : "Tebakan dari anggota baru; atur di Pengaturan Perusahaan")
     return (
         <form onSubmit={kirim} className="space-y-4">
@@ -68,7 +72,13 @@ function Isi({ bahan, tombol, onTutup, onSimpan }: { bahan: BahanLengkapi; tombo
                 <Field label="Bank" htmlFor="l-bank"><Input id="l-bank" value={v.bankNama} onChange={ubah("bankNama")} maxLength={15} /></Field>
                 <Field label="No. rekening" htmlFor="l-rek"><Input id="l-rek" value={v.bankNoRek} onChange={ubah("bankNoRek")} maxLength={15} /></Field>
                 <Field label="Atas nama rekening" htmlFor="l-an" className="sm:col-span-2"><Input id="l-an" value={v.bankAtasNama} onChange={ubah("bankAtasNama")} maxLength={50} /></Field>
-                <Field label="Grade" htmlFor="l-grade"><Input id="l-grade" value={v.grade} onChange={ubah("grade")} maxLength={15} /></Field>
+                <Field label="Grade" htmlFor="l-grade"
+                    hint={!bahan.daftarGrade.length ? "Tabel grade kosong; tambahkan di Data Master, Grade" : !bahan.daftarGrade.some((g) => g.nama === bahan.gradeKaryawan) && bahan.gradeKaryawan ? `Grade di data karyawan (${bahan.gradeKaryawan}) belum ada di tabel grade` : undefined}>
+                    <select id="l-grade" className={selectClass} value={v.grade} onChange={ubah("grade")}>
+                        <option value="">-</option>
+                        {bahan.daftarGrade.map((g) => <option key={g.id} value={g.nama}>{g.nama}</option>)}
+                    </select>
+                </Field>
                 <Field label="Status staff" htmlFor="l-staff">
                     <select id="l-staff" className={selectClass} value={v.statusStaff} onChange={ubah("statusStaff")}>
                         <option value="">-</option><option value="Staff">Staff</option><option value="No Staff">No Staff</option>
@@ -84,7 +94,9 @@ function Isi({ bahan, tombol, onTutup, onSimpan }: { bahan: BahanLengkapi; tombo
                     <Field label="Simpanan wajib" htmlFor="l-wajib" hint={hint(bahan.dariPengaturan.wajib)}><InputUang id="l-wajib" value={v.wajib} onChange={uang("wajib")} className="text-right" /></Field>
                     <Field label="Simpanan sukarela" htmlFor="l-sukarela" hint={hint(bahan.dariPengaturan.sukarela)}><InputUang id="l-sukarela" value={v.sukarela} onChange={uang("sukarela")} className="text-right" /></Field>
                 </div>
-                <Field label="Nominal grade (batas pinjaman per grade)" htmlFor="l-rp" className="mt-3 sm:w-1/2"><InputUang id="l-rp" value={v.rpGrade} onChange={uang("rpGrade")} className="text-right" /></Field>
+                <p className="mt-3 text-sm text-muted-foreground">
+                    Nominal grade (dasar plafon pinjaman): <b className="text-foreground">{grade ? `Rp ${Number(grade.nominal).toLocaleString("id-ID")}` : "belum ada grade"}</b>, mengikuti tabel Grade.
+                </p>
             </div>
 
             {galat && (

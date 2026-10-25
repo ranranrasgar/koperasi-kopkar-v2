@@ -35,7 +35,7 @@ Susunan layarnya sama dengan layar desktop *Jenis Pinjaman (Credit)*.
 
 ## Maksimal plafond dan grade
 
-Grade adalah nominal plafon tiap anggota (data anggota, kolom grade). Batas pinjaman satu anggota pada satu jenis ditentukan begini:
+Grade adalah nominal plafon tiap anggota, diambil dari tabel **Grade Anggota** (Data Master → Grade Anggota) yang tertaut ke tiap anggota. Batas pinjaman satu anggota pada satu jenis ditentukan begini:
 
 1. **Kunci jika melebihi grade** dicentang dan anggota punya nominal grade: batasnya **nominal grade anggota**. **Grade diutamakan**, walaupun Maksimal Plafond juga diisi.
 2. Selain itu, bila **Maksimal Plafond** diisi: batasnya Maksimal Plafond. Ini juga berlaku bila grade dikunci tetapi nominal grade anggota belum diisi.

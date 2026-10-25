@@ -301,6 +301,12 @@ Desktop sudah tidak dipakai, jadi web mengambil alih Generate dan Posting potong
 
 ---
 
+## 2026-10-25 — Tabel grade dan relasi anggota.grade_id
+
+- Tabel `grade (id, nama unik, nominal)` + kolom `anggota.grade_id` (FK RESTRICT) di `pengaturan-web.sql` (dipasang `npm run pengaturan:pasang`, sudah di database asli dan uji). Kolom lama `anggota.grade` dan `anggota.rp_grade` TETAP sebagai salinan (dibaca desktop, mobile-api, PWA, plafon); trigger `anggota_sinkron_grade` (isi/ganti grade_id menyalin nama+nominal) dan `grade_sinkron_anggota` (ubah nama/nominal grade menjalar ke anggota bergrade itu). Pemasangan awal melewati sinkronisasi (`kopkar.lewati_grade`).
+- Isi awal (hanya bila tabel kosong): 39 grade dari pola huruf+2 angka di data karyawan/anggota, nominal = modus rp_grade (>1) dibulatkan ke 500 ribu; anggota ditautkan lewat nama TANPA mengubah rp_grade. Di database asli 643 anggota nominalnya berbeda dari tabel (0, 1, 3000001, dll); diterapkan lewat tombol Terapkan ke anggota di halaman Grade (`/dashboard/settings/grade`, hak = Jenis Pinjaman). S13 dan T10 nominal 0 (belum ada data), isi manual.
+- Form kelengkapan: grade jadi pilihan dari tabel, nominal tampil dari tabel (`LengkapAnggota.rpGrade` dihapus); grade di luar tabel ditolak. Uji: `anggota-akun.test.ts` 17/17, `npm test` backend 82/82 (database uji).
+
 ## 2026-10-25 — Form kelengkapan anggota baru dan nilai awal simpanan
 
 - Menyetujui pendaftaran (dan tombol Jadikan anggota) di User Mobile membuka modal `FormLengkapiAnggota` bila akun belum punya anggota: data karyawan Mattel + nilai awal simpanan, semua bisa diubah. Backend: `dataLengkapiAnggota`, `bersihkanLengkap`, `nilaiAwalAnggotaBaru`, `LengkapAnggota` di `backend/src/anggota/akun.ts`; `putuskanPendaftaran` dan `jadikanAnggota` menerima `lengkap` opsional (tanpa itu, perilaku lama dengan nilai awal dari pengaturan).
