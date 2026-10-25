@@ -7,10 +7,12 @@ const nextConfig: NextConfig = {
     serverExternalPackages: ["nodemailer", "pdfkit"],
     // Server uji (scripts/dev-uji.mjs) memakai folder build dan tsconfig sendiri, sama seperti frontend/.
     distDir: process.env.KOPKAR_DIST_DIR || ".next",
-    typescript: { tsconfigPath: process.env.KOPKAR_DIST_DIR ? "tsconfig.uji.json" : "tsconfig.json" },
+    // Build di VPS 2 GB tanpa swap: pemeriksaan tipe (tsc) dilewati (sudah dijalankan di komputer pengembang sebelum commit) dan hanya satu proses pekerja,
+    // supaya build tidak dimatikan kernel (Killed). KOPKAR_HEMAT_RAM=1 diset di Dockerfile.
+    typescript: { tsconfigPath: process.env.KOPKAR_DIST_DIR ? "tsconfig.uji.json" : "tsconfig.json", ignoreBuildErrors: process.env.KOPKAR_HEMAT_RAM === "1" },
     poweredByHeader: false,
     // Unggah foto profil lewat server action: maks. 5 MB foto + amplop form (bawaan Next 1 MB).
-    experimental: { serverActions: { bodySizeLimit: "6mb" } },
+    experimental: { serverActions: { bodySizeLimit: "6mb" }, ...(process.env.KOPKAR_HEMAT_RAM === "1" ? { cpus: 1, webpackMemoryOptimizations: true } : {}) },
     async headers() {
         return [{
             source: "/:path*",
