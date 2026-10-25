@@ -33,4 +33,21 @@ for (const i of kurang) {
     console.log(`  dipasang: ${i.nama} (${Date.now() - t} ms)`);
 }
 if (!PERIKSA) for (const t of new Set(kurang.map((i) => i.tabel))) await db.query(`ANALYZE ${t}`);
+
+// Indeks kecepatan halaman (indeks-cepat.sql): penutup (INCLUDE) dan trigram untuk pencarian ILIKE. Butuh ekstensi pg_trgm (bawaan paket contrib PostgreSQL).
+const cepat = fs.readFileSync(path.join(here, 'indeks-cepat.sql'), 'utf8').split(/\r?\n/).filter((l) => /^CREATE INDEX /.test(l));
+const tabelAda = new Set((await db.query(`SELECT tablename FROM pg_tables WHERE schemaname = 'public'`)).rows.map((r) => r.tablename));
+const adaCepat = new Set((await db.query(`SELECT indexname FROM pg_indexes WHERE schemaname = 'public'`)).rows.map((r) => r.indexname));
+const belum = cepat.map((sqlI) => ({ sqlI, nama: sqlI.match(/EXISTS (\w+) ON (\w+)/)?.[1], tabel: sqlI.match(/EXISTS (\w+) ON (\w+)/)?.[2] }))
+    .filter((i) => i.nama && i.tabel && tabelAda.has(i.tabel) && !adaCepat.has(i.nama));
+console.log(`${db.database}: ${cepat.length} indeks kecepatan, ${belum.length} belum ada`);
+if (!PERIKSA && belum.length) {
+    await db.query('CREATE EXTENSION IF NOT EXISTS pg_trgm');
+    for (const i of belum) {
+        const t = Date.now();
+        await db.query(i.sqlI);
+        console.log(`  dipasang: ${i.nama} (${Date.now() - t} ms)`);
+    }
+    for (const t of new Set(belum.map((i) => i.tabel))) await db.query(`VACUUM (ANALYZE) ${t}`);
+} else if (PERIKSA) for (const i of belum) console.log(`  belum ada: ${i.nama} ON ${i.tabel}`);
 await db.end();

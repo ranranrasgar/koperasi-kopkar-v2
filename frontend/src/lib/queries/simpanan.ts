@@ -11,7 +11,9 @@ export async function bukuSimpanan(s: SearchParams) {
     const cari = sp(s, "search")
     if (cari) {
         const kw = p(`%${cari}%`)
-        where.push(`(s.no_bukti ILIKE ${kw} OR s.kode_agt ILIKE ${kw} OR a.nik ILIKE ${kw} OR a.nama ILIKE ${kw})`)
+        // Anggota yang cocok dicari dulu (tabel kecil), lalu simpanannya lewat indeks anggota_id; no_bukti lewat indeks trigram. Keduanya digabung bitmap OR,
+        // bukan OR lintas tabel yang memindai seluruh simpanan.
+        where.push(`(s.anggota_id = ANY (ARRAY(SELECT b.id FROM anggota b WHERE b.kode_agt ILIKE ${kw} OR b.nik ILIKE ${kw} OR b.nama ILIKE ${kw})) OR s.no_bukti ILIKE ${kw})`)
     }
     if (sp(s, "jenis")) where.push(`s.jenis_simpanan = ${p(sp(s, "jenis"))}`)
     if (isTanggal(sp(s, "dari"))) where.push(`s.tgl_transaksi >= ${p(sp(s, "dari"))}`)
@@ -32,8 +34,8 @@ export async function bukuSimpanan(s: SearchParams) {
           AND (x.tgl_transaksi, x.urut, x.id) <= (t.tgl_transaksi, t.urut, t.id)) AS rp_saldo`
     // Hanya urut kronologis (terbaru atau terlama) supaya saldo berjalan tetap terbaca. Satu kunci gabungan, sehingga
     // arah urut juga berlaku untuk transaksi pada tanggal yang sama.
-    const sortable = { tgl_transaksi: "(tgl_transaksi, urut, id)" }
-    return paged({ base, values, searchParams: s, sortable, defaultSort: "(tgl_transaksi, urut, id) DESC", kolomHalaman: saldo })
+    const sortable = { tgl_transaksi: "tgl_transaksi {d}, urut {d}, id {d}" }
+    return paged({ base, values, searchParams: s, sortable, defaultSort: "tgl_transaksi DESC, urut DESC, id DESC", kolomHalaman: saldo })
 }
 
 // Simpanan per jenis: kode baru ('01'..'04') dan kode lama ('SP', 'SW', 'SS', 'SK').

@@ -40,9 +40,14 @@ Dijalankan dari folder utama repositori:
 | `npm run uji:reset` | Membuat ulang database uji dari data asli |
 | `npm run backup` / `npm run restore` | Cadangan dan pemulihan database |
 | `npm run panduan:pasang` | Memasang atau memperbarui isi Pusat Panduan |
-| `npm run pengaturan:pasang`, `anggota:pasang`, `shu:pasang`, `indeks:pasang` | Memasang tabel dan data baru (aman dijalankan ulang) |
+| `npm run pengaturan:pasang`, `anggota:pasang`, `shu:pasang` | Memasang tabel dan data baru (aman dijalankan ulang) |
+| `npm run indeks:pasang` | Memasang indeks database yang belum ada, termasuk indeks kecepatan halaman (`indeks-cepat.sql`: indeks penutup dan trigram untuk pencarian). Berjalan otomatis di `update-vps.sh`; `-- --periksa` hanya melaporkan |
 | `npm test` | Menjalankan uji otomatis backend dan API |
 | `npm run email:uji -- alamat@contoh.com` | Mencoba koneksi dan kirim email percobaan |
+
+## Kecepatan halaman
+
+Halaman membaca data besar (jurnal sekitar 1,1 juta baris, simpanan sekitar 300 ribu baris), jadi kecepatan bergantung pada indeks. Ringkasnya: Buku Besar, Bank Book, dan saldo akun memakai indeks kode akun dan tanggal; Neraca, Rugi Laba, dan Neraca Saldo memakai indeks penutup sehingga cukup membaca indeks; pencarian teks (nomor bukti, keterangan) di Jurnal Umum dan Buku Simpanan memakai indeks trigram (ekstensi `pg_trgm`, termasuk dalam paket contrib PostgreSQL). Setelah memulihkan database dari cadangan atau memigrasi ulang, jalankan `npm run indeks:pasang` supaya indeks itu terpasang kembali. Indeks menambah sedikit waktu simpan jurnal, tetapi jauh menghemat waktu baca.
 
 ## Memperbarui aplikasi di VPS
 

@@ -301,6 +301,13 @@ Desktop sudah tidak dipakai, jadi web mengambil alih Generate dan Posting potong
 
 ---
 
+## 2026-10-25 — Audit kecepatan query halaman
+
+- Alat ukur (di luar repo, scratchpad): harness tsx dengan stub `@/lib/db` memanggil semua fungsi `frontend/src/lib/queries/*` dan `anggota/src/lib/data.ts` (terbaik dari 3 kali, EXPLAIN untuk >200 ms). Sebelum: Buku Besar 3,4 dtk, cari Jurnal Umum 2,6 dtk, Neraca Saldo semua 1,8 dtk, Rencana SHU 1,9 dtk, Bank Book harian 1,4 dtk, Buku Simpanan 1,2 dtk, Karyawan Mattel 2,2 dtk. Penyebab utama: tidak ada indeks `jurnal_umum.kode_perkiraan` (hanya `perkiraan_id`), seq scan 1,1 GB untuk laporan saldo, dan pencarian ILIKE tanpa trigram.
+- `database/postgres/indeks-cepat.sql` (8 indeks, dipasang `npm run indeks:pasang`, termasuk `CREATE EXTENSION pg_trgm`; sudah di database asli dan uji). Kode: `paged` mendukung `{d}` (urut banyak kolom searah agar memakai indeks), Buku Simpanan (urut + pencarian), Karyawan Mattel, `jurnalBermasalah`.
+- Sesudah (terbaik dari 3): Buku Besar 13 ms, cari Jurnal 5 ms, Bank Book 6 ms, Buku Simpanan 62 ms, Rencana SHU 60 ms, Tunggakan 66 ms, Neraca/Rugi Laba 66 ms, Karyawan Mattel 9 ms; sisa: Neraca Saldo rentang sejak 2000 250 ms (baca seluruh jurnal), Jurnal Bermasalah 180 ms, Rekap Simpanan 133 ms. PWA anggota semua <65 ms.
+- Catatan: `anggota-push.test.ts` (2 uji notifikasi) gagal di database uji karena memilih akun terbaru yang kini beremail terverifikasi (data uji, bukan kode); lolos di database asli.
+
 ## 2026-10-25 — Halaman Jurnal Bermasalah
 
 - `/dashboard/accounting/journal/tidak-seimbang` (`jurnalBermasalah` di `lib/queries/laporan.ts`): bukti tidak seimbang dan baris ke akun di luar COA, cakupan sama dengan `saldoPerAkun` (pembuka TBT terakhir + sesudahnya). Keterangan selisih di Neraca dan Neraca Saldo kini tautan ke sana. Di database asli: 25 bukti, total selisih 17.387.468,56 = 17.650.000 (akun `0`, BB/260211/005) - 262.531,44; data desktop lama (opr subigbyo), bukan dari modul web. Perbaikan lewat Edit/hapus di Jurnal Umum oleh akuntan.

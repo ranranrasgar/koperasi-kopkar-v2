@@ -47,7 +47,9 @@ export async function paged<T = Record<string, unknown>, J extends string = neve
     const pageSize = ukuranHalaman(sp(opts.searchParams, "pageSize"), opts.pageSize ?? 25)
     const sortCol = opts.sortable[sp(opts.searchParams, "sortBy")]
     const dir = sp(opts.searchParams, "sortOrder") === "desc" ? "DESC" : "ASC"
-    const order = sortCol ? `${sortCol} ${dir} NULLS LAST${opts.urutanLanjut ? `, ${opts.urutanLanjut}` : ""}` : opts.defaultSort
+    // Nilai sortable boleh memuat "{d}" (arah urut) bila beberapa kolom diurutkan searah, mis. "tgl DESC, urut DESC, id DESC"; urutan kolom
+    // terpisah seperti itu dapat memakai indeks (perbandingan ROW(...) tidak bisa). Tanpa "{d}": satu ekspresi dengan NULLS LAST.
+    const order = sortCol ? (sortCol.includes("{d}") ? sortCol.replaceAll("{d}", dir) : `${sortCol} ${dir} NULLS LAST${opts.urutanLanjut ? `, ${opts.urutanLanjut}` : ""}`) : opts.defaultSort
 
     const n = opts.values.length
     if (opts.jumlahkan) {

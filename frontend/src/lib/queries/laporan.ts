@@ -156,16 +156,20 @@ export interface BarisTanpaAkun { id: number; nomor_bukti: string; tanggal: stri
 export async function jurnalBermasalah(sampai: string) {
     const o = await pembukaTerakhir(sampai)
     const cakupan = o
-        ? `((${PEMBUKA} AND j.tanggal_jurnalumum = $2) OR (NOT ${PEMBUKA} AND j.tanggal_jurnalumum >= $2)) AND j.tanggal_jurnalumum <= $1`
+        ? `j.tanggal_jurnalumum >= $2 AND j.tanggal_jurnalumum <= $1 AND (NOT ${PEMBUKA} OR j.tanggal_jurnalumum = $2)` // batas tanggal di luar OR supaya indeks tanggal dipakai
         : `NOT ${PEMBUKA} AND j.tanggal_jurnalumum <= $1`
     const args = o ? [sampai, o] : [sampai]
     const [tidakSeimbang, tanpaAkun] = await Promise.all([
+        // Agregasi hanya memakai kolom yang ada di indeks penutup (index-only scan); keterangan diambil terakhir untuk bukti yang bermasalah saja.
         query<JurnalTidakSeimbang>(`
-            SELECT j.nomor_bukti, MIN(j.tanggal_jurnalumum)::text AS tanggal, COUNT(*)::int AS baris, SUM(j.debit_jurnalumum) AS debit, SUM(j.kredit_jurnalumum) AS kredit,
-                   SUM(j.debit_jurnalumum - j.kredit_jurnalumum) AS selisih, MIN(j.deskripsi) AS deskripsi, COUNT(*) FILTER (WHERE p.id IS NULL)::int AS tanpa_akun
-              FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan
-             WHERE ${cakupan} GROUP BY j.nomor_bukti HAVING ABS(SUM(j.debit_jurnalumum - j.kredit_jurnalumum)) >= 0.5
-             ORDER BY MIN(j.tanggal_jurnalumum) DESC, j.nomor_bukti`, args),
+            WITH g AS (
+                SELECT j.nomor_bukti, MIN(j.tanggal_jurnalumum) AS tanggal, COUNT(*)::int AS baris, SUM(j.debit_jurnalumum) AS debit, SUM(j.kredit_jurnalumum) AS kredit,
+                       SUM(j.debit_jurnalumum - j.kredit_jurnalumum) AS selisih, COUNT(*) FILTER (WHERE p.id IS NULL)::int AS tanpa_akun
+                  FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan
+                 WHERE ${cakupan} GROUP BY j.nomor_bukti HAVING ABS(SUM(j.debit_jurnalumum - j.kredit_jurnalumum)) >= 0.5)
+            SELECT g.nomor_bukti, g.tanggal::text AS tanggal, g.baris, g.debit, g.kredit, g.selisih, g.tanpa_akun,
+                   (SELECT MIN(x.deskripsi) FROM jurnal_umum x WHERE x.nomor_bukti = g.nomor_bukti) AS deskripsi
+              FROM g ORDER BY g.tanggal DESC, g.nomor_bukti`, args),
         query<BarisTanpaAkun>(`
             SELECT j.id, j.nomor_bukti, j.tanggal_jurnalumum::text AS tanggal, j.kode_perkiraan, j.debit_jurnalumum AS debit, j.kredit_jurnalumum AS kredit, j.deskripsi
               FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan
