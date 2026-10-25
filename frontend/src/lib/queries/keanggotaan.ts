@@ -18,9 +18,10 @@ export async function daftarKaryawanMattel(s: SearchParams) {
                COALESCE(a.kode_agt, n.kode) AS kode_agt,
                CASE WHEN a.id IS NOT NULL THEN 'ya' WHEN n.kode IS NOT NULL THEN 'nama' ELSE 'tidak' END AS status_agt
           FROM karyawan_mattel k LEFT JOIN anggota a ON a.karyawan_mattel_id = k.id
-          LEFT JOIN (SELECT upper(btrim(nama)) AS nm, min(kode_agt) AS kode FROM anggota WHERE karyawan_mattel_id IS NULL GROUP BY 1 HAVING count(*) = 1) n
+          LEFT JOIN (SELECT upper(btrim(x.nama)) AS nm, min(x.kode_agt) AS kode FROM anggota x WHERE x.karyawan_mattel_id IS NULL
+                      AND upper(btrim(x.nama)) IN (SELECT upper(btrim(nama)) FROM karyawan_mattel GROUP BY 1 HAVING count(*) = 1)
+                      GROUP BY 1 HAVING count(*) = 1) n
                  ON a.id IS NULL AND n.nm = upper(btrim(k.nama))
-                AND (SELECT count(*) FROM karyawan_mattel k2 WHERE upper(btrim(k2.nama)) = n.nm) = 1
          ${where.length ? `WHERE ${where.join(" AND ")}` : ""}`
     const sortable = Object.fromEntries(["nik", "nama", "deptname", "sectname", "grade", "joindate", "status_agt"].map((k) => [k, k]))
     return paged({ base, values, searchParams: s, sortable, defaultSort: "nama ASC" })
