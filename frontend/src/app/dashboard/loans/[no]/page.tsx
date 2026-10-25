@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
+import { TombolKirimInfo } from "@/components/transaksi/TombolKirimInfo"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
 import { MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
 import { AKSES_HALAMAN } from "@/config/akses"
@@ -79,6 +80,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                 <h1 className="font-mono text-2xl font-semibold tracking-tight">{r.no_pinjaman}</h1>
                 {statusUtama}
                 {!info.aktif && <Lencana teks="Anggota non-aktif" warna="abu" />}
+                <span className="ml-auto print:hidden"><TombolKirimInfo noPinjaman={r.no_pinjaman} /></span>
             </div>
 
             <div className="rounded-lg border bg-background p-4 shadow-sm">

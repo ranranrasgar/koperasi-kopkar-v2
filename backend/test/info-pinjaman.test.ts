@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import { cairkanPinjaman } from '../src/posting/pinjaman.ts';
+import { cairkanKpr } from '../src/posting/kpr.ts';
 import { bacaInfoPinjaman, jadwalAngsuranPdf, kirimInfoPencairan, teksInfoPinjaman } from '../src/anggota/info-pinjaman.ts';
 
 const pool = createPool();
@@ -65,5 +66,27 @@ test('kirim info pencairan: notifikasi tercatat dan email berlampiran PDF masuk 
         assert.equal(e.lampiran_nama, `Jadwal-Angsuran-${c.noPinjaman}.pdf`);
         assert.ok(e.ukuran > 1500);
         assert.match(e.teks, /Jadwal angsuran:/);
+    });
+});
+
+test('info KPR: jadwal dari angsuran tetap, PDF, dan notifikasi', async () => {
+    await inTx(async (db) => {
+        const a = (await db.query("SELECT id, kode_agt FROM anggota WHERE aktif = 'Y' ORDER BY id LIMIT 1")).rows[0];
+        const kas = (await db.query("SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'")).rows[0].id;
+        const k = await cairkanKpr(db, { kodeAgt: a.kode_agt, kodeKredit: 'C10', tglPinjaman: '2026-10-22', pokok: 12_000_100, lama: 12, kasPerkiraanId: kas, opr: 'uji' });
+        const i = (await bacaInfoPinjaman(db, k.noPinjaman))!;
+        assert.equal(i.jenis, 'kpr');
+        assert.equal(i.jadwal.length, 12);
+        assert.equal(i.jadwal.reduce((t, b) => t + Number(b.total), 0), 12_000_100);   // angsuran terakhir melunasi sisa pokok
+        assert.equal(Number(i.jadwal[11].sisaPokok), 0);
+        assert.equal(i.jadwal[0].tanggal, '2026-11-10');
+        assert.match(teksInfoPinjaman(i), /KPR Anda telah dicatat/);
+        const pdf = await jadwalAngsuranPdf(i);
+        assert.equal(pdf.subarray(0, 5).toString(), '%PDF-');
+        if (process.env.PDF_CONTOH_KPR) fs.writeFileSync(process.env.PDF_CONTOH_KPR, pdf);
+        const h = await kirimInfoPencairan(db, k.noPinjaman);
+        assert.equal(h?.penerima, 1);
+        const n = (await db.query('SELECT title FROM log_notifikasi WHERE anggota_id = $1 ORDER BY id DESC LIMIT 1', [a.id])).rows[0];
+        assert.equal(n.title, 'KPR Anda sudah dicatat');
     });
 });

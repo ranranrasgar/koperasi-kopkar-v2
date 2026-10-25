@@ -1,6 +1,8 @@
 // Pasang tabel Pusat Panduan dan isi awalnya dari database/panduan/**.md.
 //
-//   npm run panduan:pasang              buat tabel bila belum ada, tambahkan kategori/artikel yang belum ada (cocok lewat slug)
+//   npm run panduan:pasang              buat tabel bila belum ada, tambahkan kategori/artikel yang belum ada (cocok lewat slug), dan perbarui
+//                                       artikel yang belum pernah disunting di Kelola Panduan (diubah_oleh = 'isi awal') sesuai berkas .md terbaru;
+//                                       artikel yang sudah disunting admin tidak disentuh (dilaporkan sebagai dilewati)
 //   npm run panduan:pasang -- --timpa   kembalikan SEMUA panduan ke isi bawaan (suntingan dan artikel buatan admin dihapus)
 //   PG_URL=...                          database tujuan (bawaan: PG_URL di frontend/.env.local)
 //
@@ -69,7 +71,7 @@ async function main() {
         await c.query('BEGIN');
         await c.query(fs.readFileSync(path.join(here, 'panduan.sql'), 'utf8'));
         if (TIMPA) await c.query('DELETE FROM panduan; DELETE FROM panduan_kategori;');
-        let kBaru = 0, aBaru = 0;
+        let kBaru = 0, aBaru = 0, aDiperbarui = 0, aDilewati = 0;
         for (const k of kategori) {
             const r = await c.query(
                 `INSERT INTO panduan_kategori (slug, nama, keterangan, ikon, urutan) VALUES ($1,$2,$3,$4,$5)
@@ -81,12 +83,24 @@ async function main() {
                     `INSERT INTO panduan (kategori_id, slug, judul, ringkasan, isi, href_menu, urutan, diubah_oleh)
                      VALUES ($1,$2,$3,$4,$5,$6,$7,'isi awal') ON CONFLICT (slug) DO NOTHING RETURNING id`,
                     [id, a.slug, a.judul, a.ringkasan, a.isi, a.href_menu, a.urutan]);
-                if (ra.rows[0]) aBaru++;
+                if (ra.rows[0]) { aBaru++; continue; }
+                // Sudah ada: perbarui bila belum disunting admin dan isinya memang berbeda dari berkas; selain itu dilewati bila berbeda.
+                const lama = (await c.query('SELECT judul, ringkasan, isi, href_menu, urutan, diubah_oleh FROM panduan WHERE slug = $1', [a.slug])).rows[0];
+                const sama = lama.judul === a.judul && (lama.ringkasan ?? null) === a.ringkasan && lama.isi === a.isi && (lama.href_menu ?? null) === a.href_menu && lama.urutan === a.urutan;
+                if (sama) continue;
+                if (lama.diubah_oleh === 'isi awal') {
+                    await c.query(`UPDATE panduan SET kategori_id = $2, judul = $3, ringkasan = $4, isi = $5, href_menu = $6, urutan = $7, diubah_pada = now() WHERE slug = $1`,
+                        [a.slug, id, a.judul, a.ringkasan, a.isi, a.href_menu, a.urutan]);
+                    aDiperbarui++;
+                } else {
+                    aDilewati++;
+                    console.log(`  dilewati (sudah disunting oleh ${lama.diubah_oleh}): ${a.slug}`);
+                }
             }
         }
         await c.query('COMMIT');
         const total = (await c.query('SELECT (SELECT COUNT(*) FROM panduan_kategori) k, (SELECT COUNT(*) FROM panduan) a')).rows[0];
-        console.log(`${db}: ${TIMPA ? 'dikembalikan ke isi bawaan, ' : ''}${kBaru} kategori dan ${aBaru} artikel baru; total ${total.k} kategori, ${total.a} artikel.`);
+        console.log(`${db}: ${TIMPA ? 'dikembalikan ke isi bawaan, ' : ''}${kBaru} kategori dan ${aBaru} artikel baru, ${aDiperbarui} artikel diperbarui${aDilewati ? `, ${aDilewati} dilewati karena disunting admin` : ''}; total ${total.k} kategori, ${total.a} artikel.`);
     } catch (e) {
         await c.query('ROLLBACK');
         throw e;

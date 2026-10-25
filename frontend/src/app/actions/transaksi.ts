@@ -11,7 +11,7 @@ import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
 import { modeUji, pool, query, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
-import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
+import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_DETAIL_PINJAMAN_GRUP, MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
 import { cariAnggota, type AnggotaRingkas } from "@/lib/queries/anggota"
 import { transaksiBankBook, type TransaksiBankBook } from "@/lib/queries/laporan"
 import { riwayatAnggota, type RiwayatAnggota } from "@/lib/queries/pinjaman-riwayat"
@@ -124,6 +124,34 @@ export async function ambilSimpananAction(_: Hasil, f: FormData) { return simpan
 
 // ---------- pinjaman tunai ----------
 
+/** Kabari anggota setelah pencairan (notifikasi + email + PDF jadwal); mengembalikan kalimat tambahan untuk pesan hasil. Tidak melempar galat. */
+async function kabariAnggota(noPinjaman: string) {
+    if (await modeUji()) return ""
+    const h = await kirimInfoPencairan(pool, noPinjaman).catch((e) => { console.error("kirim info pencairan gagal:", e); return null })
+    return h ? (h.email > 0 ? "; notifikasi dan email jadwal angsuran dikirim ke anggota" : "; notifikasi dikirim ke anggota (tanpa email: belum ada email terverifikasi)") : "; notifikasi ke anggota gagal dikirim"
+}
+
+/** Kirim ulang informasi kredit dan jadwal angsuran (notifikasi + email + PDF) ke anggota pemilik pinjaman tunai atau KPR. */
+export async function kirimUlangInfoPinjamanAction(noPinjaman: string): Promise<Hasil> {
+    try {
+        const o = await operatorAktif()
+        const [tunai] = await query<{ group_pinjaman: string | null }>(
+            "SELECT jk.group_pinjaman FROM pinjaman_tunai p LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id WHERE p.no_pinjaman = $1", [noPinjaman])
+        const [kpr] = tunai ? [] : await query<{ no_pinjaman: string }>("SELECT no_pinjaman FROM kpr WHERE no_pinjaman = $1", [noPinjaman])
+        if (!tunai && !kpr) throw new InputSalah("Pinjaman tidak ditemukan")
+        // Hak sama dengan melihat detail pinjaman: operator yang menangani pinjaman grup itu.
+        const menu = tunai ? MENU_DETAIL_PINJAMAN_GRUP[tunai.group_pinjaman ?? ""] ?? [] : [MENU.cairKpr, MENU.angsurKpr, MENU.lapPinjamanKpr]
+        wajibMenu(o, menu)
+        if (await modeUji()) return { ok: true, pesan: "MODE UJI: informasi tidak dikirim ke anggota" }
+        const h = await kirimInfoPencairan(pool, noPinjaman)
+        if (!h || h.penerima === 0) return { ok: false, error: "Anggota tidak punya akun aplikasi aktif, jadi tidak ada yang bisa dikirimi" }
+        return { ok: true, pesan: h.email > 0 ? "Notifikasi dan email (dengan PDF jadwal angsuran) dikirim ke anggota" : "Notifikasi dikirim ke anggota; email tidak dikirim karena belum ada email terverifikasi" }
+    } catch (e) {
+        if (!(e instanceof InputSalah) && !(e instanceof GalatSesi)) console.error("kirim ulang info pinjaman gagal:", e)
+        return { ok: false, error: e instanceof Error ? e.message : "Gagal mengirim" }
+    }
+}
+
 /** Hanya superadmin atau grup admin yang boleh mengubah bunga saat pencairan; operator lain memakai bunga dari pengaturan jenis kredit. */
 const bolehUbahBunga = (o: Operator) => o.superadmin || o.grup?.trim().toLowerCase() === "admin"
 
@@ -166,11 +194,7 @@ export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasi
         }))
         // Kabari anggota: notifikasi di aplikasi dan email berisi informasi kredit, jadwal angsuran, dan PDF-nya. Mode uji tidak menyimpan
         // apa pun, jadi tidak mengirim; kegagalan kirim tidak membatalkan pencairan yang sudah tersimpan.
-        let kabar = ""
-        if (!(await modeUji())) {
-            const h = await kirimInfoPencairan(pool, r.noPinjaman).catch((e) => { console.error("kirim info pencairan gagal:", e); return null })
-            kabar = h ? (h.email > 0 ? "; notifikasi dan email jadwal angsuran dikirim ke anggota" : "; notifikasi dikirim ke anggota (tanpa email: belum ada email terverifikasi)") : "; notifikasi ke anggota gagal dikirim"
-        }
+        const kabar = await kabariAnggota(r.noPinjaman)
         return { ok: true, pesan: `Pinjaman ${r.noPinjaman} dicairkan${kabar}`,
             rincian: { "No. Pinjaman": r.noPinjaman, "Total jasa": rp(r.jasaTotal) },
             jadwal: r.jadwal.map((j) => ({ ke: j.ke, tanggal: j.tanggal, pokok: rp(j.pokok), jasa: rp(j.jasa), adm: 0, provisi: 0 })) }
@@ -221,7 +245,8 @@ export async function cairkanKprAction(_: Hasil, f: FormData): Promise<Hasil> {
             pokok: uang(f, "pokok", "Pokok KPR"), lama: bulat(f, "lama", "Lama angsuran"), kasPerkiraanId: teks(f, "kas"), opr,
             angsuranPerBulan: uangOpsional(f, "angsuran", "Angsuran per bulan"),
         }))
-        return { ok: true, pesan: `KPR ${r.noPinjaman} dicatat`,
+        const kabar = await kabariAnggota(r.noPinjaman)
+        return { ok: true, pesan: `KPR ${r.noPinjaman} dicatat${kabar}`,
             rincian: { "No. KPR": r.noPinjaman, "Angsuran per bulan": rp(r.angsuranPerBulan) } }
     })
 }

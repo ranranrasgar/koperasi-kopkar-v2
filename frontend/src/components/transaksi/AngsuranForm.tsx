@@ -1,5 +1,6 @@
 "use client"
 
+import { TombolKirimInfo } from "./TombolKirimInfo"
 import { useCallback, useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
@@ -109,6 +110,7 @@ function AngsuranKpr({ info, akunKas, hariIni, onSelesai }: { info: InfoAnggota;
                     <div><div className="text-[11px] uppercase text-muted-foreground">Angsuran ke</div>{k.jml_cicilan + 1} dari {k.lama_angsuran}</div>
                     <div><div className="text-[11px] uppercase text-muted-foreground">Angsuran/bulan</div>{formatRupiah(k.rp_angsuran_per_bulan)}</div>
                     <div><div className="text-[11px] uppercase text-muted-foreground">Sisa pokok</div>{formatRupiah(k.sisa_pokok)}</div>
+                    <div className="col-span-full"><TombolKirimInfo noPinjaman={k.no_pinjaman} kecil /></div>
                 </div>
             )}
             <div className="grid gap-4 sm:grid-cols-3">
