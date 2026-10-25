@@ -54,4 +54,6 @@ git pull
 
 Skrip itu menarik kode, membangun ulang image, **mencadangkan database lebih dulu**, memasang tabel dan data baru, lalu menjalankan ulang aplikasi. Database dan volumenya tidak disentuh. Lakukan di luar jam sibuk dan pastikan ada cadangan yang tersimpan di luar server.
 
+> **VPS 2 GB wajib punya swap.** Build memakai RAM besar; tanpa swap prosesnya dimatikan sistem (pesan `Killed` pada langkah 3) dan aplikasi yang sudah dihentikan tetap mati. Tambahkan swap 4 GB sekali saja: `sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile`, lalu `echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab`. Skrip pembaruan memperingatkan bila swap belum ada, dan bila langkah mana pun gagal ia **menyalakan kembali versi lama** otomatis. Bila aplikasi terlanjur mati: `cd /srv/kopkar && docker compose up -d`.
+
 Detail pemasangan awal, Nginx, HTTPS, dan pemulihan ada di berkas `docs/DEPLOY-VPS.md` pada repositori.

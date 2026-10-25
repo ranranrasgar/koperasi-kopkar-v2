@@ -12,8 +12,21 @@ cd "$(dirname "$0")"
 echo "==> 1/6 Tarik kode terbaru"
 git pull --ff-only
 
+# Build butuh RAM besar. Tanpa swap, VPS 2 GB dimatikan kernel di tengah build (pesan "Killed"); tambahkan swap 4 GB sekali saja:
+#   sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
+#   echo '/swapfile none swap sw 0 0' | sudo tee -a /etc/fstab
+if [ "$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)" -lt 1500 ] && [ "$(awk '/MemTotal/ {print int($2/1024)}' /proc/meminfo)" -lt 3500 ]; then
+    echo "PERINGATAN: RAM kurang dari 3,5 GB dan swap kurang dari 1,5 GB; build kemungkinan 'Killed'. Tambahkan swap dulu (lihat komentar di skrip ini)." >&2
+    read -r -p "Lanjut juga? [y/N] " jawab
+    [ "${jawab:-N}" = "y" ] || exit 1
+fi
+
+# Bila langkah mana pun gagal setelah aplikasi dihentikan, nyalakan lagi versi yang lama supaya situs tidak mati.
+nyalakan_lama() { echo "==> GAGAL: menyalakan kembali aplikasi (versi lama)" >&2; docker compose up -d; }
+
 echo "==> 2/6 Hentikan aplikasi (db tetap hidup untuk cadangan; bebaskan RAM untuk build)"
 docker compose stop admin anggota mobile
+trap nyalakan_lama ERR
 
 echo "==> 3/6 Bangun ulang image (beberapa menit)"
 KOPKAR_COMMIT="$(git rev-parse --short HEAD)" nice -n 19 docker compose build admin

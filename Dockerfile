@@ -19,6 +19,8 @@ RUN npm ci
 COPY . .
 # Modul database membuat pool saat dimuat (createPool melempar galat bila PG_URL kosong) tetapi tidak terhubung;
 # halaman membaca database saat request, bukan saat build. Jadi build cukup diberi PG_URL palsu.
+# Batas heap supaya build tidak memakan RAM berlebih di VPS kecil (dipadukan dengan swap).
+ENV NODE_OPTIONS=--max-old-space-size=2048
 RUN PG_URL=postgres://bangun:bangun@127.0.0.1:5432/bangun npm run build -w frontend \
  && PG_URL=postgres://bangun:bangun@127.0.0.1:5432/bangun npm run build -w anggota
 
