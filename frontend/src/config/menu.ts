@@ -42,6 +42,11 @@ export const allGroups: MenuGroup[] = [
                 label: "User Mobile",
                 icon: "smartphone",
                 href: "/dashboard/members/mobile-users"
+            },
+            {
+                label: "Absensi Fingerprint",
+                icon: "fingerprint",
+                href: "/dashboard/attendance"
             }
         ]
     },
@@ -177,26 +182,22 @@ export const allGroups: MenuGroup[] = [
                 label: "Laporan Keuangan",
                 icon: "summarize",
                 href: "/dashboard/accounting/reports"
-            },
-            {
-                label: "Tutup Buku",
-                icon: "lock_clock",
-                href: "/dashboard/accounting/closing"
             }
         ]
     },
     {
-        groupLabel: "SHU & Absensi",
+        // Urutan = alur akhir tahun: tutup buku dulu, lalu hitung dan cairkan SHU.
+        groupLabel: "Tutup Buku & SHU",
         items: [
+            {
+                label: "Tutup Buku",
+                icon: "lock_clock",
+                href: "/dashboard/accounting/closing"
+            },
             {
                 label: "Sisa Hasil Usaha (SHU)",
                 icon: "emoji_events",
                 href: "/dashboard/shu"
-            },
-            {
-                label: "Absensi Fingerprint",
-                icon: "fingerprint",
-                href: "/dashboard/attendance"
             }
         ]
     },
