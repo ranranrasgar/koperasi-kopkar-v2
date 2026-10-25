@@ -144,3 +144,32 @@ export const riwayatTutupBuku = () =>
                COUNT(*) AS baris, SUM(j.debit_jurnalumum) AS debit, SUM(j.kredit_jurnalumum) AS kredit, MIN(j.opr) AS opr
           FROM jurnal_umum j WHERE j.nomor_bukti LIKE 'TBT/%'
          GROUP BY 1, 2, 3 ORDER BY 2 DESC, 3`)
+
+export interface JurnalTidakSeimbang { nomor_bukti: string; tanggal: string; baris: number; debit: number; kredit: number; selisih: number; deskripsi: string | null; tanpa_akun: number }
+export interface BarisTanpaAkun { id: number; nomor_bukti: string; tanggal: string; kode_perkiraan: string; debit: number; kredit: number; deskripsi: string | null }
+
+/**
+ * Jurnal yang membuat neraca tidak seimbang, dengan cakupan yang sama dengan saldo per akun pada tanggal `sampai`: saldo pembuka TBT terakhir
+ * ditambah jurnal sesudahnya. `tidakSeimbang`: bukti yang total debit dan kreditnya berbeda; `tanpaAkun`: baris dengan kode akun yang tidak ada di COA
+ * (saldonya tidak masuk neraca).
+ */
+export async function jurnalBermasalah(sampai: string) {
+    const o = await pembukaTerakhir(sampai)
+    const cakupan = o
+        ? `((${PEMBUKA} AND j.tanggal_jurnalumum = $2) OR (NOT ${PEMBUKA} AND j.tanggal_jurnalumum >= $2)) AND j.tanggal_jurnalumum <= $1`
+        : `NOT ${PEMBUKA} AND j.tanggal_jurnalumum <= $1`
+    const args = o ? [sampai, o] : [sampai]
+    const [tidakSeimbang, tanpaAkun] = await Promise.all([
+        query<JurnalTidakSeimbang>(`
+            SELECT j.nomor_bukti, MIN(j.tanggal_jurnalumum)::text AS tanggal, COUNT(*)::int AS baris, SUM(j.debit_jurnalumum) AS debit, SUM(j.kredit_jurnalumum) AS kredit,
+                   SUM(j.debit_jurnalumum - j.kredit_jurnalumum) AS selisih, MIN(j.deskripsi) AS deskripsi, COUNT(*) FILTER (WHERE p.id IS NULL)::int AS tanpa_akun
+              FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan
+             WHERE ${cakupan} GROUP BY j.nomor_bukti HAVING ABS(SUM(j.debit_jurnalumum - j.kredit_jurnalumum)) >= 0.5
+             ORDER BY MIN(j.tanggal_jurnalumum) DESC, j.nomor_bukti`, args),
+        query<BarisTanpaAkun>(`
+            SELECT j.id, j.nomor_bukti, j.tanggal_jurnalumum::text AS tanggal, j.kode_perkiraan, j.debit_jurnalumum AS debit, j.kredit_jurnalumum AS kredit, j.deskripsi
+              FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan
+             WHERE ${cakupan} AND p.id IS NULL ORDER BY j.tanggal_jurnalumum DESC, j.nomor_bukti, j.urutan`, args),
+    ])
+    return { tidakSeimbang, tanpaAkun, sejak: o }
+}

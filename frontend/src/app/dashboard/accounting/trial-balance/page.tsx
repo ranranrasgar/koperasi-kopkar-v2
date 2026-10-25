@@ -1,3 +1,4 @@
+import Link from "next/link"
 import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
 import { FormPeriode, KopLaporan } from "@/components/laporan/Periode"
 import { saldoPerAkun } from "@/lib/queries/laporan"
@@ -30,7 +31,8 @@ export default async function NeracaSaldoPage(props: PageProps<"/dashboard/accou
                 {selisih !== 0 && (
                     <div role="alert" className="mb-3 rounded-md border border-amber-400 bg-amber-50 dark:bg-amber-500/10 px-3 py-2 text-sm text-amber-800 dark:text-amber-300">
                         Total debit dan kredit saldo akhir berselisih {formatAngka(selisih)}. Selisih ini berasal dari jurnal lama yang tidak seimbang di data
-                        (termasuk jurnal ke akun yang tidak ada di COA), bukan dari perhitungan laporan.
+                        (termasuk jurnal ke akun yang tidak ada di COA), bukan dari perhitungan laporan.{" "}
+                        <Link href={`/dashboard/accounting/journal/tidak-seimbang?sampai=${sampai}`} className="font-semibold underline">Lihat daftar jurnalnya</Link>.
                     </div>
                 )}
                 <div className="overflow-x-auto">

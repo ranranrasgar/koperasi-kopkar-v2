@@ -19,4 +19,15 @@ Dalam pembukuan yang seimbang, total saldo akhir debit sama dengan total saldo a
 
 Selisih itu berasal dari **data lama** yang tidak seimbang, bukan dari perhitungan laporan. Contoh yang diketahui: beberapa bukti dari aplikasi desktop tahun 2025-2026 punya baris debit dengan kode akun `0` (tidak ada di COA), dan sisa pembulatan sekitar Rp 3.468 dari jurnal sebelum 2019. Akun `0` tampil sebagai *(akun tidak ada di COA)* supaya mudah ditelusuri.
 
+## Melihat jurnal penyebab selisih
+
+Klik keterangan selisih (di Neraca saldo, atau di Neraca pada Laporan Keuangan) untuk membuka halaman **Jurnal Bermasalah** (`Akuntansi → Jurnal Umum → tidak seimbang`). Halaman ini memakai cakupan yang sama dengan laporan, yaitu saldo pembuka tutup buku terakhir ditambah jurnal sesudahnya, per tanggal yang dipilih. Isinya dua daftar:
+
+| Daftar | Isi |
+| --- | --- |
+| **Bukti tidak seimbang** | Bukti yang total debit dan kreditnya berbeda, dengan tanggal, keterangan, debit, kredit, dan **selisih**. Bukti yang juga memakai akun tidak ada di COA diberi tanda |
+| **Baris ke akun yang tidak ada di COA** | Baris jurnal dengan kode akun yang tidak terdaftar (misalnya `0`); saldonya tidak masuk neraca |
+
+Klik **nomor bukti** untuk membuka jurnalnya di Jurnal Umum, lalu perbaiki lewat **Edit** atau hapus bukti yang keliru (lihat panduan Jurnal Umum). Jumlah selisih semua bukti sama dengan selisih di laporan, jadi laporan seimbang kembali setelah bukti-bukti itu diperbaiki. Data bisa diekspor lewat tombol Ekspor.
+
 > **Catatan:** Semua transaksi dari web selalu seimbang, karena mesin posting menolak jurnal yang debit dan kreditnya berbeda.

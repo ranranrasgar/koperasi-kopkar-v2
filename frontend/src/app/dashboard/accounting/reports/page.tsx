@@ -120,10 +120,12 @@ export default async function LaporanKeuanganPage(props: PageProps<"/dashboard/a
                     <div className="flex justify-between"><span>TOTAL PASIVA</span><span className="tabular-nums">{formatAngka(totPasiva)}</span></div>
                 </div>
                 {(Math.abs(totAktiva - totPasiva) >= 0.5 || lain.length > 0) && (
-                    <p className="mt-3 text-sm text-amber-700 dark:text-amber-400">
+                    <p className="mt-3 text-sm text-amber-700 dark:text-amber-400 print:hidden">
+                        <Link href={`/dashboard/accounting/journal/tidak-seimbang?sampai=${sampai}`} className="underline decoration-dotted underline-offset-2 hover:decoration-solid" title="Buka daftar jurnal yang menyebabkan selisih">
                         Selisih aktiva - pasiva {formatAngka(totAktiva - totPasiva)}
                         {lain.length > 0 && `; di luar itu ada saldo di akun yang tidak ada di COA dan tidak masuk neraca: ${lain.map((a) => `${a.kode_perkiraan} = ${formatAngka(a.akhir)}`).join(", ")}`}.
-                        Selisih berasal dari jurnal lama yang tidak seimbang di data.
+                        Selisih berasal dari jurnal lama yang tidak seimbang di data. Klik untuk melihat daftar jurnalnya.
+                        </Link>
                     </p>
                 )}
             </>

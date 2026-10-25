@@ -16,7 +16,7 @@ Isi **Per Tanggal** lalu **Tampilkan**.
 | Modal | Akun klasifikasi 30, termasuk simpanan pokok, wajib, dan cadangan |
 | SHU Tahun Berjalan | Pendapatan dikurangi biaya yang belum ditutup buku |
 
-**Total Aktiva** harus sama dengan **Total Pasiva** (hutang + modal + SHU tahun berjalan). Bila berbeda, muncul keterangan selisih yang berasal dari jurnal lama yang tidak seimbang, beserta saldo akun yang tidak ada di COA (lihat panduan *Neraca saldo*).
+**Total Aktiva** harus sama dengan **Total Pasiva** (hutang + modal + SHU tahun berjalan). Bila berbeda, muncul keterangan selisih yang berasal dari jurnal lama yang tidak seimbang, beserta saldo akun yang tidak ada di COA (lihat panduan *Neraca saldo*). **Keterangan selisih itu bisa diklik** dan membuka daftar jurnal penyebabnya (halaman *Jurnal Bermasalah*, dijelaskan di panduan Neraca saldo).
 
 ## Rugi Laba
 

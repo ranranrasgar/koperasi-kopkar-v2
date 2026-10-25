@@ -98,6 +98,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/accounting/coa": [MENU.coa],
     "/dashboard/accounting/journal": [MENU.jurnalUmum],
     "/dashboard/accounting/journal/new": [MENU.jurnalUmum],
+    "/dashboard/accounting/journal/tidak-seimbang": [MENU.jurnalUmum],
     "/dashboard/settings": [MENU.company],
     "/dashboard/settings/jenis-pinjaman": [MENU.jenisPinjaman],
     "/dashboard/settings/jenis-simpanan": [MENU.jenisSimpanan],

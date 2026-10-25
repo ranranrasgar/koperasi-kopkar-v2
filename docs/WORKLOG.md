@@ -301,6 +301,10 @@ Desktop sudah tidak dipakai, jadi web mengambil alih Generate dan Posting potong
 
 ---
 
+## 2026-10-25 — Halaman Jurnal Bermasalah
+
+- `/dashboard/accounting/journal/tidak-seimbang` (`jurnalBermasalah` di `lib/queries/laporan.ts`): bukti tidak seimbang dan baris ke akun di luar COA, cakupan sama dengan `saldoPerAkun` (pembuka TBT terakhir + sesudahnya). Keterangan selisih di Neraca dan Neraca Saldo kini tautan ke sana. Di database asli: 25 bukti, total selisih 17.387.468,56 = 17.650.000 (akun `0`, BB/260211/005) - 262.531,44; data desktop lama (opr subigbyo), bukan dari modul web. Perbaikan lewat Edit/hapus di Jurnal Umum oleh akuntan.
+
 ## 2026-10-25 — Tabel grade dan relasi anggota.grade_id
 
 - Tabel `grade (id, nama unik, nominal)` + kolom `anggota.grade_id` (FK RESTRICT) di `pengaturan-web.sql` (dipasang `npm run pengaturan:pasang`, sudah di database asli dan uji). Kolom lama `anggota.grade` dan `anggota.rp_grade` TETAP sebagai salinan (dibaca desktop, mobile-api, PWA, plafon); trigger `anggota_sinkron_grade` (isi/ganti grade_id menyalin nama+nominal) dan `grade_sinkron_anggota` (ubah nama/nominal grade menjalar ke anggota bergrade itu). Pemasangan awal melewati sinkronisasi (`kopkar.lewati_grade`).
