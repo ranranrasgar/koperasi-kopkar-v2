@@ -185,6 +185,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/accounting/trial-balance"
             },
             {
+                label: "Neraca Lajur",
+                icon: "table_chart",
+                href: "/dashboard/accounting/worksheet"
+            },
+            {
                 label: "Laporan Keuangan",
                 icon: "summarize",
                 href: "/dashboard/accounting/reports"

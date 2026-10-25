@@ -12,7 +12,7 @@ Jurnal penyesuaian **tidak punya tabel sendiri**. Ia disimpan di tabel jurnal um
 - **Status `Penyesuaian`** pada setiap barisnya.
 - **Nomor bukti `JP/yymmdd/n`** (contoh `JP/261031/3`), dengan urutan nomor sendiri sehingga tidak bertabrakan dengan nomor `JU/`.
 
-Karena tersimpan di jurnal umum, jurnal penyesuaian **ikut dihitung** di Buku Besar, Neraca, Rugi Laba, dan Neraca Saldo seperti jurnal lainnya. Penandanya dipakai untuk **neraca lajur** (kertas kerja akuntansi), yang memisahkan saldo sebelum penyesuaian, kolom penyesuaian, dan saldo setelah penyesuaian.
+Karena tersimpan di jurnal umum, jurnal penyesuaian **ikut dihitung** di Buku Besar, Neraca, Rugi Laba, dan Neraca Saldo seperti jurnal lainnya. Penandanya dipakai oleh **Neraca Lajur** (kertas kerja akuntansi; lihat panduannya), yang memisahkan saldo sebelum penyesuaian, kolom penyesuaian, dan saldo setelah penyesuaian.
 
 ## Mencatat jurnal penyesuaian
 

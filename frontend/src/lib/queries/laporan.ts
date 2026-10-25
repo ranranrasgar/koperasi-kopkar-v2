@@ -177,3 +177,33 @@ export async function jurnalBermasalah(sampai: string) {
     ])
     return { tidakSeimbang, tanpaAkun, sejak: o }
 }
+
+export interface BarisLajur {
+    kode_perkiraan: string; nama_perkiraan: string; kode_klasifikasi: number | null
+    /** Saldo sebelum penyesuaian (awal + mutasi biasa), bertanda debit - kredit. */
+    sebelum: number
+    /** Mutasi jurnal berstatus Penyesuaian dalam periode. */
+    adjDebit: number; adjKredit: number
+}
+
+/**
+ * Bahan neraca lajur (kertas kerja): per akun saldo sebelum penyesuaian (saldo awal + mutasi tanpa jurnal penyesuaian) dan jumlah debit/kredit
+ * jurnal penyesuaian (status Penyesuaian). Jurnal tutup buku (TBT) tidak dihitung sebagai mutasi supaya pendapatan dan biaya tampil utuh.
+ * Kolom lain (disesuaikan, laba rugi, neraca) dihitung dari ketiganya.
+ */
+export async function neracaLajur(dari: string, sampai: string): Promise<BarisLajur[]> {
+    const [akun, adj] = await Promise.all([
+        saldoPerAkun(dari, sampai, { tanpaTutupBuku: true }),
+        query<{ kode_perkiraan: string; debit: number; kredit: number }>(`
+            SELECT j.kode_perkiraan, SUM(j.debit_jurnalumum) AS debit, SUM(j.kredit_jurnalumum) AS kredit FROM jurnal_umum j
+             WHERE j.status = 'Penyesuaian' AND j.tanggal_jurnalumum BETWEEN $1 AND $2 AND j.nomor_bukti NOT LIKE 'TBT/%' GROUP BY 1`, [dari, sampai]),
+    ])
+    const peta = new Map(adj.map((a) => [a.kode_perkiraan, a]))
+    return akun.map((a) => {
+        const p = peta.get(a.kode_perkiraan)
+        const adjDebit = p?.debit ?? 0, adjKredit = p?.kredit ?? 0
+        // akhir = awal + debit - kredit (semua mutasi); sebelum penyesuaian = akhir tanpa mutasi penyesuaian.
+        return { kode_perkiraan: a.kode_perkiraan, nama_perkiraan: a.nama_perkiraan, kode_klasifikasi: a.kode_klasifikasi,
+            sebelum: a.akhir - (adjDebit - adjKredit), adjDebit, adjKredit }
+    }).filter((b) => Math.abs(b.sebelum) >= 0.005 || b.adjDebit !== 0 || b.adjKredit !== 0)
+}

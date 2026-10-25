@@ -304,7 +304,7 @@ Desktop sudah tidak dipakai, jadi web mengambil alih Generate dan Posting potong
 ## 2026-10-25 — Jurnal Penyesuaian
 
 - Menu Akuntansi → Jurnal Penyesuaian (`/dashboard/accounting/adjusting`, hak = Jurnal Umum). Memakai `jurnal_umum` tanpa tabel baru: kolom lama `status` = `'Penyesuaian'` (kolom itu juga dipakai desktop untuk `'Reconcile'` pada Bank Book) dan nomor `JP/yymmdd/n` dari `seq_jurnal_penyesuaian_no` (pengaturan-web.sql). `postJurnalUmum({penyesuaian})`, `tandaiPenyesuaian` (JU lama dapat ditandai/dikembalikan, ikon timbangan), `ubahJurnalUmum` mempertahankan penanda, `JournalInput.status`. Jurnal Umum: kolom/filter Jenis. Indeks parsial `ix_jurnal_umum_penyesuaian`. Laporan (Neraca, Rugi Laba, Buku Besar) tetap menghitung jurnal penyesuaian. Uji: `jurnal-umum.test.ts` 8/8 (database uji).
-- BELUM: halaman Neraca Lajur (kolom: saldo sebelum penyesuaian = saldo tanpa baris berstatus Penyesuaian, penyesuaian = baris berstatus itu, saldo disesuaikan, rugi laba, neraca). Penanda sudah siap untuk itu.
+- Neraca Lajur `/dashboard/accounting/worksheet` (hak = Neraca Saldo): `neracaLajur()` di `lib/queries/laporan.ts` = `saldoPerAkun(tanpaTutupBuku)` + jumlah baris status Penyesuaian; kolom sebelum/penyesuaian/disesuaikan/laba rugi/neraca dihitung di halaman. Diverifikasi di data asli 2026: laba bersih 2.526.687.661 = SHU tahun berjalan Neraca; selisih Neraca Saldo 17.387.468,56 dan selisih neraca -262.531,44 sama dengan temuan Jurnal Bermasalah.
 
 ## 2026-10-25 — Audit kecepatan query halaman
 

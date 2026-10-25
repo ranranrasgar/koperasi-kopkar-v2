@@ -118,6 +118,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/accounting/ledger": [MENU.bankBook, MENU.bukuBesar],
     "/dashboard/accounting/bank-book": [MENU.bankBook],
     "/dashboard/accounting/trial-balance": [MENU.neracaSaldo],
+    "/dashboard/accounting/worksheet": [MENU.neracaSaldo], // neraca lajur memakai hak yang sama dengan Neraca Saldo
     "/dashboard/accounting/reports": [MENU.neraca, MENU.rugiLaba],
     "/dashboard/accounting/closing": [MENU.tutupBuku],
     "/dashboard/shu": [MENU.lapShu, MENU.shu, MENU.hitungShu],
