@@ -1,13 +1,16 @@
 "use client"
 
-import { useMemo } from "react"
+import { useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
+import { ChevronDown, ChevronsDownUp, ChevronsUpDown } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { ThemeToggle } from "./ThemeToggle"
 import { getMenuGroups } from "@/config/menu"
 import { useSidebar } from "./SidebarContext"
 import { logoutAction } from "@/app/actions/auth"
+
+const KUNCI_TUTUP = "kopkar.menu.tertutup"
 
 interface SidebarProps {
     className?: string
@@ -21,6 +24,26 @@ export function Sidebar({ className, onClose }: SidebarProps) {
     const menuGroups = useMemo(() => {
         return getMenuGroups(pathname || "", izin)
     }, [pathname, izin])
+
+    // Grup yang dikerutkan (diingat per perangkat). Awalnya semua terbuka supaya sama dengan hasil render server.
+    const [tertutup, setTertutup] = useState<string[]>([])
+    useEffect(() => {
+        try {
+            const v = JSON.parse(localStorage.getItem(KUNCI_TUTUP) ?? "[]")
+            if (Array.isArray(v)) setTertutup(v.filter((x) => typeof x === "string"))
+        } catch { /* penyimpanan tidak tersedia: tetap terbuka semua */ }
+    }, [])
+    const simpan = (daftar: string[]) => {
+        setTertutup(daftar)
+        try { localStorage.setItem(KUNCI_TUTUP, JSON.stringify(daftar)) } catch { /* abaikan */ }
+    }
+    const bisaDikerutkan = menuGroups.filter((g) => g.groupLabel !== "Main").map((g) => g.groupLabel)
+    const aktifDi = menuGroups.find((g) => g.items.some((i) => i.active))?.groupLabel
+    // Berpindah halaman membuka grup halaman itu, supaya lokasi sekarang selalu terlihat.
+    useEffect(() => {
+        if (aktifDi) setTertutup((t) => (t.includes(aktifDi) ? t.filter((x) => x !== aktifDi) : t))
+    }, [aktifDi, pathname])
+    const toggle = (label: string) => simpan(tertutup.includes(label) ? tertutup.filter((x) => x !== label) : [...tertutup, label])
 
     return (
         <aside className={cn("fixed left-0 top-0 h-screen w-64 bg-background z-50 flex flex-col justify-between overflow-y-auto transition-transform duration-300 md:translate-x-0 border-r border-outline-variant", className)}>
@@ -37,17 +60,33 @@ export function Sidebar({ className, onClose }: SidebarProps) {
                     </div>
                 </div>
                 
+                <div className="flex items-center justify-between px-3 text-[11px] text-on-surface-variant/70">
+                    <span className="font-semibold uppercase tracking-wider">Menu</span>
+                    <span className="flex items-center gap-0.5">
+                        <button type="button" onClick={() => simpan([])} title="Buka semua grup" aria-label="Buka semua grup"
+                            className="rounded p-1 hover:bg-muted hover:text-foreground"><ChevronsUpDown className="h-4 w-4" /></button>
+                        <button type="button" onClick={() => simpan(bisaDikerutkan)} title="Kerutkan semua grup" aria-label="Kerutkan semua grup"
+                            className="rounded p-1 hover:bg-muted hover:text-foreground"><ChevronsDownUp className="h-4 w-4" /></button>
+                    </span>
+                </div>
                 <nav className="flex flex-col gap-1">
                     {menuGroups.map((group) => {
                         const isMain = group.groupLabel === "Main"
+                        const tutup = !isMain && tertutup.includes(group.groupLabel)
+                        const jumlahLencana = group.items.reduce((t, i) => t + (lencana[i.href] ?? 0), 0)
                         return (
                             <div key={group.groupLabel} className={isMain ? "mb-2" : "mb-2"}>
                                 {!isMain && (
-                                    <div className="px-3 py-1 text-xs font-bold uppercase tracking-wider text-on-surface-variant/50 mt-2 mb-1">
-                                        {group.groupLabel}
-                                    </div>
+                                    <button type="button" onClick={() => toggle(group.groupLabel)} aria-expanded={!tutup}
+                                        className="mt-2 mb-1 flex w-full items-center gap-1 rounded px-3 py-1 text-left text-xs font-bold uppercase tracking-wider text-on-surface-variant/60 hover:bg-muted/50 hover:text-on-surface-variant">
+                                        <span className="flex-1">{group.groupLabel}</span>
+                                        {tutup && jumlahLencana > 0 && (
+                                            <span className="rounded-full bg-red-600 px-1.5 py-0.5 text-[10px] font-bold leading-none text-white normal-case">{jumlahLencana > 99 ? "99+" : jumlahLencana}</span>
+                                        )}
+                                        <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", tutup && "-rotate-90")} />
+                                    </button>
                                 )}
-                                <div className="flex flex-col gap-1">
+                                <div className={cn("flex flex-col gap-1", tutup && "hidden")}>
                                     {group.items.map((item) => {
                                         if (item.locked) {
                                             return (

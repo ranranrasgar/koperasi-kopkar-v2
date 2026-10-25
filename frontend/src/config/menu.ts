@@ -14,6 +14,12 @@ export interface MenuGroup {
     items: MenuItem[]
 }
 
+/*
+ * Urutan menu: dari yang paling sering dipakai harian ke yang jarang, mengikuti susunan perangkat lunak akuntansi koperasi simpan pinjam:
+ * Dashboard -> Keanggotaan (master) -> Simpanan -> Pinjaman -> Potongan Gaji bulanan -> Akuntansi (jurnal, buku, laporan, COA) ->
+ * Tutup Buku & SHU (proses akhir tahun, berurutan) -> Data Master -> Komunikasi -> Sistem -> Bantuan.
+ * Di tiap grup: transaksi harian dulu, lalu laporan dan penelusuran, lalu analisis.
+ */
 export const allGroups: MenuGroup[] = [
     {
         groupLabel: "Main",
@@ -54,16 +60,6 @@ export const allGroups: MenuGroup[] = [
         groupLabel: "Simpanan",
         items: [
             {
-                label: "Rekap Simpanan",
-                icon: "account_balance_wallet",
-                href: "/dashboard/savings"
-            },
-            {
-                label: "Buku Simpanan",
-                icon: "menu_book",
-                href: "/dashboard/savings/ledger"
-            },
-            {
                 label: "Setoran Simpanan",
                 icon: "credit_card",
                 href: "/dashboard/savings/deposit"
@@ -74,19 +70,29 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/savings/withdraw"
             },
             {
+                label: "Rekap Simpanan",
+                icon: "account_balance_wallet",
+                href: "/dashboard/savings"
+            },
+            {
+                label: "Buku Simpanan",
+                icon: "menu_book",
+                href: "/dashboard/savings/ledger"
+            },
+            {
                 label: "Kartu Simpanan",
                 icon: "badge",
                 href: "/dashboard/savings/cards"
             },
             {
-                label: "Grafik Analisa",
-                icon: "monitoring",
-                href: "/dashboard/savings/analytics"
-            },
-            {
                 label: "Simpanan Berjangka",
                 icon: "calendar_month",
                 href: "/dashboard/savings/time-deposits"
+            },
+            {
+                label: "Grafik Analisa",
+                icon: "monitoring",
+                href: "/dashboard/savings/analytics"
             }
         ]
     },
@@ -94,14 +100,9 @@ export const allGroups: MenuGroup[] = [
         groupLabel: "Pinjaman",
         items: [
             {
-                label: "Daftar Pinjaman",
-                icon: "receipt_long",
-                href: "/dashboard/loans"
-            },
-            {
-                label: "Cari Pinjaman",
-                icon: "manage_search",
-                href: "/dashboard/loans/cari"
+                label: "Setoran Angsuran",
+                icon: "sync",
+                href: "/dashboard/loans/payment"
             },
             {
                 label: "Pengajuan Kredit",
@@ -119,14 +120,19 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/loans/create-kpr"
             },
             {
-                label: "Setoran Angsuran",
-                icon: "sync",
-                href: "/dashboard/loans/payment"
-            },
-            {
                 label: "Setoran Titipan (Escrow)",
                 icon: "layers",
                 href: "/dashboard/loans/escrow"
+            },
+            {
+                label: "Daftar Pinjaman",
+                icon: "receipt_long",
+                href: "/dashboard/loans"
+            },
+            {
+                label: "Cari Pinjaman",
+                icon: "manage_search",
+                href: "/dashboard/loans/cari"
             },
             {
                 label: "Kredit Macet",
@@ -139,25 +145,20 @@ export const allGroups: MenuGroup[] = [
         groupLabel: "Potongan Gaji",
         items: [
             {
-                label: "Transaksi Potongan",
-                icon: "format_list_numbered",
-                href: "/dashboard/deductions"
-            },
-            {
                 label: "Generate & Posting",
                 icon: "calendar_month",
                 href: "/dashboard/deductions/periode"
+            },
+            {
+                label: "Transaksi Potongan",
+                icon: "format_list_numbered",
+                href: "/dashboard/deductions"
             }
         ]
     },
     {
         groupLabel: "Akuntansi",
         items: [
-            {
-                label: "Chart of Accounts (COA)",
-                icon: "account_tree",
-                href: "/dashboard/accounting/coa"
-            },
             {
                 label: "Jurnal Umum",
                 icon: "menu_book",
@@ -182,11 +183,15 @@ export const allGroups: MenuGroup[] = [
                 label: "Laporan Keuangan",
                 icon: "summarize",
                 href: "/dashboard/accounting/reports"
+            },
+            {
+                label: "Chart of Accounts (COA)",
+                icon: "account_tree",
+                href: "/dashboard/accounting/coa"
             }
         ]
     },
     {
-        // Urutan = alur akhir tahun: tutup buku dulu, lalu hitung dan cairkan SHU.
         groupLabel: "Tutup Buku & SHU",
         items: [
             {
@@ -202,32 +207,12 @@ export const allGroups: MenuGroup[] = [
         ]
     },
     {
-        groupLabel: "Sistem & Pengaturan",
+        groupLabel: "Data Master",
         items: [
-            {
-                label: "Kelola Hak Akses",
-                icon: "admin_panel_settings",
-                href: "/dashboard/settings/akses"
-            },
-            {
-                label: "Operator",
-                icon: "manage_accounts",
-                href: "/dashboard/settings/operator"
-            },
             {
                 label: "Pengaturan Perusahaan",
                 icon: "business",
                 href: "/dashboard/settings"
-            },
-            {
-                label: "Mode Uji / Live",
-                icon: "science",
-                href: "/dashboard/settings/mode"
-            },
-            {
-                label: "Backup & Restore",
-                icon: "backup",
-                href: "/dashboard/settings/backup"
             },
             {
                 label: "Jenis Pinjaman",
@@ -238,7 +223,12 @@ export const allGroups: MenuGroup[] = [
                 label: "Jenis Simpanan",
                 icon: "sell",
                 href: "/dashboard/settings/jenis-simpanan"
-            },
+            }
+        ]
+    },
+    {
+        groupLabel: "Komunikasi",
+        items: [
             {
                 label: "Kirim Notifikasi",
                 icon: "campaign",
@@ -248,6 +238,31 @@ export const allGroups: MenuGroup[] = [
                 label: "Himbauan & Promo",
                 icon: "local_offer",
                 href: "/dashboard/himbauan"
+            }
+        ]
+    },
+    {
+        groupLabel: "Sistem",
+        items: [
+            {
+                label: "Operator",
+                icon: "manage_accounts",
+                href: "/dashboard/settings/operator"
+            },
+            {
+                label: "Kelola Hak Akses",
+                icon: "admin_panel_settings",
+                href: "/dashboard/settings/akses"
+            },
+            {
+                label: "Backup & Restore",
+                icon: "backup",
+                href: "/dashboard/settings/backup"
+            },
+            {
+                label: "Mode Uji / Live",
+                icon: "science",
+                href: "/dashboard/settings/mode"
             },
             {
                 label: "Kelola Panduan",
