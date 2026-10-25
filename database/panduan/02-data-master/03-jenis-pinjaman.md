@@ -26,7 +26,7 @@ Susunan layarnya sama dengan layar desktop *Jenis Pinjaman (Credit)*.
 
 | Kotak centang | Efek |
 | --- | --- |
-| UM jika melebihi Grade | Tanda uang muka bila pinjaman melebihi grade anggota |
+| UM jika melebihi Grade | Tanda uang muka bila pinjaman melebihi grade anggota. Disimpan seperti di desktop; web belum menghitung uang muka otomatis dari tanda ini |
 | Kunci jika melebihi grade | Pinjaman tidak boleh melebihi plafon grade anggota |
 | Staff | Jenis hanya untuk anggota Staff. Tidak dicentang: hanya untuk anggota non-staff |
 | Kunci jika ada tunggakan | Anggota tidak bisa mengajukan jenis ini selama pinjaman jenis yang sama masih berjalan (sisa lebih dari Rp 100) |
