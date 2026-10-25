@@ -13,13 +13,13 @@ const tombol = "inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded
 const tombolUtama = "inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-md text-sm font-semibold shadow-sm bg-blue-600 hover:bg-blue-700 text-white"
 
 /** Pilih tahun buku: berpindah halaman dengan ?tahun=. */
-export function PilihTahun({ tahun, daftar }: { tahun: number; daftar: number[] }) {
+export function PilihTahun({ tahun, daftar, berjalan }: { tahun: number; daftar: number[]; berjalan?: number }) {
     const router = useRouter()
     return (
         <label className="flex items-center gap-1.5">
             <span className="text-xs font-medium text-muted-foreground whitespace-nowrap">Tahun buku</span>
             <select value={tahun} onChange={(e) => router.push(`?tahun=${e.target.value}`)} className={`${selectClass} h-9 w-28`} aria-label="Tahun buku">
-                {daftar.map((t) => <option key={t} value={t}>{t}</option>)}
+                {daftar.map((t) => <option key={t} value={t}>{t}{t === berjalan ? " (berjalan)" : ""}</option>)}
             </select>
         </label>
     )
