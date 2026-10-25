@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
-import { alasanTerkunci, bacaJurnalUmum, hapusJurnalUmum, postJurnalUmum, ubahJurnalUmum } from '../src/posting/jurnal-umum.ts';
+import { alasanTerkunci, bacaJurnalUmum, hapusJurnalUmum, postJurnalUmum, STATUS_PENYESUAIAN, tandaiPenyesuaian, ubahJurnalUmum } from '../src/posting/jurnal-umum.ts';
 
 const pool = createPool();
 const ROLLBACK = new Error('rollback-uji');
@@ -59,4 +59,45 @@ test('jurnal umum: baca, ubah, hapus; bukti non-JU/BB terkunci', async () => {
         assert.equal(await bacaJurnalUmum(db, a.nomorBukti), null);
         assert.match(alasanTerkunci('CR-1026-23315') ?? '', /transaksi lain/);
     });
+});
+
+test('jurnal penyesuaian: nomor JP, status Penyesuaian, ubah mempertahankan penanda, tandai/kembalikan JU, hapus', async () => {
+    await inTx(async (db) => {
+        const lines = [{ kodePerkiraan: '5.1.00.40', debit: '3378101' }, { kodePerkiraan: '1.2.00.20', kredit: '3378101' }];
+        const jp = await postJurnalUmum(db, { tanggal: '2026-10-31', deskripsi: 'Penyusutan Oktober', opr: 'uji', lines, penyesuaian: true });
+        assert.match(jp.nomorBukti, /^JP\/261031\/\d+$/);
+        const baris = (await db.query('SELECT tahun, status, sumber_tipe FROM jurnal_umum WHERE nomor_bukti = $1', [jp.nomorBukti])).rows;
+        assert.deepEqual(baris, [{ tahun: 'JP261031', status: STATUS_PENYESUAIAN, sumber_tipe: 'penyesuaian' }, { tahun: 'JP261031', status: STATUS_PENYESUAIAN, sumber_tipe: 'penyesuaian' }]);
+        const b = await bacaJurnalUmum(db, jp.nomorBukti);
+        assert.equal(b?.penyesuaian, true);
+        assert.equal(b?.terkunci, null);
+
+        // Ubah: nomor dan penanda tetap.
+        await ubahJurnalUmum(db, jp.nomorBukti, { tanggal: '2026-10-31', deskripsi: 'Penyusutan Oktober (koreksi)', opr: 'uji',
+            lines: [{ kodePerkiraan: '5.1.00.40', debit: '4000000' }, { kodePerkiraan: '1.2.00.20', kredit: '4000000' }] });
+        const sesudah = await bacaJurnalUmum(db, jp.nomorBukti);
+        assert.equal(sesudah?.penyesuaian, true);
+        assert.equal(Number(sesudah?.baris[0].debit), 4000000);
+        assert.equal((await db.query('SELECT count(*)::int n FROM jurnal_umum WHERE nomor_bukti = $1', [jp.nomorBukti])).rows[0].n, 2);
+
+        // JU biasa bukan penyesuaian; bisa ditandai dan dikembalikan; JP tidak bisa ditandai.
+        const ju = await postJurnalUmum(db, { tanggal: '2026-10-31', deskripsi: 'Beban', opr: 'uji', lines });
+        assert.equal((await bacaJurnalUmum(db, ju.nomorBukti))?.penyesuaian, false);
+        await tandaiPenyesuaian(db, ju.nomorBukti, true);
+        assert.equal((await bacaJurnalUmum(db, ju.nomorBukti))?.penyesuaian, true);
+        await ubahJurnalUmum(db, ju.nomorBukti, { tanggal: '2026-10-31', deskripsi: 'Beban 2', opr: 'uji', lines });
+        assert.equal((await bacaJurnalUmum(db, ju.nomorBukti))?.penyesuaian, true, 'penanda tetap setelah diubah');
+        await tandaiPenyesuaian(db, ju.nomorBukti, false);
+        assert.equal((await bacaJurnalUmum(db, ju.nomorBukti))?.penyesuaian, false);
+        await assert.rejects(tandaiPenyesuaian(db, jp.nomorBukti, false), /hanya jurnal umum JU/);
+
+        // Daftar penyesuaian hanya memuat JP (dan JU yang ditandai), dan hapus berfungsi.
+        assert.equal((await db.query("SELECT count(*)::int n FROM jurnal_umum WHERE nomor_bukti = $1 AND status = 'Penyesuaian'", [jp.nomorBukti])).rows[0].n, 2);
+        await hapusJurnalUmum(db, jp.nomorBukti);
+        assert.equal(await bacaJurnalUmum(db, jp.nomorBukti), null);
+    });
+});
+
+test('alasanTerkunci: JP/ boleh diubah seperti JU/', () => {
+    assert.equal(alasanTerkunci('JP/261031/1'), null);
 });

@@ -62,3 +62,6 @@ SELECT n.nama, COALESCE((SELECT mode() WITHIN GROUP (ORDER BY round(a.rp_grade /
 ON CONFLICT (nama) DO NOTHING;
 UPDATE anggota a SET grade_id = g.id FROM grade g WHERE a.grade_id IS NULL AND a.grade = g.nama;
 SELECT set_config('kopkar.lewati_grade', '', true);
+
+-- Jurnal Penyesuaian: memakai tabel jurnal_umum dengan status 'Penyesuaian' dan nomor JP/yymmdd/n (nomor sendiri, tidak bertabrakan dengan JU/).
+CREATE SEQUENCE IF NOT EXISTS seq_jurnal_penyesuaian_no START 1;

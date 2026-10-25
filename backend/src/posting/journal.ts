@@ -32,6 +32,8 @@ export interface JournalInput {
     izinTakSeimbang?: boolean;
     /** Tambahkan baris ke nomor bukti yang sudah ada (bawaan: hapus dulu seluruh baris bernomor sama, seperti desktop). */
     tambah?: boolean;
+    /** Kolom status baris jurnal; bawaan kosong. 'Penyesuaian' menandai jurnal penyesuaian (neraca lajur); 'Reconcile' dipakai Bank Book desktop. */
+    status?: string;
 }
 
 const yymmdd = (d: string) => d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10);
@@ -60,11 +62,11 @@ export async function postJournal(db: Db, j: JournalInput): Promise<number> {
         const urutan = Number((await db.query("SELECT nextval('seq_jurnal_urutan') v")).rows[0].v);
         await db.query(
             `INSERT INTO jurnal_umum (urutan, tanggal_jurnalumum, nomor_bukti, no_bukti_transaksi, tahun, kode_perkiraan,
-                urut, debit_jurnalumum, kredit_jurnalumum, deskripsi, opr, sumber_tipe, sumber_id, perkiraan_id, tgl_transaksi)
-             VALUES ($1,$2,$3,$14,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$2)`,
+                urut, debit_jurnalumum, kredit_jurnalumum, deskripsi, opr, sumber_tipe, sumber_id, perkiraan_id, tgl_transaksi, status)
+             VALUES ($1,$2,$3,$14,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$2,$15)`,
             [urutan, l.tanggal ?? j.tanggal, j.nomorBukti, (j.tahunPrefix ?? '') + yymmdd(l.tanggal ?? j.tanggal), l.kodePerkiraan, urut,
              fromUnits(toUnits(l.debit ?? 0)), fromUnits(toUnits(l.kredit ?? 0)), l.deskripsi || j.deskripsi, j.opr,
-             j.sumberTipe, j.sumberId, idOf.get(l.kodePerkiraan), j.noBuktiTransaksi ?? j.nomorBukti]);
+             j.sumberTipe, j.sumberId, idOf.get(l.kodePerkiraan), j.noBuktiTransaksi ?? j.nomorBukti, j.status ?? '']);
     }
     return lines.length;
 }

@@ -135,6 +135,7 @@ export const journalConfig: ModuleConfig = {
     filters: [
         { key: "dari", label: "Dari Tanggal", type: "date" },
         { key: "sampai", label: "Sampai Tanggal", type: "date" },
+        { key: "jenis", label: "Jenis", type: "select", options: [{ label: "Jurnal penyesuaian", value: "penyesuaian" }, { label: "Bukan penyesuaian", value: "umum" }] },
         { key: "sumber", label: "Sumber", type: "select", options: [
             { label: "Simpanan", value: "simpanan" },
             { label: "Pencairan Pinjaman", value: "pinjaman_tunai" },
@@ -142,6 +143,7 @@ export const journalConfig: ModuleConfig = {
             { label: "Angsuran KPR", value: "kpr_rincian" },
             { label: "SHU", value: "shu" },
             { label: "Jurnal Umum (web)", value: "jurnal" },
+            { label: "Jurnal Penyesuaian (web)", value: "penyesuaian" },
             { label: "Kas", value: "kas" },
             { label: "Tanpa sumber (data lama)", value: "lain" },
         ] },
@@ -154,7 +156,30 @@ export const journalConfig: ModuleConfig = {
         { key: "deskripsi", label: "Keterangan", type: "string" },
         { key: "debit_jurnalumum", label: "Debit", type: "currency", sortable: true },
         { key: "kredit_jurnalumum", label: "Kredit", type: "currency", sortable: true },
+        { key: "jenis", label: "Jenis", type: "badge", badgeMap: { penyesuaian: { label: "Penyesuaian", color: "indigo" } } },
         { key: "sumber_tipe", label: "Sumber", type: "string", hidden: true },
+        { key: "opr", label: "Operator", type: "string", hidden: true },
+    ],
+}
+
+/** Jurnal Penyesuaian: jurnal_umum berstatus Penyesuaian (nomor JP/), dasar kolom penyesuaian neraca lajur. */
+export const adjustingConfig: ModuleConfig = {
+    title: "Jurnal Penyesuaian",
+    description: "Jurnal penyesuaian akhir periode (penyusutan, beban dibayar di muka, pendapatan diterima di muka, dan sejenisnya). Tersimpan di jurnal umum dengan status Penyesuaian dan ikut dalam laporan; dipisahkan di neraca lajur.",
+    rowKey: "urutan",
+    searchPlaceholder: "No. bukti, akun, atau keterangan",
+    filters: [
+        { key: "dari", label: "Dari Tanggal", type: "date" },
+        { key: "sampai", label: "Sampai Tanggal", type: "date" },
+    ],
+    columns: [
+        { key: "tanggal_jurnalumum", label: "Tanggal", type: "date", sortable: true },
+        { key: "nomor_bukti", label: "No. Bukti", type: "string", sortable: true, mono: true },
+        { key: "kode_perkiraan", label: "Kode Akun", type: "string", sortable: true, mono: true },
+        { key: "nama_perkiraan", label: "Nama Akun", type: "string" },
+        { key: "deskripsi", label: "Keterangan", type: "string" },
+        { key: "debit_jurnalumum", label: "Debit", type: "currency", sortable: true },
+        { key: "kredit_jurnalumum", label: "Kredit", type: "currency", sortable: true },
         { key: "opr", label: "Operator", type: "string", hidden: true },
     ],
 }

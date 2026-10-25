@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Loader2, Printer, Trash2 } from "lucide-react"
-import { hapusJurnalAction } from "@/app/actions/transaksi"
+import { Loader2, Printer, Scale, Trash2 } from "lucide-react"
+import { hapusJurnalAction, tandaiPenyesuaianAction } from "@/app/actions/transaksi"
 import { TombolJurnalUbah } from "@/components/transaksi/JurnalForm"
 import { cetakVoucher } from "@/lib/cetak-voucher"
 import { hariIni } from "@/lib/format"
@@ -33,7 +33,16 @@ export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
     const router = useRouter()
     const [sibuk, mulai] = useTransition()
     const nomor = String(item.nomor_bukti ?? "")
-    const ju = nomor.startsWith("JU/"), bb = nomor.startsWith("BB/")
+    const jp = nomor.startsWith("JP/"), ju = nomor.startsWith("JU/") || jp, bb = nomor.startsWith("BB/")
+    const penyesuaian = jp || item.jenis === "penyesuaian"
+    const tandai = () => {
+        if (!confirm(penyesuaian ? `Kembalikan ${nomor} menjadi jurnal umum biasa?` : `Tandai ${nomor} sebagai jurnal penyesuaian? Nomor tetap; jurnal ini akan dipisahkan di kolom penyesuaian neraca lajur.`)) return
+        mulai(async () => {
+            const h = await tandaiPenyesuaianAction(nomor, !penyesuaian)
+            if (h) alert(h.ok ? h.pesan : h.error)
+            router.refresh()
+        })
+    }
     const hapus = () => {
         if (!confirm(`Hapus bukti ${nomor}? Semua barisnya ikut terhapus dan tidak bisa dibatalkan.`)) return
         mulai(async () => {
@@ -46,6 +55,10 @@ export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
         <>
             <TombolVoucher nomorBukti={nomor} />
             {ju && <TombolJurnalUbah nomorBukti={nomor} hariIni={hariIni()} />}
+            {nomor.startsWith("JU/") && (
+                <button type="button" title={penyesuaian ? "Kembalikan ke jurnal umum biasa" : "Tandai sebagai jurnal penyesuaian"} onClick={tandai} disabled={sibuk}
+                    className={`${tombol} ${penyesuaian ? "text-indigo-600" : "text-gray-500"}`}><Scale className="h-4 w-4" /></button>
+            )}
             {(ju || bb) && (
                 <button type="button" title="Hapus bukti" onClick={hapus} disabled={sibuk} className={`${tombol} text-red-600`}>
                     {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}

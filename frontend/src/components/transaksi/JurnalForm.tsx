@@ -17,7 +17,7 @@ let nextId = 1
 const barisBaru = (): Baris => ({ id: nextId++, akun: "", ket: "", debit: "", kredit: "" })
 const angka = (v: string) => Number(v.replace(",", ".")) || 0
 
-function JurnalForm({ akun, hariIni, selesai, awal }: { akun: Akun[]; hariIni: string; selesai: () => void; awal?: BuktiJurnal }) {
+function JurnalForm({ akun, hariIni, selesai, awal, penyesuaian = false }: { akun: Akun[]; hariIni: string; selesai: () => void; awal?: BuktiJurnal; penyesuaian?: boolean }) {
     const { hasil, onSubmit, pending } = useAksiForm(jurnalUmumAction)
     useTutupSetelahBerhasil(hasil?.ok, selesai)
     const [baris, setBaris] = useState<Baris[]>(() => awal
@@ -41,6 +41,7 @@ function JurnalForm({ akun, hariIni, selesai, awal }: { akun: Akun[]; hariIni: s
         <>
             <form onSubmit={onSubmit} className="space-y-4">
                 {awal && <input type="hidden" name="nomorBukti" value={awal.nomorBukti} />}
+                {(penyesuaian || awal?.penyesuaian) && <input type="hidden" name="penyesuaian" value="1" />}
                 <div className="grid gap-4 sm:grid-cols-4">
                     <Field label="Tanggal" htmlFor="tanggal" hint={awal ? "Bagian dari nomor bukti; tidak bisa diubah." : undefined}>
                         <Input id="tanggal" name="tanggal" type="date" required defaultValue={awal?.tanggal ?? hariIni} readOnly={Boolean(awal)} />
@@ -116,11 +117,12 @@ function JurnalForm({ akun, hariIni, selesai, awal }: { akun: Akun[]; hariIni: s
 }
 
 /** Tombol "Jurnal Baru" di daftar jurnal: form di modal. */
-export function TombolJurnalBaru({ akun, hariIni }: { akun: Akun[]; hariIni: string }) {
+export function TombolJurnalBaru({ akun, hariIni, penyesuaian = false }: { akun: Akun[]; hariIni: string; penyesuaian?: boolean }) {
     return (
-        <TombolModal label={<><Plus className="h-4 w-4" /> Jurnal Baru</>} judul="Jurnal Umum Baru" lebar="sm:max-w-4xl" className={tombolModalUtama}
-            keterangan="Jurnal memorial; nomor JU/yymmdd/n diberikan mesin posting. Debit dan kredit harus seimbang.">
-            {(selesai) => <JurnalForm akun={akun} hariIni={hariIni} selesai={selesai} />}
+        <TombolModal label={<><Plus className="h-4 w-4" /> {penyesuaian ? "Penyesuaian Baru" : "Jurnal Baru"}</>} judul={penyesuaian ? "Jurnal Penyesuaian Baru" : "Jurnal Umum Baru"} lebar="sm:max-w-4xl" className={tombolModalUtama}
+            keterangan={penyesuaian ? "Jurnal penyesuaian akhir periode; nomor JP/yymmdd/n dan status Penyesuaian diberikan mesin posting. Debit dan kredit harus seimbang."
+                : "Jurnal memorial; nomor JU/yymmdd/n diberikan mesin posting. Debit dan kredit harus seimbang."}>
+            {(selesai) => <JurnalForm akun={akun} hariIni={hariIni} selesai={selesai} penyesuaian={penyesuaian} />}
         </TombolModal>
     )
 }

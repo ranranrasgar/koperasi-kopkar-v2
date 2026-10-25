@@ -20,7 +20,8 @@ export async function daftarCoa(s: SearchParams) {
     return paged({ base, values, searchParams: s, sortable, defaultSort: "kode_perkiraan ASC", pageSize: 50 })
 }
 
-export async function daftarJurnal(s: SearchParams) {
+/** `penyesuaian`: hanya jurnal penyesuaian (halaman Jurnal Penyesuaian); selain itu semua jurnal, dengan filter opsional jenis. */
+export async function daftarJurnal(s: SearchParams, opsi: { penyesuaian?: boolean } = {}) {
     const { values, p } = params()
     const where: string[] = []
     if (sp(s, "search")) {
@@ -29,12 +30,14 @@ export async function daftarJurnal(s: SearchParams) {
     }
     if (isTanggal(sp(s, "dari"))) where.push(`j.tanggal_jurnalumum >= ${p(sp(s, "dari"))}`)
     if (isTanggal(sp(s, "sampai"))) where.push(`j.tanggal_jurnalumum <= ${p(sp(s, "sampai"))}`)
+    if (opsi.penyesuaian || sp(s, "jenis") === "penyesuaian") where.push("j.status = 'Penyesuaian'")
+    else if (sp(s, "jenis") === "umum") where.push("j.status <> 'Penyesuaian'")
     const sumber = sp(s, "sumber")
     if (sumber === "lain") where.push("j.sumber_tipe IS NULL")
     else if (sumber) where.push(`j.sumber_tipe = ${p(sumber)}`)
     const base = `
         SELECT j.id, j.urutan, j.tanggal_jurnalumum, j.nomor_bukti, j.kode_perkiraan, c.nama_perkiraan, j.deskripsi,
-               j.debit_jurnalumum, j.kredit_jurnalumum, j.sumber_tipe, j.opr
+               j.debit_jurnalumum, j.kredit_jurnalumum, j.sumber_tipe, j.opr, CASE WHEN j.status = 'Penyesuaian' THEN 'penyesuaian' ELSE '' END AS jenis
           FROM jurnal_umum j LEFT JOIN perkiraan c ON c.id = j.perkiraan_id
          ${where.length ? `WHERE ${where.join(" AND ")}` : ""}`
     const sortable = Object.fromEntries(["tanggal_jurnalumum", "nomor_bukti", "kode_perkiraan", "debit_jurnalumum", "kredit_jurnalumum"].map((k) => [k, k]))

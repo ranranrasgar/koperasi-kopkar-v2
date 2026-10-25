@@ -38,6 +38,10 @@ Pakai jurnal memorial untuk transaksi yang tidak punya form sendiri, misalnya bi
 4. Tambah baris sesuai kebutuhan; hapus baris dengan ikon tempat sampah.
 5. Tunggu sampai penanda **Seimbang** muncul, lalu tekan **Simpan Jurnal**.
 
+## Jenis jurnal: umum dan penyesuaian
+
+Kolom **Jenis** memberi lencana *Penyesuaian* pada jurnal penyesuaian, dan filter **Jenis** memisahkannya. Ikon **timbangan** di baris jurnal `JU/` menandai jurnal lama sebagai penyesuaian (atau mengembalikannya). Jurnal penyesuaian baru dicatat di menu *Jurnal Penyesuaian* (lihat panduannya).
+
 ## Mengubah jurnal umum
 
 Tekan ikon pensil pada baris jurnal `JU/`. Isinya dimuat ke form yang sama; ubah akun, nominal, atau keterangan lalu **Simpan Perubahan**. **Nomor bukti dan tanggal tidak bisa diubah** (tanggal bagian dari nomor): untuk pindah tanggal, hapus jurnal lalu buat yang baru.

@@ -12,3 +12,5 @@ CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_jurnal_umum_kode_trgm ON jurnal_umum 
 CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_simpanan_tgl_cover ON simpanan (tgl_transaksi) INCLUDE (rp_setoran, rp_pengambilan, jenis_simpanan);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_simpanan_anggota_cover ON simpanan (anggota_id) INCLUDE (jenis_simpanan, rp_setoran, rp_pengambilan, tgl_transaksi);
 CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_simpanan_no_bukti_trgm ON simpanan USING gin (no_bukti gin_trgm_ops);
+-- Jurnal Penyesuaian (status = 'Penyesuaian', sedikit baris): daftar dan neraca lajur tanpa memindai seluruh jurnal.
+CREATE INDEX CONCURRENTLY IF NOT EXISTS ix_jurnal_umum_penyesuaian ON jurnal_umum (tanggal_jurnalumum) INCLUDE (kode_perkiraan, debit_jurnalumum, kredit_jurnalumum, nomor_bukti) WHERE status = 'Penyesuaian';

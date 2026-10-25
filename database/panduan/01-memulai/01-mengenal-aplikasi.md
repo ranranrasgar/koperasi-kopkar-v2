@@ -15,7 +15,7 @@ Menu samping disusun dari yang paling sering dipakai sehari-hari ke yang jarang,
 | Simpanan | Setoran dan pengambilan lima jenis simpanan, laporan saldo | Setoran, Pengambilan, Rekap, Buku, Kartu, Berjangka, Grafik |
 | Pinjaman | Pengajuan, pencairan pinjaman tunai dan KPR, angsuran, titipan, tunggakan | Setoran Angsuran, Pengajuan Kredit, Input Pinjaman Tunai dan KPR, Titipan, Daftar Pinjaman, Cari Pinjaman, Kredit Macet |
 | Potongan Gaji | Potongan gaji bulanan anggota | Generate & Posting, Transaksi Potongan |
-| Akuntansi | Jurnal, kas dan bank, buku besar, neraca saldo, laporan keuangan, bagan akun | Jurnal Umum, Bank Book, Buku Besar, Trial Balance, Laporan Keuangan, Chart of Accounts |
+| Akuntansi | Jurnal, kas dan bank, buku besar, neraca saldo, laporan keuangan, bagan akun | Jurnal Umum, Jurnal Penyesuaian, Bank Book, Buku Besar, Trial Balance, Laporan Keuangan, Chart of Accounts |
 | Tutup Buku & SHU | Proses akhir tahun, berurutan: tutup buku lalu SHU | Tutup Buku, Sisa Hasil Usaha (SHU) |
 | Data Master | Aturan produk | Jenis Pinjaman, Jenis Simpanan, Grade Anggota |
 | Komunikasi | Pesan ke aplikasi anggota | Kirim Notifikasi, Himbauan & Promo |

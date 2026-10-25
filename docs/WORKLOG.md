@@ -301,6 +301,11 @@ Desktop sudah tidak dipakai, jadi web mengambil alih Generate dan Posting potong
 
 ---
 
+## 2026-10-25 — Jurnal Penyesuaian
+
+- Menu Akuntansi → Jurnal Penyesuaian (`/dashboard/accounting/adjusting`, hak = Jurnal Umum). Memakai `jurnal_umum` tanpa tabel baru: kolom lama `status` = `'Penyesuaian'` (kolom itu juga dipakai desktop untuk `'Reconcile'` pada Bank Book) dan nomor `JP/yymmdd/n` dari `seq_jurnal_penyesuaian_no` (pengaturan-web.sql). `postJurnalUmum({penyesuaian})`, `tandaiPenyesuaian` (JU lama dapat ditandai/dikembalikan, ikon timbangan), `ubahJurnalUmum` mempertahankan penanda, `JournalInput.status`. Jurnal Umum: kolom/filter Jenis. Indeks parsial `ix_jurnal_umum_penyesuaian`. Laporan (Neraca, Rugi Laba, Buku Besar) tetap menghitung jurnal penyesuaian. Uji: `jurnal-umum.test.ts` 8/8 (database uji).
+- BELUM: halaman Neraca Lajur (kolom: saldo sebelum penyesuaian = saldo tanpa baris berstatus Penyesuaian, penyesuaian = baris berstatus itu, saldo disesuaikan, rugi laba, neraca). Penanda sudah siap untuk itu.
+
 ## 2026-10-25 — Audit kecepatan query halaman
 
 - Alat ukur (di luar repo, scratchpad): harness tsx dengan stub `@/lib/db` memanggil semua fungsi `frontend/src/lib/queries/*` dan `anggota/src/lib/data.ts` (terbaik dari 3 kali, EXPLAIN untuk >200 ms). Sebelum: Buku Besar 3,4 dtk, cari Jurnal Umum 2,6 dtk, Neraca Saldo semua 1,8 dtk, Rencana SHU 1,9 dtk, Bank Book harian 1,4 dtk, Buku Simpanan 1,2 dtk, Karyawan Mattel 2,2 dtk. Penyebab utama: tidak ada indeks `jurnal_umum.kode_perkiraan` (hanya `perkiraan_id`), seq scan 1,1 GB untuk laporan saldo, dan pencarian ILIKE tanpa trigram.

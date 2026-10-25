@@ -18,5 +18,5 @@ export async function cetakVoucher(nomorBukti: string): Promise<string | null> {
         <table><thead><tr><th>Kode Akun</th><th>Nama Akun</th><th>Keterangan</th><th class="kanan">Debit</th><th class="kanan">Kredit</th></tr></thead>
         <tbody>${baris}</tbody><tfoot><tr><td colspan="3" class="kanan"><b>Total</b></td><td class="kanan"><b>${formatAngka(totalD)}</b></td><td class="kanan"><b>${formatAngka(totalK)}</b></td></tr></tfoot></table>
         <table style="margin-top:14px"><tbody><tr>${ttd}</tr></tbody></table>`
-    return bukaCetak({ judul: b.nomorBukti.startsWith("BB/") ? "Voucher Kas / Bank" : "Voucher Jurnal", subjudul: b.nomorBukti, orientasi: "potret", isi })
+    return bukaCetak({ judul: b.nomorBukti.startsWith("BB/") ? "Voucher Kas / Bank" : b.penyesuaian ? "Voucher Jurnal Penyesuaian" : "Voucher Jurnal", subjudul: b.nomorBukti, orientasi: "potret", isi })
 }

@@ -5,7 +5,7 @@ import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpan
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
 import { kirimInfoPencairan } from "@kopkar/backend/src/anggota/info-pinjaman.ts"
-import { bacaJurnalUmum, hapusJurnalUmum, postJurnalUmum, ubahJurnalUmum, type BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
+import { bacaJurnalUmum, hapusJurnalUmum, postJurnalUmum, tandaiPenyesuaian, ubahJurnalUmum, type BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { bacaBankBook, hapusBankBook, simpanBankBook, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
@@ -276,11 +276,20 @@ export async function jurnalUmumAction(_: Hasil, f: FormData): Promise<Hasil> {
         }).filter((l) => l.kodePerkiraan && (toUnits(l.debit) > 0n || toUnits(l.kredit) > 0n))
         if (lines.length < 2) throw new InputSalah("Jurnal minimal dua baris berisi nilai")
         const nomor = teks(f, "nomorBukti", false)
-        const input = { tanggal: tanggal(f), deskripsi: teks(f, "deskripsi"), opr, lines }
+        const penyesuaian = f.get("penyesuaian") === "1"
+        const input = { tanggal: tanggal(f), deskripsi: teks(f, "deskripsi"), opr, lines, penyesuaian }
         const r = await tx((db) => nomor ? ubahJurnalUmum(db, nomor, input) : postJurnalUmum(db, input))
         const total = lines.reduce((s, l) => s + toUnits(l.debit), 0n)
-        return { ok: true, pesan: `Jurnal ${r.nomorBukti} ${nomor ? "diubah" : "tercatat"} (${r.baris} baris)`,
+        return { ok: true, pesan: `Jurnal ${r.nomorBukti.startsWith("JP/") ? "penyesuaian " : ""}${r.nomorBukti} ${nomor ? "diubah" : "tercatat"} (${r.baris} baris)`,
             rincian: { "No. Bukti": r.nomorBukti, "Total debit = kredit": rp(total) } }
+    })
+}
+
+/** Tandai jurnal umum JU/ sebagai penyesuaian, atau kembalikan ke jurnal umum biasa (jurnal lama yang ternyata penyesuaian, mis. penyusutan). */
+export async function tandaiPenyesuaianAction(nomorBukti: string, penyesuaian: boolean): Promise<Hasil> {
+    return posting([MENU.jurnalUmum], async () => {
+        await tx((db) => tandaiPenyesuaian(db, nomorBukti, penyesuaian))
+        return { ok: true, pesan: `Bukti ${nomorBukti} ${penyesuaian ? "ditandai sebagai jurnal penyesuaian" : "dikembalikan menjadi jurnal umum biasa"}` }
     })
 }
 

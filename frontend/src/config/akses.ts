@@ -99,6 +99,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/accounting/journal": [MENU.jurnalUmum],
     "/dashboard/accounting/journal/new": [MENU.jurnalUmum],
     "/dashboard/accounting/journal/tidak-seimbang": [MENU.jurnalUmum],
+    "/dashboard/accounting/adjusting": [MENU.jurnalUmum], // jurnal penyesuaian memakai hak yang sama dengan Jurnal Umum
     "/dashboard/settings": [MENU.company],
     "/dashboard/settings/jenis-pinjaman": [MENU.jenisPinjaman],
     "/dashboard/settings/jenis-simpanan": [MENU.jenisSimpanan],
