@@ -47,7 +47,7 @@ export function Sidebar({ className, onClose }: SidebarProps) {
 
     return (
         <aside className={cn("fixed left-0 top-0 h-screen w-64 bg-background z-50 flex flex-col transition-transform duration-300 md:translate-x-0 border-r border-outline-variant", className)}>
-            <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4">
+            <div className="flex min-h-0 flex-1 flex-col gap-1 overflow-y-auto p-4 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 <div className="mb-lg px-sm">
                     <div className="flex items-center gap-2">
                         <img src={koperasi.logo} alt={`Logo ${koperasi.nama}`} className="h-10 w-10 shrink-0 object-contain" />
