@@ -168,6 +168,8 @@ export const karyawanMattelConfig: ModuleConfig = {
         { key: "anggota", label: "Keanggotaan", type: "select", options: [{ label: "Sudah anggota", value: "ya" }, { label: "Belum anggota", value: "tidak" }] },
     ],
     columns: [
+        { key: "status_agt", label: "Status", type: "badge", sortable: true,
+            badgeMap: { ya: { label: "Anggota", color: "green" }, nama: { label: "Anggota (cocok nama)", color: "blue" }, tidak: { label: "Belum", color: "gray" } } },
         { key: "nik", label: "NIK", type: "string", sortable: true, mono: true },
         { key: "nama", label: "Nama", type: "string", sortable: true },
         { key: "deptname", label: "Departemen", type: "string", sortable: true },

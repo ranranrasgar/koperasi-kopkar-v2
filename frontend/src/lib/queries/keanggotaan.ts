@@ -9,14 +9,20 @@ export async function daftarKaryawanMattel(s: SearchParams) {
         const kw = p(`%${sp(s, "search")}%`)
         where.push(`(k.nik ILIKE ${kw} OR k.nama ILIKE ${kw} OR k.deptname ILIKE ${kw} OR k.sectname ILIKE ${kw})`)
     }
-    if (sp(s, "anggota") === "ya") where.push("a.id IS NOT NULL")
-    if (sp(s, "anggota") === "tidak") where.push("a.id IS NULL")
+    if (sp(s, "anggota") === "ya") where.push("COALESCE(a.kode_agt, n.kode) IS NOT NULL")
+    if (sp(s, "anggota") === "tidak") where.push("COALESCE(a.kode_agt, n.kode) IS NULL")
+    // Tertaut langsung lewat karyawan_mattel_id; bila tidak, cocok nama (hanya bila nama itu unik di data karyawan dan di anggota yang belum tertaut),
+    // karena NIK anggota lama berbeda dengan NIK HR Mattel dan banyak anggota belum ditautkan.
     const base = `
         SELECT k.id, k.plant, k.nik, k.nama, k.deptname, k.sectname, k.grade, k.joindate, k.tgl_lahir, k.no_rek, k.emphone, k.sts,
-               a.kode_agt
+               COALESCE(a.kode_agt, n.kode) AS kode_agt,
+               CASE WHEN a.id IS NOT NULL THEN 'ya' WHEN n.kode IS NOT NULL THEN 'nama' ELSE 'tidak' END AS status_agt
           FROM karyawan_mattel k LEFT JOIN anggota a ON a.karyawan_mattel_id = k.id
+          LEFT JOIN (SELECT upper(btrim(nama)) AS nm, min(kode_agt) AS kode FROM anggota WHERE karyawan_mattel_id IS NULL GROUP BY 1 HAVING count(*) = 1) n
+                 ON a.id IS NULL AND n.nm = upper(btrim(k.nama))
+                AND (SELECT count(*) FROM karyawan_mattel k2 WHERE upper(btrim(k2.nama)) = n.nm) = 1
          ${where.length ? `WHERE ${where.join(" AND ")}` : ""}`
-    const sortable = Object.fromEntries(["nik", "nama", "deptname", "sectname", "grade", "joindate"].map((k) => [k, k]))
+    const sortable = Object.fromEntries(["nik", "nama", "deptname", "sectname", "grade", "joindate", "status_agt"].map((k) => [k, k]))
     return paged({ base, values, searchParams: s, sortable, defaultSort: "nama ASC" })
 }
 
