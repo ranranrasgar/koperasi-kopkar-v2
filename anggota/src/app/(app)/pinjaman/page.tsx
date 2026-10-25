@@ -1,9 +1,10 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { Archive, CalendarClock, ChevronDown, ChevronRight, CircleCheck, Hourglass, Landmark, Plus, type LucideIcon } from "lucide-react"
+import { Archive, CalendarClock, ChevronDown, Landmark } from "lucide-react"
+import { HeroKewajiban } from "@/components/HeroKewajiban"
 import { JudulBagian, Kartu, Kemajuan, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
-import { pinjamanAktif, pinjamanLunas, profil, rincianPinjaman, type PinjamanAktif } from "@/lib/data"
+import { pinjamanAktif, pinjamanLunas, profil, type PinjamanAktif } from "@/lib/data"
 import { hariIni, rupiah, selisihHari, tanggal } from "@/lib/format"
 
 export const metadata: Metadata = { title: "Pinjaman" }
@@ -14,7 +15,7 @@ function Chip({ children, kelas }: { children: React.ReactNode; kelas: string })
     return <span className={`shrink-0 rounded-full px-2.5 py-1 text-[0.6875rem] font-semibold uppercase tracking-wide ${kelas}`}>{children}</span>
 }
 
-/** Kontrak pinjaman berjalan: statistik, kemajuan, dan sorotan jatuh tempo. Seluruh kartu membuka rincian pinjaman. */
+/** Kontrak pinjaman berjalan: statistik, kemajuan, dan jatuh tempo berikutnya. Seluruh kartu membuka rincian dan jadwal pinjaman. */
 function KontrakBerjalan({ p, hari }: { p: PinjamanAktif; hari: string }) {
     const terbayar = Math.max(0, p.pokok - p.sisa)
     const persenBayar = p.pokok > 0 ? Math.min(100, Math.round((terbayar / p.pokok) * 100)) : 0
@@ -46,11 +47,6 @@ function KontrakBerjalan({ p, hari }: { p: PinjamanAktif; hari: string }) {
                 <span className="angka text-xs text-redup">{p.jml_cicilan} dari {p.lama_angsuran} bulan</span>
             </div>
             <div className="mt-1.5"><Kemajuan ke={p.jml_cicilan} dari={p.lama_angsuran} /></div>
-            <div className="mt-1.5 flex justify-between text-[0.6875rem] text-redup">
-                <span>Mulai {tanggal(p.tgl_pinjaman)}</span>
-                <span>Selesai {tanggal(p.selesai)}</span>
-            </div>
-
             {p.angsuran !== null && p.jatuh_tempo && (
                 <div className="mt-4 flex items-center gap-3 rounded-2xl bg-utama-lembut p-3.5">
                     <span className="grid size-11 shrink-0 place-items-center rounded-full bg-permukaan text-utama"><CalendarClock size={20} strokeWidth={1.75} /></span>
@@ -68,7 +64,6 @@ function KontrakBerjalan({ p, hari }: { p: PinjamanAktif; hari: string }) {
                     </div>
                 </div>
             )}
-            <p className="mt-3 flex items-center justify-end gap-1 text-xs font-medium text-utama">Lihat rincian <ChevronRight size={14} /></p>
         </Link>
     )
 }
@@ -79,72 +74,18 @@ export default async function PinjamanPage() {
     const hari = hariIni()
     const tunai = daftar.filter((p) => p.jenis === "tunai"), kpr = daftar.filter((p) => p.jenis === "kpr")
     const sisaTunai = tunai.reduce((t, p) => t + p.sisa, 0), sisaKpr = kpr.reduce((t, p) => t + p.sisa, 0)
-    // Jadwal angsuran: untuk kontrak pertama saja (satu daftar yang ringkas); kontrak lain lewat halaman rinciannya.
-    const utama = daftar[0]
-    const rinci = utama ? await rincianPinjaman(a.anggotaId, utama.jenis, utama.id) : null
-    const berikut = rinci?.jadwal.find((j) => !j.lunas)
-    const terbayar = rinci ? rinci.jadwal.filter((j) => j.lunas).slice(-3).reverse() : []
-    const jadwal: { j: NonNullable<typeof berikut>; mendatang: boolean }[] = [
-        ...(berikut ? [{ j: berikut, mendatang: true }] : []), ...terbayar.map((j) => ({ j, mendatang: false })),
-    ]
-
     return (
         <main>
             <div className="px-5 pt-2">
                 {/* Ringkasan kewajiban; KPR dipisah dari pinjaman tunai (keputusan K3). */}
-                <section className="rounded-[var(--radius-kartu)] border border-garis bg-permukaan p-5">
-                    <div className="flex items-center justify-between gap-3">
-                        <span className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.1em] text-redup">
-                            <span className="grid size-10 place-items-center rounded-full bg-utama-lembut text-utama"><Landmark size={19} strokeWidth={1.75} /></span>
-                            Kewajiban anggota
-                        </span>
-                        <Chip kelas={daftar.length ? "bg-masuk/15 text-masuk" : "bg-garis text-redup"}>{daftar.length ? `${daftar.length} kontrak aktif` : "Tidak ada kontrak"}</Chip>
-                    </div>
-                    <p className="mt-4 text-sm text-redup">{kpr.length ? "Sisa pinjaman tunai" : "Total sisa pinjaman aktif"}</p>
-                    <p className="angka mt-0.5 text-[1.875rem] font-bold leading-tight tracking-tight">{rupiah(sisaTunai)}</p>
-                    {kpr.length > 0 && <p className="mt-2 text-sm text-redup">Sisa KPR <span className="angka font-semibold text-teks">{rupiah(sisaKpr)}</span></p>}
-                    <Link href="/ajukan" className="mt-4 flex items-center gap-3 rounded-2xl bg-utama-lembut p-3.5 transition-colors active:opacity-80">
-                        <div className="min-w-0 flex-1">
-                            <p className="text-xs text-redup">Plafon kredit (grade)</p>
-                            <p className="angka font-bold">{rupiah(data?.rp_grade ?? 0)}</p>
-                        </div>
-                        <span className="flex items-center gap-1 text-sm font-semibold text-utama"><Plus size={16} />Ajukan</span>
-                    </Link>
-                </section>
+                <HeroKewajiban judul={kpr.length ? "Sisa pinjaman tunai" : "Total sisa pinjaman aktif"} sisa={rupiah(sisaTunai)} sisaKpr={kpr.length ? rupiah(sisaKpr) : null}
+                    kontrak={daftar.length} plafon={rupiah(data?.rp_grade ?? 0)} />
 
                 <JudulBagian>Kontrak berjalan</JudulBagian>
                 {daftar.length === 0 ? (
                     <Kartu><Kosong judul="Tidak ada pinjaman berjalan" isi={lunas.length ? "Pinjaman yang sudah lunas ada di riwayat di bawah." : undefined} /></Kartu>
                 ) : (
                     <div className="space-y-3">{daftar.map((p) => <KontrakBerjalan key={`${p.jenis}-${p.id}`} p={p} hari={hari} />)}</div>
-                )}
-
-                {utama && jadwal.length > 0 && (
-                    <>
-                        <JudulBagian href={`/pinjaman/${utama.jenis}/${utama.id}`} tautan={`Semua (${rinci?.jadwal.length ?? 0})`}>Jadwal angsuran</JudulBagian>
-                        <p className="-mt-1 mb-1 text-xs text-redup">{utama.nama_kredit ?? utama.no_pinjaman}</p>
-                        <Kartu className="divide-y divide-garis">
-                            {jadwal.map(({ j, mendatang }) => {
-                                const Ikon: LucideIcon = mendatang ? Hourglass : CircleCheck
-                                return (
-                                    <div key={j.angsuran_ke} className="flex items-center gap-3 px-5 py-3">
-                                        <span className={`grid size-10 shrink-0 place-items-center rounded-full ${mendatang ? "bg-tunggu/15 text-tunggu" : "bg-masuk/15 text-masuk"}`}><Ikon size={19} strokeWidth={1.75} /></span>
-                                        <div className="min-w-0 flex-1">
-                                            <p className="flex items-center gap-2 text-[0.9375rem] font-medium">
-                                                Bulan ke-{j.angsuran_ke}
-                                                <Chip kelas={mendatang ? "bg-tunggu/15 text-tunggu" : "bg-masuk/15 text-masuk"}>{mendatang ? "Mendatang" : "Lunas"}</Chip>
-                                            </p>
-                                            <p className="text-xs text-redup">{tanggal(j.tanggal_angsuran)}</p>
-                                        </div>
-                                        <div className="text-right">
-                                            <p className="angka text-[0.9375rem] font-semibold">{rupiah(j.total)}</p>
-                                            <p className={`text-xs ${mendatang ? "text-tunggu" : "text-masuk"}`}>{mendatang ? "Siap ditagih" : "Terpotong"}</p>
-                                        </div>
-                                    </div>
-                                )
-                            })}
-                        </Kartu>
-                    </>
                 )}
 
                 {lunas.length > 0 && (
