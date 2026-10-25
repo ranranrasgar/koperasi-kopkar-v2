@@ -54,6 +54,7 @@ const HALAMAN_LEBAR = [
     "/dashboard/loans/bad-debts",  // Kredit Macet: 10 kolom
     "/dashboard/deductions",       // Transaksi Potongan: 11 kolom
     "/dashboard/deductions/",      // Generate & Posting dan rinciannya
+    "/dashboard/accounting/worksheet", // Neraca Lajur: 12 kolom angka
 ]
 const lebarPenuh = (path: string) => HALAMAN_LEBAR.some((p) => (p.endsWith("/") ? path.startsWith(p) : path === p))
 
