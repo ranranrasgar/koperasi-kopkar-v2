@@ -24,5 +24,8 @@ CREATE TABLE IF NOT EXISTS panduan (
     diubah_oleh varchar(50)
 );
 
+-- Kategori khusus admin (superadmin dan grup admin) disembunyikan dari operator lain di Pusat Panduan.
+ALTER TABLE panduan_kategori ADD COLUMN IF NOT EXISTS khusus_admin boolean NOT NULL DEFAULT false;
+
 CREATE INDEX IF NOT EXISTS ix_panduan_kategori_id_urutan ON panduan (kategori_id, urutan);
 CREATE INDEX IF NOT EXISTS ix_panduan_href_menu ON panduan (href_menu);

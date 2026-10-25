@@ -71,6 +71,9 @@ export async function wajibIzin(href: string) {
 /** Galat sesi atau hak akses (bukan kegagalan posting); pesannya ditampilkan ke kasir tanpa dicatat di log. */
 export class GalatSesi extends Error {}
 
+/** Boleh membaca panduan khusus admin: superadmin atau grup admin. */
+export const adminPanduan = (o: Pick<Operator, "superadmin" | "grup">) => o.superadmin || (o.grup ?? "").trim().toLowerCase() === "admin"
+
 /** Untuk server action: operator yang sah, sudah mengganti password awal, dan (bila diberi) berizin salah satu menu. */
 export async function operatorAktif(menu?: readonly string[]): Promise<Operator> {
     const o = await operatorSesi()

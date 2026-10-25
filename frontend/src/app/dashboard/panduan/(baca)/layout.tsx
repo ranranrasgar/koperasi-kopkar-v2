@@ -1,7 +1,7 @@
 import { NavPanduan } from "@/components/panduan/NavPanduan"
 import { PanduanBelumDipasang as BelumDipasang } from "@/components/panduan/BelumDipasang"
 import { PanduanBelumDipasang, pohonPanduan } from "@/lib/queries/panduan"
-import { wajibLogin } from "@/lib/operator"
+import { adminPanduan, wajibLogin } from "@/lib/operator"
 import { MENU } from "@/config/akses"
 
 // Kerangka Pusat Panduan: navigasi kategori/artikel di kiri, isi di kanan (gaya pusat bantuan).
@@ -9,7 +9,7 @@ export default async function PanduanLayout({ children }: { children: React.Reac
     const o = await wajibLogin()
     let pohon
     try {
-        pohon = await pohonPanduan()
+        pohon = await pohonPanduan(false, adminPanduan(o))
     } catch (e) {
         if (e instanceof PanduanBelumDipasang) return <BelumDipasang />
         throw e

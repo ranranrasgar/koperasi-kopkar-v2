@@ -52,7 +52,7 @@ export function bacaIsiAwal() {
             });
             if (!k.meta.nama) throw new Error(`${d.name}/_kategori.md: nama wajib`);
             return { slug: slugDari(d.name), urutan: urutDari(d.name), nama: k.meta.nama, ikon: k.meta.ikon || null,
-                keterangan: k.meta.keterangan || null, artikel };
+                keterangan: k.meta.keterangan || null, khususAdmin: k.meta.khusus === 'admin', artikel };
         });
 }
 
@@ -74,9 +74,10 @@ async function main() {
         let kBaru = 0, aBaru = 0, aDiperbarui = 0, aDilewati = 0;
         for (const k of kategori) {
             const r = await c.query(
-                `INSERT INTO panduan_kategori (slug, nama, keterangan, ikon, urutan) VALUES ($1,$2,$3,$4,$5)
-                 ON CONFLICT (slug) DO NOTHING RETURNING id`, [k.slug, k.nama, k.keterangan, k.ikon, k.urutan]);
+                `INSERT INTO panduan_kategori (slug, nama, keterangan, ikon, urutan, khusus_admin) VALUES ($1,$2,$3,$4,$5,$6)
+                 ON CONFLICT (slug) DO NOTHING RETURNING id`, [k.slug, k.nama, k.keterangan, k.ikon, k.urutan, k.khususAdmin]);
             if (r.rows[0]) kBaru++;
+            else if (k.khususAdmin) await c.query('UPDATE panduan_kategori SET khusus_admin = true WHERE slug = $1', [k.slug]); // pembatasan dari berkas selalu berlaku
             const id = r.rows[0]?.id ?? (await c.query('SELECT id FROM panduan_kategori WHERE slug = $1', [k.slug])).rows[0].id;
             for (const a of k.artikel) {
                 const ra = await c.query(

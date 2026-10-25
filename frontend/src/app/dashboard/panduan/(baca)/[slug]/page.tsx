@@ -6,21 +6,22 @@ import { TombolCetak } from "@/components/ui/TombolCetak"
 import { artikelPanduan, pohonPanduan } from "@/lib/queries/panduan"
 import { daftarIsi } from "@/lib/panduan-teks"
 import { formatTanggal } from "@/lib/format"
-import { wajibIzin } from "@/lib/operator"
+import { adminPanduan, wajibIzin, wajibLogin } from "@/lib/operator"
 import { allGroups } from "@/config/menu"
 import { MENU } from "@/config/akses"
 
 const namaMenu = (href: string) => allGroups.flatMap((g) => g.items).find((i) => i.href === href)?.label
 
 export async function generateMetadata(props: PageProps<"/dashboard/panduan/[slug]">): Promise<Metadata> {
-    const a = await artikelPanduan((await props.params).slug)
+    const o = await wajibLogin()
+    const a = await artikelPanduan((await props.params).slug, adminPanduan(o))
     return { title: a ? `${a.judul} · Pusat Panduan` : "Pusat Panduan" }
 }
 
 export default async function ArtikelPanduanPage(props: PageProps<"/dashboard/panduan/[slug]">) {
     const o = await wajibIzin("/dashboard/panduan") // semua operator yang login boleh membaca
     const { slug } = await props.params
-    const [a, { kategori }] = await Promise.all([artikelPanduan(slug), pohonPanduan()])
+    const [a, { kategori }] = await Promise.all([artikelPanduan(slug, adminPanduan(o)), pohonPanduan(false, adminPanduan(o))])
     if (!a) notFound()
 
     const urut = kategori.flatMap((k) => k.artikel)

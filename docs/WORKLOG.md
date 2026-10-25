@@ -301,6 +301,12 @@ Desktop sudah tidak dipakai, jadi web mengambil alih Generate dan Posting potong
 
 ---
 
+## 2026-10-25 — Panduan khusus admin, hapus keanggotaan, email resmi, EMAIL_UJI_KE
+
+- **Panduan khusus admin**: kolom `panduan_kategori.khusus_admin` (di `panduan.sql`), diisi dari `khusus: admin` di `_kategori.md`; `adminPanduan(o)` (superadmin atau grup admin) di `lib/operator.ts` disaring pada `pohonPanduan`, `artikelPanduan`, `panduanUntukHalaman`, `cariPanduan`. Kategori baru `11-teknologi-aplikasi` (3 artikel: teknologi, database/keamanan, layanan/pemeliharaan). Layar Kelola tetap memuat semua.
+- Hapus keanggotaan bersama akun mobile (`hapusKeanggotaan` di `backend/src/anggota/akun.ts`, ditolak bila ada simpanan/pinjaman/KPR/potongan/SHU); email aktivasi resmi berkop (`templat.ts` mendukung kop, subjudul, poin, tabel); `EMAIL_UJI_KE` mengizinkan penerima uji dari server uji; kolom Status keanggotaan di Karyawan Mattel (tertaut atau cocok nama unik).
+- Belum dikerjakan: nilai awal simpanan pokok/wajib/sukarela anggota baru masih modus anggota baru bergrade sama (`jadikanAnggota`); usulan tabel nilai awal per grade menunggu aturan koperasi.
+
 ## 2026-10-25 — Pengaturan Tampilan (tema warna per operator)
 
 **Dikerjakan:** halaman `/dashboard/settings/tampilan` (ikon palet di dasar sidebar, antara Logout dan mode gelap). Enam warna (aksen, kanvas, kartu, header, sidebar, tulisan sidebar), 8 preset profesional, pratinjau, peringatan kontras WCAG, Reset = hapus baris. Tersimpan per operator di tabel `opr_tampilan` (`pengaturan-web.sql`, dipasang oleh `npm run pengaturan:pasang`; sudah dijalankan di database asli dan uji). `backend/src/tampilan.ts` (murni, diuji 4/4), `frontend/src/lib/tampilan.ts`, `app/actions/tampilan.ts`, `components/settings/EditorTampilan.tsx`. Layout menyisipkan `<style>` dari `cssTema()`: variabel `--tema-*`/`--aksen`, latar hanya di `:root:not(.dark)`, dan penggantian kelas `bg-blue-600`, `text-blue-600` dst ke aksen. Kelas menu samping (`.item-menu`, `.aktif`, dll) di `globals.css` punya fallback ke warna lama, jadi tanpa tema tampilan tidak berubah. Nilai divalidasi ketat `#rrggbb` (disisipkan ke `<style>`). Preferensi pribadi, tidak ikut mode uji.

@@ -2,7 +2,7 @@ import Link from "next/link"
 import { redirect } from "next/navigation"
 import { cariPanduan, panduanUntukHalaman, pohonPanduan } from "@/lib/queries/panduan"
 import { sp } from "@/lib/list"
-import { wajibIzin } from "@/lib/operator"
+import { adminPanduan, wajibIzin } from "@/lib/operator"
 
 function KotakCari({ nilai }: { nilai?: string }) {
     return (
@@ -15,19 +15,20 @@ function KotakCari({ nilai }: { nilai?: string }) {
 }
 
 export default async function PusatPanduanPage(props: PageProps<"/dashboard/panduan">) {
-    await wajibIzin("/dashboard/panduan") // semua operator yang login boleh membaca
+    const o = await wajibIzin("/dashboard/panduan") // semua operator yang login boleh membaca
+    const admin = adminPanduan(o)
     const s = await props.searchParams
     const untuk = sp(s, "untuk")
     let tanpaPanduan = false
     if (untuk.startsWith("/dashboard")) {
-        const slug = await panduanUntukHalaman(untuk)
+        const slug = await panduanUntukHalaman(untuk, admin)
         if (slug) redirect(`/dashboard/panduan/${slug}`)
         tanpaPanduan = true
     }
 
     const q = sp(s, "q").trim().slice(0, 100)
     if (q) {
-        const hasil = await cariPanduan(q)
+        const hasil = await cariPanduan(q, admin)
         return (
             <div className="max-w-3xl">
                 <KotakCari nilai={q} />
@@ -46,7 +47,7 @@ export default async function PusatPanduanPage(props: PageProps<"/dashboard/pand
         )
     }
 
-    const { kategori } = await pohonPanduan()
+    const { kategori } = await pohonPanduan(false, admin)
     const jumlah = kategori.reduce((t, k) => t + k.artikel.length, 0)
     return (
         <div>
