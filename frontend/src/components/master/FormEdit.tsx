@@ -11,7 +11,7 @@ import { cn } from "@/lib/utils"
 export interface FieldSpec {
     name: string
     label: string
-    type?: "text" | "number" | "select" | "checkbox" | "textarea"
+    type?: "text" | "number" | "date" | "select" | "checkbox" | "textarea"
     options?: { value: string; label: string }[]
     required?: boolean
     hint?: string
@@ -62,7 +62,8 @@ export function FormEdit({ fields, nilai, aksi, tombol = "Simpan", onSelesai, ko
                             ) : f.type === "textarea" ? (
                                 <Textarea id={id} name={f.name} defaultValue={v == null ? "" : String(v)} required={f.required} rows={3} />
                             ) : (
-                                <Input id={id} name={f.name} type={f.type === "number" ? "number" : "text"} step={f.step ?? "any"}
+                                <Input id={id} name={f.name} type={f.type === "number" ? "number" : f.type === "date" ? "date" : "text"}
+                                    step={f.type === "number" ? f.step ?? "any" : undefined}
                                     defaultValue={v == null ? "" : String(v)} required={f.required} />
                             )}
                         </Field>

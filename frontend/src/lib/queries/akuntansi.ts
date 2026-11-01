@@ -2,6 +2,17 @@ import "server-only"
 import { query } from "@/lib/db"
 import { isTanggal, paged, params, sp, type SearchParams } from "@/lib/list"
 
+const akunCoaBisaDihapus = `NOT (
+    COALESCE(c.rp_saldo_awal, 0) <> 0
+    OR EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.perkiraan_id = c.id OR j.kode_perkiraan = c.kode_perkiraan)
+    OR EXISTS (SELECT 1 FROM perkiraan x WHERE x.id <> c.id AND (x.parent_id = c.id OR x.pr_parent = c.pr_id))
+    OR EXISTS (SELECT 1 FROM jenis_simpanan x WHERE x.coa_id = c.id)
+    OR EXISTS (SELECT 1 FROM jenis_kredit x WHERE x.coa_kredit_id = c.id OR x.coa_jasa_id = c.id OR x.coa_adm_id = c.id OR x.coa_provisi_id = c.id)
+    OR EXISTS (SELECT 1 FROM jenis_pos_shu x WHERE x.perkiraan_id = c.id OR x.kode_coa = c.kode_perkiraan)
+    OR EXISTS (SELECT 1 FROM variable_akun x WHERE x.perkiraan_id = c.id)
+    OR EXISTS (SELECT 1 FROM saldo_perkiraan x WHERE x.perkiraan_id = c.id)
+)`
+
 export async function daftarCoa(s: SearchParams) {
     const { values, p } = params()
     const where: string[] = []
@@ -12,7 +23,8 @@ export async function daftarCoa(s: SearchParams) {
     const dk = sp(s, "d_k")
     if (dk === "D" || dk === "C") where.push(`c.d_k = ${p(dk)}`)
     const base = `
-        SELECT c.id, c.kode_perkiraan, c.nama_perkiraan, c.d_k, c.rp_saldo_awal, c.tgl_saldo_awal, c.keterangan,
+        SELECT c.id, c.kode_perkiraan, c.nama_perkiraan, c.d_k, c.rp_saldo_awal, c.rp_budget, c.tgl_saldo_awal, c.keterangan,
+               ${akunCoaBisaDihapus} AS _bisa_hapus,
                i.kode_perkiraan || ' ' || i.nama_perkiraan AS nama_induk
           FROM perkiraan c LEFT JOIN perkiraan i ON i.id = c.parent_id
          ${where.length ? `WHERE ${where.join(" AND ")}` : ""}`
@@ -46,11 +58,17 @@ export async function daftarJurnal(s: SearchParams, opsi: { penyesuaian?: boolea
     return paged({ base, values, searchParams: s, sortable, defaultSort: `tanggal_jurnalumum DESC, ${perBukti}`, urutanLanjut: perBukti, pageSize: 50 })
 }
 
-export interface AkunPohon { id: number; parent_id: number | null; kode_perkiraan: string; nama_perkiraan: string; d_k: string; keterangan: string | null }
+export interface AkunPohon {
+    id: number; parent_id: number | null; kode_perkiraan: string; nama_perkiraan: string; d_k: string; keterangan: string | null
+    rp_saldo_awal: number | string | null; rp_budget: number | string | null; _bisa_hapus: boolean
+}
 
 /** Semua akun COA dengan induknya, untuk tampilan pohon (3 tingkat, akun induk tidak pernah dijurnal). */
 export const pohonCoa = () =>
-    query<AkunPohon>("SELECT id, parent_id, kode_perkiraan, nama_perkiraan, d_k, keterangan FROM perkiraan ORDER BY kode_perkiraan")
+    query<AkunPohon>(`
+        SELECT c.id, c.parent_id, c.kode_perkiraan, c.nama_perkiraan, c.d_k, c.keterangan,
+               c.rp_saldo_awal, c.rp_budget, ${akunCoaBisaDihapus} AS _bisa_hapus
+          FROM perkiraan c ORDER BY c.kode_perkiraan`)
 
 export interface Akun { id: number; kode_perkiraan: string; nama_perkiraan: string }
 

@@ -15,6 +15,8 @@ export async function daftarKaryawanMattel(s: SearchParams) {
     // karena NIK anggota lama berbeda dengan NIK HR Mattel dan banyak anggota belum ditautkan.
     const base = `
         SELECT k.id, k.plant, k.nik, k.nama, k.deptname, k.sectname, k.grade, k.joindate, k.tgl_lahir, k.no_rek, k.emphone, k.sts,
+               (a.id IS NOT NULL OR EXISTS (SELECT 1 FROM app_user u
+                   WHERE u.karyawan_mattel_id = k.id OR (u.karyawan_mattel_id IS NULL AND u.kode_agt = k.nik))) AS _tertaut,
                COALESCE(a.kode_agt, n.kode) AS kode_agt,
                CASE WHEN a.id IS NOT NULL THEN 'ya' WHEN n.kode IS NOT NULL THEN 'nama' ELSE 'tidak' END AS status_agt
           FROM karyawan_mattel k LEFT JOIN anggota a ON a.karyawan_mattel_id = k.id

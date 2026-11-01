@@ -123,6 +123,7 @@ export const coaConfig: ModuleConfig = {
         { key: "nama_induk", label: "Induk", type: "string" },
         { key: "d_k", label: "D/K", type: "string", sortable: true },
         { key: "rp_saldo_awal", label: "Saldo Awal", type: "currency", sortable: true },
+        { key: "rp_budget", label: "Anggaran", type: "currency", hidden: true },
         { key: "keterangan", label: "Keterangan", type: "string", hidden: true },
     ],
 }

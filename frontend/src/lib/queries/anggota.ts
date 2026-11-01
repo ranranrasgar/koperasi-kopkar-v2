@@ -29,6 +29,24 @@ export async function daftarAnggota(s: SearchParams) {
                a.jns_kelamin, a.status AS status_kawin, a.alamat, a.kota, NULLIF(a.kodepos, 0) AS kodepos, a.hp,
                a.bank_nama, a.bank_no_rek, a.bank_atas_nama, a.simpanan_pokok, a.simpanan_wajib, a.simpanan_sukarela,
                a.tglpencatatan, a.tgl_keluar, a.alasan_keluar, a.opr,
+               NOT (
+                   EXISTS (SELECT 1 FROM simpanan x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM pinjaman_tunai x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM kpr x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM pengajuan_pinjaman x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM shu_anggota x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM potongan_gaji_anggota x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM potongan_gaji_pinjaman x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM temp_potongan_all x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM temp_potongan_bank x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM temp_potongan_koperasi x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM temp_potongan_kpr x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM temp_shu x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM temp_shu_backup x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM temp_simpanan x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM log_notifikasi x WHERE x.anggota_id = a.id)
+                   OR EXISTS (SELECT 1 FROM app_user x WHERE x.anggota_id = a.id OR (x.anggota_id IS NULL AND x.kode_agt = a.kode_agt))
+               ) AS _bisa_hapus,
                ${saldo.kolom} AS saldo_simpanan,
                u.username AS _username, u.foto AS _foto, o.status AS _role
           FROM anggota a

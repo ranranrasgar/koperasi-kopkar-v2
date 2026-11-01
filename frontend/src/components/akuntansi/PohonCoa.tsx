@@ -6,9 +6,11 @@ import { ChevronRight, ChevronsDownUp, ChevronsUpDown, FileText, Folder, FolderO
 import { Button } from "@/components/ui/button"
 import { formatAngka } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { AksiCoa } from "@/components/master/AksiCoa"
 
 export interface BarisPohon {
     id: number; parent_id: number | null; kode_perkiraan: string; nama_perkiraan: string; d_k: string; keterangan: string | null
+    rp_saldo_awal: number | string | null; rp_budget: number | string | null; _bisa_hapus: boolean
     saldo: number // debit - kredit akun ini sendiri; induk dijumlahkan dari anaknya
 }
 
@@ -111,6 +113,7 @@ export function PohonCoa({ baris, per, dari }: { baris: BarisPohon[]; per: strin
                             <th className="px-3 py-2 text-left w-36">Kode</th>
                             <th className="px-3 py-2 text-center w-14">D/K</th>
                             <th className="px-3 py-2 text-right w-44">Saldo</th>
+                            <th className="px-3 py-2 text-center w-20 print:hidden">Aksi</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -150,11 +153,16 @@ export function PohonCoa({ baris, per, dari }: { baris: BarisPohon[]; per: strin
                                     <td className={cn("px-3 py-1.5 text-right tabular-nums", induk && "font-semibold", saldo < 0 && "text-red-600 dark:text-red-400")}>
                                         {Math.abs(s.total) >= 0.5 ? formatAngka(saldo) : <span className="text-muted-foreground">-</span>}
                                     </td>
+                                    <td className="px-3 py-1.5 text-center print:hidden" onClick={(e) => e.stopPropagation()}>
+                                        <div className="inline-flex items-center gap-1">
+                                            <AksiCoa item={s} />
+                                        </div>
+                                    </td>
                                 </tr>
                             )
                         })}
                         {baris_.length === 0 && (
-                            <tr><td colSpan={4} className="px-3 py-8 text-center text-muted-foreground">Tidak ada akun yang cocok dengan &quot;{cari}&quot;.</td></tr>
+                            <tr><td colSpan={5} className="px-3 py-8 text-center text-muted-foreground">Tidak ada akun yang cocok dengan &quot;{cari}&quot;.</td></tr>
                         )}
                     </tbody>
                 </table>

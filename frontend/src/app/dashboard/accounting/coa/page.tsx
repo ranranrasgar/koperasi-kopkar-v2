@@ -10,6 +10,7 @@ import { formatTanggal, hariIni } from "@/lib/format"
 import { isTanggal, sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
 import { cn } from "@/lib/utils"
+import { AksiCoa } from "@/components/master/AksiCoa"
 
 export default async function CoaPage(props: PageProps<"/dashboard/accounting/coa">) {
     await wajibIzin("/dashboard/accounting/coa") // layout tidak dijalankan ulang pada navigasi antarhalaman
@@ -32,7 +33,7 @@ export default async function CoaPage(props: PageProps<"/dashboard/accounting/co
         return (
             <div className="space-y-3">
                 {tombolTampilan}
-                <ModuleTable config={coaConfig} data={await daftarCoa(s)} />
+                <ModuleTable config={coaConfig} data={await daftarCoa(s)} aksiBaris={AksiCoa} />
             </div>
         )
     }
