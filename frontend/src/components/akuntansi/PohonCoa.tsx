@@ -10,7 +10,7 @@ import { AksiCoa } from "@/components/master/AksiCoa"
 
 export interface BarisPohon {
     id: number; parent_id: number | null; kode_perkiraan: string; nama_perkiraan: string; d_k: string; keterangan: string | null
-    rp_saldo_awal: number | string | null; rp_budget: number | string | null; _bisa_hapus: boolean
+    rp_saldo_awal: number | string | null; rp_budget: number | string | null; _bisa_hapus?: boolean
     saldo: number // debit - kredit akun ini sendiri; induk dijumlahkan dari anaknya
 }
 
@@ -155,7 +155,7 @@ export function PohonCoa({ baris, per, dari }: { baris: BarisPohon[]; per: strin
                                     </td>
                                     <td className="px-3 py-1.5 text-center print:hidden" onClick={(e) => e.stopPropagation()}>
                                         <div className="inline-flex items-center gap-1">
-                                            <AksiCoa item={s} />
+                                            <AksiCoa item={{ ...s, _bisa_hapus: !induk && Number(s.rp_saldo_awal || 0) === 0 && Math.abs(s.saldo) < 0.001 }} />
                                         </div>
                                     </td>
                                 </tr>

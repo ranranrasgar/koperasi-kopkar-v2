@@ -51,6 +51,28 @@ export async function saldoPerAkun(dari: string, sampai: string, opsi: { tanpaTu
          ORDER BY 1`, o ? [dari, sampai, o] : [dari, sampai])
 }
 
+/**
+ * Saldo akhir per kode akun pada tanggal `sampai` (bertanda debit - kredit).
+ * Ringan dan cepat untuk tampilan bagan akun (COA): agregasi langsung tanpa join berlebih.
+ */
+export async function saldoAkhirPerAkun(sampai: string): Promise<Map<string, number>> {
+    const dari = `${sampai.slice(0, 4)}-01-01`
+    const o = await pembukaTerakhir(dari)
+    const rows = o
+        ? await query<{ kode_perkiraan: string; saldo: string | number }>(`
+            SELECT j.kode_perkiraan, SUM(j.debit_jurnalumum - j.kredit_jurnalumum) AS saldo
+              FROM jurnal_umum j
+             WHERE (j.tanggal_jurnalumum = $1 AND j.nomor_bukti LIKE 'TBT/%')
+                OR (j.tanggal_jurnalumum >= $1 AND j.tanggal_jurnalumum <= $2 AND j.nomor_bukti NOT LIKE 'TBT/%')
+             GROUP BY j.kode_perkiraan`, [o, sampai])
+        : await query<{ kode_perkiraan: string; saldo: string | number }>(`
+            SELECT j.kode_perkiraan, SUM(j.debit_jurnalumum - j.kredit_jurnalumum) AS saldo
+              FROM jurnal_umum j
+             WHERE j.tanggal_jurnalumum <= $1 AND j.nomor_bukti NOT LIKE 'TBT/%'
+             GROUP BY j.kode_perkiraan`, [sampai])
+    return new Map(rows.map((r) => [r.kode_perkiraan, Number(r.saldo)]))
+}
+
 export interface BarisBukuBesar {
     tanggal_jurnalumum: string; nomor_bukti: string; deskripsi: string | null; debit: number; kredit: number; saldo: number; opr: string | null
 }

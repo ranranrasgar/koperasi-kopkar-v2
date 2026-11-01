@@ -5,7 +5,7 @@ import { PohonCoa } from "@/components/akuntansi/PohonCoa"
 import { FormPeriode } from "@/components/laporan/Periode"
 import { coaConfig } from "@/config/modules"
 import { daftarCoa, pohonCoa } from "@/lib/queries/akuntansi"
-import { saldoPerAkun } from "@/lib/queries/laporan"
+import { saldoAkhirPerAkun } from "@/lib/queries/laporan"
 import { formatTanggal, hariIni } from "@/lib/format"
 import { isTanggal, sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
@@ -41,8 +41,7 @@ export default async function CoaPage(props: PageProps<"/dashboard/accounting/co
     // Saldo per tanggal: saldo pembuka TBT tahun berjalan + jurnal sampai tanggal itu (model laporan.ts).
     const per = isTanggal(sp(s, "sampai")) ? sp(s, "sampai") : hariIni()
     const dari = `${per.slice(0, 4)}-01-01`
-    const [akun, saldo] = await Promise.all([pohonCoa(), saldoPerAkun(dari, per)])
-    const saldoKode = new Map(saldo.map((a) => [a.kode_perkiraan, a.akhir]))
+    const [akun, saldoKode] = await Promise.all([pohonCoa(), saldoAkhirPerAkun(per)])
     const baris = akun.map((a) => ({ ...a, saldo: saldoKode.get(a.kode_perkiraan) ?? 0 }))
 
     return (

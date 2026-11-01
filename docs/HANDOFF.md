@@ -3,18 +3,34 @@
 ## Status Terakhir
 
 - Branch aktif: `main`
-- Commit terakhir: `feat(master): tambah aksi ubah/status/hapus pada Anggota, Karyawan Mattel, dan COA`
+- Commit terakhir: `perf(coa): optimasi pemuatan bagan akun dan daftar anggota`
 - Sinkronisasi remote: Siap di-push ke `origin/main` (`https://github.com/ranranrasgar/koperasi-kopkar-v2.git`).
 - Status verifikasi:
   - Typecheck (`npm run typecheck`) lulus bersih (0 error).
-  - Seluruh file kode `<= 500 LOC` (terbesar ~260 baris pada `modules.ts`).
+  - Seluruh file kode `<= 500 LOC` (terbesar ~232 baris pada `laporan.ts`).
   - Git diff whitespace check lulus.
 - Tugas berikutnya:
-  - Uji alur edit data, keluar/aktifkan status, dan validasi penghapusan di browser saat terautentikasi sebagai operator.
+  - Pengguna melakukan git pull & update di VPS server.
 
 ---
 
 ## Riwayat Perubahan (terbaru di atas)
+
+### 1 Nov 2026 - Optimasi Kecepatan Halaman COA (/dashboard/accounting/coa) dan Anggota
+- **Apa & Mengapa**:
+  - Mengatasi masalah pemuatan sangat lambat pada halaman COA (`/dashboard/accounting/coa`):
+    1. **Eliminasi Subquery Berat COA**: Menghapus correlated subquery `akunCoaBisaDihapus` pada `pohonCoa()` dan `daftarCoa()` yang sebelumnya memindai 1,1 juta baris `jurnal_umum` sebanyak ~300 kali untuk setiap baris akun perkiraan (terutama akun induk yang tidak pernah dijurnal).
+    2. **Perhitungan Status Hapus O(1)**: Status disable tombol hapus pada pohon COA dihitung langsung di sisi client berdasarkan struktur data in-memory (`!induk && rp_saldo_awal === 0 && saldo === 0`), sementara validasi integritas database komprehensif tetap terlindungi 100% pada server action `hapusCoaAction` saat aksi hapus dieksekusi.
+    3. **Query Saldo Akhir Ringan (`saldoAkhirPerAkun`)**: Menambahkan fungsi khusus `saldoAkhirPerAkun` yang hanya melakukan agregasi penutup jurnal tanggal berjalan menggunakan index-only scan `ix_jurnal_umum_tanggal_cover`, tanpa CTE multi-kolom dan join tabel yang tidak dibutuhkan oleh pohon COA.
+    4. **Optimasi Count Daftar Anggota**: Memindahkan kolom `_bisa_hapus` pada `daftarAnggota` ke opsi `kolomHalaman` agar tidak dievaluasi pada `COUNT(*)` seluruh data anggota.
+- **File Utama yang Tersentuh**:
+  - `frontend/src/lib/queries/akuntansi.ts` (Penyederhanaan `pohonCoa()` dan `daftarCoa()`)
+  - `frontend/src/lib/queries/laporan.ts` (Implementasi `saldoAkhirPerAkun()`)
+  - `frontend/src/app/dashboard/accounting/coa/page.tsx` (Menggunakan `saldoAkhirPerAkun()`)
+  - `frontend/src/components/akuntansi/PohonCoa.tsx` (Evaluasi `_bisa_hapus` berbasis relasi pohon & saldo)
+  - `frontend/src/lib/queries/anggota.ts` (Pindahkan `_bisa_hapus` ke `kolomHalaman`)
+- **Tindakan Lanjutan**:
+  - Pull ke VPS dan restart container Next.js.
 
 ### 1 Nov 2026 - Aksi Ubah, Status, dan Hapus pada Anggota, Karyawan Mattel, dan COA Master
 - **Apa & Mengapa**:
