@@ -1,7 +1,7 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
-import { dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, type DataLengkapi, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
+import { dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, ubahStatusAkun, type DataLengkapi, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
 import { antreEmail } from "@kopkar/backend/src/email/antrean.ts"
 import { modeUji, pool, query, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, type Operator } from "@/lib/operator"
@@ -58,6 +58,47 @@ export async function putuskanPendaftaranAction(id: number, setuju: boolean, len
         return { ok: true, pesan: r.pesan }
     } catch (e) {
         if (!(e instanceof GalatSesi)) console.error("putuskan pendaftaran gagal:", e)
+        return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
+    }
+}
+
+/**
+ * Aktifkan atau nonaktifkan akun yang sudah diputuskan (Aktif/Tidak Aktif), kapan saja. Lewat tx() supaya ikut di-rollback di mode uji.
+ * Pemilik akun diberi tahu lewat email bila emailnya terverifikasi; gagal kirim tidak membatalkan perubahan.
+ */
+export async function ubahStatusAkunAction(id: number, aktif: boolean): Promise<HasilPendaftaran> {
+    try {
+        await operatorAktif(MENU_USER)
+        const r = await tx((db) => ubahStatusAkun(db as never, id, aktif))
+        if (!r.ok) return r
+        if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
+        revalidatePath("/dashboard/members", "layout")
+        if (r.email) {
+            const dasar = (process.env.ANGGOTA_URL ?? "").replace(/\/+$/, "")
+            await tx((db) => antreEmail(db, aktif
+                ? {
+                    jenis: "status_akun", ke: r.email!, judul: "Akun aplikasi anggota Anda aktif kembali",
+                    teks: [
+                        `Yth. ${r.username},`,
+                        "Dengan hormat, pengurus koperasi telah mengaktifkan kembali akun aplikasi anggota Anda. Anda dapat masuk lagi dengan username dan password seperti biasa.",
+                        "Bila lupa password, pilih Lupa password pada halaman masuk lalu ikuti tautan yang dikirim ke email Anda.",
+                        "Hormat kami,\nPengurus Koperasi",
+                    ].join("\n\n"),
+                    tautan: dasar ? `${dasar}/masuk` : null,
+                }
+                : {
+                    jenis: "status_akun", ke: r.email!, judul: "Akun aplikasi anggota Anda dinonaktifkan",
+                    teks: [
+                        `Yth. ${r.username},`,
+                        "Dengan hormat, akun aplikasi anggota Anda telah dinonaktifkan oleh pengurus koperasi. Untuk sementara Anda tidak dapat masuk ke aplikasi anggota.",
+                        "Data simpanan dan pinjaman Anda tetap tercatat di koperasi. Untuk keterangan lebih lanjut atau mengaktifkan kembali akun, hubungi pengurus koperasi di sekretariat.",
+                        "Hormat kami,\nPengurus Koperasi",
+                    ].join("\n\n"),
+                })).catch((e) => console.error("antre email status akun gagal:", e))
+        }
+        return { ok: true, pesan: r.pesan }
+    } catch (e) {
+        if (!(e instanceof GalatSesi)) console.error("ubah status akun gagal:", e)
         return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
     }
 }

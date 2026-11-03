@@ -31,6 +31,8 @@ Anggota memakai **aplikasi anggota** (di browser HP, dan aplikasi Android lama) 
 | --- | --- | --- |
 | Centang hijau (**Setujui**) | Baris Menunggu | Mengaktifkan akun. Karyawan Mattel yang belum anggota otomatis dijadikan anggota. Hanya bisa bila email pendaftar sudah terverifikasi. |
 | Silang oranye (**Tolak**) | Baris Menunggu | Akun tetap nonaktif; pendaftar diberi tahu lewat email. |
+| Silang oranye (**Nonaktifkan**) | Akun Aktif | Menonaktifkan akun kapan saja. Pemilik akun langsung keluar dari aplikasi anggota (browser dan Android) dan tidak bisa masuk sampai diaktifkan lagi. Data simpanan dan pinjaman tidak berubah. |
+| Centang hijau (**Aktifkan**) | Akun Tidak aktif atau Ditolak | Mengaktifkan kembali akun. Akun yang pendaftarannya dulu ditolak hanya bisa diaktifkan bila emailnya sudah terverifikasi. Bila akun belum terhubung ke anggota, gunakan **Jadikan anggota** sesudahnya. |
 | Ikon tambah orang (**Jadikan anggota**) | Akun aktif yang belum terhubung ke anggota | Membuat data anggota (atau menautkan ke anggota dengan NIK yang sama). |
 | Tempat sampah (**Hapus**) | Semua baris | Menghapus akun beserta data aplikasinya. Akun yang sudah terhubung ke anggota hanya boleh dihapus **superadmin atau grup admin**. Untuk akun beranggota, ketik kode anggota pada kotak verifikasi bila keanggotaannya ikut dihapus (hanya bila belum ada transaksi); status karyawan kembali bukan anggota. |
 | Mata (**Detail**) | Semua baris | Melihat semua kolom baris itu. |
@@ -40,5 +42,6 @@ Anggota memakai **aplikasi anggota** (di browser HP, dan aplikasi Android lama) 
 - Password anggota diatur anggota sendiri dan **tidak bisa diubah dari web admin**.
 - Username tidak membedakan huruf besar/kecil. Satu email hanya untuk satu akun.
 - Pengajuan kredit dari aplikasi anggota masuk ke **Pinjaman → Pengajuan Kredit**.
+- Perubahan status akun (diaktifkan atau dinonaktifkan) diberitahukan lewat email ke pemilik akun, **hanya bila email sudah terverifikasi**. Di mode uji tidak ada yang tersimpan maupun terkirim.
 - Notifikasi (himbauan, promo, keputusan pengajuan) juga dikirim ke email anggota, **hanya bila email sudah terverifikasi**. Pesan chat tidak dikirim lewat email.
 - Hak akses halaman ini: menu *User* atau *Request User && Anggota Baru* pada grup operator.

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import {
-    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, bersihkanLengkap, dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
+    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, bersihkanLengkap, dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, ubahStatusAkun, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
     hashJawaban, hashPasswordAnggota, masukAnggota, pertanyaanUntuk, resetLewatJawaban,
 } from '../src/anggota/akun.ts';
 
@@ -189,6 +189,31 @@ test('daftar lewat Google: email terverifikasi tanpa kode, akun menunggu admin; 
         assert.equal((await masukAnggota(p, 'uji_google_pwa', 'Rahasia123')).ok, true);
         assert.equal((await daftarMenungguAdmin(db)).some((x) => x.id === Number(u!.user_id)), false);
         assert.equal((await putuskanPendaftaran(db, Number(u!.user_id), false)).ok, false);
+    });
+});
+
+test('ubah status akun: nonaktif/aktif kapan saja, email hanya bila terverifikasi, pendaftaran menunggu ditolak', async () => {
+    await inTx(async (db) => {
+        const u = (await db.query(`SELECT id FROM app_user WHERE status AND NOT menunggu_admin ORDER BY id LIMIT 1`)).rows[0];
+        const id = Number(u.id);
+        await db.query(`UPDATE app_user SET email = 'uji.status@contoh.id' WHERE id = $1`, [id]);
+        await db.query('DELETE FROM app_user_email_verif WHERE app_user_id = $1', [id]);
+        const mati = await ubahStatusAkun(db, id, false);
+        assert.equal(mati.ok, true);
+        assert.equal(mati.ok && mati.email, null, 'email belum terverifikasi: tidak dikirimi');
+        assert.equal((await cariAkun(db, { id }))?.akun_aktif, false);
+        assert.equal((await ubahStatusAkun(db, id, false)).ok, false, 'sudah tidak aktif');
+        await db.query(`INSERT INTO app_user_email_verif (app_user_id, email, terverifikasi_pada) VALUES ($1, 'uji.status@contoh.id', now())`, [id]);
+        const hidup = await ubahStatusAkun(db, id, true);
+        assert.equal(hidup.ok && hidup.email, 'uji.status@contoh.id');
+        assert.equal((await cariAkun(db, { id }))?.akun_aktif, true);
+        await db.query('UPDATE app_user SET status = false, menunggu_admin = true WHERE id = $1', [id]);
+        assert.equal((await ubahStatusAkun(db, id, true)).ok, false, 'menunggu: lewat putuskanPendaftaran');
+        await db.query(`UPDATE app_user SET menunggu_admin = false, keputusan_daftar = 'ditolak' WHERE id = $1`, [id]);
+        assert.equal((await ubahStatusAkun(db, id, true)).ok, true, 'ditolak, email terverifikasi: boleh');
+        await db.query('UPDATE app_user SET status = false WHERE id = $1', [id]);
+        await db.query('DELETE FROM app_user_email_verif WHERE app_user_id = $1', [id]);
+        assert.equal((await ubahStatusAkun(db, id, true)).ok, false, 'ditolak, email belum terverifikasi: tidak boleh');
     });
 });
 

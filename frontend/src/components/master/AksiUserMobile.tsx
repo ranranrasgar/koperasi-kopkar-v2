@@ -3,11 +3,11 @@
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Check, Loader2, Trash2, UserPlus, X } from "lucide-react"
-import { dataLengkapiAnggotaAction, hapusUserMobileAction, jadikanAnggotaAction, putuskanPendaftaranAction, type HasilPendaftaran } from "@/app/actions/pendaftaran"
+import { dataLengkapiAnggotaAction, hapusUserMobileAction, jadikanAnggotaAction, putuskanPendaftaranAction, ubahStatusAkunAction, type HasilPendaftaran } from "@/app/actions/pendaftaran"
 import { Button } from "@/components/ui/button"
 import { FormLengkapiAnggota, type BahanLengkapi } from "@/components/master/FormLengkapiAnggota"
 
-/** Aksi per baris User Mobile: setujui/tolak pendaftaran baru, dan hapus akun (aturan hak di server). */
+/** Aksi per baris User Mobile: setujui/tolak pendaftaran baru, aktifkan/nonaktifkan akun lain kapan saja, dan hapus akun (aturan hak di server). */
 export function AksiUserMobile({ item }: { item: Record<string, unknown> }) {
     const router = useRouter()
     const [pesan, setPesan] = useState<HasilPendaftaran | null>(null)
@@ -78,6 +78,17 @@ export function AksiUserMobile({ item }: { item: Record<string, unknown> }) {
                     </Button>
                 </>
             )}
+            {!menunggu && (item.status === true ? (
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-amber-600 hover:bg-amber-50 hover:text-amber-700" title="Nonaktifkan akun"
+                    onClick={() => jalankan(`Nonaktifkan akun ${nama}? Pemilik akun langsung keluar dari aplikasi dan tidak bisa masuk sampai diaktifkan lagi.`, () => ubahStatusAkunAction(id, false))}>
+                    <X className="h-4 w-4" />
+                </Button>
+            ) : (
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-green-600 hover:bg-green-50 hover:text-green-700" title="Aktifkan akun"
+                    onClick={() => jalankan(`Aktifkan kembali akun ${nama}?`, () => ubahStatusAkunAction(id, true))}>
+                    <Check className="h-4 w-4" />
+                </Button>
+            ))}
             {!menunggu && item.status === true && item.punya_anggota === false && (
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700" title="Jadikan anggota"
                     onClick={() => lengkapi(false)}>

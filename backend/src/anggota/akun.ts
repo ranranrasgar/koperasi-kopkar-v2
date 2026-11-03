@@ -410,6 +410,26 @@ export async function putuskanPendaftaran(db: pg.PoolClient, userId: number, set
     return { ok: true, pesan: `Pendaftaran ${u.username} ${setuju ? 'disetujui' : 'ditolak'}${kodeAnggota ? `, kode anggota ${kodeAnggota}` : ''}`, email: u.email, username: u.username, kodeAnggota };
 }
 
+/**
+ * Aktifkan atau nonaktifkan akun yang sudah diputuskan (bukan pendaftaran yang masih menunggu; itu lewat putuskanPendaftaran).
+ * Sesi PWA dan token aplikasi Android memeriksa status akun di setiap permintaan, jadi akun yang dinonaktifkan langsung keluar.
+ * `email` hanya diisi bila email akun sudah terverifikasi, untuk pemberitahuan perubahan status.
+ */
+export async function ubahStatusAkun(db: pg.PoolClient, userId: number, aktif: boolean): Promise<HasilPutusan> {
+    const u = (await db.query<{ username: string; email: string | null; status: boolean; menunggu: boolean; ditolak: boolean; verif: boolean }>(
+        `SELECT u.username, u.email, u.status, (u.menunggu_admin AND NOT u.status) menunggu, coalesce(u.keputusan_daftar = 'ditolak', false) ditolak,
+                coalesce(v.terverifikasi_pada IS NOT NULL AND v.email = lower(trim(u.email)), false) verif
+           FROM app_user u LEFT JOIN app_user_email_verif v ON v.app_user_id = u.id
+          WHERE u.id = $1 FOR UPDATE OF u`, [userId])).rows[0];
+    if (!u) return { ok: false, error: 'Akun tidak ditemukan' };
+    if (u.menunggu) return { ok: false, error: 'Akun masih menunggu persetujuan; gunakan Setujui atau Tolak pendaftaran' };
+    if (u.status === aktif) return { ok: false, error: `Akun ${u.username} sudah ${aktif ? 'aktif' : 'tidak aktif'}` };
+    // Pendaftaran yang dulu ditolak: syaratnya sama dengan menyetujui pendaftaran (email terverifikasi).
+    if (aktif && u.ditolak && !u.verif) return { ok: false, error: 'Pendaftaran akun ini dulu ditolak dan emailnya belum terverifikasi; akun belum bisa diaktifkan' };
+    await db.query('UPDATE app_user SET status = $2, updated_at = now() WHERE id = $1', [userId, aktif]);
+    return { ok: true, pesan: `Akun ${u.username} ${aktif ? 'diaktifkan' : 'dinonaktifkan'}`, email: u.verif ? u.email : null, username: u.username };
+}
+
 export type HasilHapus = { ok: true; pesan: string; punyaAnggota: boolean } | { ok: false; error: string };
 
 /**
