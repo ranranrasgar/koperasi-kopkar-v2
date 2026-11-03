@@ -24,8 +24,9 @@ fi
 # Bila langkah mana pun gagal setelah aplikasi dihentikan, nyalakan lagi versi yang lama supaya situs tidak mati.
 nyalakan_lama() { echo "==> GAGAL: menyalakan kembali aplikasi (versi lama)" >&2; docker compose up -d; }
 
-echo "==> 2/6 Hentikan aplikasi (db tetap hidup untuk cadangan; bebaskan RAM untuk build)"
-docker compose stop admin anggota mobile
+echo "==> 2/6 Hentikan aplikasi dan database (bebaskan RAM untuk build; db dinyalakan lagi di langkah 4 untuk cadangan)"
+# VPS OpenVZ 2 GB tanpa swap: dengan PostgreSQL tetap hidup, build Next.js dimatikan kernel ("Killed", 3 November).
+docker compose stop admin anggota mobile db
 trap nyalakan_lama ERR
 
 echo "==> 3/6 Bangun ulang image (beberapa menit)"

@@ -23,8 +23,9 @@ COPY . .
 # Build memakai webpack, bukan Turbopack: webpackMemoryOptimizations hanya berlaku untuk webpack, dan pekerja CSS Turbopack
 # kehabisan waktu ("timeout while receiving message from process" di globals.css) saat RAM VPS penuh.
 ENV NODE_OPTIONS=--max-old-space-size=1280 KOPKAR_HEMAT_RAM=1
-RUN PG_URL=postgres://bangun:bangun@127.0.0.1:5432/bangun npm run build -w frontend -- --webpack \
- && PG_URL=postgres://bangun:bangun@127.0.0.1:5432/bangun npm run build -w anggota -- --webpack
+# Dua langkah terpisah: bila build kedua gagal (RAM habis), build pertama tetap tersimpan di cache dan tidak diulang.
+RUN PG_URL=postgres://bangun:bangun@127.0.0.1:5432/bangun npm run build -w frontend -- --webpack
+RUN PG_URL=postgres://bangun:bangun@127.0.0.1:5432/bangun npm run build -w anggota -- --webpack
 
 FROM dasar AS jalan
 ENV NODE_ENV=production
