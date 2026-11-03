@@ -12,6 +12,17 @@ Menu dikelompokkan per fungsi (Keanggotaan, Simpanan, Pinjaman, dan seterusnya).
 - Pilihan Anda **diingat di perangkat ini**. Grup halaman yang sedang Anda buka otomatis terbuka saat berpindah halaman, jadi lokasi Anda selalu terlihat.
 - Grup yang dikerutkan tetap menampilkan lencana merah bila ada isi yang belum dibaca (misalnya pesan anggota).
 - Tombol ☰ di kiri atas menyembunyikan atau menampilkan menu samping. Di dasar menu ada **Logout** dan ikon **palet warna** (mengubah warna dan tema, lihat artikel *Mengubah warna dan tema tampilan*) dan ikon **mode terang/gelap** yang selalu terlihat tanpa menggulir.
+- **Di HP** menu tersembunyi supaya halaman memakai seluruh layar; judul halaman tampil di bilah atas. Tekan ☰ untuk membuka menu sebagai laci dari kiri. Laci tertutup sendiri setelah memilih halaman, atau tekan ✕, ketuk area gelap di kanannya, atau tombol Esc.
+
+## Memasang aplikasi ke layar utama (PWA)
+
+Aplikasi pengurus bisa dipasang seperti aplikasi biasa, lalu dibuka dari ikon **Kopkar Admin** tanpa bilah alamat browser:
+
+- **Android (Chrome)**: buka situs admin, menu ⋮ → **Instal aplikasi** atau **Tambahkan ke layar utama**.
+- **iPhone (Safari)**: tombol Bagikan → **Tambahkan ke Layar Utama**.
+- **Komputer (Chrome/Edge)**: ikon pasang di ujung kanan bilah alamat.
+
+Aplikasi yang dipasang tetap butuh internet dan login seperti biasa; tidak ada data yang disimpan di perangkat. Pemasangan hanya bisa dari alamat **https** (atau localhost).
 
 ## Lebar halaman
 

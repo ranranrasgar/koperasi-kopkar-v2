@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { createPortal } from "react-dom"
 import { usePathname } from "next/navigation"
 import { useSidebar } from "./SidebarContext"
 import { Sidebar } from "./Sidebar"
@@ -27,6 +28,16 @@ export function Navbar({ operator }: { operator: OperatorTampil }) {
     useEffect(() => {
         setIsMounted(true)
     }, [])
+    // Laci menu HP: tutup saat pindah halaman atau Esc, dan halaman di belakangnya tidak ikut bergulir selama terbuka.
+    useEffect(() => { setIsMobileMenuOpen(false) }, [pathname])
+    useEffect(() => {
+        if (!isMobileMenuOpen) return
+        const tutup = (e: KeyboardEvent) => { if (e.key === "Escape") setIsMobileMenuOpen(false) }
+        const awal = document.body.style.overflow
+        document.body.style.overflow = "hidden"
+        window.addEventListener("keydown", tutup)
+        return () => { document.body.style.overflow = awal; window.removeEventListener("keydown", tutup) }
+    }, [isMobileMenuOpen])
 
     const menuGroups = getMenuGroups(pathname || "", izin)
     const activeItem = menuGroups.flatMap(g => g.items).find(item => item.active)
@@ -36,8 +47,9 @@ export function Navbar({ operator }: { operator: OperatorTampil }) {
             <div className="flex items-center gap-4">
                 {/* Mobile Menu Toggle */}
                 {isMounted && (
-                    <button 
-                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)} 
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        aria-label="Buka menu" aria-expanded={isMobileMenuOpen}
                         className="md:hidden text-on-surface hover:bg-surface-variant p-2 rounded-md transition-colors"
                     >
                         <span className="material-symbols-outlined text-[1.5rem]">menu</span>
@@ -52,7 +64,7 @@ export function Navbar({ operator }: { operator: OperatorTampil }) {
                     <span className="material-symbols-outlined text-[1.5rem]">menu</span>
                 </button>
 
-                <h2 className="font-headline-md text-headline-md font-semibold text-on-surface hidden md:flex items-center gap-2">
+                <h2 className="min-w-0 truncate font-headline-md text-base md:text-headline-md font-semibold text-on-surface flex items-center gap-2">
                     {activeItem ? activeItem.label : "Dashboard"}
                 </h2>
             </div>
@@ -93,14 +105,20 @@ export function Navbar({ operator }: { operator: OperatorTampil }) {
                 </DropdownMenu>
             </div>
 
-            {/* Mobile Drawer (Simulation) */}
-            {isMobileMenuOpen && (
-                <div className="fixed inset-0 z-50 md:hidden flex">
-                    <div className="fixed inset-0 bg-black/50" onClick={() => setIsMobileMenuOpen(false)}></div>
-                    <div className="relative z-50 w-64 h-full bg-background shadow-xl">
-                        <Sidebar onClose={() => setIsMobileMenuOpen(false)} />
+            {/* Laci menu HP. Lewat portal ke body: header memakai backdrop-blur, yang membuat elemen fixed di dalamnya
+                terkurung di area header (tidak bisa menutupi layar penuh). */}
+            {isMounted && isMobileMenuOpen && createPortal(
+                <div className="fixed inset-0 z-[60] flex md:hidden" role="dialog" aria-modal="true" aria-label="Menu">
+                    <div className="absolute inset-0 bg-black/50 animate-in fade-in duration-200" onClick={() => setIsMobileMenuOpen(false)} />
+                    <div className="relative h-[100dvh] w-[85vw] max-w-[20rem] shadow-2xl animate-in slide-in-from-left duration-200">
+                        <Sidebar className="relative h-full w-full border-r-0 pt-[env(safe-area-inset-top)] pb-[env(safe-area-inset-bottom)]" onClose={() => setIsMobileMenuOpen(false)} />
+                        <button type="button" onClick={() => setIsMobileMenuOpen(false)} aria-label="Tutup menu"
+                            className="absolute right-2 top-[calc(env(safe-area-inset-top)+0.75rem)] z-10 grid h-9 w-9 place-items-center rounded-full ikon-sidebar">
+                            <span className="material-symbols-outlined text-[1.25rem]">close</span>
+                        </button>
                     </div>
-                </div>
+                </div>,
+                document.body,
             )}
         </header>
     )

@@ -13,17 +13,14 @@ function ShellContent({ children, operator }: { children: React.ReactNode; opera
 
     return (
         <div className="bg-[var(--tema-kanvas,var(--background))] text-on-background font-body-md min-h-screen flex overflow-x-clip">
-            {/* Sidebar (Fixed position) */}
+            {/* Sidebar tetap untuk layar lebar; di HP menu dibuka sebagai laci dari tombol menu di Navbar. */}
             <div className={cn(
-                "fixed inset-y-0 left-0 z-50 transition-transform duration-300 ease-in-out md:translate-x-0",
+                "fixed inset-y-0 left-0 z-50 hidden md:block transition-transform duration-300 ease-in-out md:translate-x-0",
                 !isOpen && "md:-translate-x-full"
             )}>
                 <Sidebar className={cn(!isOpen && "md:-translate-x-full")} />
             </div>
 
-            {/* Overlay for mobile when sidebar is open */}
-            {/* Handled mostly by Navbar, but we can manage desktop margin here */}
-            
             {/* Main Content */}
             <div className={cn(
                 "flex-1 flex flex-col min-h-screen transition-all duration-300 w-full min-w-0",
