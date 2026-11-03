@@ -117,6 +117,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                     <table className="w-full text-sm">
                         <thead className="bg-muted text-muted-foreground text-xs">
                             <tr>
+                                <th className="w-10 px-3 py-2 text-center">No.</th>
                                 {KOLOM.map((k) => (
                                     <th key={k.key} className={`px-3 py-2 ${k.kelas}`} aria-sort={urutKey === k.key ? (urutArah === "desc" ? "descending" : "ascending") : undefined}>
                                         {k.urut ? (
@@ -131,9 +132,10 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                             </tr>
                         </thead>
                         <tbody>
-                            {data.items.length === 0 && <tr><td colSpan={9} className="p-8 text-center text-muted-foreground">Tidak ada pengajuan{adaFilter ? " yang cocok dengan pencarian" : ""}.</td></tr>}
-                            {data.items.map((p) => (
+                            {data.items.length === 0 && <tr><td colSpan={10} className="p-8 text-center text-muted-foreground">Tidak ada pengajuan{adaFilter ? " yang cocok dengan pencarian" : ""}.</td></tr>}
+                            {data.items.map((p, i) => (
                                 <tr key={p.id} className="border-t hover:bg-muted/30">
+                                    <td className="px-3 py-2 text-center text-xs text-muted-foreground tabular-nums">{(data.page - 1) * data.pageSize + i + 1}</td>
                                     <td className="px-3 py-2 whitespace-nowrap">{formatTanggal(p.tgl_realisasi)}</td>
                                     <td className="px-3 py-2">
                                         <div className="font-medium">{p.nama}</div>

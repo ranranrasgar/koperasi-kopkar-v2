@@ -1,13 +1,22 @@
 "use client"
 
-import { useEffect, useState } from "react"
-import { AlertTriangle, Check, Loader2, X } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import { AlertTriangle, Check, Loader2, MessageCircle, Printer, X } from "lucide-react"
 import { pesanPlafon } from "@kopkar/backend/src/posting/plafon.ts"
 import { tinjauPengajuanAction, type TinjauanPengajuan } from "@/app/actions/pengajuan"
 import { ModalForm } from "@/components/ui/Modal"
+import { bukaCetak } from "@/lib/cetak-klien"
 import type { Pengajuan } from "@/lib/queries/keanggotaan"
 import { formatAngka2, formatRupiah, formatTanggal } from "@/lib/format"
 import { RiwayatAnggotaPanel, RingkasRisiko } from "./RiwayatAnggota"
+
+/** Nomor HP Indonesia ke format wa.me (628...); null bila tidak berupa nomor HP. */
+function nomorWa(hp: string | null | undefined) {
+    let n = (hp ?? "").replace(/\D/g, "")
+    if (n.startsWith("0")) n = "62" + n.slice(1)
+    else if (n.startsWith("8")) n = "62" + n
+    return /^628\d{7,12}$/.test(n) ? n : null
+}
 
 const Baris = ({ label, nilai }: { label: string; nilai: React.ReactNode }) => (
     <div className="flex gap-2 py-0.5"><dt className="w-32 shrink-0 text-muted-foreground">{label}</dt><dd className="min-w-0 break-words">{nilai || "-"}</dd></div>
@@ -21,6 +30,7 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
     p: Pengajuan | null; onTutup: () => void; onPutuskan: (p: Pengajuan, setuju: boolean) => void; sibuk: boolean
 }) {
     const [data, setData] = useState<TinjauanPengajuan | null>(null)
+    const area = useRef<HTMLDivElement>(null)
     useEffect(() => {
         if (!p) return
         let batal = false
@@ -32,6 +42,30 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
     const t = data?.ok ? data : null
     const i = t?.pengajuan
     const lebihPlafon = t ? pesanPlafon(t.pengajuan.rp_pinjaman_pokok, t.batas, "anggota") : null
+    const wa = nomorWa(i?.hp)
+
+    /** Dokumen cetak berkop (A4); dari jendela cetak bisa disimpan sebagai PDF untuk dikirim ke anggota. */
+    const cetak = async () => {
+        if (!p || !area.current) return
+        const galat = await bukaCetak({ judul: "Tinjauan Pengajuan Kredit", subjudul: `${p.nama} (${p.kd_anggota}) · diajukan ${formatTanggal(p.tgl_realisasi)}`, isi: area.current })
+        if (galat) alert(galat)
+    }
+    /** Buka WhatsApp ke HP anggota dengan ringkasan pengajuan; PDF dilampirkan manual (wa.me tidak bisa membawa berkas). */
+    const kirimWa = () => {
+        if (!p || !t || !i || !wa) return
+        const r = t.riwayat.ringkas
+        const teks = [
+            `Yth. ${p.nama} (${p.kd_anggota}),`,
+            `Berikut informasi pengajuan kredit Anda di koperasi:`,
+            `- Jenis: ${i.kd_kredit} ${i.nama_kredit ?? ""}`.trim(),
+            `- Pokok diajukan: ${formatRupiah(i.rp_pinjaman_pokok)}, ${i.lama_angsuran}x angsuran, jasa ${formatAngka2(i.persen_bunga)}%`,
+            `- Sisa utang berjalan: ${formatRupiah(r.sisa_pokok)} (${r.berjalan} pinjaman), angsuran per bulan ${formatRupiah(r.angsuran_bulan)}`,
+            `- Tunggakan: ${r.tunggak_kali > 0 ? `${formatRupiah(r.rp_tunggak)} (${r.tunggak_kali} angsuran)` : "tidak ada"}`,
+            `Rincian lengkap terlampir (PDF). Terima kasih.`,
+            `Pengurus Koperasi`,
+        ].join("\n")
+        window.open(`https://wa.me/${wa}?text=${encodeURIComponent(teks)}`, "_blank", "noopener")
+    }
     return (
         <ModalForm open={p !== null} onOpenChange={(b) => { if (!b) onTutup() }} kunci={false} lebar="sm:max-w-[64rem]"
             judul={p ? `Tinjau pengajuan: ${p.nama}` : ""} keterangan="Identitas dan riwayat pinjaman anggota sebelum pengajuan diputuskan.">
@@ -39,6 +73,13 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
             {data && !data.ok && <div role="alert" className="rounded-md border border-red-300 bg-red-50 p-2.5 text-sm text-red-700">{data.error}</div>}
             {p && t && i && (
                 <div className="space-y-4">
+                    <div className="flex flex-wrap justify-end gap-2">
+                        <button type="button" onClick={cetak} title="Dokumen berkop; pilih Simpan sebagai PDF di jendela cetak"
+                            className="inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm font-medium hover:bg-muted"><Printer className="h-4 w-4" />Cetak / PDF</button>
+                        <button type="button" onClick={kirimWa} disabled={!wa} title={wa ? `Buka WhatsApp ke ${i.hp}; lampirkan PDF hasil cetak` : "Nomor HP anggota kosong atau tidak valid"}
+                            className="inline-flex h-9 items-center gap-1.5 rounded-md border border-green-300 px-3 text-sm font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"><MessageCircle className="h-4 w-4" />Kirim ke WA</button>
+                    </div>
+                    <div ref={area} className="space-y-4">
                     <section className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-4" aria-label="Rincian pengajuan">
                         <div><div className="text-xs text-muted-foreground">Jenis</div><div className="font-medium">{i.kd_kredit} {i.nama_kredit}</div></div>
                         <div><div className="text-xs text-muted-foreground">Pokok diajukan</div><div className="font-bold tabular-nums">{formatRupiah(i.rp_pinjaman_pokok)}</div></div>
@@ -69,6 +110,7 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
                         </dl>
                     </section>
                     <RiwayatAnggotaPanel data={t.riwayat} batas={t.batas} />
+                    </div>
                     {p.status === "P" && (
                         <div className="flex justify-end gap-2 border-t pt-3">
                             {sibuk && <Loader2 className="h-4 w-4 animate-spin self-center text-muted-foreground" />}

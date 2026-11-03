@@ -39,6 +39,10 @@ Pilih status di kotak di atas tabel untuk melihat pengajuan per status, atau **S
    - tabel semua pinjaman tunai dan KPR anggota (pokok, angsuran dibayar, sisa pokok, keterlambatan terlama, status).
 
    Ringkasan dan tabel ini sama dengan panel riwayat di form pencairan pinjaman tunai.
+
+   Di atas jendela tinjauan ada dua tombol:
+   - **Cetak / PDF**: membuka dokumen berkop koperasi (A4) berisi seluruh tinjauan. Untuk berkas PDF, tekan **Cetak** lalu pilih tujuan **Simpan sebagai PDF**. Tabel riwayat ikut tercetak sebanyak yang tampil; tekan *Tampilkan semua* dulu bila perlu semua pinjaman.
+   - **Kirim ke WA**: membuka WhatsApp ke nomor HP anggota dengan pesan ringkasan pengajuan (jenis, pokok, lama, sisa utang, tunggakan). WhatsApp tidak bisa menerima lampiran dari tautan, jadi lampirkan PDF hasil cetak secara manual di chat itu. Tombol nonaktif bila HP anggota kosong atau bukan nomor HP.
 2. Nilai kemampuan bayar anggota dari data itu, misalnya pinjaman yang masih berjalan, tunggakan, dan potongan gaji bulanannya.
 3. Tekan **Setujui** atau **Tolak** (di jendela tinjauan atau di baris tabel), lalu konfirmasi.
 
