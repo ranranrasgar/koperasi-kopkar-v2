@@ -36,7 +36,7 @@ docker compose up -d db
 docker compose run --rm -w /app admin npm run backup -- --ke /backup
 
 echo "==> 5/6 Pasang tabel, indeks, pengaturan, dan data baru"
-for s in anggota:pasang indeks:pasang pengaturan:pasang shu:pasang panduan:pasang; do
+for s in anggota:pasang indeks:pasang pengaturan:pasang shu:pasang sequences:pasang panduan:pasang; do
     docker compose run --rm -w /app admin npm run "$s"
 done
 

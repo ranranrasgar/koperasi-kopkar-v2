@@ -16,6 +16,9 @@ CREATE SEQUENCE IF NOT EXISTS seq_pinjaman_no;
 SELECT setval('seq_pinjaman_rincian_urut', GREATEST((SELECT COALESCE(MAX(urut), 0) FROM pinjaman_tunai_rincian), (SELECT last_value FROM seq_pinjaman_rincian_urut), 1));
 SELECT setval('seq_pinjaman_tagih_urut', GREATEST((SELECT COALESCE(MAX(urut), 0) FROM pinjaman_tunai_rincian_tagih), (SELECT last_value FROM seq_pinjaman_tagih_urut), 1));
 SELECT setval('seq_pinjaman_no', GREATEST((SELECT COALESCE(MAX(no_pinjaman_urut), 0) FROM pinjaman_tunai), (SELECT last_value FROM seq_pinjaman_no), 1));
+-- Titipan angsuran pinjaman tunai (form Titipan Angsuran): urut baris.
+CREATE SEQUENCE IF NOT EXISTS seq_pinjaman_titipan_urut;
+SELECT setval('seq_pinjaman_titipan_urut', GREATEST((SELECT COALESCE(MAX(urut), 0) FROM pinjaman_tunai_titipan), (SELECT last_value FROM seq_pinjaman_titipan_urut), 1));
 
 -- KPR: nomor KPR-mmyy-urut dan urut rincian (nomor ANGS-KPR-).
 CREATE SEQUENCE IF NOT EXISTS seq_kpr_no;

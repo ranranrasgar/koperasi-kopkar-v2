@@ -111,6 +111,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/savings/time-deposits": [MENU.lapSimpananBerjangka],
     "/dashboard/loans/apply": [MENU.pengajuan],
     "/dashboard/loans/escrow": [MENU.titipan],
+    "/dashboard/loans/titipan": [MENU.titipan],
     "/dashboard/loans/bad-debts": [MENU.lapTunggakanKoperasi, MENU.lapTunggakanBank, MENU.lapTunggakanKpr, MENU.jenisMacet],
     "/dashboard/deductions": [MENU.potonganSemua, MENU.potonganKoperasi, MENU.potonganBank, MENU.potonganKpr, MENU.potonganSimpanan],
     // Generate, ubah, dan posting potongan gaji bulanan: menu desktop Potongan Keseluruhan (yang dulu menggabungkan semua potongan).
@@ -136,7 +137,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
 
 /** Menu yang memakai pencarian anggota di form transaksi. */
 export const MENU_TRANSAKSI = [MENU.setoranSimpanan, MENU.pencairanSimpanan, MENU.cairKoperasi, MENU.cairBank, MENU.cairKpr,
-    MENU.angsurKoperasi, MENU.angsurBank, MENU.angsurKpr]
+    MENU.angsurKoperasi, MENU.angsurBank, MENU.angsurKpr, MENU.titipan]
 
 export const punyaIzin = (izin: readonly string[], menu: readonly string[]) => menu.some((m) => izin.includes(m))
 

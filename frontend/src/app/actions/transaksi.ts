@@ -3,12 +3,14 @@
 import { revalidatePath } from "next/cache"
 import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpanan.ts"
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
+import { hapusTitipan, postingTitipan, tambahTitipan } from "@kopkar/backend/src/posting/titipan.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
 import { kirimInfoPencairan } from "@kopkar/backend/src/anggota/info-pinjaman.ts"
 import { bacaJurnalUmum, hapusJurnalUmum, postJurnalUmum, tandaiPenyesuaian, ubahJurnalUmum, type BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { bacaBankBook, hapusBankBook, simpanBankBook, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
+import { formatRupiah } from "@/lib/format"
 import { modeUji, pool, query, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
 import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_DETAIL_PINJAMAN_GRUP, MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
@@ -205,6 +207,10 @@ export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasi
 export async function angsuranBerikutnyaAction(noPinjaman: string) {
     const o = await wajibLogin() // sesi habis: alihkan ke login
     if (!punyaIzin(o.izin, [MENU.angsurKoperasi, MENU.angsurBank])) return null
+    return angsuranBerikutnya(noPinjaman)
+}
+
+async function angsuranBerikutnya(noPinjaman: string) {
     const [p] = await query<{ rp_pinjaman_pokok: string; persen_bunga: string; bunga_per: number; lama_angsuran: number; jml_cicilan: number;
         persen_adm: string; persen_provisi: string }>(
         `SELECT rp_pinjaman_pokok::text, persen_bunga::text, bunga_per, lama_angsuran, jml_cicilan, persen_adm::text, persen_provisi::text
@@ -225,12 +231,17 @@ export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil>
         const override = {
             jasa: uangOpsional(f, "jasa", "Jasa"), adm: uangOpsional(f, "adm", "Adm"), provisi: uangOpsional(f, "provisi", "Provisi"),
         }
-        const r = await tx((db) => bayarAngsuran(db, {
-            noPinjaman: teks(f, "noPinjaman"), tanggal: tanggal(f), kasPerkiraanId: teks(f, "kas"), opr,
-            override: Object.values(override).some((v) => v !== undefined) ? override : undefined,
-        }))
+        // Dari form Titipan Angsuran: titipan yang belum diposting ditandai POSTING di transaksi yang sama dengan angsuran ini.
+        const dariTitipan = teks(f, "titipan", false) === "1"
+        const { r, titip } = await tx(async (db) => {
+            const r = await bayarAngsuran(db, {
+                noPinjaman: teks(f, "noPinjaman"), tanggal: tanggal(f), kasPerkiraanId: teks(f, "kas"), opr,
+                override: Object.values(override).some((v) => v !== undefined) ? override : undefined,
+            })
+            return { r, titip: dariTitipan ? await postingTitipan(db, teks(f, "noPinjaman")) : null }
+        })
         const total = toUnits(r.pokok) + toUnits(r.jasa) + toUnits(r.adm) + toUnits(r.provisi)
-        return { ok: true, pesan: `Angsuran ke-${r.ke} tercatat dengan nomor ${r.noBukti}${r.lunas ? " (LUNAS)" : ""}`,
+        return { ok: true, pesan: `Angsuran ke-${r.ke} tercatat dengan nomor ${r.noBukti}${r.lunas ? " (LUNAS)" : ""}${titip ? `; ${titip.jumlah} titipan (${formatRupiah(Number(titip.total))}) ditandai POSTING` : ""}`,
             rincian: { "No. Bukti": r.noBukti, "Pokok": rp(r.pokok), "Jasa": rp(r.jasa), "Adm": rp(r.adm), "Provisi": rp(r.provisi),
                 "Total": rp(total), "Sisa pokok": rp(r.sisaPokok) } }
     })
@@ -380,4 +391,40 @@ export async function riwayatAnggotaAction(kodeAgt: string): Promise<RiwayatAngg
     const o = await wajibLogin() // sesi habis: alihkan ke login
     if (!punyaIzin(o.izin, [MENU.cairKoperasi, MENU.cairBank, MENU.cairKpr, MENU.angsurKoperasi, MENU.angsurBank, MENU.angsurKpr])) return null
     return riwayatAnggota(kodeAgt)
+}
+
+// ---------- titipan angsuran pinjaman tunai ----------
+
+export interface Titipan { id: number; tanggal: string; rp_jumlah: number; status: string; urut: number }
+export interface DataTitipan {
+    daftar: Titipan[]; belumPosting: number
+    berikut: Awaited<ReturnType<typeof angsuranBerikutnya>>
+}
+
+/** Titipan satu pinjaman (semua = termasuk yang sudah POSTING), total yang belum diposting, dan angsuran berikutnya. */
+export async function dataTitipanAction(noPinjaman: string, semua: boolean): Promise<DataTitipan | null> {
+    const o = await wajibLogin() // sesi habis: alihkan ke login
+    if (!punyaIzin(o.izin, [MENU.titipan])) return null
+    const [daftar, [jml], berikut] = await Promise.all([
+        query<Titipan>(`SELECT id, tanggal::text AS tanggal, rp_jumlah, status, urut FROM pinjaman_tunai_titipan
+            WHERE no_pinjaman = $1 ${semua ? "" : "AND status <> 'POSTING'"} ORDER BY tanggal, urut`, [noPinjaman]),
+        query<{ total: number }>("SELECT COALESCE(SUM(rp_jumlah), 0) AS total FROM pinjaman_tunai_titipan WHERE no_pinjaman = $1 AND status <> 'POSTING'", [noPinjaman]),
+        angsuranBerikutnya(noPinjaman),
+    ])
+    return { daftar, belumPosting: jml?.total ?? 0, berikut }
+}
+
+export async function tambahTitipanAction(_: Hasil, f: FormData): Promise<Hasil> {
+    return posting([MENU.titipan], async () => {
+        const noPinjaman = teks(f, "noPinjaman"), jumlah = uang(f, "jumlah", "Jumlah titipan")
+        await tx((db) => tambahTitipan(db, { noPinjaman, tanggal: tanggal(f), jumlah }))
+        return { ok: true, pesan: `Titipan ${formatRupiah(Number(jumlah))} untuk ${noPinjaman} tersimpan (belum diposting ke angsuran)` }
+    })
+}
+
+export async function hapusTitipanAction(id: number): Promise<Hasil> {
+    return posting([MENU.titipan], async () => {
+        await tx((db) => hapusTitipan(db, id))
+        return { ok: true, pesan: "Titipan dihapus" }
+    })
 }

@@ -120,6 +120,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/loans/create-kpr"
             },
             {
+                label: "Titipan Angsuran",
+                icon: "savings",
+                href: "/dashboard/loans/titipan"
+            },
+            {
                 label: "Setoran Titipan (Escrow)",
                 icon: "layers",
                 href: "/dashboard/loans/escrow"
