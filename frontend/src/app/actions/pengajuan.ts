@@ -5,6 +5,8 @@ import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
 import { modeUji, pool, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif } from "@/lib/operator"
 import { MENU } from "@/config/akses"
+import { batasPlafon, type BatasPlafon } from "@kopkar/backend/src/posting/plafon.ts"
+import { pengajuanUntukDitinjau, riwayatAnggota, type RiwayatAnggota } from "@/lib/queries/pinjaman-riwayat"
 
 export type HasilPengajuan = { ok: true; pesan: string } | { ok: false; error: string }
 
@@ -36,6 +38,26 @@ export async function putuskanPengajuanAction(id: number, setuju: boolean): Prom
         return { ok: true, pesan }
     } catch (e) {
         if (!(e instanceof GalatSesi)) console.error("putuskan pengajuan gagal:", e)
+        return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
+    }
+}
+
+export type TinjauanPengajuan = {
+    ok: true; pengajuan: NonNullable<Awaited<ReturnType<typeof pengajuanUntukDitinjau>>>; riwayat: RiwayatAnggota; batas: BatasPlafon | null
+} | { ok: false; error: string }
+
+/** Identitas dan riwayat pinjaman anggota sebuah pengajuan, untuk ditinjau pengurus sebelum menyetujui. Hanya membaca. */
+export async function tinjauPengajuanAction(id: number): Promise<TinjauanPengajuan> {
+    try {
+        await operatorAktif([MENU.pengajuan])
+        const pengajuan = await pengajuanUntukDitinjau(id)
+        if (!pengajuan) return { ok: false, error: "Pengajuan tidak ada" }
+        const riwayat = await riwayatAnggota(pengajuan.kode_agt)
+        if (!riwayat) return { ok: false, error: "Anggota pengajuan tidak ditemukan" }
+        const batas = batasPlafon({ kunciGrade: pengajuan.kunci_grade, maksPlafond: pengajuan.maks_plafond }, riwayat.anggota.rp_grade)
+        return { ok: true, pengajuan, riwayat, batas }
+    } catch (e) {
+        if (!(e instanceof GalatSesi)) console.error("tinjau pengajuan gagal:", e)
         return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
     }
 }

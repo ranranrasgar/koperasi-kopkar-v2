@@ -31,9 +31,16 @@ Pilih status di kotak di atas tabel untuk melihat pengajuan per status, atau **S
 
 ## Memutuskan pengajuan
 
-1. Periksa nama, jenis kredit, pokok, lama, dan bunga yang diajukan.
-2. Periksa kemampuan bayar anggota, misalnya pinjaman yang masih berjalan dan potongan gaji bulanannya.
-3. Tekan **Setujui** atau **Tolak**, lalu konfirmasi.
+1. Tekan **Lihat** pada baris pengajuan. Jendela tinjauan menampilkan:
+   - rincian pengajuan (jenis, pokok, lama, bunga, keperluan) dan peringatan merah bila pokok melebihi batas plafon;
+   - ringkasan risiko berwarna: macet sekarang (merah), menunggak (oranye), pernah terlambat atau pernah macet (kuning), atau bersih (hijau);
+   - identitas anggota: kode/KPK, KTP, alamat, telepon, bank, bagian dan tanggal mulai kerja (dari data karyawan Mattel bila tertaut), jabatan, grade, gaji pokok;
+   - kartu sisa utang berjalan, angsuran per bulan, tunggakan beserta kolektibilitasnya, pernah macet, jumlah pinjaman, simpanan, dan grade;
+   - tabel semua pinjaman tunai dan KPR anggota (pokok, angsuran dibayar, sisa pokok, keterlambatan terlama, status).
+
+   Ringkasan dan tabel ini sama dengan panel riwayat di form pencairan pinjaman tunai.
+2. Nilai kemampuan bayar anggota dari data itu, misalnya pinjaman yang masih berjalan, tunggakan, dan potongan gaji bulanannya.
+3. Tekan **Setujui** atau **Tolak** (di jendela tinjauan atau di baris tabel), lalu konfirmasi.
 
 > **Penting:** Keputusan **tidak bisa dibatalkan** dari web. Hanya pengajuan berstatus Menunggu yang bisa diputuskan; jika dua petugas memutuskan bersamaan, yang kedua mendapat pesan *Pengajuan tidak ada atau sudah diputuskan*.
 

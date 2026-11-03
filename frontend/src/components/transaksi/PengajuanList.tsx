@@ -3,7 +3,7 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Check, Loader2, Search, X } from "lucide-react"
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Check, Eye, Loader2, Search, X } from "lucide-react"
 import { putuskanPengajuanAction, type HasilPengajuan } from "@/app/actions/pengajuan"
 import { Button } from "@/components/ui/button"
 import { Paginasi } from "@/components/ui/Paginasi"
@@ -12,6 +12,7 @@ import type { PageData } from "@/config/modules"
 import type { Pengajuan } from "@/lib/queries/keanggotaan"
 import { formatRupiah, formatTanggal, formatAngka, formatAngka2 } from "@/lib/format"
 import { FormCard } from "./common"
+import { TinjauPengajuan } from "./TinjauPengajuan"
 
 const STATUS: Record<string, { label: string; cls: string }> = {
     P: { label: "Menunggu", cls: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400" },
@@ -38,6 +39,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
     const sp = useSearchParams()
     const [hasil, setHasil] = useState<HasilPengajuan | null>(null)
     const [sibuk, setSibuk] = useState<number | null>(null)
+    const [tinjau, setTinjau] = useState<Pengajuan | null>(null)
     const [isPending, startTransition] = useTransition()
     const [cari, setCari] = useState(sp.get("search") ?? "")
     const status = sp.get("status") ?? "P"
@@ -62,6 +64,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
         startTransition(async () => {
             setHasil(await putuskanPengajuanAction(p.id, setuju))
             setSibuk(null)
+            setTinjau(null)
             router.refresh()
         })
     }
@@ -144,6 +147,8 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                                         <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${STATUS[p.status]?.cls ?? ""}`}>{STATUS[p.status]?.label ?? p.status}</span>
                                     </td>
                                     <td className="px-3 py-2 text-right whitespace-nowrap">
+                                        <button type="button" onClick={() => setTinjau(p)} title="Lihat identitas dan riwayat pinjaman anggota"
+                                            className="inline-flex items-center gap-1 text-xs text-blue-700 hover:underline mr-3"><Eye className="h-3.5 w-3.5" />Lihat</button>
                                         {p.status === "P" && (sibuk === p.id ? <Loader2 className="h-4 w-4 animate-spin inline" /> : (
                                             <>
                                                 <button type="button" onClick={() => putuskan(p, true)} disabled={sibuk !== null}
@@ -164,6 +169,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                 <Paginasi page={data.page} totalPages={data.totalPages} pageSize={data.pageSize} total={data.total} disabled={isPending}
                     onHalaman={(p) => ubah({ page: p })} onBaris={(v) => ubah({ pageSize: v, page: 1 })} className="sticky bottom-0 z-10 border-t border-outline-variant bg-background/95 backdrop-blur" />
             </div>
+            <TinjauPengajuan p={tinjau} onTutup={() => setTinjau(null)} onPutuskan={putuskan} sibuk={sibuk !== null} />
         </FormCard>
     )
 }

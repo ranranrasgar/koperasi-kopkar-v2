@@ -91,3 +91,28 @@ export async function riwayatAnggota(kodeAgt: string): Promise<RiwayatAnggota | 
         daftar,
     }
 }
+
+export interface IdentitasAnggota {
+    nik: string; jns_kelamin: string; status: string; alamat: string; kota: string; hp: string; telp_rmh: string
+    bank_nama: string; bank_no_rek: string; bank_atas_nama: string; grade: string; no_ktp: string | null; jabatan: string | null; rp_gaji_pokok: number | null
+    plant: string | null; deptname: string | null; sectname: string | null; joindate: string | null; tgl_lahir: string | null
+}
+
+/** Pengajuan beserta identitas anggota (data anggota, detail terbaru, data HR Mattel bila tertaut) untuk ditinjau sebelum disetujui. */
+export async function pengajuanUntukDitinjau(id: number) {
+    const [p] = await query<{
+        anggota_id: number; kode_agt: string; rp_pinjaman_pokok: number; lama_angsuran: number; persen_bunga: number; keterangan: string | null; status: string
+        kd_kredit: string; nama_kredit: string | null; kunci_grade: boolean; maks_plafond: number
+    } & IdentitasAnggota>(`
+        SELECT pp.anggota_id, a.kode_agt, pp.rp_pinjaman_pokok, pp.lama_angsuran, pp.persen_bunga, pp.keterangan, pp.status, pp.kd_kredit, jk.nama_kredit,
+               COALESCE(jk.kunci_jika_melebihi_grade = 1, false) AS kunci_grade, COALESCE(jk.maks_plafond, 0) AS maks_plafond,
+               a.nik, a.jns_kelamin, a.status, a.alamat, a.kota, a.hp, a.telp_rmh, a.bank_nama, a.bank_no_rek, a.bank_atas_nama, a.grade,
+               ad.no_ktp_sim AS no_ktp, ad.jabatan, ad.rp_gaji_pokok,
+               k.plant, k.deptname, k.sectname, k.joindate::text AS joindate, k.tgl_lahir::text AS tgl_lahir
+          FROM pengajuan_pinjaman pp JOIN anggota a ON a.id = pp.anggota_id
+          LEFT JOIN jenis_kredit jk ON jk.id = pp.jenis_kredit_id
+          LEFT JOIN karyawan_mattel k ON k.id = a.karyawan_mattel_id
+          LEFT JOIN LATERAL (SELECT no_ktp_sim, jabatan, rp_gaji_pokok FROM anggota_detail WHERE anggota_id = a.id ORDER BY id DESC LIMIT 1) ad ON true
+         WHERE pp.id = $1`, [id])
+    return p ?? null
+}
