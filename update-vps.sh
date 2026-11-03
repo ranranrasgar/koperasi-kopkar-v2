@@ -10,7 +10,16 @@ set -euo pipefail
 cd "$(dirname "$0")"
 
 echo "==> 1/6 Tarik kode terbaru"
-git pull --ff-only
+if [ "${KOPKAR_SUDAH_PULL:-}" != "1" ]; then
+    sebelum="$(git rev-parse HEAD:update-vps.sh)"
+    git pull --ff-only
+    # Bash membaca skrip sedikit demi sedikit: bila git pull mengubah skrip ini, langkah berikutnya masih versi lama
+    # (3 November: database tetap hidup selama build). Jalankan ulang versi baru tanpa pull lagi.
+    if [ "$(git rev-parse HEAD:update-vps.sh)" != "$sebelum" ]; then
+        echo "==> Skrip update ikut berubah; menjalankan versi baru"
+        KOPKAR_SUDAH_PULL=1 exec "$0" "$@"
+    fi
+fi
 
 # Build butuh RAM besar. Tanpa swap, VPS 2 GB dimatikan kernel di tengah build (pesan "Killed"); tambahkan swap 4 GB sekali saja:
 #   sudo fallocate -l 4G /swapfile && sudo chmod 600 /swapfile && sudo mkswap /swapfile && sudo swapon /swapfile
