@@ -11,6 +11,7 @@ Anggota memakai **aplikasi anggota** (di browser HP, dan aplikasi Android lama) 
 | --- | --- |
 | Username | Nama login anggota |
 | Kode Anggota / Nama | Anggota pemilik akun |
+| KPK | Nomor KPK anggota pemilik akun (kosong bila akun belum terhubung ke anggota). Pencarian juga bisa memakai KPK. |
 | Email | Email akun |
 | Status | **Aktif**, **Tidak aktif**, **Menunggu** (pendaftaran baru), atau **Ditolak** |
 | Notifikasi | Apakah perangkat sudah menerima notifikasi (tersembunyi; buka lewat **Kolom**) |

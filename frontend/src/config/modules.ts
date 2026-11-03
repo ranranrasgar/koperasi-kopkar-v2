@@ -214,15 +214,15 @@ export const userMobileConfig: ModuleConfig = {
     title: "User Mobile",
     description: "Akun aplikasi Android anggota (tabel app_user).",
     rowKey: "id",
-    searchPlaceholder: "Username, kode anggota, nama, atau email",
+    searchPlaceholder: "Username, kode anggota, KPK, nama, atau email",
     filters: [
         { key: "status", label: "Status", type: "select", options: [{ label: "Anggota baru (menunggu)", value: "menunggu" }, { label: "Sudah disetujui", value: "disetujui" }, { label: "Ditolak", value: "ditolak" }, { label: "Aktif", value: "true" }, { label: "Tidak aktif", value: "false" }] },
     ],
     columns: [
         { key: "username", label: "Username", type: "string", sortable: true },
         { key: "kode_agt", label: "Kode Anggota", type: "string", sortable: true, mono: true },
+        { key: "nik", label: "KPK", type: "string", sortable: true, mono: true },
         { key: "nama", label: "Nama", type: "string", sortable: true },
-        { key: "nik", label: "KPK", type: "string", hidden: true },
         { key: "email", label: "Email", type: "string" },
         { key: "status_tampil", label: "Status", type: "badge", sortable: true,
             badgeMap: { "true": { label: "Aktif", color: "green" }, "false": { label: "Tidak aktif", color: "gray" }, "menunggu": { label: "Menunggu", color: "orange" }, "ditolak": { label: "Ditolak", color: "red" } } },
