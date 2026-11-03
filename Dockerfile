@@ -20,9 +20,11 @@ COPY . .
 # Modul database membuat pool saat dimuat (createPool melempar galat bila PG_URL kosong) tetapi tidak terhubung;
 # halaman membaca database saat request, bukan saat build. Jadi build cukup diberi PG_URL palsu.
 # VPS kecil tanpa swap (OpenVZ/LXC tidak mengizinkan swapon): batas heap, tanpa pemeriksaan tipe, satu pekerja (lihat next.config.ts).
+# Build memakai webpack, bukan Turbopack: webpackMemoryOptimizations hanya berlaku untuk webpack, dan pekerja CSS Turbopack
+# kehabisan waktu ("timeout while receiving message from process" di globals.css) saat RAM VPS penuh.
 ENV NODE_OPTIONS=--max-old-space-size=1280 KOPKAR_HEMAT_RAM=1
-RUN PG_URL=postgres://bangun:bangun@127.0.0.1:5432/bangun npm run build -w frontend \
- && PG_URL=postgres://bangun:bangun@127.0.0.1:5432/bangun npm run build -w anggota
+RUN PG_URL=postgres://bangun:bangun@127.0.0.1:5432/bangun npm run build -w frontend -- --webpack \
+ && PG_URL=postgres://bangun:bangun@127.0.0.1:5432/bangun npm run build -w anggota -- --webpack
 
 FROM dasar AS jalan
 ENV NODE_ENV=production
