@@ -15,7 +15,11 @@ menu: /dashboard/loans/bad-debts
 | Nilai Tunggakan | Pinjaman tunai: pokok + jasa + adm + provisi angsuran yang tertunggak. KPR: pokok saja |
 | Sejak | Tanggal jatuh tempo angsuran tertua yang belum dibayar |
 
-Daftar diurutkan dari tunggakan terbanyak. Saring per **Grup** (KOPERASI, BANK / PIHAK LAIN, KPR) dan status anggota (**Aktif / Non-aktif / Semua**; bawaannya Aktif). Isi **Per Tanggal** untuk melihat posisi tunggakan pada tanggal tertentu.
+Daftar diurutkan dari tunggakan terbanyak. Klik judul kolom (No. Pinjaman, Anggota, Jenis, Tunggak, Sejak, Hari, Nilai Tunggakan) untuk mengurutkan; klik lagi untuk urutan terbalik. Kolom **No.** adalah nomor urut baris, bersambung antarhalaman.
+
+Saring dengan kotak **cari** (no. pinjaman, nama, kode anggota, atau KPK), **Grup** (KOPERASI, BANK / PIHAK LAIN, KPR), dan status anggota (**Aktif / Non-aktif / Semua**; bawaannya Aktif), lalu **Tampilkan**. Isi **Per Tanggal** untuk melihat posisi tunggakan pada tanggal tertentu.
+
+Daftar dibagi per halaman (bawaan 50 baris; bisa diganti atau pilih *Semua*) dengan bilah halaman di atas dan di bawah tabel. Jumlah dan **Total** di bawah tabel selalu untuk seluruh hasil saringan, bukan hanya halaman yang tampil. **Ekspor** mengunduh seluruh hasil saringan; **Cetak** mencetak halaman yang sedang tampil.
 
 ## Menindaklanjuti tunggakan
 
