@@ -57,6 +57,8 @@ export async function daftarUserMobile(s: SearchParams) {
 export interface Pengajuan {
     id: number; tgl_realisasi: string; kd_anggota: string; nama: string; nik: string | null; kd_kredit: string; nama_kredit: string | null
     persen_bunga: number; lama_angsuran: number; rp_pinjaman_pokok: number; keterangan: string | null; status: string
+    /** Disetujui di web dan belum dicairkan. */
+    menunggu_cair: boolean
 }
 
 const STATUS_PENGAJUAN = ["P", "Y", "N"]
@@ -87,7 +89,7 @@ export async function daftarPengajuan(s: SearchParams) {
 
     const base = `
         SELECT pp.id, pp.tgl_realisasi, pp.kd_anggota, a.nama, a.nik, a.kode_agt, pp.kd_kredit, jk.nama_kredit, pp.persen_bunga, pp.lama_angsuran,
-               pp.rp_pinjaman_pokok, pp.keterangan, pp.status
+               pp.rp_pinjaman_pokok, pp.keterangan, pp.status, pp.menunggu_cair
           FROM pengajuan_pinjaman pp JOIN anggota a ON a.id = pp.anggota_id LEFT JOIN jenis_kredit jk ON jk.id = pp.jenis_kredit_id
          ${where.length ? `WHERE ${where.join(" AND ")}` : ""}`
     const sortable = Object.fromEntries(["tgl_realisasi", "nama", "kd_anggota", "nik", "nama_kredit", "rp_pinjaman_pokok", "lama_angsuran", "persen_bunga", "status"].map((k) => [k, k]))

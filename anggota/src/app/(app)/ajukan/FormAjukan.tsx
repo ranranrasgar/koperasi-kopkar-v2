@@ -11,6 +11,8 @@ export interface Produk {
     persenAdm: string; persenProvisi: string
     /** Batas plafond untuk anggota ini pada jenis ini (rupiah) dan asalnya; null = tidak dibatasi. Grade diutamakan atas Maksimal Plafond. */
     batas: number | null; sumberBatas: "grade" | "maksimal" | null
+    /** Jenis memakai "Kunci jika belum lunas", dan apakah anggota ini masih punya pinjaman jenis itu yang belum lunas (dicek ulang di server). */
+    kunciSisa: boolean; belumLunas: boolean
 }
 
 const kolom = "h-13 w-full rounded-xl border border-garis bg-permukaan px-4 text-base outline-none transition " +
@@ -32,7 +34,7 @@ export function FormAjukan({ produk, hariIni, batasTanggal, namaMenunggu }: {
     produk: Produk[]; hariIni: string; batasTanggal: string; namaMenunggu: string[]
 }) {
     const [hasil, kirim, proses] = useActionState(ajukanAction, null)
-    const [kode, setKode] = useState(produk[0]?.kode ?? "")
+    const [kode, setKode] = useState((produk.find((x) => !x.belumLunas) ?? produk[0])?.kode ?? "")
     const [besarTeks, setBesarTeks] = useState("")
     const [lama, setLama] = useState(Math.min(12, produk[0]?.maksCicilan ?? 12))
     const [tgl, setTgl] = useState(hariIni)
@@ -48,7 +50,7 @@ export function FormAjukan({ produk, hariIni, batasTanggal, namaMenunggu }: {
     const sudahMenunggu = !!p && namaMenunggu.includes(p.nama)
     const tglSah = tgl >= hariIni && tgl <= batasTanggal
     const lamaSah = !!p && lama >= 1 && lama <= p.maksCicilan
-    const bisaPeriksa = !!p && besar > 0 && lamaSah && !lewatGrade && tglSah && !sudahMenunggu
+    const bisaPeriksa = !!p && besar > 0 && lamaSah && !lewatGrade && tglSah && !sudahMenunggu && !p.belumLunas
 
     // Daftar kelayakan: hanya aturan yang benar-benar dicek sistem (null = belum bisa dinilai).
     const syarat: { ok: boolean | null; judul: string; ket: string }[] = [
@@ -62,6 +64,8 @@ export function FormAjukan({ produk, hariIni, batasTanggal, namaMenunggu }: {
         },
         { ok: lamaSah, judul: "Lama pinjaman dalam batas", ket: `Maksimal ${p?.maksCicilan ?? "-"} bulan untuk jenis ini.` },
         { ok: tglSah, judul: "Tanggal realisasi sah", ket: "Mulai hari ini sampai paling lambat satu tahun ke depan." },
+        ...(p?.kunciSisa ? [{ ok: !p.belumLunas, judul: "Tidak ada pinjaman jenis ini yang belum lunas",
+            ket: p.belumLunas ? "Lunasi dulu pinjaman jenis ini yang masih berjalan (atau tunggu pencairannya) sebelum mengajukan lagi." : "Jenis ini hanya bisa diajukan bila pinjaman sejenis sudah lunas." }] : []),
         { ok: !sudahMenunggu, judul: "Belum ada pengajuan sejenis yang menunggu", ket: sudahMenunggu ? "Tunggu keputusan pengurus untuk pengajuan sebelumnya." : "Satu pengajuan per jenis dalam satu waktu." },
     ]
     const siap = syarat.filter((s) => s.ok === true).length
@@ -131,7 +135,7 @@ export function FormAjukan({ produk, hariIni, batasTanggal, namaMenunggu }: {
                         <label htmlFor="jenis" className="text-[0.9375rem] font-semibold">Jenis pinjaman</label>
                         <Pilihan>
                             <select id="jenis" value={kode} onChange={(e) => ubahJenis(e.target.value)} className={`${kolom} appearance-none pr-11`}>
-                                {produk.map((x) => <option key={x.kode} value={x.kode}>{x.nama}</option>)}
+                                {produk.map((x) => <option key={x.kode} value={x.kode}>{x.nama}{x.belumLunas ? " (belum lunas)" : ""}</option>)}
                             </select>
                         </Pilihan>
                         {p && (
@@ -141,6 +145,7 @@ export function FormAjukan({ produk, hariIni, batasTanggal, namaMenunggu }: {
                                 {Number(p.persenProvisi) > 0 && ` · provisi ${persen(p.persenProvisi)}`}
                             </p>
                         )}
+                        {p?.belumLunas && <p className="text-xs font-medium text-keluar">Anda masih punya pinjaman {p.nama} yang belum lunas atau menunggu pencairan. Jenis ini bisa diajukan lagi setelah lunas.</p>}
                     </section>
 
                     <section className="space-y-3">

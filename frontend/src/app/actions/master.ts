@@ -196,7 +196,7 @@ async function akunKode(db: Db, f: FormData, k: string, label: string) {
 /**
  * Simpan jenis pinjaman (jenis_kredit) dengan semua isian layar desktop "Jenis Pinjaman (Credit)": grup, jenis, kode, nama, maks. lama cicilan,
  * tanggal jatuh tempo, jasa dan per, biaya provisi/adm/denda (kotak centang + persen; tidak dicentang = 0), empat akun COA, dan Pengaturan Umum
- * (UM jika melebihi grade, kunci jika melebihi grade, staff, kunci jika ada tunggakan, hitung SHU, tidak untuk mobile), ditambah Maksimal Plafond.
+ * (UM jika melebihi grade, kunci jika melebihi grade, staff, kunci jika belum lunas, hitung SHU, tidak untuk mobile), ditambah Maksimal Plafond.
  */
 export async function simpanJenisPinjamanAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
     return simpan(MENU.jenisPinjaman, "/dashboard/settings/jenis-pinjaman", async (db) => {

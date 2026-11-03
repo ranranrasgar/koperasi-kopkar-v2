@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
-import { ajukanPinjaman, jenisKreditUntuk, pengajuanSaya, type IsianPengajuan } from '../src/anggota/pengajuan.ts';
+import { ajukanPinjaman, jenisBelumLunas, jenisKreditUntuk, pengajuanSaya, type IsianPengajuan } from '../src/anggota/pengajuan.ts';
 import { estimasiAngsuran } from '../src/anggota/pengajuan-hitung.ts';
 
 const pool = createPool();
@@ -93,13 +93,23 @@ test('kunci sisa: sisa receh <= Rp 100 tidak mengunci, sisa lebih besar mengunci
         const anggota = Number(p.anggota_id);
         const x = isian({ kodeKredit: p.kode_kredit, lama: 1 });
 
+        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), false, 'sisa receh: tidak ditandai di form');
         assert.equal((await ajukanPinjaman(db, anggota, x, HARI)).ok, true, 'sisa receh tidak mengunci');
+        // Disetujui tetapi belum dicairkan juga mengunci; setelah dicairkan/dibatalkan (menunggu_cair false) terbuka lagi.
+        await db.query("UPDATE pengajuan_pinjaman SET status = 'Y', menunggu_cair = true WHERE anggota_id = $1 AND status = 'P'", [anggota]);
+        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), true, 'disetujui belum cair: ditandai');
+        const tunggu = await ajukanPinjaman(db, anggota, x, HARI);
+        assert.equal(tunggu.ok, false, 'disetujui belum cair: ditolak');
+        if (!tunggu.ok) assert.match(tunggu.error, /menunggu pencairan/);
+        await db.query('UPDATE pengajuan_pinjaman SET menunggu_cair = false WHERE anggota_id = $1 AND menunggu_cair', [anggota]);
+        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), false, 'sudah cair: terbuka');
         await db.query("DELETE FROM pengajuan_pinjaman WHERE anggota_id = $1 AND status = 'P'", [anggota]);
 
         // Jadikan sisanya besar: tambah kredit pokok pada salah satu rincian.
         await db.query(`UPDATE pinjaman_tunai_rincian SET kredit_pokok = kredit_pokok + 500000 WHERE id = (
             SELECT r.id FROM pinjaman_tunai_rincian r JOIN pinjaman_tunai pt ON pt.id = r.pinjaman_tunai_id
              WHERE pt.anggota_id = $1 AND pt.jenis_kredit_id = $2 ORDER BY r.id LIMIT 1)`, [anggota, p.jenis_kredit_id]);
+        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), true, 'sisa besar: ditandai di form');
         const r = await ajukanPinjaman(db, anggota, x, HARI);
         assert.equal(r.ok, false);
         if (!r.ok) assert.match(r.error, /Selesaikan dulu tagihan/);

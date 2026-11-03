@@ -166,3 +166,7 @@ CREATE TABLE IF NOT EXISTS app_user_google (
 ALTER TABLE app_user ADD COLUMN IF NOT EXISTS menunggu_admin boolean NOT NULL DEFAULT false;
 -- Keputusan admin atas pendaftaran baru: 'disetujui' atau 'ditolak' (kosong = akun lama / belum diputuskan). Dipakai filter User Mobile.
 ALTER TABLE app_user ADD COLUMN IF NOT EXISTS keputusan_daftar varchar(10);
+
+-- Pengajuan kredit yang disetujui di web dan belum dicairkan: true saat disetujui, false lagi saat pinjaman tunai jenis yang sama
+-- dicairkan untuk anggota itu atau persetujuannya dibatalkan. Dipakai aturan "Kunci jika belum lunas". Baris lama otomatis false.
+ALTER TABLE pengajuan_pinjaman ADD COLUMN IF NOT EXISTS menunggu_cair boolean NOT NULL DEFAULT false;

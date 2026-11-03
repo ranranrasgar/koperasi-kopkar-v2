@@ -59,7 +59,8 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
     const urut = (key: string) => ubah({ sortBy: key, sortOrder: urutKey === key && urutArah === "asc" ? "desc" : "asc" })
 
     const putuskan = (p: Pengajuan, setuju: boolean) => {
-        if (!confirm(`${setuju ? "Setujui" : "Tolak"} pengajuan ${p.nama} sebesar ${formatRupiah(p.rp_pinjaman_pokok)}?`)) return
+        const aksi = setuju ? "Setujui" : p.status === "Y" ? "Batalkan persetujuan" : "Tolak"
+        if (!confirm(`${aksi} pengajuan ${p.nama} sebesar ${formatRupiah(p.rp_pinjaman_pokok)}?${p.status === "Y" ? " Status menjadi Ditolak dan anggota dikabari." : ""}`)) return
         setSibuk(p.id)
         startTransition(async () => {
             setHasil(await putuskanPengajuanAction(p.id, setuju))
@@ -160,6 +161,10 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                                         {p.status === "Y" && bolehCair && (
                                             <Link href={`/dashboard/loans/create-cash?pengajuan=${p.id}`} className="text-xs text-primary hover:underline">Cairkan</Link>
                                         )}
+                                        {p.status === "Y" && p.menunggu_cair && (sibuk === p.id ? <Loader2 className="ml-3 h-4 w-4 animate-spin inline" /> : (
+                                            <button type="button" onClick={() => putuskan(p, false)} disabled={sibuk !== null} title="Batalkan persetujuan yang belum dicairkan"
+                                                className="ml-3 inline-flex items-center gap-1 text-xs text-red-700 hover:underline"><X className="h-3.5 w-3.5" />Batalkan</button>
+                                        ))}
                                     </td>
                                 </tr>
                             ))}

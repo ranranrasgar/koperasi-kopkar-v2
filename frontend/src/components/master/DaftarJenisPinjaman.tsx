@@ -134,7 +134,7 @@ function FormJenis({ awal, akun, grade, selesai }: { awal: JenisPinjaman | null;
                         <Centang name="pakai_um" label="UM jika melebihi Grade" ket="Uang muka bila pinjaman melebihi grade anggota" checked={um} onChange={setUm} />
                         <Centang name="kunci_jika_melebihi_grade" label="Kunci jika melebihi grade" ket="Pinjaman tidak boleh melebihi plafon grade anggota" checked={kunciGrade} onChange={setKunciGrade} />
                         <Centang name="kunci_hanya_untuk_staff" label="Staff" ket="Hanya untuk anggota Staff (tidak dicentang: hanya non-staff)" checked={staff} onChange={setStaff} />
-                        <Centang name="kunci_jika_sisa" label="Kunci jika ada tunggakan" ket="Tidak bisa diajukan selama pinjaman jenis ini masih berjalan" checked={sisa} onChange={setSisa} />
+                        <Centang name="kunci_jika_sisa" label="Kunci jika belum lunas" ket="Tidak bisa diajukan lagi selama pinjaman jenis ini belum lunas" checked={sisa} onChange={setSisa} />
                         <Centang name="hitung_shu" label="Hitung SHU" ket="Jasa pinjaman ikut dihitung dalam pembagian SHU" checked={shu} onChange={setShu} />
                         <Centang name="hide" label="Tidak untuk mobile" ket="Disembunyikan dari pengajuan di aplikasi anggota" checked={sembunyi} onChange={setSembunyi} />
                     </fieldset>
@@ -228,7 +228,7 @@ export function DaftarJenisPinjaman({ baris, akun, grade }: { baris: JenisPinjam
                                         {b.kunci_hanya_untuk_staff === 1 ? <span className={lencana}>Staff</span> : null}
                                         {b.kunci_jika_melebihi_grade === 1 ? <span className={lencana}>Kunci grade</span> : null}
                                         {b.pakai_um === 1 ? <span className={lencana}>UM</span> : null}
-                                        {b.kunci_jika_sisa === 1 ? <span className={lencana}>Kunci tunggakan</span> : null}
+                                        {b.kunci_jika_sisa === 1 ? <span className={lencana}>Kunci belum lunas</span> : null}
                                         {b.hitung_shu === 1 ? <span className={lencana}>SHU</span> : null}
                                         {b.hide ? <span className={lencana}>Tanpa mobile</span> : null}
                                     </span></td>

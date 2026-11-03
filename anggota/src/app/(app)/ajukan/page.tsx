@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { jenisKreditUntuk, pengajuanSaya } from "@kopkar/backend/src/anggota/pengajuan.ts"
+import { jenisBelumLunas, jenisKreditUntuk, pengajuanSaya } from "@kopkar/backend/src/anggota/pengajuan.ts"
 import { batasPlafon } from "@kopkar/backend/src/posting/plafon.ts"
 import { Kartu, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
@@ -18,8 +18,8 @@ const STATUS: Record<string, { teks: string; kelas: string }> = {
 
 export default async function AjukanPage() {
     const a = await wajibAnggota()
-    const [jenis, daftar, data] = await Promise.all([
-        jenisKreditUntuk(poolAngka, a.anggotaId), pengajuanSaya(poolAngka, a.anggotaId, 20), profil(a.anggotaId),
+    const [jenis, daftar, data, belumLunas] = await Promise.all([
+        jenisKreditUntuk(poolAngka, a.anggotaId), pengajuanSaya(poolAngka, a.anggotaId, 20), profil(a.anggotaId), jenisBelumLunas(poolAngka, a.anggotaId),
     ])
     const hari = hariIni()
     const batas = new Date(Date.parse(`${hari}T00:00:00Z`) + 365 * 86400000).toISOString().slice(0, 10)
@@ -33,6 +33,7 @@ export default async function AjukanPage() {
                         namaMenunggu={daftar.filter((x) => x.status === "P").map((x) => x.nama_kredit ?? "")}
                         produk={jenis.map((j) => ({ kode: j.kode, nama: j.nama, persenBunga: j.persenBunga, perAngsuran: j.perAngsuran,
                             maksCicilan: j.maksCicilan, persenAdm: j.persenAdm, persenProvisi: j.persenProvisi,
+                            kunciSisa: j.kunciSisa, belumLunas: j.kunciSisa && belumLunas.has(j.id),
                             batas: batasPlafon(j, data?.rp_grade ?? 0)?.batas ?? null, sumberBatas: batasPlafon(j, data?.rp_grade ?? 0)?.sumber ?? null }))} />}
 
                 <h2 className="mb-1 mt-9 text-[0.9375rem] font-semibold">Pengajuan saya</h2>

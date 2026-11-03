@@ -10,7 +10,7 @@ Daftar jenis pinjaman mengikuti aturan koperasi dan status Anda:
 
 - Anggota **Staff** hanya melihat jenis untuk staff, anggota non-staff hanya jenis non-staff.
 - Jenis yang tidak dibuka untuk aplikasi (*Tidak untuk mobile*) tidak ditampilkan; ajukan lewat pengurus.
-- Jenis yang dikunci tunggakan tidak bisa diajukan lagi selama pinjaman jenis yang sama masih berjalan.
+- Jenis pinjaman yang dikunci tidak bisa diajukan lagi selama pinjaman Anda dengan jenis yang sama belum lunas. Di form pengajuan jenis itu ditandai **(belum lunas)** dan tombol lanjut tidak bisa ditekan.
 
 ## Plafon Anda
 

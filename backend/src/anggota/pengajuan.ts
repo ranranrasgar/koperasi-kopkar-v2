@@ -34,6 +34,22 @@ export async function jenisKreditUntuk(db: pg.Pool | Db, anggotaId: number) {
     return r.rows;
 }
 
+/**
+ * Id jenis kredit yang masih punya pinjaman tunai belum lunas (sisa pokok + jasa lebih dari SISA_LUNAS) milik anggota ini,
+ * atau pengajuan yang sudah disetujui tetapi belum dicairkan (menunggu_cair).
+ * Dipakai aturan "Kunci jika belum lunas" (kunci_jika_sisa) saat mengajukan dan untuk menandai jenis yang terkunci di form.
+ */
+export async function jenisBelumLunas(db: pg.Pool | Db, anggotaId: number): Promise<Set<string>> {
+    const r = await db.query<{ id: string }>(
+        `SELECT DISTINCT pt.jenis_kredit_id::text id FROM pinjaman_tunai pt
+           JOIN LATERAL (SELECT SUM(kredit_pokok + kredit_bunga) - SUM(debit_pokok + debit_bunga) sisa
+                           FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = pt.id) r ON true
+          WHERE pt.anggota_id = $1 AND pt.jenis_kredit_id IS NOT NULL AND r.sisa > $2
+         UNION
+         SELECT jenis_kredit_id::text FROM pengajuan_pinjaman WHERE anggota_id = $1 AND status = 'Y' AND menunggu_cair AND jenis_kredit_id IS NOT NULL`, [anggotaId, SISA_LUNAS]);
+    return new Set(r.rows.map((x) => x.id));
+}
+
 export interface IsianPengajuan {
     kodeKredit: string;
     lama: number;
@@ -71,14 +87,7 @@ export async function ajukanPinjaman(db: Db, anggotaId: number, i: IsianPengajua
     // Grade anggota diutamakan; Maksimal Plafond jenis kredit berlaku bila grade tidak dikunci atau nominal grade anggota kosong.
     const salahPlafon = pesanPlafon(i.besar, batasPlafon(j, a.rp_grade));
     if (salahPlafon) return gagal(salahPlafon);
-    if (j.kunciSisa) {
-        const sisa = (await db.query(
-            `SELECT 1 FROM pinjaman_tunai pt JOIN pinjaman_tunai_rincian r ON r.pinjaman_tunai_id = pt.id
-              WHERE pt.anggota_id = $1 AND pt.jenis_kredit_id = $2
-              GROUP BY pt.id HAVING SUM(r.kredit_pokok + r.kredit_bunga) - SUM(r.debit_pokok + r.debit_bunga) > $3 LIMIT 1`,
-            [anggotaId, j.id, SISA_LUNAS])).rowCount;
-        if (sisa) return gagal('Selesaikan dulu tagihan pinjaman jenis ini yang masih berjalan.');
-    }
+    if (j.kunciSisa && (await jenisBelumLunas(db, anggotaId)).has(j.id)) return gagal('Selesaikan dulu tagihan pinjaman jenis ini yang masih berjalan atau menunggu pencairan.');
     if (!Number.isInteger(i.lama) || i.lama < 1) return gagal('Lama pinjaman harus diisi.');
     if (i.lama > j.maksCicilan) return gagal(`Lama pinjaman tidak boleh lebih dari ${j.maksCicilan} bulan.`);
     if (!Number.isSafeInteger(i.besar) || i.besar <= 0) return gagal('Besar pinjaman harus diisi.');

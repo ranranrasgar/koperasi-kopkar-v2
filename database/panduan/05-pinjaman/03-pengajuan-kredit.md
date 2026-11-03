@@ -24,7 +24,7 @@ Pengajuan dari aplikasi Android lama hanya diperiksa di HP anggota, jadi tetap p
 | Status | Arti | Yang bisa dilakukan |
 | --- | --- | --- |
 | **Menunggu** (P) | Belum diputuskan | Setujui atau Tolak |
-| **Disetujui** (Y) | Disetujui pengurus | Cairkan |
+| **Disetujui** (Y) | Disetujui pengurus | Cairkan, atau **Batalkan** selama belum dicairkan |
 | **Ditolak** (N) | Ditolak | Tidak ada; pengajuan selesai |
 
 Pilih status di kotak di atas tabel untuk melihat pengajuan per status, atau **Semua**.
@@ -42,11 +42,13 @@ Pilih status di kotak di atas tabel untuk melihat pengajuan per status, atau **S
 2. Nilai kemampuan bayar anggota dari data itu, misalnya pinjaman yang masih berjalan, tunggakan, dan potongan gaji bulanannya.
 3. Tekan **Setujui** atau **Tolak** (di jendela tinjauan atau di baris tabel), lalu konfirmasi.
 
-> **Penting:** Keputusan **tidak bisa dibatalkan** dari web. Hanya pengajuan berstatus Menunggu yang bisa diputuskan; jika dua petugas memutuskan bersamaan, yang kedua mendapat pesan *Pengajuan tidak ada atau sudah diputuskan*.
+> **Penting:** Penolakan **tidak bisa dibatalkan** dari web, dan persetujuan hanya bisa dibatalkan selama belum dicairkan (lihat di bawah). Hanya pengajuan berstatus Menunggu yang bisa disetujui atau ditolak; jika dua petugas memutuskan bersamaan, yang kedua mendapat pesan *Pengajuan tidak ada atau sudah diputuskan*.
 
 Anggota dikabari keputusan lewat notifikasi aplikasi (dan email bila emailnya terverifikasi).
 
 Menyetujui pengajuan **belum mencairkan uang**. Tidak ada jurnal yang terbentuk sampai pencairan dicatat.
+
+Selama pengajuan yang disetujui belum dicairkan, jenis pinjaman yang memakai **Kunci jika belum lunas** tidak bisa diajukan lagi oleh anggota itu. Tandanya hilang begitu pinjaman tunai jenis yang sama dicairkan untuk anggota tersebut, baik lewat tombol **Cairkan** maupun lewat form pencairan biasa. Bila pengajuan tidak jadi dicairkan, tekan **Batalkan** pada barisnya: status menjadi Ditolak, anggota dikabari, dan kuncinya terbuka.
 
 ## Mencairkan pengajuan yang disetujui
 

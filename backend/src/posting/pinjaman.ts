@@ -76,6 +76,8 @@ export async function cairkanPinjaman(db: Db, i: PencairanInput): Promise<Pencai
          fromUnits(pokok), i.lama, jk.persen_adm, fromUnits(rpAdm(t)), jk.persen_provisi, fromUnits(rpProvisi(t)), i.opr,
          a.rows[0].id, jk.id, i.kasPerkiraanId]);
     const pinjamanId = h.rows[0].id;
+    // Pengajuan jenis ini yang disetujui untuk anggota ini sudah terpenuhi oleh pencairan ini (lewat tombol Cairkan atau form biasa).
+    await db.query('UPDATE pengajuan_pinjaman SET menunggu_cair = false WHERE anggota_id = $1 AND jenis_kredit_id = $2 AND menunggu_cair', [a.rows[0].id, jk.id]);
 
     const urutR = Number((await db.query("SELECT nextval('seq_pinjaman_rincian_urut') v")).rows[0].v);
     await db.query(
