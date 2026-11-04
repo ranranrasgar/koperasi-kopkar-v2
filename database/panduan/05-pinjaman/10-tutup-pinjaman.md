@@ -13,7 +13,7 @@ Tombol ini hanya untuk grup **superadmin** dan **admin**.
 2. Tekan **Tutup Pinjaman** di kanan atas.
 3. Tulis alasannya, misalnya *Lunas langsung ke BRI*, lalu tekan **OK**.
 
-Pinjaman langsung berstatus **Lunas**, dan di halaman detail tampil siapa yang menutup, kapan, dan alasannya.
+Pinjaman langsung berstatus **Lunas**, dan di halaman detail tampil siapa yang menutup, kapan, dan alasannya. Di Jadwal Angsuran, angsuran yang tidak pernah dibayar berstatus **Ditutup**, sedangkan yang sudah dibayar tetap **Terbayar**.
 
 ## Yang berubah dan yang tidak
 

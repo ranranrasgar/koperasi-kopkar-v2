@@ -14,6 +14,9 @@ const ukuranBaca = (b: number) =>
 const waktu = (iso: string) =>
     new Intl.DateTimeFormat("id-ID", { dateStyle: "medium", timeStyle: "short", timeZone: "Asia/Jakarta" }).format(new Date(iso))
 
+/** Sama dengan BATAS_ZIP di lib/cadangan.ts: cadangan lebih besar diunduh per berkas. */
+const BATAS_UNDUH_ZIP = 4_000_000_000
+
 const tombol = "inline-flex h-8 items-center gap-1.5 rounded-md border px-2.5 text-xs font-medium hover:bg-muted disabled:opacity-50 disabled:pointer-events-none"
 
 /** Buat, periksa, unduh, hapus, dan pulihkan cadangan. Semua aksi dijalankan di server (database/postgres/backup.mjs, restore.mjs). */
@@ -163,13 +166,19 @@ function FragmenBaris({ c, buka, sibuk, sorot, onBuka, onPeriksa, onHapus, onPul
                 </td>
                 <td className="px-3 py-2.5">
                     <p>{c.jumlahTabel} tabel</p>
-                    <p className="text-xs text-muted-foreground">{c.tanpaMedia ? "tanpa media" : "dengan media"} · {c.jumlahBerkas} berkas</p>
+                    <p className="text-xs text-muted-foreground">{c.tanpaMedia ? "tanpa media" : "dengan media"}</p>
                 </td>
                 <td className="px-3 py-2.5">
                     <div className="flex flex-wrap justify-end gap-1.5">
-                        <button type="button" className={tombol} onClick={onBuka} aria-expanded={buka}>
-                            <Download className="h-3.5 w-3.5" /> Unduh <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", buka && "rotate-180")} />
-                        </button>
+                        {c.ukuran < BATAS_UNDUH_ZIP ? (
+                            <a href={`/dashboard/settings/backup/unduh?nama=${encodeURIComponent(c.nama)}`} className={tombol} download>
+                                <Download className="h-3.5 w-3.5" /> Unduh ZIP
+                            </a>
+                        ) : (
+                            <button type="button" className={tombol} onClick={onBuka} aria-expanded={buka}>
+                                <Download className="h-3.5 w-3.5" /> Unduh <ChevronDown className={cn("h-3.5 w-3.5 transition-transform", buka && "rotate-180")} />
+                            </button>
+                        )}
                         <button type="button" className={tombol} disabled={sibuk} onClick={onPeriksa}><ShieldCheck className="h-3.5 w-3.5" /> Periksa</button>
                         <button type="button" className={cn(tombol, "text-red-600 dark:text-red-400")} disabled={sibuk} onClick={onPulihkan}><RotateCcw className="h-3.5 w-3.5" /> Pulihkan</button>
                         <button type="button" className={tombol} disabled={sibuk} onClick={onHapus} aria-label={`Hapus ${c.nama}`}><Trash2 className="h-3.5 w-3.5" /></button>

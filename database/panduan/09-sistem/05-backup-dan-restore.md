@@ -11,7 +11,7 @@ Menu ini hanya untuk **superadmin**, kecuali diberikan ke grup lain lewat Kelola
 
 1. Tekan **Buat cadangan sekarang**. Aplikasi boleh tetap dipakai selama proses berjalan; cadangan diambil dari satu titik waktu, jadi isinya tetap serasi.
 2. Tunggu sampai muncul *Cadangan selesai dibuat* (biasanya kurang dari satu menit). Jangan tutup halaman.
-3. Cadangan baru tampil di daftar beserta tanggal, ukuran, dan jumlah berkasnya.
+3. Cadangan baru tampil di daftar beserta tanggal dan ukurannya.
 
 Centang **Tanpa media** bila hanya perlu data (cadangan lebih kecil; foto dan gambar tidak ikut).
 
@@ -21,7 +21,7 @@ Centang **Tanpa media** bila hanya perlu data (cadangan lebih kecil; foto dan ga
 
 Cadangan yang hanya ada di server ikut hilang bila server rusak. Secara berkala:
 
-1. Tekan **Unduh** pada cadangan, lalu unduh **semua** berkas yang tampil (data.dump, media.dump, dan manifest.json, atau semua potongannya) ke **satu folder** di komputer atau disk luar. Jangan ganti nama berkasnya.
+1. Tekan **Unduh ZIP** pada cadangan. Hasilnya **satu berkas .zip** yang berisi semua bagian cadangan. Simpan di komputer atau disk luar.
 2. Simpan juga berkas pengaturan server (`.env.local`) di tempat terpisah yang aman. Berkas itu berisi password dan tidak ikut cadangan.
 
 ## Memeriksa cadangan
@@ -38,23 +38,27 @@ Cadangan yang hanya ada di server ikut hilang bila server rusak. Secara berkala:
 
 Cara kerjanya aman: isi cadangan dimasukkan ke database sementara dulu, jumlah baris setiap tabel dicocokkan dengan catatan cadangan, baru database lama diganti. Bila ada yang gagal di tengah jalan, database lama **tidak berubah**.
 
+Sesudah dipulihkan, tabel, indeks, sequence nomor bukti, dan panduan **disesuaikan otomatis** dengan versi aplikasi, jadi cadangan lama tetap bisa dipakai tanpa perintah tambahan. Pengaturan server (`.env.local`) tidak ikut cadangan.
+
 Pemulihan ditolak bila ruang disk server tidak cukup (butuh kira-kira ukuran database ditambah 1 GB). Kosongkan ruang disk atau minta petugas teknis memulihkan lewat perintah server.
 
 ## Isi berkas cadangan
+
+Di dalam .zip ada berkas berikut. Tidak perlu dibuka atau diubah.
 
 | Berkas | Isi |
 | --- | --- |
 | `data.dump` (atau `data.dump.001`, `.002`, ... bila dipotong) | Seluruh data dan struktur tabel, terkompresi |
 | `media.dump` | Foto profil anggota dan gambar himbauan/promo/notifikasi (tidak ada bila dibuat "Tanpa media") |
-| `manifest.json` (hasil unduhan bernama `...-manifest.json`) | Catatan cadangan: waktu, nama database, versi PostgreSQL, jumlah baris setiap tabel, ukuran dan sidik SHA-256 setiap berkas |
+| `manifest.json` | Catatan cadangan: waktu, nama database, versi PostgreSQL, jumlah baris setiap tabel, ukuran dan sidik SHA-256 setiap berkas |
 
-Ketiganya diperlukan untuk memulihkan. Jangan ganti nama berkasnya.
+Semuanya diperlukan untuk memulihkan. Cadangan lebih dari 4 GB diunduh per berkas lewat tombol **Unduh**, lalu semua berkasnya dipilih sekaligus saat mengunggah.
 
 ## Memindahkan data ke server lain (kantor ke VPS, atau sebaliknya)
 
-1. Di server **asal**, buat cadangan lalu **Unduh** semua berkasnya ke satu folder di komputer.
-2. Di server **tujuan**, buka Backup & Restore, pada **Unggah cadangan dari komputer** pilih **semua** berkas tadi sekaligus (tahan Ctrl untuk memilih beberapa berkas).
-3. Periksa daftar berkas yang tampil: semua harus bertanda ✓. Tekan **Unggah**. Berkas dikirim sedikit demi sedikit dengan bilah kemajuan; jangan tutup halaman.
+1. Di server **asal**, buat cadangan lalu tekan **Unduh ZIP**.
+2. Di server **tujuan**, buka Backup & Restore, pada **Unggah cadangan dari komputer** pilih berkas .zip tadi.
+3. Isi cadangan tampil dengan tanda ✓. Tekan **Unggah**. Berkas dikirim sedikit demi sedikit dengan bilah kemajuan; jangan tutup halaman.
 4. Setelah selesai, server memeriksa SHA-256 semua berkas. Bila cocok, cadangan muncul di daftar (disorot) dan jendela **Pulihkan** langsung terbuka.
 5. Ketik nama database server tujuan, lalu **Pulihkan**.
 

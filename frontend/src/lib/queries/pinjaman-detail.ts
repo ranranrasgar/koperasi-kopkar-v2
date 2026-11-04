@@ -47,7 +47,7 @@ export async function detailPinjaman(no: string) {
             `SELECT urut, angsuran_ke, tanggal_angsuran, no_bukti, deskripsi, debit_pokok, debit_bunga, kredit_pokok, kredit_bunga, rp_adm, rp_provisi
                FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = $1 ORDER BY angsuran_ke, urut`, [info.id]),
     ])
-    const [penutupan] = await query<{ alasan: string; oleh: string; pada: string }>(
-        "SELECT alasan, oleh, pada::text FROM pinjaman_penutupan WHERE pinjaman_tunai_id = $1 AND dibatalkan_pada IS NULL", [info.id])
+    const [penutupan] = await query<{ alasan: string; oleh: string; pada: string; cicilan_sebelum: number }>(
+        "SELECT alasan, oleh, pada::text, cicilan_sebelum FROM pinjaman_penutupan WHERE pinjaman_tunai_id = $1 AND dibatalkan_pada IS NULL", [info.id])
     return { ringkas, info, jadwal, bayar, penutupan: penutupan ?? null }
 }

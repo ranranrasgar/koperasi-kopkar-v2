@@ -54,6 +54,8 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
     const bayarPerKe = new Map<number, BarisBayar[]>()
     for (const b of bayar) if (b.angsuran_ke > 0) bayarPerKe.set(b.angsuran_ke, [...(bayarPerKe.get(b.angsuran_ke) ?? []), b])
     const status = (ke: number, tgl: string) => {
+        // Pinjaman ditutup tanpa jurnal: penghitung cicilan penuh, tetapi angsuran sesudah nilai lamanya memang tidak pernah dibayar.
+        if (penutupan && ke > penutupan.cicilan_sebelum) return { t: "Ditutup", w: "abu" as const }
         if (ke <= r.jml_cicilan) return { t: "Terbayar", w: "hijau" as const }
         if (r.lunas) return { t: "Lunas", w: "abu" as const }
         const jt = tgl.slice(0, 10)

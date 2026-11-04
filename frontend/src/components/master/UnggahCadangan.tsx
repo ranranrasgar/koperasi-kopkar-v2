@@ -2,6 +2,7 @@
 
 import { useRef, useState } from "react"
 import { AlertCircle, CheckCircle2, Loader2, Upload, X } from "lucide-react"
+import { isiZip } from "@/lib/zip-baca"
 import { cn } from "@/lib/utils"
 
 const ukuranBaca = (b: number) =>
@@ -20,7 +21,8 @@ async function kirim(url: string, init: RequestInit) {
 }
 
 /**
- * Unggah cadangan dari komputer (mis. hasil Unduh di server lain) supaya bisa dipulihkan di server ini. Berkas dikirim
+ * Unggah cadangan dari komputer (satu .zip hasil Unduh, atau semua berkasnya) supaya bisa dipulihkan di server ini. Zip dibuka di browser, jadi alur
+ * sesudahnya sama dengan memilih berkas satu per satu. Berkas dikirim
  * per potongan 8 MB karena proxy Next.js memotong isi permintaan di atas 10 MB tanpa galat. Setelah semua masuk, server
  * mencocokkan SHA-256 tiap berkas dengan manifest.
  */
@@ -36,12 +38,18 @@ export function UnggahCadangan({ sibuk, onSelesai }: { sibuk: boolean; onSelesai
     const cariManifest = (fs: File[]) => fs.find((f) => f.name.endsWith("manifest.json"))
 
     const pilih = async (daftar: FileList | null) => {
-        const fs = [...(daftar ?? [])]
-        setBerkas(fs)
+        let fs = [...(daftar ?? [])]
+        setBerkas([])
         setStatus(null)
         setRingkas(null)
+        const zip = fs.find((f) => /\.zip$/i.test(f.name))
+        if (zip) {
+            try { fs = await isiZip(zip) }
+            catch (e) { setStatus({ jenis: "galat", pesan: e instanceof Error ? e.message : "ZIP tidak bisa dibuka" }); return }
+        }
+        setBerkas(fs)
         const m = cariManifest(fs)
-        if (!m) { setStatus({ jenis: "galat", pesan: "Pilih juga manifest.json (atau ...-manifest.json) dari folder cadangan." }); return }
+        if (!m) { setStatus({ jenis: "galat", pesan: zip ? "ZIP ini bukan cadangan aplikasi: manifest.json tidak ada di dalamnya." : "Pilih satu berkas .zip hasil Unduh, atau semua berkas cadangan termasuk manifest.json." }); return }
         try {
             const isi = JSON.parse(await m.text())
             if (isi.format !== "kopkar-backup-1") throw new Error()
@@ -105,12 +113,11 @@ export function UnggahCadangan({ sibuk, onSelesai }: { sibuk: boolean; onSelesai
             <div>
                 <p className="font-semibold">Unggah cadangan dari komputer</p>
                 <p className="text-sm text-muted-foreground">
-                    Pilih <b>semua</b> berkas satu cadangan sekaligus: <code className="font-mono">manifest.json</code>, <code className="font-mono">data.dump</code>
-                    {" "}(atau semua potongannya), dan <code className="font-mono">media.dump</code>. Setelah terunggah dan diperiksa, cadangan bisa dipulihkan di server ini.
+                    Pilih <b>satu berkas .zip</b> hasil Unduh. Setelah terunggah dan diperiksa, jendela Pulihkan terbuka otomatis.
                 </p>
             </div>
             <div className="flex flex-wrap items-center gap-3">
-                <input ref={input} type="file" multiple accept=".dump,.json,.001,.002,.003,.004,.005,.006,.007,.008,.009,application/json,application/octet-stream"
+                <input ref={input} type="file" multiple accept=".zip,.dump,.json,.001,.002,.003,.004,.005,.006,.007,.008,.009,application/json,application/octet-stream"
                     disabled={jalan || sibuk} onChange={(e) => pilih(e.target.files)}
                     className="text-sm file:mr-3 file:h-9 file:rounded-md file:border file:bg-background file:px-3 file:text-sm file:font-medium hover:file:bg-muted" />
                 <button type="button" disabled={status?.jenis !== "siap" || sibuk} onClick={unggah}

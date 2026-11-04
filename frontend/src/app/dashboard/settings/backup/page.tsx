@@ -19,9 +19,9 @@ export default async function BackupPage() {
             <FormCard title="Yang perlu diketahui" description="Cadangan dan pemulihan selalu sungguhan, tidak dipengaruhi mode Uji / Live.">
                 <ul className="list-disc space-y-1.5 pl-5 text-sm text-muted-foreground">
                     <li>Cadangan dikompres (database 1,5 GB menjadi sekitar 40 MB), dipotong per 500 MB, dan setiap potongan punya SHA-256 untuk memastikan berkas tidak rusak saat disalin.</li>
-                    <li>Unduh <b>semua</b> berkas satu cadangan (termasuk manifest.json) ke satu folder bila ingin menyimpannya di luar server. Simpan juga <code className="font-mono">.env.local</code> secara terpisah; berkas itu tidak ikut cadangan.</li>
-                    <li><b>Pulihkan</b> menimpa seluruh database dengan isi cadangan. Database dipulihkan ke database sementara dulu, jumlah barisnya dicocokkan, baru ditukar; bila gagal, database lama tidak berubah. Semua pengguna sebaiknya keluar dulu.</li>
-                    <li>Pindah data antar server (komputer kantor ke VPS atau sebaliknya): <b>Unduh</b> semua berkas cadangan di server asal, lalu di server tujuan pilih semuanya di <b>Unggah cadangan dari komputer</b>, tunggu sampai diperiksa, lalu <b>Pulihkan</b>. PostgreSQL server tujuan harus versi yang sama atau lebih baru dari server asal.</li>
+                    <li><b>Unduh ZIP</b> menghasilkan satu berkas untuk disimpan di luar server. Jangan mengubah isinya. Simpan juga <code className="font-mono">.env.local</code> secara terpisah; berkas itu tidak ikut cadangan.</li>
+                    <li><b>Pulihkan</b> menimpa seluruh database dengan isi cadangan. Database dipulihkan ke database sementara dulu, jumlah barisnya dicocokkan, baru ditukar; bila gagal, database lama tidak berubah. Sesudah itu tabel, indeks, sequence, dan panduan disesuaikan otomatis dengan versi aplikasi. Semua pengguna sebaiknya keluar dulu.</li>
+                    <li>Pindah data antar server (komputer kantor ke VPS atau sebaliknya): <b>Unduh ZIP</b> di server asal, lalu di server tujuan pilih berkas itu di <b>Unggah cadangan dari komputer</b>, tunggu sampai diperiksa, lalu <b>Pulihkan</b>. PostgreSQL server tujuan harus versi yang sama atau lebih baru dari server asal.</li>
                     <li>Bila ruang disk sempit atau unggahan lewat browser tidak memungkinkan, salin folder cadangan ke folder cadangan server lalu pakai perintah <code className="font-mono">npm run restore</code> (lihat Pusat Panduan).</li>
                 </ul>
             </FormCard>
