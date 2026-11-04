@@ -36,7 +36,8 @@ Kartu **Nilai Awal Anggota Baru** berisi **simpanan pokok, wajib, dan sukarela**
 | Nama Koperasi (wajib, maks. 100 karakter) | Menu samping, halaman login, judul tab browser |
 | Nama Manager / Ketua | Tanda tangan dokumen |
 | Alamat, Alamat 2 / Telepon, Kota | Kop laporan dan nota |
-| Email, Website, NPWP, SIUP, TDP | Identitas resmi |
+| Email | Tampil di kop laporan dan sebagai alamat kontak di Kebijakan Privasi serta Syarat dan Ketentuan aplikasi anggota. Bila kosong atau bukan alamat email, baris email tidak ditampilkan |
+| Website, NPWP, SIUP, TDP | Identitas resmi |
 | Biaya Adm Bank (Rp) | Ditambahkan ke potongan gaji setiap anggota aktif (saat ini Rp 2.000) |
 | Pajak Pendapatan (%) | Persentase pajak pendapatan (0 sampai 100) |
 | Keterangan Nota | Catatan di bagian bawah nota (maks. 1.000 karakter) |

@@ -8,6 +8,13 @@ export const namaKoperasi = cache(async () => {
     return p?.nama?.trim() || "KOPKAR MJS 2000"
 })
 
+/** Email koperasi dari Pengaturan Perusahaan di admin; null bila belum diisi (data lama berisi "-"). */
+export const kontakEmail = cache(async () => {
+    const [p] = await query<{ email: string | null }>("SELECT email FROM perusahaan ORDER BY id LIMIT 1")
+    const email = p?.email?.trim() ?? ""
+    return email.includes("@") ? email : null
+})
+
 /** Nomor WhatsApp koperasi dari Pengaturan di admin (pengaturan_web.wa_kontak), hanya angka berawalan 62; null bila belum diisi. */
 export const kontakWa = cache(async () => {
     try {

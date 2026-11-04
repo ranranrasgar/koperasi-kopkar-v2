@@ -2,8 +2,6 @@ import Image from "next/image"
 import Link from "next/link"
 import { namaKoperasi } from "@/lib/koperasi"
 
-export const EMAIL_KONTAK = "support@kopkarmjsmattel.com"
-
 /** Kerangka halaman dokumen hukum (kebijakan privasi, syarat layanan): terbuka tanpa login, nyaman dibaca. */
 export async function HalamanHukum({ judul, diperbarui, children }: { judul: string; diperbarui: string; children: React.ReactNode }) {
     const nama = await namaKoperasi()

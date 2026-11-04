@@ -1,12 +1,12 @@
 import type { Metadata } from "next"
-import { EMAIL_KONTAK, HalamanHukum } from "@/components/HalamanHukum"
-import { kontakWa } from "@/lib/koperasi"
+import { HalamanHukum } from "@/components/HalamanHukum"
+import { kontakEmail, kontakWa } from "@/lib/koperasi"
 
 export const metadata: Metadata = { title: "Kebijakan Privasi", description: "Bagaimana aplikasi anggota Kopkar MJS mengumpulkan, memakai, dan melindungi data Anda." }
 export const dynamic = "force-dynamic"
 
 export default async function KebijakanPrivasiPage() {
-    const wa = await kontakWa()
+    const [email, wa] = await Promise.all([kontakEmail(), kontakWa()])
     return (
         <HalamanHukum judul="Kebijakan Privasi" diperbarui="23 Oktober 2026">
             <section>
@@ -81,7 +81,7 @@ export default async function KebijakanPrivasiPage() {
             <section>
                 <h2>6. Penghapusan akun</h2>
                 <p>
-                    Untuk meminta penghapusan akun, kirim email ke <a className="font-semibold text-utama" href={`mailto:${EMAIL_KONTAK}?subject=Permintaan%20penghapusan%20akun`}>{EMAIL_KONTAK}</a> dari
+                    Untuk meminta penghapusan akun, {email ? <>kirim email ke <a className="font-semibold text-utama" href={`mailto:${email}?subject=Permintaan%20penghapusan%20akun`}>{email}</a></> : "hubungi koperasi"} dari
                     email yang terdaftar, sertakan nama lengkap, NIK, dan username Anda. Setelah identitas Anda diverifikasi, akun aplikasi beserta
                     foto, langganan notifikasi, dan pesan Anda dihapus. Data keuangan koperasi (simpanan, pinjaman, transaksi) dapat tetap disimpan
                     sepanjang diperlukan untuk pembukuan, audit, dan kewajiban hukum.
@@ -101,8 +101,10 @@ export default async function KebijakanPrivasiPage() {
             <section>
                 <h2>9. Hubungi kami</h2>
                 <p>
-                    Email: <a className="font-semibold text-utama" href={`mailto:${EMAIL_KONTAK}`}>{EMAIL_KONTAK}</a>
-                    {wa && <> · WhatsApp: <a className="font-semibold text-utama" href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">+{wa}</a></>}
+                    {email && <>Email: <a className="font-semibold text-utama" href={`mailto:${email}`}>{email}</a></>}
+                    {!email && !wa && "Silakan menghubungi pengurus koperasi."}
+                    {email && wa && " · "}
+                    {wa && <>WhatsApp: <a className="font-semibold text-utama" href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">+{wa}</a></>}
                 </p>
             </section>
         </HalamanHukum>

@@ -24,7 +24,7 @@ Data tidak dijual atau disewakan. Hanya pengurus berwenang yang bisa melihatnya.
 
 ## Menghubungi koperasi
 
-Email: `support@kopkarmjsmattel.com`. Nomor WhatsApp (bila diatur pengurus) tampil di halaman Pendaftaran diterima dan di Kebijakan Privasi.
+Email dan nomor WhatsApp koperasi (bila diatur pengurus) tampil di Kebijakan Privasi dan Syarat dan Ketentuan. Nomor WhatsApp juga tampil di halaman Pendaftaran diterima.
 
 ## Keamanan akun
 

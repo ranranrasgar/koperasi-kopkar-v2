@@ -123,15 +123,16 @@ ANGGOTA_URL=https://anggota.kopkarmjsmattel.com
 # Notifikasi HP: SAMA PERSIS dengan komputer kantor dan dengan anggota/.env.local
 VAPID_PUBLIC_KEY=...
 VAPID_PRIVATE_KEY=...
-VAPID_SUBJECT=mailto:support@kopkarmjsmattel.com
+VAPID_SUBJECT=mailto:kopmjs2000@gmail.com
 
 # Email (sama dengan anggota/.env.local)
-SMTP_HOST=smtp.emailarray.com
+SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=support@kopkarmjsmattel.com
+SMTP_SECURE=0
+SMTP_USER=kopmjs2000@gmail.com
 SMTP_PASS=...
-SMTP_FROM=Kopkar MJS <support@kopkarmjsmattel.com>
+SMTP_FROM=Kopkar MJS <kopmjs2000@gmail.com>
+EMAIL_MAKS_PER_HARI=450
 ```
 
 ### 4c. `anggota/.env.local` (PWA anggota)
@@ -143,14 +144,15 @@ ADMIN_URL=https://admin.kopkarmjsmattel.com
 
 VAPID_PUBLIC_KEY=...
 VAPID_PRIVATE_KEY=...
-VAPID_SUBJECT=mailto:support@kopkarmjsmattel.com
+VAPID_SUBJECT=mailto:kopmjs2000@gmail.com
 
-SMTP_HOST=smtp.emailarray.com
+SMTP_HOST=smtp.gmail.com
 SMTP_PORT=587
-SMTP_SECURE=false
-SMTP_USER=support@kopkarmjsmattel.com
+SMTP_SECURE=0
+SMTP_USER=kopmjs2000@gmail.com
 SMTP_PASS=...
-SMTP_FROM=Kopkar MJS <support@kopkarmjsmattel.com>
+SMTP_FROM=Kopkar MJS <kopmjs2000@gmail.com>
+EMAIL_MAKS_PER_HARI=450
 
 GOOGLE_CLIENT_ID=...
 GOOGLE_CLIENT_SECRET=...

@@ -2,11 +2,12 @@
 
 import { revalidatePath } from "next/cache"
 import { bahanAnggotaBaru, tambahAnggota, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
+import { batalTutupPinjaman, tutupPinjaman } from "@kopkar/backend/src/posting/penutupan.ts"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { modeUji, pool, tx } from "@/lib/db"
 import { isTanggal } from "@/lib/list"
 import { GalatSesi, operatorAktif, type Operator } from "@/lib/operator"
-import { MENU } from "@/config/akses"
+import { AKSES_HALAMAN, MENU } from "@/config/akses"
 import type { HasilSimpan } from "./master"
 
 class Salah extends Error {}
@@ -55,6 +56,28 @@ function angka(f: FormData, k: string, label: string, maks = 999_999_999_999) {
     const n = Number(nilai || "0")
     if (!Number.isFinite(n) || n < 0 || n > maks) throw new Salah(`${label} harus angka antara 0 dan ${maks}`)
     return nilai || "0"
+}
+
+/** Tutup pinjaman tanpa jurnal mengubah status pinjaman tanpa bukti kas, jadi hanya untuk superadmin dan admin. */
+const wajibAdmin = (o: Operator) => {
+    if (!o.superadmin && o.grup?.trim().toLowerCase() !== "admin") throw new Salah("Hanya superadmin atau admin yang boleh menutup pinjaman")
+}
+
+export async function tutupPinjamanAction(noPinjaman: string, alasan: string): Promise<HasilSimpan> {
+    return simpan(AKSES_HALAMAN["/dashboard/loans/[no]"], "/dashboard/loans", async (db, operator) => {
+        wajibAdmin(operator)
+        const h = await tutupPinjaman(db as never, { noPinjaman, alasan, opr: operator.nama, operatorId: operator.id }).catch((e: Error) => { throw new Salah(e.message) })
+        const draf = h.drafPotongan.length ? ` Generate ulang Potongan Gaji ${h.drafPotongan.join(", ")}.` : ""
+        return `Pinjaman ${noPinjaman} ditutup tanpa jurnal.${draf}`
+    })
+}
+
+export async function batalTutupPinjamanAction(noPinjaman: string): Promise<HasilSimpan> {
+    return simpan(AKSES_HALAMAN["/dashboard/loans/[no]"], "/dashboard/loans", async (db, operator) => {
+        wajibAdmin(operator)
+        await batalTutupPinjaman(db as never, { noPinjaman, opr: operator.nama }).catch((e: Error) => { throw new Salah(e.message) })
+        return `Penutupan pinjaman ${noPinjaman} dibatalkan`
+    })
 }
 
 /** Isian awal form Tambah Anggota (nilai simpanan dan daftar grade), dimuat saat form dibuka. */

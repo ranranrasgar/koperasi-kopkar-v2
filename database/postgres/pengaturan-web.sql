@@ -65,3 +65,22 @@ SELECT set_config('kopkar.lewati_grade', '', true);
 
 -- Jurnal Penyesuaian: memakai tabel jurnal_umum dengan status 'Penyesuaian' dan nomor JP/yymmdd/n (nomor sendiri, tidak bertabrakan dengan JU/).
 CREATE SEQUENCE IF NOT EXISTS seq_jurnal_penyesuaian_no START 1;
+
+
+-- Pinjaman yang ditutup lunas tanpa jurnal (sudah selesai di luar koperasi). Menyimpan nilai cicilan sebelum ditutup supaya bisa dibatalkan.
+CREATE TABLE IF NOT EXISTS pinjaman_penutupan (
+    id bigserial PRIMARY KEY,
+    pinjaman_tunai_id bigint NOT NULL,
+    no_pinjaman varchar(30) NOT NULL,
+    cicilan_sebelum integer NOT NULL,
+    sisa_cicilan_sebelum integer,
+    sisa_buku numeric(20,4) NOT NULL,
+    alasan varchar(255) NOT NULL,
+    oleh varchar(30) NOT NULL,
+    operator_id bigint,
+    pada timestamptz NOT NULL DEFAULT now(),
+    dibatalkan_pada timestamptz,
+    dibatalkan_oleh varchar(30)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_pinjaman_penutupan_aktif ON pinjaman_penutupan (pinjaman_tunai_id) WHERE dibatalkan_pada IS NULL;
+CREATE INDEX IF NOT EXISTS ix_pinjaman_penutupan_no ON pinjaman_penutupan (no_pinjaman);

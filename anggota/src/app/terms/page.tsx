@@ -1,13 +1,13 @@
 import type { Metadata } from "next"
 import Link from "next/link"
-import { EMAIL_KONTAK, HalamanHukum } from "@/components/HalamanHukum"
-import { kontakWa } from "@/lib/koperasi"
+import { HalamanHukum } from "@/components/HalamanHukum"
+import { kontakEmail, kontakWa } from "@/lib/koperasi"
 
 export const metadata: Metadata = { title: "Syarat dan Ketentuan", description: "Ketentuan penggunaan aplikasi anggota Kopkar MJS." }
 export const dynamic = "force-dynamic"
 
 export default async function SyaratKetentuanPage() {
-    const wa = await kontakWa()
+    const [email, wa] = await Promise.all([kontakEmail(), kontakWa()])
     return (
         <HalamanHukum judul="Syarat dan Ketentuan" diperbarui="23 Oktober 2026">
             <section>
@@ -89,8 +89,10 @@ export default async function SyaratKetentuanPage() {
                 <h2>9. Hukum yang berlaku dan kontak</h2>
                 <p>Syarat ini tunduk pada hukum Republik Indonesia. Pertanyaan dan keluhan dapat disampaikan ke:</p>
                 <p>
-                    Email: <a className="font-semibold text-utama" href={`mailto:${EMAIL_KONTAK}`}>{EMAIL_KONTAK}</a>
-                    {wa && <> · WhatsApp: <a className="font-semibold text-utama" href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">+{wa}</a></>}
+                    {email && <>Email: <a className="font-semibold text-utama" href={`mailto:${email}`}>{email}</a></>}
+                    {!email && !wa && "Silakan menghubungi pengurus koperasi."}
+                    {email && wa && " · "}
+                    {wa && <>WhatsApp: <a className="font-semibold text-utama" href={`https://wa.me/${wa}`} target="_blank" rel="noopener noreferrer">+{wa}</a></>}
                 </p>
             </section>
         </HalamanHukum>
