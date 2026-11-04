@@ -5,6 +5,7 @@ import { jurnalBermasalah } from "@/lib/queries/laporan"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
 import { isTanggal, sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
+import { MENU } from "@/config/akses"
 
 export const dynamic = "force-dynamic"
 
@@ -12,7 +13,11 @@ const cari = (bukti: string) => `/dashboard/accounting/journal?search=${encodeUR
 
 /** Daftar jurnal yang menyebabkan selisih di neraca dan neraca saldo: bukti tidak seimbang dan baris ke akun yang tidak ada di COA. */
 export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboard/accounting/journal/tidak-seimbang">) {
-    await wajibIzin("/dashboard/accounting/journal/tidak-seimbang") // layout tidak dijalankan ulang pada navigasi antarhalaman
+    const o = await wajibIzin("/dashboard/accounting/journal/tidak-seimbang") // layout tidak dijalankan ulang pada navigasi antarhalaman
+    // Operator yang hanya berizin menu ini tidak bisa membuka Jurnal Umum, jadi nomor bukti tampil sebagai teks biasa.
+    const bolehJurnal = o.izin.includes(MENU.jurnalUmum)
+    const bukti = (nomor: string) => bolehJurnal
+        ? <Link href={cari(nomor)} className="text-blue-700 hover:underline dark:text-blue-400">{nomor}</Link> : nomor
     const s = await props.searchParams
     const sampai = isTanggal(sp(s, "sampai")) ? sp(s, "sampai") : hariIni()
     const { tidakSeimbang, tanpaAkun, sejak } = await jurnalBermasalah(sampai)
@@ -43,7 +48,7 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
                                 <tbody>
                                     {tidakSeimbang.map((b) => (
                                         <tr key={b.nomor_bukti} className="border-t hover:bg-muted/30">
-                                            <td className="px-3 py-1.5 font-mono text-xs"><Link href={cari(b.nomor_bukti)} className="text-blue-700 hover:underline dark:text-blue-400">{b.nomor_bukti}</Link>
+                                            <td className="px-3 py-1.5 font-mono text-xs">{bukti(b.nomor_bukti)}
                                                 {b.tanpa_akun > 0 && <span className="ml-2 rounded bg-amber-100 px-1.5 py-0.5 text-[10px] font-semibold text-amber-800">akun tak ada di COA</span>}</td>
                                             <td className="px-3 py-1.5 whitespace-nowrap">{formatTanggal(b.tanggal)}</td>
                                             <td className="px-3 py-1.5 max-w-[22rem] truncate">{b.deskripsi ?? "-"}</td>
@@ -71,7 +76,7 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
                                 <tbody>
                                     {tanpaAkun.map((b) => (
                                         <tr key={b.id} className="border-t hover:bg-muted/30">
-                                            <td className="px-3 py-1.5 font-mono text-xs"><Link href={cari(b.nomor_bukti)} className="text-blue-700 hover:underline dark:text-blue-400">{b.nomor_bukti}</Link></td>
+                                            <td className="px-3 py-1.5 font-mono text-xs">{bukti(b.nomor_bukti)}</td>
                                             <td className="px-3 py-1.5 whitespace-nowrap">{formatTanggal(b.tanggal)}</td>
                                             <td className="px-3 py-1.5 font-mono">{b.kode_perkiraan || "(kosong)"}</td>
                                             <td className="px-3 py-1.5 max-w-[22rem] truncate">{b.deskripsi ?? "-"}</td>
@@ -84,7 +89,7 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
                         </div>
                     )}
                 </section>
-                <p className="text-xs text-muted-foreground">Klik nomor bukti untuk membuka jurnalnya di Jurnal Umum (bisa diedit atau dihapus di sana). Selisih neraca hilang bila bukti diperbaiki sampai debit sama dengan kredit dan akunnya ada di COA.</p>
+                <p className="text-xs text-muted-foreground">{bolehJurnal ? "Klik nomor bukti untuk membuka jurnalnya di Jurnal Umum (bisa diedit atau dihapus di sana)." : "Perbaikan jurnal dilakukan di Jurnal Umum oleh operator yang berizin."} Selisih neraca hilang bila bukti diperbaiki sampai debit sama dengan kredit dan akunnya ada di COA.</p>
             </div>
         </HalamanLaporan>
     )

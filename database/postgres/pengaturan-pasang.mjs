@@ -22,6 +22,7 @@ const PECAHAN_IZIN = {
     'Setoran Titipan Escrow (web)': ['Setoran Titipan Angsuran Pinjaman'],
     'Generate & Posting Potongan (web)': ['Potongan Keseluruhan (Bank)'],
     'Jurnal Penyesuaian (web)': ['Jurnal Umum'],
+    'Jurnal Bermasalah (web)': ['Jurnal Umum'],
     'Buku Besar Kas (web)': ['Buku Kas && Bank (Bank Book)'],
     'Neraca Lajur (web)': ['Neraca Saldo'],
     'Grade Anggota (web)': ['Jenis Pinjaman'],

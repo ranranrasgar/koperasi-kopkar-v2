@@ -21,7 +21,7 @@ Selisih itu berasal dari **data lama** yang tidak seimbang, bukan dari perhitung
 
 ## Melihat jurnal penyebab selisih
 
-Klik keterangan selisih (di Neraca saldo, atau di Neraca pada Laporan Keuangan) untuk membuka halaman **Jurnal Bermasalah** (`Akuntansi → Jurnal Umum → tidak seimbang`). Halaman ini memakai cakupan yang sama dengan laporan, yaitu saldo pembuka tutup buku terakhir ditambah jurnal sesudahnya, per tanggal yang dipilih. Isinya dua daftar:
+Klik keterangan selisih (di Neraca saldo, atau di Neraca pada Laporan Keuangan) untuk membuka halaman **Jurnal Bermasalah**, atau buka langsung dari menu **Akuntansi → Jurnal Bermasalah**. Menu ini punya hak akses sendiri, jadi bisa diberikan ke grup yang tidak punya menu lain. Nomor bukti hanya bisa diklik oleh grup yang berizin Jurnal Umum. Halaman ini memakai cakupan yang sama dengan laporan, yaitu saldo pembuka tutup buku terakhir ditambah jurnal sesudahnya, per tanggal yang dipilih. Isinya dua daftar:
 
 | Daftar | Isi |
 | --- | --- |

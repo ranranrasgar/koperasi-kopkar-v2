@@ -175,6 +175,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/accounting/adjusting"
             },
             {
+                label: "Jurnal Bermasalah",
+                icon: "report_problem",
+                href: "/dashboard/accounting/journal/tidak-seimbang"
+            },
+            {
                 label: "Bank Book",
                 icon: "account_balance",
                 href: "/dashboard/accounting/bank-book"
