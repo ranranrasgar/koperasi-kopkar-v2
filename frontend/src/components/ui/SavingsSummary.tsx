@@ -2,7 +2,7 @@
 
 import React, { useState, useTransition } from "react"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
-import { Loader2, Search, ChevronLeft, ChevronRight, ArrowUpDown, Printer } from "lucide-react"
+import { Download, Loader2, Search, ChevronLeft, ChevronRight, ArrowUpDown, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -13,6 +13,7 @@ import { formatAngka, formatTanggal } from "@/lib/format"
 import { dataCetakAction } from "@/app/actions/cetak"
 import { MemuatData } from "@/components/ui/MemuatData"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
+import { unduhExcel } from "@/lib/ekspor-excel"
 
 type Totals = {
     Setoran_Pokok: number; Ambil_Pokok: number; Saldo_Pokok: number
@@ -36,13 +37,12 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
     const sortOrder = searchParams.get("sortOrder") ?? "asc"
     const hideZero = searchParams.get("hideZero") !== "0"
 
-    // Cetak = dokumen sendiri berisi SEMUA anggota sesuai pencarian (bukan hanya halaman ini), per jenis simpanan, dengan baris total.
+    // Cetak dan Ekspor berisi SEMUA anggota sesuai pencarian (bukan hanya halaman ini), per jenis simpanan, dengan baris total.
     const [mencetak, setMencetak] = useState(false)
-    const cetak = async () => {
-        setMencetak(true)
-        try {
+    const [mengekspor, setMengekspor] = useState(false)
+    const siapkan = async () => {
             const r = await dataCetakAction(pathname, { ...Object.fromEntries(searchParams.entries()), endDate })
-            if ("error" in r) { alert(r.error); return }
+            if ("error" in r) { alert(r.error); return null }
             const items = (r.items as unknown as Row[]).filter((x) => !hideZero || x.Saldo_Total !== 0)
             // Hanya saldo per jenis simpanan (tanpa setoran dan pengambilan) supaya muat selembar kertas lanskap.
             const kolom: KolomTabel[] = [
@@ -57,13 +57,29 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
             const jumlah = (k: keyof Totals) => formatAngka(items.reduce((t, x) => t + (Number(x[k]) || 0), 0))
             const total = ["", "", `Total (${items.length.toLocaleString("id-ID")} anggota)`, "", ...JENIS.map((j) => jumlah(`Saldo_${j}`)), jumlah("Saldo_Total")]
             const subjudul = [`Saldo simpanan s/d ${formatTanggal(endDate, "long")}`, searchParams.get("search") ? `Pencarian: ${searchParams.get("search")}` : "", hideZero ? "Saldo nol disembunyikan" : ""].filter(Boolean).join(" · ")
-            const galat = await bukaCetak({
-                judul: "Rekap Simpanan Anggota", subjudul, orientasi: "lanskap",
-                isi: tabelHtml(kolom, baris, items.length < r.total && !hideZero ? r.total : items.length, { total }),
-            })
+            return { kolom, baris, total, subjudul, jumlah: items.length < r.total && !hideZero ? r.total : items.length }
+    }
+    const cetak = async () => {
+        setMencetak(true)
+        try {
+            const d = await siapkan()
+            if (!d) return
+            const galat = await bukaCetak({ judul: "Rekap Simpanan Anggota", subjudul: d.subjudul, orientasi: "lanskap", isi: tabelHtml(d.kolom, d.baris, d.jumlah, { total: d.total }) })
             if (galat) alert(galat)
         } finally {
             setMencetak(false)
+        }
+    }
+    const ekspor = async () => {
+        setMengekspor(true)
+        try {
+            const d = await siapkan()
+            if (!d) return
+            const galat = await unduhExcel({ nama: `rekap-simpanan_${endDate}`, judul: "Rekap Simpanan Anggota", subjudul: d.subjudul,
+                bagian: [{ kolom: d.kolom, baris: d.baris, total: d.total, nomor: true, jumlahTotal: d.jumlah }] })
+            if (galat) alert(galat)
+        } finally {
+            setMengekspor(false)
         }
     }
 
@@ -122,6 +138,9 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
                 <div className="flex items-center gap-2 shrink-0 print:hidden">
                     <Button onClick={cetak} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={mencetak}>
                         {mencetak ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Printer className="mr-1.5 h-4 w-4" />} Cetak
+                    </Button>
+                    <Button onClick={ekspor} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={mengekspor}>
+                        {mengekspor ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />} Ekspor
                     </Button>
                 </div>
             </div>

@@ -55,7 +55,7 @@ export async function daftarUserMobile(s: SearchParams) {
 }
 
 export interface Pengajuan {
-    id: number; tgl_realisasi: string; kd_anggota: string; nama: string; nik: string | null; kd_kredit: string; nama_kredit: string | null
+    id: number; tgl_realisasi: string; kd_anggota: string; kode_agt: string; nama: string; nik: string | null; kd_kredit: string; nama_kredit: string | null
     persen_bunga: number; lama_angsuran: number; rp_pinjaman_pokok: number; keterangan: string | null; status: string
     /** Disetujui di web dan belum dicairkan. */
     menunggu_cair: boolean

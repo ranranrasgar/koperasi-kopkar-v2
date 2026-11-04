@@ -1,6 +1,6 @@
 import { PilihAkun } from "@/components/laporan/PilihAkun"
 import { PaginasiUrl } from "@/components/ui/PaginasiUrl"
-import { ukuranHalaman } from "@/lib/halaman"
+import { MAKS_CETAK, ukuranHalaman } from "@/lib/halaman"
 import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
 import { FormPeriode, KopLaporan } from "@/components/laporan/Periode"
 import { bukuBesar } from "@/lib/queries/laporan"
@@ -23,16 +23,16 @@ export default async function BukuKasBankPage(props: PageProps<"/dashboard/accou
     const hal = await bukuBesar(kode, dari, sampai, { page: 1, pageSize })
     const totalPages = Math.max(1, Math.ceil(hal.jumlahBaris / pageSize))
     const page = Math.min(totalPages, Math.max(1, parseInt(sp(s, "page") || "1", 10) || 1))
-    // Halaman 1 sudah dibaca di atas; halaman lain dibaca ulang. Ekspor selalu seluruh periode (maks. 5.000 baris), bukan hanya halaman ini.
+    // Halaman 1 sudah dibaca di atas; halaman lain dibaca ulang. Cetak dan Ekspor selalu seluruh periode, bukan hanya halaman ini.
     const { awal, baris, debit: totD, kredit: totK } = page === 1 ? hal : await bukuBesar(kode, dari, sampai, { page, pageSize })
     const akhir = awal + totD - totK
-    const semua = hal.jumlahBaris <= pageSize ? hal.baris : (await bukuBesar(kode, dari, sampai)).baris
+    const semua = hal.jumlahBaris <= pageSize ? hal.baris : (await bukuBesar(kode, dari, sampai, { page: 1, pageSize: MAKS_CETAK })).baris
     // Saldo yang dibawa dari halaman sebelumnya = saldo setelah baris terakhir halaman itu.
     const bawa = page > 1 && baris[0] ? Number(baris[0].saldo) - Number(baris[0].debit) + Number(baris[0].kredit) : awal
 
     return (
         <HalamanLaporan title="Buku Besar" description="Mutasi satu akun dengan saldo berjalan (debit menambah, kredit mengurangi)."
-            ekspor={{ nama: `buku-besar_${kode}_${sampai}`, baris: [["Tanggal", "No. Bukti", "Keterangan", "Debit", "Kredit", "Saldo"], ["", "", "Saldo awal", "", "", String(awal)],
+            berhalaman ekspor={{ nama: `buku-besar_${kode}_${sampai}`, jumlahTotal: hal.jumlahBaris + 1, baris: [["Tanggal", "No. Bukti", "Keterangan", "Debit", "Kredit", "Saldo"], ["", "", "Saldo awal", "", "", String(awal)],
                 ...semua.map((b) => [b.tanggal_jurnalumum, b.nomor_bukti, b.deskripsi ?? "", String(b.debit), String(b.kredit), String(b.saldo)]),
                 ["", "", "Total mutasi / saldo akhir", String(totD), String(totK), String(akhir)]] }}
             filter={

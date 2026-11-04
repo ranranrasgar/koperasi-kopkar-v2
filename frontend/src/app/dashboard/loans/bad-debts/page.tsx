@@ -70,7 +70,7 @@ export default async function KreditMacetPage(props: PageProps<"/dashboard/loans
 
     return (
         <HalamanLaporan title="Kredit Macet / Tunggakan" description="Angsuran yang terlambat menurut jadwal tagih (bulan jatuh temponya sudah berakhir) dan belum dibayar, per pinjaman."
-            ekspor={{ nama: `kredit-macet_${per}`, baris: [["No.", "No. Pinjaman", "Kode Anggota", "KPK", "Nama", "Jenis", "Dibayar", "Jatuh Tempo", "Lama", "Tunggak", "Sejak", "Hari", "Nilai Tunggakan", "Kolektibilitas"],
+            berhalaman ekspor={{ nama: `kredit-macet_${per}`, baris: [["No.", "No. Pinjaman", "Kode Anggota", "KPK", "Nama", "Jenis", "Dibayar", "Jatuh Tempo", "Lama", "Tunggak", "Sejak", "Hari", "Nilai Tunggakan", "Kolektibilitas"],
                 ...urut.map((t, i) => [String(i + 1), t.no_pinjaman, t.kode_agt, t.nik ?? "", t.nama, t.nama_kredit ?? t.grup, String(t.jml_cicilan), String(t.jatuh_tempo), String(t.lama_angsuran),
                     String(t.tunggak), t.jatuh_tempo_pertama.slice(0, 10), String(hariTunggak(t.jatuh_tempo_pertama)), String(t.rp_tunggak), kolOf(t)]),
                 ["", "", "", "", "Total", "", "", "", "", "", "", "", String(total), ""]] }}

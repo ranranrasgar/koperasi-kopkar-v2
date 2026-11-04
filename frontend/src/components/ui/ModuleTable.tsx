@@ -17,6 +17,7 @@ import {
 import type { ColumnConfig, FilterConfig, ModuleConfig, PageData } from "@/config/modules"
 import { formatRupiah, formatAngka, formatTanggal } from "@/lib/format"
 import { dataCetakAction } from "@/app/actions/cetak"
+import { unduhExcel } from "@/lib/ekspor-excel"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 import { useKolomTersimpan } from "@/lib/kolom-tersimpan"
 import { MemuatData } from "@/components/ui/MemuatData"
@@ -115,56 +116,59 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
         updateParams({ sortBy: key, sortOrder: nextOrder })
     }
 
-    // Cetak = dokumen sendiri berisi SEMUA baris sesuai filter dan urutan (bukan hanya halaman yang tampil), dengan kop surat koperasi.
+    // Cetak dan Ekspor berisi SEMUA baris sesuai filter dan urutan (bukan hanya halaman yang tampil), dengan kop surat koperasi.
     const [mencetak, setMencetak] = useState(false)
+    const [mengekspor, setMengekspor] = useState(false)
+    const ambilSemua = async () => {
+        const r = await dataCetakAction(pathname, Object.fromEntries(searchParams?.entries() ?? []))
+        if ("error" in r) { alert(r.error); return null }
+        return r
+    }
+    const subjudulSaringan = () => [
+        searchParams?.get("search") ? `Pencarian: ${searchParams.get("search")}` : "",
+        ...(config.filters ?? []).map((f) => {
+            const nilai = searchParams?.get(f.key)
+            if (!nilai) return ""
+            return `${f.label}: ${f.options?.find((o) => o.value === nilai)?.label ?? nilai}`
+        }),
+    ].filter(Boolean).join(" · ") || undefined
+    const kolomTabel = (daftar: ColumnConfig[]): KolomTabel[] => daftar.map((c) => ({ label: c.label, kanan: c.type === "currency" || c.type === "number", mono: c.mono }))
+    const selTeks = (item: Row, col: ColumnConfig) => {
+        const v = item[col.key]
+        if (v === null || v === undefined || v === "") return ""
+        if (col.type === "badge" && col.badgeMap) return col.badgeMap[String(v)]?.label ?? String(v)
+        if (col.type === "date") return formatTanggal(String(v), "2-digit")
+        return formatValue(v, col.type)
+    }
     const handleCetak = async () => {
         setMencetak(true)
         try {
-            const r = await dataCetakAction(pathname, Object.fromEntries(searchParams?.entries() ?? []))
-            if ("error" in r) { alert(r.error); return }
-            const kolom: KolomTabel[] = activeColumns.map((c) => ({ label: c.label, kanan: c.type === "currency" || c.type === "number", mono: c.mono }))
-            const baris = r.items.map((item) => activeColumns.map((col) => {
-                const v = item[col.key]
-                if (!col.subKey && (v === null || v === undefined || v === "")) return ""
-                if (col.type === "badge" && col.badgeMap) return col.badgeMap[String(v)]?.label ?? String(v)
-                if (col.type === "date") return formatTanggal(String(v), "2-digit")
-                return [formatValue(v, col.type), col.subKey ? item[col.subKey] : ""].filter(Boolean).join("\n")
-            }))
-            const subjudul = [
-                searchParams?.get("search") ? `Pencarian: ${searchParams.get("search")}` : "",
-                ...(config.filters ?? []).map((f) => {
-                    const nilai = searchParams?.get(f.key)
-                    if (!nilai) return ""
-                    return `${f.label}: ${f.options?.find((o) => o.value === nilai)?.label ?? nilai}`
-                }),
-            ].filter(Boolean).join(" · ")
-            const galat = await bukaCetak({ judul: config.title, subjudul: subjudul || undefined, isi: tabelHtml(kolom, baris, r.total) })
+            const r = await ambilSemua()
+            if (!r) return
+            const baris = r.items.map((item) => activeColumns.map((col) => [selTeks(item, col), col.subKey ? item[col.subKey] : ""].filter(Boolean).join("\n")))
+            const galat = await bukaCetak({ judul: config.title, subjudul: subjudulSaringan(), isi: tabelHtml(kolomTabel(activeColumns), baris, r.total) })
             if (galat) alert(galat)
         } finally {
             setMencetak(false)
         }
     }
 
-    const handleExport = () => {
-        if (data.items.length === 0) return
-        // Baris kecil (subKey) menjadi kolom sendiri, kecuali kolomnya memang sedang ditampilkan.
-        const kolomEkspor = activeColumns.flatMap((col) => {
-            const sub = config.columns.find((c) => c.key === col.subKey)
-            return sub && !activeColumns.includes(sub) ? [col, sub] : [col]
-        })
-        const headers = kolomEkspor.map((c) => `"${c.label}"`).join(",")
-        const rows = data.items.map((item) => kolomEkspor.map((col) => {
-            const val = item[col.key]
-            if (val === null || val === undefined) return '""'
-            const text = col.type === "date" ? formatTanggal(String(val), "2-digit") : String(val)
-            return `"${text.replace(/"/g, '""')}"`
-        }).join(","))
-        const blob = new Blob(["﻿" + [headers, ...rows].join("\n")], { type: "text/csv;charset=utf-8" })
-        const link = document.createElement("a")
-        link.href = URL.createObjectURL(blob)
-        link.download = `${pathname.replace(/^\/dashboard\//, "").replace(/\//g, "_")}_hal${data.page}.csv`
-        link.click()
-        URL.revokeObjectURL(link.href)
+    const handleExport = async () => {
+        setMengekspor(true)
+        try {
+            const r = await ambilSemua()
+            if (!r) return
+            // Baris kecil (subKey) menjadi kolom sendiri, kecuali kolomnya memang sedang ditampilkan.
+            const kolomEkspor = activeColumns.flatMap((col) => {
+                const sub = config.columns.find((c) => c.key === col.subKey)
+                return sub && !activeColumns.includes(sub) ? [col, sub] : [col]
+            })
+            const galat = await unduhExcel({ nama: pathname.replace(/^\/dashboard\//, "").replace(/\//g, "_"), judul: config.title, subjudul: subjudulSaringan(),
+                bagian: [{ kolom: kolomTabel(kolomEkspor), baris: r.items.map((item) => kolomEkspor.map((col) => selTeks(item, col))), nomor: true, jumlahTotal: r.total }] })
+            if (galat) alert(galat)
+        } finally {
+            setMengekspor(false)
+        }
     }
 
     const renderFilter = (filter: FilterConfig, compact: boolean) => {
@@ -208,8 +212,8 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                     <Button onClick={handleCetak} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={mencetak || data.items.length === 0}>
                         {mencetak ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Printer className="mr-1.5 h-4 w-4" />} Cetak
                     </Button>
-                    <Button onClick={handleExport} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={data.items.length === 0}>
-                        <Download className="mr-1.5 h-4 w-4" /> Ekspor
+                    <Button onClick={handleExport} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={mengekspor || data.items.length === 0}>
+                        {mengekspor ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />} Ekspor
                     </Button>
                     {actions}
                 </div>

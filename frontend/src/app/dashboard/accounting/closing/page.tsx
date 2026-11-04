@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { ArrowRight, CalendarClock, CheckCircle2, Circle } from "lucide-react"
 import { PilihTahun, TombolTutupBuku } from "@/components/shu/ShuAksi"
+import { TombolEkspor } from "@/components/laporan/TombolEkspor"
+import { TombolCetak } from "@/components/ui/TombolCetak"
 import { riwayatTutupBuku } from "@/lib/queries/laporan"
 import { rencanaShu, tahunShu, tahunTutupBuku } from "@/lib/queries/shu"
 import { formatAngka, formatAngka2, formatTanggal, hariIni } from "@/lib/format"
@@ -36,6 +38,17 @@ export default async function TutupBukuPage(props: PageProps<"/dashboard/account
         { no: 5, judul: "Pencairan", ket: ringkas ? `${formatAngka(ringkas.dicairkan)} dicairkan, ${formatAngka(ringkas.belum)} belum` : "Tunai atau ke simpanan sukarela", ok: Boolean(ringkas && ringkas.anggota > 0 && ringkas.belum === 0) },
     ]
     const aktif = langkah.find((l) => !l.ok)?.no
+    const judulLaporan = `Tutup Buku ${tahun}`
+    const subjudul = berjalan ? `Pratinjau sementara sampai ${formatTanggal(hariIni(), "long")}` : r.sudahDitutup ? "Sudah ditutup" : "Pratinjau, belum ditutup"
+    const uang = (v: unknown) => String(Number(v))
+    const bagian = [
+        { judul: "Pratinjau", polos: true, baris: [["Keterangan", "Nilai"], ["Pendapatan sebelum pajak", uang(r.pendapatan)], [`Pajak pendapatan (${persen}%)`, uang(r.pajak)],
+            ["Laba ditahan (setelah pajak)", uang(r.labaDitahan)], ["SHU anggota (kolam pembagian)", uang(kolam)]] },
+        { judul: "Laba setelah pajak dibagi ke pos SHU", baris: [["Pos SHU", "Akun", "Persen", "Nominal"], ...r.pos.map((p) => [p.nama, p.kode, uang(p.persen), uang(p.nominal)]),
+            ["Jumlah", "", uang(r.pos.reduce((t, p) => t + Number(p.persen), 0)), uang(r.pos.reduce((t, p) => t + Number(p.nominal), 0))]] },
+        { judul: "Riwayat Tutup Buku", baris: [["Tanggal", "No. Bukti", "Bagian", "Baris", "Debit", "Kredit", "Operator"],
+            ...riwayat.map((x) => [x.tanggal, x.nomor_bukti, x.bagian, String(x.baris), String(x.debit), String(x.kredit), x.opr ?? ""])] },
+    ]
 
     return (
         <div className="space-y-4">
@@ -51,6 +64,8 @@ export default async function TutupBukuPage(props: PageProps<"/dashboard/account
                         {berjalan ? "Tahun berjalan" : r.sudahDitutup ? "Sudah ditutup" : "Belum ditutup"}
                     </span>
                     <div className="ml-auto flex items-center gap-2">
+                        <TombolCetak judul={judulLaporan} subjudul={subjudul} bagian={bagian} />
+                        <TombolEkspor nama={`tutup-buku_${tahun}`} judul={judulLaporan} subjudul={subjudul} bagian={bagian} />
                         {r.sudahDitutup && (
                             <Link href={`/dashboard/shu?tahun=${tahun}`} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-sm font-medium shadow-sm hover:bg-muted">
                                 Lanjut ke SHU {tahun} <ArrowRight className="h-4 w-4" />

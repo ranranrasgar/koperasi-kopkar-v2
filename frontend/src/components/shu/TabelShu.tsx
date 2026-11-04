@@ -4,6 +4,7 @@ import { useState, useTransition } from "react"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
 import { ArrowDown, ArrowUp, Download, Loader2, Printer, Search } from "lucide-react"
 import { dataCetakAction } from "@/app/actions/cetak"
+import { unduhExcel } from "@/lib/ekspor-excel"
 import { TombolVoucher } from "@/components/akuntansi/AksiJurnal"
 import { TombolBatal, TombolCairkan } from "@/components/shu/ShuAksi"
 import type { Akun } from "@/components/transaksi/common"
@@ -45,32 +46,31 @@ export function TabelShu({ data, tahun, statusTahun, akunKas, hariIni, bolehCair
     }
     const baris = (items: BarisShu[]) => items.map((a) => [a.kode_agt, a.nik ?? "-", a.nama, a.status_staff ?? "-", String(a.lama_agt), formatAngka(a.rp_sukarela),
         formatAngka(a.rp_jasa_uang), formatAngka(a.rp_jasa_barang), formatAngka2(a.rp_bagian), statusTeks(a), a.no_reff ?? ""])
+    const KOLOM_CETAK: KolomTabel[] = [{ label: "Kode", mono: true }, { label: "KPK", mono: true }, { label: "Nama" }, { label: "Staff", tengah: true }, { label: "Lama (bln)", kanan: true },
+        { label: "Saldo Sukarela", kanan: true }, { label: "Jasa Uang", kanan: true }, { label: "Jasa Barang", kanan: true }, { label: "SHU Anggota", kanan: true }, { label: "Status" }, { label: "No. Ref", mono: true }]
+    const barisTotal = (items: BarisShu[]) => {
+        const j = (f: (a: BarisShu) => number) => items.reduce((t, a) => t + f(a), 0)
+        return ["", "", `Total (${items.length.toLocaleString("id-ID")} anggota)`, "", "", formatAngka(j((a) => a.rp_sukarela)), formatAngka(j((a) => a.rp_jasa_uang)),
+            formatAngka(j((a) => a.rp_jasa_barang)), formatAngka2(j((a) => a.rp_bagian)), "", ""]
+    }
+    const subjudul = () => [`Tahun buku ${tahun}`, sp.get("q") ? `Pencarian: ${sp.get("q")}` : "", sp.get("status") === "0" ? "Belum diambil" : sp.get("status") === "1" ? "Sudah dicairkan" : ""].filter(Boolean).join(" · ")
     const cetak = async () => {
         setMencetak(true)
         try {
             const r = await semua()
             if (!r) return
             const items = r.items as unknown as BarisShu[]
-            const kolom: KolomTabel[] = [{ label: "Kode", mono: true }, { label: "KPK", mono: true }, { label: "Nama" }, { label: "Staff", tengah: true }, { label: "Lama (bln)", kanan: true },
-                { label: "Saldo Sukarela", kanan: true }, { label: "Jasa Uang", kanan: true }, { label: "Jasa Barang", kanan: true }, { label: "SHU Anggota", kanan: true }, { label: "Status" }, { label: "No. Ref", mono: true }]
-            const j = (f: (a: BarisShu) => number) => items.reduce((t, a) => t + f(a), 0)
-            const total = ["", "", `Total (${items.length.toLocaleString("id-ID")} anggota)`, "", "", formatAngka(j((a) => a.rp_sukarela)), formatAngka(j((a) => a.rp_jasa_uang)),
-                formatAngka(j((a) => a.rp_jasa_barang)), formatAngka2(j((a) => a.rp_bagian)), "", ""]
-            const sub = [`Tahun buku ${tahun}`, sp.get("q") ? `Pencarian: ${sp.get("q")}` : "", sp.get("status") === "0" ? "Belum diambil" : sp.get("status") === "1" ? "Sudah dicairkan" : ""].filter(Boolean).join(" · ")
-            const galat = await bukaCetak({ judul: "SHU Anggota", subjudul: sub, isi: tabelHtml(kolom, baris(items), r.total, { total }) })
+            const galat = await bukaCetak({ judul: "SHU Anggota", subjudul: subjudul(), isi: tabelHtml(KOLOM_CETAK, baris(items), r.total, { total: barisTotal(items) }) })
             if (galat) alert(galat)
         } finally { setMencetak(false) }
     }
     const ekspor = async () => {
         const r = await semua()
         if (!r) return
-        const kepala = ["Kode", "KPK", "Nama", "Staff", "Lama (bln)", "Saldo Sukarela", "Jasa Uang", "Jasa Barang", "SHU Anggota", "Status", "No. Ref"]
-        const csv = [kepala, ...baris(r.items as unknown as BarisShu[])].map((x) => x.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n")
-        const a = document.createElement("a")
-        a.href = URL.createObjectURL(new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8" }))
-        a.download = `shu-anggota_${tahun}.csv`
-        a.click()
-        URL.revokeObjectURL(a.href)
+        const items = r.items as unknown as BarisShu[]
+        const galat = await unduhExcel({ nama: `shu-anggota_${tahun}`, judul: "SHU Anggota", subjudul: subjudul(),
+            bagian: [{ kolom: KOLOM_CETAK, baris: baris(items), total: barisTotal(items), nomor: true, jumlahTotal: r.total }] })
+        if (galat) alert(galat)
     }
     const dapatDicairkan = statusTahun === "posting" && bolehCair
 

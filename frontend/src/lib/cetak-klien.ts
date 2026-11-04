@@ -30,7 +30,9 @@ export function bersihkanUntukCetak(area: HTMLElement): string {
 export interface KolomTabel { label: string; kanan?: boolean; tengah?: boolean; mono?: boolean }
 
 /** Tabel dari data: kolom dan baris yang sudah berupa teks. Teks sesudah ganti baris tampil sebagai baris kecil di bawahnya. */
-export function tabelHtml(kolom: KolomTabel[], baris: string[][], jumlahBarisTotal?: number, opsi: { kelompok?: { label: string; lebar: number }[]; total?: string[] } = {}): string {
+export function tabelHtml(kolom: KolomTabel[], baris: string[][], jumlahBarisTotal?: number, opsi: { kelompok?: { label: string; lebar: number }[]; total?: string[]; polos?: boolean } = {}): string {
+    // Tabel keterangan (label dan nilai): tanpa nomor urut dan tanpa jumlah data.
+    if (opsi.polos) return `<table><tbody>${baris.map((r) => `<tr>${r.map((v, j) => `<td class="${kolom[j]?.kanan ? "kanan" : ""}">${esc(v)}</td>`).join("")}</tr>`).join("")}</tbody></table>`
     const kelas = (k: KolomTabel) => (k.kanan ? "kanan" : k.tengah ? "tengah" : "") + (k.mono ? " mono" : "")
     // Kepala berkelompok: baris pertama berisi judul kelompok (lebar = jumlah kolom), baris kedua nama kolom.
     const kepala2 = `<tr><th class="no">No.</th>${kolom.map((k) => `<th class="${kelas(k)}">${esc(k.label)}</th>`).join("")}</tr>`

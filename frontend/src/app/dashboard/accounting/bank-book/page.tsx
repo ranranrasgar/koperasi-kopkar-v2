@@ -3,6 +3,7 @@ import { FormCard, selectClass } from "@/components/transaksi/common"
 import { TombolBankBookBaru } from "@/components/bankbook/BankBook"
 import { HarianBankBook } from "@/components/bankbook/HarianBankBook"
 import { TombolCetak } from "@/components/ui/TombolCetak"
+import { TombolEkspor } from "@/components/laporan/TombolEkspor"
 import { akunBankBook, harianBankBook } from "@/lib/queries/laporan"
 import { semuaAkun } from "@/lib/queries/akuntansi"
 import { formatAngka, hariIni } from "@/lib/format"
@@ -28,6 +29,14 @@ export default async function BankBookPage(props: PageProps<"/dashboard/accounti
     const masuk = rows.reduce((t, r) => t + Number(r.debit), 0), keluar = rows.reduce((t, r) => t + Number(r.kredit), 0)
     const formProps = { akunBank: { id: akun.id, kode_perkiraan: akun.kode_perkiraan, nama_perkiraan: akun.nama_perkiraan }, semuaAkun: await semuaAkun(), hariIni: hari }
     const ke = (o: { akun?: string }) => `?akun=${o.akun ?? kode}&bulan=${bulan}&tahun=${tahun}`
+    // Cetak dan Ekspor berisi seluruh bulan, bukan hanya halaman tabel yang sedang tampil.
+    const judulLaporan = "Bank Book"
+    const subjudul = `${akun.kode_perkiraan} ${akun.nama_perkiraan} · ${BULAN[bulan - 1]} ${tahun}`
+    const bagian = [
+        { judul: "Ringkasan", polos: true, baris: [["Keterangan", "Nilai"], ["Saldo awal", String(awal)], ["Debit", String(masuk)], ["Kredit", String(keluar)], ["Saldo akhir", String(awal + masuk - keluar)]] },
+        { judul: "Harian", baris: [["Tanggal", "Saldo Awal", "Debit", "Kredit", "Saldo Akhir"], ...rows.map((r) => [r.tanggal, r.awal, r.debit, r.kredit, r.akhir].map(String)),
+            ["Total", "", String(masuk), String(keluar), ""]] },
+    ]
     const tahunPilihan = Array.from({ length: 8 }, (_, i) => Number(hari.slice(0, 4)) + 1 - i)
     if (!tahunPilihan.includes(tahun)) tahunPilihan.push(tahun)
 
@@ -63,7 +72,8 @@ export default async function BankBookPage(props: PageProps<"/dashboard/accounti
                                 <select name="tahun" defaultValue={tahun} className={`${selectClass} w-28`}>{tahunPilihan.sort((a, b) => b - a).map((t) => <option key={t} value={t}>{t}</option>)}</select>
                             </label>
                             <button type="submit" className="h-9 px-4 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold">Tampilkan</button>
-                            <TombolCetak />
+                            <TombolCetak judul={judulLaporan} subjudul={subjudul} bagian={bagian} />
+                            <TombolEkspor nama={`bank-book_${kode}_${tahun}-${String(bulan).padStart(2, "0")}`} judul={judulLaporan} subjudul={subjudul} bagian={bagian} />
                         </form>
                         <TombolBankBookBaru {...formProps} />
                     </div>

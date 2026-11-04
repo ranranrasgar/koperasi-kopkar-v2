@@ -8,9 +8,13 @@ export const PILIHAN_BARIS = [25, 50, 100, 200] as const
  */
 export const MAKS_SEMUA = 5000
 
-/** Parameter URL pageSize -> jumlah baris: angka 1..200, atau "semua" (= MAKS_SEMUA); selain itu bawaan tabel. */
+/** Batas Cetak dan Ekspor: seluruh hasil saringan sampai batas ini; yang lebih besar diberi keterangan supaya saringan dipersempit. */
+export const MAKS_CETAK = 20000
+
+/** Parameter URL pageSize -> jumlah baris: angka 1..200, "semua" (= MAKS_SEMUA), atau "cetak" (= MAKS_CETAK); selain itu bawaan tabel. */
 export function ukuranHalaman(nilai: string | null | undefined, bawaan: number) {
     if (nilai === "semua") return MAKS_SEMUA
+    if (nilai === "cetak") return MAKS_CETAK
     const n = Number(nilai)
     return Number.isInteger(n) && n >= 1 && n <= 200 ? n : bawaan
 }

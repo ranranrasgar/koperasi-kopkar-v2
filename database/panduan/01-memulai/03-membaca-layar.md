@@ -41,7 +41,7 @@ Hampir semua halaman daftar (anggota, pinjaman, jurnal, COA, dan lain-lain) mema
 | Baris per halaman | Di bilah halaman: pilih **25, 50, 100, 200**, atau **Semua**. Mengganti pilihan kembali ke halaman 1 |
 | Halaman | Bilah halaman menempel di dasar layar (dan pada laporan panjang juga di atas tabel): tombol awal, sebelumnya, nomor, berikutnya, akhir, serta loncat ke halaman tertentu |
 | Cetak | Membuka dokumen cetak berkop surat berisi **seluruh baris sesuai filter dan urutan** (bukan hanya halaman yang tampil) |
-| Ekspor | Mengunduh data sebagai file CSV yang bisa dibuka di Excel |
+| Ekspor | Mengunduh file Excel (.xlsx) yang rapi seperti hasil cetak: kop koperasi, judul, tabel berbingkai, angka yang bisa dijumlahkan, dan baris total. Isinya **seluruh baris sesuai filter dan urutan**, bukan hanya halaman yang tampil |
 
 **Semua** menampilkan seluruh baris sampai **5.000 baris**. Untuk tabel yang lebih besar, misalnya Jurnal Umum atau Buku Simpanan tanpa filter, pilihan ini tertulis *Semua (maks. 5.000)*; persempit dulu dengan pencarian atau filter tanggal.
 

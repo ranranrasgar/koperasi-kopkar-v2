@@ -17,7 +17,7 @@ Saldo ditulis sebagai **debit dikurangi kredit**: debit menambah, kredit mengura
 
 Akun yang ramai punya ribuan baris, jadi tabel dibagi per halaman: pilih **25, 50, 100 (bawaan), 200**, atau **Semua** (maks. 5.000). Bilah halaman ada **di atas dan di dasar layar**. Saldo berjalan tetap benar di semua halaman: halaman kedua dan seterusnya diawali baris *Saldo dari halaman sebelumnya*. **Total mutasi dan saldo akhir** di bawah selalu untuk **seluruh periode**, bukan hanya halaman yang tampil.
 
-**Ekspor** mengunduh seluruh periode (maks. 5.000 baris). **Cetak** mencetak halaman yang tampil; pilih **Semua** lebih dulu untuk mencetak semua baris.
+**Cetak** dan **Ekspor** selalu berisi seluruh periode, bukan hanya halaman yang tampil.
 
 ## Rekonsiliasi bank
 

@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { formatAngka } from "@/lib/format"
 import { cn } from "@/lib/utils"
 import { AksiCoa } from "@/components/master/AksiCoa"
+import { TombolEkspor } from "@/components/laporan/TombolEkspor"
 
 export interface BarisPohon {
     id: number; parent_id: number | null; kode_perkiraan: string; nama_perkiraan: string; d_k: string; keterangan: string | null
@@ -101,6 +102,8 @@ export function PohonCoa({ baris, per, dari }: { baris: BarisPohon[]; per: strin
                 <Button variant="outline" size="sm" className="h-9" onClick={() => ubah(new Set())} disabled={!!cocok}>
                     <ChevronsDownUp className="h-4 w-4" /> Tutup semua
                 </Button>
+                <TombolEkspor nama={`coa_${per}`} judul="Bagan Akun (COA)" subjudul={`Saldo per ${per}, di sisi normal akun (D = debit, C = kredit)`}
+                    baris={[["Kode", "Nama Akun", "D/K", "Saldo"], ...urutanLengkap(akar).map((s) => [s.kode_perkiraan, `${"    ".repeat(s.tingkat)}${s.nama_perkiraan}`, s.d_k, Math.abs(s.total) >= 0.5 ? String(tampilSaldo(s)) : ""])]} />
                 <span className="ml-auto text-xs text-muted-foreground">
                     {cocok ? `${[...cocok].filter((id) => !peta.get(id)?.anak.length).length} akun cocok` : `${semuaInduk.length} induk, ${jumlahDetail} akun detail`}
                 </span>

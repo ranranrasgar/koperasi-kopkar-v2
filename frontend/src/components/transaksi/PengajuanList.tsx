@@ -3,7 +3,8 @@
 import { useState, useTransition } from "react"
 import Link from "next/link"
 import { usePathname, useRouter, useSearchParams } from "next/navigation"
-import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Check, Eye, Loader2, Search, X } from "lucide-react"
+import { ArrowDown, ArrowUp, ChevronLeft, ChevronRight, Check, Download, Eye, Loader2, Printer, Search, X } from "lucide-react"
+import { dataCetakAction } from "@/app/actions/cetak"
 import { putuskanPengajuanAction, type HasilPengajuan } from "@/app/actions/pengajuan"
 import { Button } from "@/components/ui/button"
 import { Paginasi } from "@/components/ui/Paginasi"
@@ -11,6 +12,8 @@ import { MemuatData } from "@/components/ui/MemuatData"
 import type { PageData } from "@/config/modules"
 import type { Pengajuan } from "@/lib/queries/keanggotaan"
 import { formatRupiah, formatTanggal, formatAngka, formatAngka2 } from "@/lib/format"
+import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
+import { unduhExcel } from "@/lib/ekspor-excel"
 import { FormCard } from "./common"
 import { TinjauPengajuan } from "./TinjauPengajuan"
 
@@ -30,6 +33,9 @@ const KOLOM: { key: string; label: string; kelas: string; urut?: boolean }[] = [
     { key: "keterangan", label: "Keperluan", kelas: "text-left" },
     { key: "status", label: "Status", kelas: "text-center", urut: true },
 ]
+
+const KOLOM_CETAK: KolomTabel[] = [{ label: "Tanggal" }, { label: "Kode", mono: true }, { label: "KPK", mono: true }, { label: "Anggota" }, { label: "Jenis" },
+    { label: "Pokok", kanan: true }, { label: "Lama", tengah: true }, { label: "Bunga", kanan: true }, { label: "Keperluan" }, { label: "Status", tengah: true }]
 
 const kolomInput = "h-9 rounded-md border border-input bg-background px-2 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500"
 
@@ -70,6 +76,28 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
         })
     }
 
+    // Cetak dan Ekspor berisi SEMUA pengajuan sesuai saringan, bukan hanya halaman ini.
+    const [menyiapkan, setMenyiapkan] = useState<"cetak" | "ekspor" | null>(null)
+    const keluarkan = async (cara: "cetak" | "ekspor") => {
+        setMenyiapkan(cara)
+        try {
+            const r = await dataCetakAction(pathname, Object.fromEntries(sp.entries()))
+            if ("error" in r) { alert(r.error); return }
+            const items = r.items as unknown as Pengajuan[]
+            const baris = items.map((p) => [formatTanggal(p.tgl_realisasi), p.kode_agt, p.nik ?? "-", p.nama, p.nama_kredit ?? "-", formatAngka(p.rp_pinjaman_pokok),
+                `${p.lama_angsuran} bln`, `${formatAngka2(p.persen_bunga)}%`, p.keterangan ?? "", STATUS[p.status ?? ""]?.label ?? p.status ?? ""])
+            const total = ["", "", "", `Total (${items.length.toLocaleString("id-ID")} pengajuan)`, "", formatAngka(items.reduce((t, p) => t + Number(p.rp_pinjaman_pokok), 0)), "", "", "", ""]
+            const namaStatus = status ? STATUS[status]?.label : "Semua status"
+            const subjudul = [namaStatus, sp.get("search") ? `Pencarian: ${sp.get("search")}` : "", sp.get("dari") ? `Dari ${formatTanggal(sp.get("dari"))}` : "", sp.get("sampai") ? `Sampai ${formatTanggal(sp.get("sampai"))}` : ""].filter(Boolean).join(" · ")
+            const galat = cara === "cetak"
+                ? await bukaCetak({ judul: "Pengajuan Kredit", subjudul, isi: tabelHtml(KOLOM_CETAK, baris, r.total, { total }) })
+                : await unduhExcel({ nama: "pengajuan-kredit", judul: "Pengajuan Kredit", subjudul, bagian: [{ kolom: KOLOM_CETAK, baris, total, nomor: true, jumlahTotal: r.total }] })
+            if (galat) alert(galat)
+        } finally {
+            setMenyiapkan(null)
+        }
+    }
+
     const dari = Math.min(data.total, (data.page - 1) * data.pageSize + 1)
     const sampai = Math.min(data.total, data.page * data.pageSize)
 
@@ -105,6 +133,14 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                         </Button>
                     )}
                     {isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+                    <div className="ml-auto flex shrink-0 items-center gap-2">
+                        <Button type="button" variant="outline" size="sm" className="h-9 font-medium shadow-sm" onClick={() => keluarkan("cetak")} disabled={menyiapkan !== null || data.total === 0}>
+                            {menyiapkan === "cetak" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Printer className="mr-1.5 h-4 w-4" />} Cetak
+                        </Button>
+                        <Button type="button" variant="outline" size="sm" className="h-9 font-medium shadow-sm" onClick={() => keluarkan("ekspor")} disabled={menyiapkan !== null || data.total === 0}>
+                            {menyiapkan === "ekspor" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />} Ekspor
+                        </Button>
+                    </div>
                 </div>
                 {hasil && (
                     <div role={hasil.ok ? "status" : "alert"} className={`rounded-md border p-2.5 text-sm ${hasil.ok

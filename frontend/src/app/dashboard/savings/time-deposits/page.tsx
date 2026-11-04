@@ -1,6 +1,8 @@
 import Link from "next/link"
 import { Minus, Plus } from "lucide-react"
 import { FormCard } from "@/components/transaksi/common"
+import { TombolEkspor } from "@/components/laporan/TombolEkspor"
+import { TombolCetak } from "@/components/ui/TombolCetak"
 import { rekapBerjangka } from "@/lib/queries/simpanan-lap"
 import { formatAngka, formatTanggal } from "@/lib/format"
 import { MENU } from "@/config/akses"
@@ -10,10 +12,15 @@ export default async function SimpananBerjangkaPage() {
     const o = await wajibIzin("/dashboard/savings/time-deposits") // layout tidak dijalankan ulang pada navigasi antarhalaman
     const data = await rekapBerjangka()
     const total = data.reduce((s, r) => s + r.saldo, 0)
+    const bagian = [{ baris: [["Kode", "KPK", "Nama", "Setor", "Ambil", "Saldo", "Transaksi Terakhir"],
+        ...data.map((r) => [r.kode_agt, r.nik ?? "-", r.nama, String(r.setor), String(r.ambil), String(r.saldo), r.terakhir ?? ""]),
+        ...(data.length ? [["", "", "Total", String(data.reduce((s, r) => s + r.setor, 0)), String(data.reduce((s, r) => s + r.ambil, 0)), String(total), ""]] : [])] }]
     return (
         <FormCard title="Simpanan Berjangka" description="Saldo simpanan berjangka (jenis 05) per anggota. Setoran dan pengambilan memakai form simpanan dengan jenis Berjangka.">
             <div className="space-y-3">
-                <div className="flex justify-end gap-2">
+                <div className="flex justify-end gap-2 print:hidden">
+                    <TombolCetak judul="Simpanan Berjangka" bagian={bagian} />
+                    <TombolEkspor nama="simpanan-berjangka" judul="Simpanan Berjangka" bagian={bagian} />
                     {o.izin.includes(MENU.pencairanSimpanan) && (
                         <Link href="/dashboard/savings/withdraw?jenis=05" className="h-9 px-3 inline-flex items-center gap-1.5 rounded-md border text-sm hover:bg-muted">
                             <Minus className="h-4 w-4" /> Pengambilan

@@ -2,6 +2,8 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 import { TombolKirimInfo } from "@/components/transaksi/TombolKirimInfo"
+import { TombolEkspor } from "@/components/laporan/TombolEkspor"
+import { TombolCetak } from "@/components/ui/TombolCetak"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
 import { MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
 import { AKSES_HALAMAN } from "@/config/akses"
@@ -69,6 +71,27 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
         </Link>
     )
     const th = "px-3 py-2 text-xs font-semibold"
+    const rp = (v: number | string | null | undefined) => `Rp ${formatAngka(Number(v ?? 0))}`
+    const judulCetak = `Detail Pinjaman ${r.no_pinjaman}`
+    const subjudulCetak = `${r.nama} (${r.nik ?? "-"} | ${r.kode_agt})`
+    // Cetak dan Ekspor memuat ringkasan, seluruh jadwal, dan seluruh riwayat, tidak tergantung tab yang terbuka.
+    const bagian = [
+        { judul: "Ringkasan", polos: true, baris: [["Keterangan", "Nilai"], ["Status", r.lunas ? "Lunas" : tunggak > 0 ? `Menunggak ${tunggak} angsuran` : "Berjalan"],
+            ["Jenis Kredit", `${info.nama_kredit ?? "-"} (${r.kode_kredit ?? "-"})`], ["Grup", info.group_pinjaman ?? "-"], ["Tgl Realisasi", formatTanggal(r.tgl_pinjaman, "long")],
+            ["Lama Angsuran", `${r.lama_angsuran} bulan, terbayar ${r.jml_cicilan}`], ["Bunga", `${formatAngka(info.persen_bunga)}% / ${info.bunga_per} bln`], ["Pinjaman", rp(r.rp_pinjaman_pokok)],
+            ["Uang Muka", rp(r.uang_muka)], ["Adm / Provisi", `${rp(r.rp_adm)} / ${rp(r.rp_provisi)}`], ["Angsuran / Bulan", rp(r.temp_angs_per_bulan)], ["Total Jasa", rp(r.temp_total_jasa)],
+            ["Sudah Dibayar (pokok + jasa)", rp(r.total_bayar)], ["Sisa Pokok", rp(r.sisa_pokok)], ["Jatuh Tempo Berikut", r.jatuh_tempo ? formatTanggal(r.jatuh_tempo, "long") : "-"], ["Operator", r.opr || "-"]] },
+        { judul: "Jadwal Angsuran", baris: [["Ke", "Jatuh Tempo", "Pokok", "Jasa", "Angsuran", "Status", "Tgl Bayar", "Dibayar", "No. Bukti"],
+            ...jadwal.map((j) => {
+                const b = bayarPerKe.get(j.angsuran_ke) ?? []
+                return [String(j.angsuran_ke), j.tanggal_angsuran, String(j.debit_pokok), String(j.debit_bunga), String(j.debit_pokok + j.debit_bunga), status(j.angsuran_ke, j.tanggal_angsuran).t,
+                    b.length ? b[b.length - 1].tanggal_angsuran : "", b.length ? String(b.reduce((t, x) => t + x.debit_pokok + x.debit_bunga, 0)) : "", b.map((x) => x.no_bukti).join(", ")]
+            }),
+            ["", "Total", String(jadwal.reduce((t, j) => t + j.debit_pokok, 0)), String(jadwal.reduce((t, j) => t + j.debit_bunga, 0)), String(jadwal.reduce((t, j) => t + j.debit_pokok + j.debit_bunga, 0)), "", "", String(totBayar.p + totBayar.b), ""]] },
+        { judul: "Riwayat Pembayaran", baris: [["Ke", "Tanggal", "No. Bukti", "Keterangan", "Bayar Pokok", "Bayar Jasa", "Cair Pokok", "Jasa Dibebankan", "Sisa Pokok"],
+            ...baris.map((b) => [String(b.angsuran_ke), b.tanggal_angsuran, b.no_bukti, b.deskripsi ?? "", String(b.debit_pokok), String(b.debit_bunga), String(b.kredit_pokok), String(b.kredit_bunga), String(b.saldo)]),
+            ["", "", "", "Total", String(totBayar.p), String(totBayar.b), String(bayar.reduce((t, b) => t + b.kredit_pokok, 0)), String(bayar.reduce((t, b) => t + b.kredit_bunga, 0)), String(saldo)]] },
+    ]
 
     return (
         <div className="space-y-4">
@@ -80,7 +103,11 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                 <h1 className="font-mono text-2xl font-semibold tracking-tight">{r.no_pinjaman}</h1>
                 {statusUtama}
                 {!info.aktif && <Lencana teks="Anggota non-aktif" warna="abu" />}
-                <span className="ml-auto print:hidden"><TombolKirimInfo noPinjaman={r.no_pinjaman} /></span>
+                <span className="ml-auto flex items-center gap-2 print:hidden">
+                    <TombolCetak judul={judulCetak} subjudul={subjudulCetak} bagian={bagian} />
+                    <TombolEkspor nama={`pinjaman_${r.no_pinjaman}`} judul={judulCetak} subjudul={subjudulCetak} bagian={bagian} />
+                    <TombolKirimInfo noPinjaman={r.no_pinjaman} />
+                </span>
             </div>
 
             <div className="rounded-lg border bg-background p-4 shadow-sm">

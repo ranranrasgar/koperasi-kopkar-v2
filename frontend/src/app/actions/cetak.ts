@@ -6,8 +6,8 @@ import { query } from "@/lib/db"
 import { identitasKoperasi } from "@/lib/koperasi"
 import { operatorAktif } from "@/lib/operator"
 import { daftarAnggota } from "@/lib/queries/anggota"
-import { daftarJurnal } from "@/lib/queries/akuntansi"
-import { daftarKaryawanMattel, daftarUserMobile } from "@/lib/queries/keanggotaan"
+import { daftarCoa, daftarJurnal } from "@/lib/queries/akuntansi"
+import { daftarKaryawanMattel, daftarPengajuan, daftarUserMobile } from "@/lib/queries/keanggotaan"
 import { laporanPinjaman } from "@/lib/queries/pinjaman"
 import { daftarPotongan } from "@/lib/queries/pinjaman-lap"
 import { bukuSimpanan, rekapSimpanan } from "@/lib/queries/simpanan"
@@ -56,6 +56,9 @@ const DAFTAR: Record<string, Ambil> = {
     "/dashboard/members/karyawan-mattel": (s) => daftarKaryawanMattel(s) as Promise<PageData>,
     "/dashboard/members/mobile-users": (s) => daftarUserMobile(s) as Promise<PageData>,
     "/dashboard/accounting/journal": (s) => daftarJurnal(s) as Promise<PageData>,
+    "/dashboard/accounting/adjusting": (s) => daftarJurnal(s, { penyesuaian: true }) as Promise<PageData>,
+    "/dashboard/accounting/coa": (s) => daftarCoa(s) as Promise<PageData>,
+    "/dashboard/loans/apply": (s) => daftarPengajuan(s) as unknown as Promise<PageData>,
     "/dashboard/savings/ledger": (s) => bukuSimpanan(s) as Promise<PageData>,
     "/dashboard/loans": (s) => laporanPinjaman(s) as unknown as Promise<PageData>,
     "/dashboard/deductions": (s) => daftarPotongan(s) as unknown as Promise<PageData>,
@@ -67,7 +70,7 @@ const DAFTAR: Record<string, Ambil> = {
 }
 
 /**
- * Seluruh baris daftar sesuai filter dan urutan yang sedang dipakai (maksimal MAKS_SEMUA baris), untuk dokumen cetak.
+ * Seluruh baris daftar sesuai filter dan urutan yang sedang dipakai (maksimal MAKS_CETAK baris), untuk Cetak dan Ekspor.
  * Hak akses sama dengan halaman daftarnya.
  */
 export async function dataCetakAction(path: string, params: Record<string, string>): Promise<{ items: Record<string, unknown>[]; total: number; ekstra?: unknown } | { error: string }> {
@@ -76,7 +79,7 @@ export async function dataCetakAction(path: string, params: Record<string, strin
         if (!ambil) return { error: "Daftar ini belum bisa dicetak" }
         await operatorAktif(AKSES_HALAMAN[path])
         const { page: _h, pageSize: _p, ...saring } = params
-        const d = await ambil({ ...saring, page: "1", pageSize: "semua" })
+        const d = await ambil({ ...saring, page: "1", pageSize: "cetak" })
         return { items: d.items as Record<string, unknown>[], total: d.total, ekstra: d.ekstra }
     } catch (e) {
         return { error: e instanceof Error ? e.message : "Gagal mengambil data cetak" }
