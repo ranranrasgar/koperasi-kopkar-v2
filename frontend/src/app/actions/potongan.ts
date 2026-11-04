@@ -9,7 +9,7 @@ import { MENU } from "@/config/akses"
 import type { Hasil } from "@/app/actions/transaksi"
 
 const PERIODE = /^\d{4}-(0[1-9]|1[0-2])$/
-const MENU_POTONGAN = [MENU.potonganSemua]
+const MENU_POTONGAN = [MENU.generatePotongan]
 
 class InputSalah extends Error {}
 

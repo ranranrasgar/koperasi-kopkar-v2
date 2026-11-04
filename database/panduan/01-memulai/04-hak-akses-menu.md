@@ -2,7 +2,7 @@
 judul: Hak akses dan kenapa menu saya berbeda
 ringkasan: Menu dan tombol yang bisa dipakai ditentukan oleh grup operator, sama seperti di aplikasi desktop.
 ---
-Setiap operator masuk ke satu **grup** (contoh: admin, Kasir, Pengurus, Pengawas, supervisor). Hak akses diatur **per grup**, bukan per orang, memakai nama menu yang sama dengan aplikasi desktop.
+Setiap operator masuk ke satu **grup** (contoh: admin, Kasir, Pengurus, Pengawas, supervisor). Hak akses diatur **per grup**, bukan per orang, memakai nama yang sama dengan menu samping.
 
 ## Apa yang diatur hak akses
 

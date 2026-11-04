@@ -1,6 +1,6 @@
 ---
 judul: Daftar anggota
-ringkasan: Mencari, mengubah, menonaktifkan, mengaktifkan kembali, dan menghapus anggota yang belum memiliki transaksi.
+ringkasan: Mencari, menambah, mengubah, menonaktifkan, mengaktifkan kembali, dan menghapus anggota yang belum memiliki transaksi.
 menu: /dashboard/members
 ---
 Menu **Keanggotaan → Daftar Anggota** menampilkan seluruh anggota koperasi, aktif maupun tidak.
@@ -15,6 +15,7 @@ Menu **Keanggotaan → Daftar Anggota** menampilkan seluruh anggota koperasi, ak
 | Status | **AKTIF** atau **NON-AKTIF**. Hanya anggota aktif yang ikut potongan gaji |
 | Staff | **STAFF** atau **NON-STAFF**; menentukan produk pinjaman yang sesuai (misalnya C01 untuk non staff, C02 untuk staff) |
 | Grade | Golongan karyawan dari HR |
+| No. Rekening | Nomor rekening anggota; nama pemilik rekening tampil kecil di bawahnya. Di **Cetak** tampil sama, di **Ekspor** nama pemilik menjadi kolom sendiri (*Rekening Atas Nama*) |
 | Tgl Daftar | Tanggal mulai menjadi anggota |
 | Saldo Simpanan | Total saldo semua jenis simpanan |
 
@@ -23,6 +24,16 @@ Menu **Keanggotaan → Daftar Anggota** menampilkan seluruh anggota koperasi, ak
 - Kotak cari menerima **kode anggota, KPK, atau nama**.
 - Filter **Status** (Aktif / Non-Aktif), **Anggota** (Anggota / Non Anggota), dan **Staff** (Staff / Non Staff) bisa digabung.
 - Tombol mata di kolom **Aksi** membuka jendela **Detail** berisi semua kolom anggota itu, termasuk kolom yang sedang disembunyikan.
+
+## Menambah anggota baru
+
+Tombol **Tambah Anggota** di kanan atas tampil untuk grup yang dicentang **Daftar Anggota → Tambah anggota baru** di Kelola Hak Akses.
+
+1. Isi **KPK** dan **Nama lengkap** (wajib), lalu data lain yang tersedia.
+2. Periksa **Simpanan awal**. Nilainya mengikuti Pengaturan Perusahaan dan bisa diubah di form ini.
+3. Pilih **Tambah**. Sistem membuat kode anggota otomatis dengan format `BBTT-NNNN` (bulan, tahun, nomor urut), lalu menampilkannya.
+
+KPK yang sudah terdaftar ditolak dan pesannya menyebut kode anggota pemiliknya; bila anggota itu tidak aktif, aktifkan kembali lewat tombol di barisnya. Bila KPK ada di data Karyawan Mattel, anggota otomatis tertaut ke data itu. Anggota yang ditambah di sini belum punya akun aplikasi; akun dibuat anggota sendiri lewat pendaftaran di aplikasi. Dalam **Mode Uji**, anggota baru tidak tersimpan.
 
 ## Mengelola anggota
 

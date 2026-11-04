@@ -216,6 +216,20 @@ async function kodeAnggotaBaru(db: pg.PoolClient) {
     return { urut: Number(r.urut), kode: `${r.bulan}-${String(r.urut).padStart(4, '0')}` };
 }
 
+/** Baris anggota baru (+ anggota_detail kosong) dengan kode berformat lama. Panggil di dalam transaksi yang memegang kunci 'anggota_baru'. */
+async function sisipkanAnggota(db: pg.PoolClient, l: LengkapAnggota, a: { nik: string; rpGrade: string; gradeId: string | null; karyawanId: string | null }, oleh: Pelaksana) {
+    const { urut, kode } = await kodeAnggotaBaru(db);
+    const id = (await db.query<{ id: string }>(
+        `INSERT INTO anggota (urut, status_staff, aktif, agt_non_agt, grade, rp_grade, kode_agt, nik, nama, jns_kelamin, alamat, kota, kodepos, hp, telp_rmh,
+                              bank_nama, bank_no_rek, bank_atas_nama, tglpencatatan, simpanan_pokok, simpanan_wajib, simpanan_sukarela, opr, karyawan_mattel_id, operator_id, grade_id)
+         VALUES ($1, $2, true, true, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, (now() AT TIME ZONE 'Asia/Jakarta')::date, $17, $18, $19, $20, $21, $22, $23)
+         RETURNING id::text`,
+        [urut, l.statusStaff, l.grade, a.rpGrade, kode, a.nik, l.nama, l.jnsKelamin, l.alamat, l.kota, Number(l.kodepos), l.hp, l.telpRmh,
+            l.bankNama, l.bankNoRek, l.bankAtasNama, l.pokok, l.wajib, l.sukarela, oleh.nama.slice(0, 15), a.karyawanId, oleh.id, a.gradeId])).rows[0].id;
+    await db.query('INSERT INTO anggota_detail (anggota_id, urut, kode_agt) SELECT $1, coalesce(max(urut), 0) + 1, $2 FROM anggota_detail', [id, kode]);
+    return { id, kode };
+}
+
 /** Data kelengkapan anggota baru yang diisi admin saat menyetujui pendaftaran (semua string dari form; divalidasi di bersihkanLengkap). */
 export interface LengkapAnggota {
     nama: string; jnsKelamin: string; alamat: string; kota: string; kodepos: string; hp: string; telpRmh: string;
@@ -373,19 +387,43 @@ export async function jadikanAnggota(db: pg.PoolClient, userId: number, oleh: Pe
         const g = await cariGrade(db, l.grade);
         if (lengkap && l.grade && !g) return { ok: false, error: `Grade ${l.grade} tidak ada di tabel grade. Pilih grade yang tersedia atau tambahkan lebih dulu di Data Master → Grade.` };
         const rpGrade = g ? g.nominal : lengkap ? '0' : String(awal.rpGrade);
-        const { urut, kode: kodeBaru } = await kodeAnggotaBaru(db);
-        anggotaId = (await db.query<{ id: string }>(
-            `INSERT INTO anggota (urut, status_staff, aktif, agt_non_agt, grade, rp_grade, kode_agt, nik, nama, jns_kelamin, alamat, kota, kodepos, hp, telp_rmh,
-                                  bank_nama, bank_no_rek, bank_atas_nama, tglpencatatan, simpanan_pokok, simpanan_wajib, simpanan_sukarela, opr, karyawan_mattel_id, operator_id, grade_id)
-             VALUES ($1, $2, true, true, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, (now() AT TIME ZONE 'Asia/Jakarta')::date, $17, $18, $19, $20, $21, $22, $23)
-             RETURNING id::text`,
-            [urut, l.statusStaff, l.grade, rpGrade, kodeBaru, k.nik, l.nama, l.jnsKelamin, l.alamat, l.kota, Number(l.kodepos), l.hp, l.telpRmh,
-                l.bankNama, l.bankNoRek, l.bankAtasNama, l.pokok, l.wajib, l.sukarela, oleh.nama.slice(0, 15), k.id, oleh.id, g?.id ?? null])).rows[0].id;
-        await db.query('INSERT INTO anggota_detail (anggota_id, urut, kode_agt) SELECT $1, coalesce(max(urut), 0) + 1, $2 FROM anggota_detail', [anggotaId, kodeBaru]);
-        kode = kodeBaru; dibuat = true;
+        const baru = await sisipkanAnggota(db, l, { nik: k.nik, rpGrade, gradeId: g?.id ?? null, karyawanId: k.id }, oleh);
+        anggotaId = baru.id; kode = baru.kode; dibuat = true;
     }
     await db.query('UPDATE app_user SET anggota_id = $2, kode_agt = $3, karyawan_mattel_id = NULL, updated_at = now() WHERE id = $1', [userId, anggotaId, kode]);
     return { ok: true, kode, dibuat };
+}
+
+/** Isian awal form Tambah Anggota di admin: nilai simpanan dari pengaturan (atau tebakan) dan daftar grade. */
+export async function bahanAnggotaBaru(db: Pick<pg.PoolClient, 'query'>) {
+    const awal = await nilaiAwalAnggotaBaru(db, '');
+    return {
+        dariPengaturan: awal.dariPengaturan, daftarGrade: await daftarGrade(db),
+        form: { nama: '', jnsKelamin: '', alamat: '', kota: '', kodepos: '0', hp: '', telpRmh: '', bankNama: '', bankNoRek: '', bankAtasNama: '', grade: '', statusStaff: '',
+            pokok: String(awal.pokok), wajib: String(awal.wajib), sukarela: String(awal.sukarela) } satisfies LengkapAnggota,
+    };
+}
+
+/**
+ * Tambah anggota langsung dari admin (tanpa akun aplikasi). KPK wajib dan tidak boleh sudah terdaftar; bila KPK ada di data karyawan Mattel,
+ * anggota ditautkan ke sana, dan akun karyawan itu yang disetujui kemudian otomatis tertaut ke anggota ini (jadikanAnggota). Jalankan di dalam transaksi.
+ */
+export async function tambahAnggota(db: pg.PoolClient, nikMentah: string, data: LengkapAnggota, oleh: Pelaksana):
+    Promise<{ ok: true; kode: string } | { ok: false; error: string }> {
+    const nik = String(nikMentah ?? '').trim();
+    if (!nik) return { ok: false, error: 'KPK wajib diisi' };
+    if (nik.length > 25) return { ok: false, error: 'KPK maksimal 25 karakter' };
+    const l = bersihkanLengkap(data);
+    if (typeof l === 'string') return { ok: false, error: l };
+    const g = await cariGrade(db, l.grade);
+    if (l.grade && !g) return { ok: false, error: `Grade ${l.grade} tidak ada di tabel grade. Pilih grade yang tersedia atau tambahkan lebih dulu di Data Master → Grade.` };
+
+    await db.query("SELECT pg_advisory_xact_lock(hashtext('anggota_baru'))");
+    const ada = (await db.query<{ kode_agt: string; aktif: boolean }>('SELECT kode_agt, aktif FROM anggota WHERE nik = $1 ORDER BY aktif DESC, id DESC LIMIT 1', [nik])).rows[0];
+    if (ada) return { ok: false, error: `KPK ${nik} sudah terdaftar sebagai anggota ${ada.kode_agt}${ada.aktif ? '' : ' (tidak aktif; aktifkan kembali lewat tombol di barisnya)'}.` };
+    const k = (await db.query<{ id: string }>('SELECT id::text FROM karyawan_mattel WHERE nik = $1 LIMIT 1', [nik])).rows[0];
+    const { kode } = await sisipkanAnggota(db, l, { nik, rpGrade: g?.nominal ?? '0', gradeId: g?.id ?? null, karyawanId: k?.id ?? null }, oleh);
+    return { ok: true, kode };
 }
 
 /**

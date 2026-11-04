@@ -4,6 +4,6 @@ import { wajibIzin } from "@/lib/operator"
 
 export default async function KelolaAksesPage() {
     await wajibIzin("/dashboard/settings/akses") // hanya grup superadmin
-    const { grup, menu } = await matriksAkses()
-    return <MatriksAkses grup={grup} menu={menu} />
+    const { grup, kelompok } = await matriksAkses()
+    return <MatriksAkses grup={grup} kelompok={kelompok} />
 }

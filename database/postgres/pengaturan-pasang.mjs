@@ -1,4 +1,4 @@
-// Pasang tabel pengaturan_web, tabel periode Potongan Gaji, dan izin menu Mode Aplikasi untuk grup admin. Aman dijalankan ulang.
+// Pasang tabel pengaturan_web, tabel periode Potongan Gaji, izin menu Mode Aplikasi untuk grup admin, dan izin menu sidebar yang dipecah. Aman dijalankan ulang.
 //
 //   npm run pengaturan:pasang                 nilai awal mode_uji dari KOPKAR_UJI_ROLLBACK di frontend/.env.local (bawaan 0 = live)
 //   npm run pengaturan:pasang -- --mode=uji   nilai awal mode uji (atau --mode=live); tidak mengubah nilai yang sudah ada
@@ -12,6 +12,20 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 // Harus sama dengan MENU.modeAplikasi di frontend/src/config/akses.ts.
 const MENU_MODE = 'Mode Aplikasi (web)';
 const GRUP_IZIN = ['admin'];
+// Menu sidebar yang dulu berbagi izin. Izin barunya diisi sekali dari izin lama supaya tidak ada grup yang kehilangan akses;
+// setelah ada barisnya, isinya milik Kelola Hak Akses dan tidak disentuh lagi. Nama harus sama dengan MENU di frontend/src/config/akses.ts.
+const IZIN_DETAIL_PINJAMAN = ['Lap. Pinjaman Koperasi', 'Pencairan Pinjaman Koperasi', 'Setoran Angsuran Pinjaman Koperasi', 'Lap. Tunggakan Pinjaman Koperasi',
+    'Pengajuan Pinjaman', 'Lap. Pinjaman Bank / Pihak Lain', 'Pencairan Pinjaman Bank', 'Setoran Angsuran Pinjaman Bank', 'Lap. Tunggakan Bank / Pihak Lain'];
+const PECAHAN_IZIN = {
+    'Kartu Simpanan (web)': ['Lap. Buku Simpanan'],
+    'Cari Pinjaman (web)': IZIN_DETAIL_PINJAMAN,
+    'Setoran Titipan Escrow (web)': ['Setoran Titipan Angsuran Pinjaman'],
+    'Generate & Posting Potongan (web)': ['Potongan Keseluruhan (Bank)'],
+    'Jurnal Penyesuaian (web)': ['Jurnal Umum'],
+    'Buku Besar Kas (web)': ['Buku Kas && Bank (Bank Book)'],
+    'Neraca Lajur (web)': ['Neraca Saldo'],
+    'Grade Anggota (web)': ['Jenis Pinjaman'],
+};
 
 function envLokal() {
     try {
@@ -43,9 +57,16 @@ async function main() {
         for (const g of grup)
             await c.query(`INSERT INTO opr_hak_akses (urut, id_opr, menu, akses, grup_id) VALUES (nextval('seq_opr_hak_akses_urut'), $1, $2, 'T', $3)
                 ON CONFLICT (grup_id, menu) DO UPDATE SET akses = 'T'`, [g.urut, MENU_MODE, g.id]);
+        let pecahan = 0;
+        for (const [menu, asal] of Object.entries(PECAHAN_IZIN))
+            pecahan += (await c.query(`INSERT INTO opr_hak_akses (urut, id_opr, menu, akses, grup_id)
+                SELECT nextval('seq_opr_hak_akses_urut'), g.urut, $1::varchar,
+                       CASE WHEN EXISTS (SELECT 1 FROM opr_hak_akses h WHERE h.grup_id = g.id AND h.menu = ANY($2) AND h.akses = 'T') THEN 'T' ELSE 'F' END, g.id
+                  FROM opr_grup g
+                 WHERE g.nama_grup IS DISTINCT FROM 'superadmin' AND NOT EXISTS (SELECT 1 FROM opr_hak_akses WHERE menu = $1)`, [menu, asal])).rowCount;
         await c.query('COMMIT');
         const db = decodeURIComponent(new URL(url).pathname.slice(1));
-        console.log(`${db}: mode ${mode === '1' ? 'UJI' : 'LIVE'}${r.rows[0] ? ' (baru dipasang)' : ' (sudah ada, tidak diubah)'}; izin "${MENU_MODE}" untuk grup: ${grup.map((g) => g.nama_grup).join(', ') || '-'}`);
+        console.log(`${db}: mode ${mode === '1' ? 'UJI' : 'LIVE'}${r.rows[0] ? ' (baru dipasang)' : ' (sudah ada, tidak diubah)'}; izin "${MENU_MODE}" untuk grup: ${grup.map((g) => g.nama_grup).join(', ') || '-'}; izin menu sidebar baru: ${pecahan} baris`);
     } catch (e) {
         await c.query('ROLLBACK');
         throw e;

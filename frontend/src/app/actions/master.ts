@@ -109,7 +109,7 @@ export async function simpanNilaiAwalAnggotaAction(_: HasilSimpan, f: FormData):
 
 /** Tambah atau ubah grade (tabel grade). Mengubah nama atau nominal berlaku untuk semua anggota bergrade itu (trigger database). */
 export async function simpanGradeAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan(MENU.jenisPinjaman, "/dashboard/settings/grade", async (db) => {
+    return simpan(MENU.gradeAnggota, "/dashboard/settings/grade", async (db) => {
         const id = Number(f.get("id") || 0)
         const nama = teks(f, "nama", "Nama grade", true, 15)
         if (/\s/.test(nama)) throw new Salah("Nama grade tidak boleh memakai spasi (contoh: M06)")
@@ -128,7 +128,7 @@ export async function simpanGradeAction(_: HasilSimpan, f: FormData): Promise<Ha
 
 /** Hapus grade yang belum dipakai anggota mana pun. */
 export async function hapusGradeAction(id: number): Promise<HasilSimpan> {
-    return simpan(MENU.jenisPinjaman, "/dashboard/settings/grade", async (db) => {
+    return simpan(MENU.gradeAnggota, "/dashboard/settings/grade", async (db) => {
         const { rows: [g] } = await db.query<{ nama: string; n: string }>(
             "SELECT g.nama, (SELECT count(*) FROM anggota a WHERE a.grade_id = g.id) n FROM grade g WHERE g.id = $1", [id])
         if (!g) throw new Salah("Grade tidak ada")
@@ -143,7 +143,7 @@ export async function hapusGradeAction(id: number): Promise<HasilSimpan> {
  * disamakan dengan tabel. Mengubah plafon pinjaman anggota yang nilainya berbeda, jadi hanya dijalankan atas permintaan admin.
  */
 export async function terapkanGradeAction(): Promise<HasilSimpan> {
-    return simpan(MENU.jenisPinjaman, "/dashboard/settings/grade", async (db) => {
+    return simpan(MENU.gradeAnggota, "/dashboard/settings/grade", async (db) => {
         const tautan = await db.query("UPDATE anggota a SET grade_id = g.id FROM grade g WHERE a.grade_id IS NULL AND a.grade = g.nama")
         const sama = await db.query("UPDATE anggota a SET rp_grade = g.nominal FROM grade g WHERE a.grade_id = g.id AND a.rp_grade <> g.nominal")
         return `${tautan.rowCount ?? 0} anggota ditautkan ke grade, ${sama.rowCount ?? 0} nominal grade anggota disamakan dengan tabel`

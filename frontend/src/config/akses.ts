@@ -6,6 +6,7 @@ export const MENU = {
     dashboard: "Dashboard",
     daftarAnggota: "Daftar Nama Anggota",
     lapDaftarAnggota: "Lap. Daftar Nama Anggota",
+    inputAnggota: "Input Anggota Baru",
     lapSimpanan: "Lap. Simpanan",
     lapBukuSimpanan: "Lap. Buku Simpanan",
     setoranSimpanan: "Setoran Simpanan",
@@ -66,7 +67,55 @@ export const MENU = {
     kelolaPengumuman: "Kelola Himbauan & Promo (web)",
     // Khusus web; membaca dan membalas pesan anggota, serta menerima notifikasi pesan masuk. Harus sama dengan MENU_PESAN di backend.
     pesanAnggota: "Pesan Anggota (web)",
+    // Khusus web; menu sidebar yang dulu berbagi izin dengan menu lain. Harus sama dengan PECAHAN_IZIN di database/postgres/pengaturan-pasang.mjs.
+    kartuSimpanan: "Kartu Simpanan (web)",
+    cariPinjaman: "Cari Pinjaman (web)",
+    escrow: "Setoran Titipan Escrow (web)",
+    generatePotongan: "Generate & Posting Potongan (web)",
+    jurnalPenyesuaian: "Jurnal Penyesuaian (web)",
+    bukuBesarKas: "Buku Besar Kas (web)",
+    neracaLajur: "Neraca Lajur (web)",
+    gradeAnggota: "Grade Anggota (web)",
 } as const
+
+/**
+ * Nama sub-baris di Kelola Hak Akses, untuk menu sidebar yang punya lebih dari satu izin (lihat AKSES_HALAMAN).
+ * Menu berizin tunggal tampil memakai label sidebar saja, jadi tidak perlu entri di sini.
+ */
+export const LABEL_IZIN: Record<string, string> = {
+    [MENU.daftarAnggota]: "Kelola data",
+    [MENU.inputAnggota]: "Tambah anggota baru",
+    [MENU.lapDaftarAnggota]: "Lihat laporan",
+    [MENU.karyawanMattel]: "Kelola Karyawan Mattel",
+    [MENU.daftarKaryawan]: "Kelola daftar karyawan",
+    [MENU.lapDaftarKaryawan]: "Lihat laporan",
+    [MENU.user]: "Kelola user",
+    [MENU.requestUser]: "Permintaan user & anggota baru",
+    [MENU.angsurKoperasi]: "Koperasi",
+    [MENU.angsurBank]: "Bank / pihak lain",
+    [MENU.angsurKpr]: "KPR",
+    [MENU.cairKoperasi]: "Koperasi",
+    [MENU.cairBank]: "Bank / pihak lain",
+    [MENU.lapPinjamanKoperasi]: "Koperasi",
+    [MENU.lapPinjamanBank]: "Bank / pihak lain",
+    [MENU.lapPinjamanKpr]: "KPR",
+    [MENU.lapTunggakanKoperasi]: "Koperasi",
+    [MENU.lapTunggakanBank]: "Bank / pihak lain",
+    [MENU.lapTunggakanKpr]: "KPR",
+    [MENU.jenisMacet]: "Jenis macet",
+    [MENU.potonganSemua]: "Keseluruhan (bank)",
+    [MENU.potonganKoperasi]: "Pinjaman koperasi",
+    [MENU.potonganBank]: "Pinjaman bank",
+    [MENU.potonganKpr]: "Pinjaman KPR",
+    [MENU.potonganSimpanan]: "Simpanan anggota",
+    [MENU.bukuBesar]: "Semua akun",
+    [MENU.bukuBesarKas]: "Akun kas & bank saja",
+    [MENU.neraca]: "Neraca",
+    [MENU.rugiLaba]: "Rugi laba",
+    [MENU.lapShu]: "Lihat laporan",
+    [MENU.shu]: "Pencairan SHU",
+    [MENU.hitungShu]: "Hitung SHU",
+}
 
 /** Grup yang lolos semua pemeriksaan izin dan boleh mengelola hak akses serta operator. */
 export const GRUP_SUPERADMIN = "superadmin"
@@ -83,15 +132,20 @@ export const MENU_DETAIL_PINJAMAN_GRUP: Record<string, string[]> = {
     "BANK / PIHAK LAIN": [MENU.lapPinjamanBank, MENU.cairBank, MENU.angsurBank, MENU.lapTunggakanBank],
 }
 
-/** Halaman web -> menu desktop yang mengizinkannya. Halaman tanpa entri tidak dibatasi (dashboard). */
+/**
+ * Halaman web -> izin yang membukanya. Halaman tanpa entri tidak dibatasi (dashboard).
+ * Satu izin hanya untuk satu menu sidebar, supaya baris di Kelola Hak Akses tidak saling memengaruhi.
+ */
 export const AKSES_HALAMAN: Record<string, string[]> = {
-    "/dashboard/members": [MENU.daftarAnggota, MENU.lapDaftarAnggota],
+    "/dashboard/members": [MENU.daftarAnggota, MENU.inputAnggota, MENU.lapDaftarAnggota],
     "/dashboard/savings": [MENU.lapSimpanan],
     "/dashboard/savings/ledger": [MENU.lapBukuSimpanan],
     "/dashboard/savings/deposit": [MENU.setoranSimpanan],
     "/dashboard/savings/withdraw": [MENU.pencairanSimpanan],
     "/dashboard/loans": [MENU.lapPinjamanKoperasi, MENU.lapPinjamanBank, MENU.lapPinjamanKpr],
-    "/dashboard/loans/cari": [...new Set(Object.values(MENU_DETAIL_PINJAMAN_GRUP).flat())],
+    "/dashboard/loans/cari": [MENU.cariPinjaman],
+    // Detail pinjaman (bukan menu sidebar); izin per grup pinjaman diperiksa lagi di halamannya.
+    "/dashboard/loans/[no]": [...new Set(Object.values(MENU_DETAIL_PINJAMAN_GRUP).flat())],
     "/dashboard/loans/create-cash": [MENU.cairKoperasi, MENU.cairBank],
     "/dashboard/loans/create-kpr": [MENU.cairKpr],
     "/dashboard/loans/payment": [MENU.angsurKoperasi, MENU.angsurBank, MENU.angsurKpr],
@@ -99,27 +153,27 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/accounting/journal": [MENU.jurnalUmum],
     "/dashboard/accounting/journal/new": [MENU.jurnalUmum],
     "/dashboard/accounting/journal/tidak-seimbang": [MENU.jurnalUmum],
-    "/dashboard/accounting/adjusting": [MENU.jurnalUmum], // jurnal penyesuaian memakai hak yang sama dengan Jurnal Umum
+    "/dashboard/accounting/adjusting": [MENU.jurnalPenyesuaian],
     "/dashboard/settings": [MENU.company],
     "/dashboard/settings/jenis-pinjaman": [MENU.jenisPinjaman],
     "/dashboard/settings/jenis-simpanan": [MENU.jenisSimpanan],
-    "/dashboard/settings/grade": [MENU.jenisPinjaman], // grade menentukan plafon pinjaman, jadi hak yang sama dengan Jenis Pinjaman
+    "/dashboard/settings/grade": [MENU.gradeAnggota],
     "/dashboard/members/karyawan-mattel": [MENU.karyawanMattel, MENU.daftarKaryawan, MENU.lapDaftarKaryawan],
     "/dashboard/members/mobile-users": [MENU.user, MENU.requestUser],
-    "/dashboard/savings/cards": [MENU.lapBukuSimpanan],
+    "/dashboard/savings/cards": [MENU.kartuSimpanan],
     "/dashboard/savings/analytics": [MENU.lapGrafikSimpanan],
     "/dashboard/savings/time-deposits": [MENU.lapSimpananBerjangka],
     "/dashboard/loans/apply": [MENU.pengajuan],
-    "/dashboard/loans/escrow": [MENU.titipan],
+    "/dashboard/loans/escrow": [MENU.escrow],
     "/dashboard/loans/titipan": [MENU.titipan],
     "/dashboard/loans/bad-debts": [MENU.lapTunggakanKoperasi, MENU.lapTunggakanBank, MENU.lapTunggakanKpr, MENU.jenisMacet],
     "/dashboard/deductions": [MENU.potonganSemua, MENU.potonganKoperasi, MENU.potonganBank, MENU.potonganKpr, MENU.potonganSimpanan],
-    // Generate, ubah, dan posting potongan gaji bulanan: menu desktop Potongan Keseluruhan (yang dulu menggabungkan semua potongan).
-    "/dashboard/deductions/periode": [MENU.potonganSemua],
-    "/dashboard/accounting/ledger": [MENU.bankBook, MENU.bukuBesar],
+    // Generate, ubah, dan posting potongan gaji bulanan.
+    "/dashboard/deductions/periode": [MENU.generatePotongan],
+    "/dashboard/accounting/ledger": [MENU.bukuBesar, MENU.bukuBesarKas],
     "/dashboard/accounting/bank-book": [MENU.bankBook],
     "/dashboard/accounting/trial-balance": [MENU.neracaSaldo],
-    "/dashboard/accounting/worksheet": [MENU.neracaSaldo], // neraca lajur memakai hak yang sama dengan Neraca Saldo
+    "/dashboard/accounting/worksheet": [MENU.neracaLajur],
     "/dashboard/accounting/reports": [MENU.neraca, MENU.rugiLaba],
     "/dashboard/accounting/closing": [MENU.tutupBuku],
     "/dashboard/shu": [MENU.lapShu, MENU.shu, MENU.hitungShu],

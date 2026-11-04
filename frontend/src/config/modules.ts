@@ -8,6 +8,8 @@ export interface ColumnConfig {
     sortable?: boolean
     hidden?: boolean
     mono?: boolean
+    // Kunci data yang tampil sebagai baris kecil di bawah nilai (tabel dan cetak); di ekspor CSV menjadi kolom sendiri tepat setelah kolom ini.
+    subKey?: string
     // Untuk 'badge': nilai -> { label, color }
     badgeMap?: Record<string, { label: string; color: string }>
 }
@@ -60,6 +62,7 @@ export const membersConfig: ModuleConfig = {
             badgeMap: { "Staff": { label: "STAFF", color: "indigo" }, "No Staff": { label: "NON-STAFF", color: "orange" } } },
         { key: "grade", label: "Grade", type: "string", sortable: true },
         { key: "rp_grade", label: "Grade (Rp)", type: "currency", sortable: true, hidden: true },
+        { key: "bank_no_rek", label: "No. Rekening", type: "string", subKey: "bank_atas_nama" },
         // Kolom tersembunyi: tampil di jendela Detail, bisa dimunculkan lewat Kolom, dan ikut ekspor.
         // Dipilih dari kolom anggota yang terisi untuk sebagian besar anggota (telp_rmh 7%, status_acc 0% tidak dimuat).
         { key: "jns_kelamin", label: "Jenis Kelamin", type: "badge", hidden: true,
@@ -70,7 +73,6 @@ export const membersConfig: ModuleConfig = {
         { key: "kodepos", label: "Kode Pos", type: "string", hidden: true },
         { key: "hp", label: "No. HP", type: "string", hidden: true },
         { key: "bank_nama", label: "Bank", type: "string", hidden: true },
-        { key: "bank_no_rek", label: "No. Rekening", type: "string", hidden: true },
         { key: "bank_atas_nama", label: "Rekening Atas Nama", type: "string", hidden: true },
         { key: "simpanan_pokok", label: "Simpanan Pokok", type: "currency", hidden: true },
         { key: "simpanan_wajib", label: "Potongan Simp. Wajib / bulan", type: "currency", hidden: true },

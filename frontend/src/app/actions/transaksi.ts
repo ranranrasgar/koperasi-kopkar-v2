@@ -275,8 +275,12 @@ export async function bayarAngsuranKprAction(_: Hasil, f: FormData): Promise<Has
 
 // ---------- jurnal umum ----------
 
+/** Jurnal lama yang ditandai penyesuaian tetap bernomor JU/, jadi ubah dan hapus cukup salah satu izin ini. */
+const MENU_JURNAL = [MENU.jurnalUmum, MENU.jurnalPenyesuaian]
+
 export async function jurnalUmumAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting([MENU.jurnalUmum], async ({ nama: opr }) => {
+    const menu = f.get("nomorBukti") ? MENU_JURNAL : [f.get("penyesuaian") === "1" ? MENU.jurnalPenyesuaian : MENU.jurnalUmum]
+    return posting(menu, async ({ nama: opr }) => {
         const akun = f.getAll("akun").map(String), debit = f.getAll("debit").map(String), kredit = f.getAll("kredit").map(String)
         const ket = f.getAll("ketBaris").map(String)
         const lines = akun.map((a, i) => {
@@ -298,7 +302,7 @@ export async function jurnalUmumAction(_: Hasil, f: FormData): Promise<Hasil> {
 
 /** Tandai jurnal umum JU/ sebagai penyesuaian, atau kembalikan ke jurnal umum biasa (jurnal lama yang ternyata penyesuaian, mis. penyusutan). */
 export async function tandaiPenyesuaianAction(nomorBukti: string, penyesuaian: boolean): Promise<Hasil> {
-    return posting([MENU.jurnalUmum], async () => {
+    return posting(MENU_JURNAL, async () => {
         await tx((db) => tandaiPenyesuaian(db, nomorBukti, penyesuaian))
         return { ok: true, pesan: `Bukti ${nomorBukti} ${penyesuaian ? "ditandai sebagai jurnal penyesuaian" : "dikembalikan menjadi jurnal umum biasa"}` }
     })
@@ -353,12 +357,12 @@ export async function transaksiBankBookAction(akunBank: string, tgl: string): Pr
 
 // ---------- ubah, hapus, voucher bukti jurnal ----------
 
-const MENU_BUKTI = [MENU.jurnalUmum, MENU.bankBook, MENU.shu] // voucher juga untuk bukti pencairan SHU
+const MENU_BUKTI = [...MENU_JURNAL, MENU.bankBook, MENU.shu] // voucher juga untuk bukti pencairan SHU
 
 /** Isi form ubah jurnal umum, beserta daftar akun (dimuat saat form dibuka, bukan di tiap baris daftar). */
 export async function bacaJurnalAction(nomorBukti: string): Promise<{ bukti: BuktiJurnal; akun: { id: number; kode_perkiraan: string; nama_perkiraan: string }[] } | { error: string }> {
     try {
-        await operatorAktif([MENU.jurnalUmum])
+        await operatorAktif(MENU_JURNAL)
         const bukti = await bacaJurnalUmum(pool, nomorBukti)
         if (!bukti) return { error: `Bukti ${nomorBukti} tidak ditemukan` }
         return { bukti, akun: await query("SELECT id, kode_perkiraan, nama_perkiraan FROM perkiraan ORDER BY kode_perkiraan") }
@@ -367,9 +371,9 @@ export async function bacaJurnalAction(nomorBukti: string): Promise<{ bukti: Buk
     }
 }
 
-/** Hapus bukti JU/ (izin Jurnal Umum) atau BB/ (izin Bank Book) yang belum direkonsiliasi. */
+/** Hapus bukti JU/ atau JP/ (izin Jurnal Umum / Jurnal Penyesuaian) atau BB/ (izin Bank Book) yang belum direkonsiliasi. */
 export async function hapusJurnalAction(nomorBukti: string): Promise<Hasil> {
-    return posting(nomorBukti.startsWith("BB/") ? [MENU.bankBook] : [MENU.jurnalUmum], async () => {
+    return posting(nomorBukti.startsWith("BB/") ? [MENU.bankBook] : MENU_JURNAL, async () => {
         await tx((db) => hapusJurnalUmum(db, nomorBukti))
         return { ok: true, pesan: `Bukti ${nomorBukti} dihapus` }
     })

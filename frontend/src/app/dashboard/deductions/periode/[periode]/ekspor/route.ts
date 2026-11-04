@@ -11,7 +11,7 @@ import { buatXlsx, type Sel } from "@/lib/xlsx"
 // rekening tidak berubah menjadi notasi ilmiah (6,0211E+11) dan digitnya tidak hilang.
 export async function GET(request: NextRequest, ctx: { params: Promise<{ periode: string }> }) {
     const o = await operatorSesi()
-    if (!o || !punyaIzin(o.izin, [MENU.potonganSemua])) return new NextResponse("Tidak berizin", { status: 403 })
+    if (!o || !punyaIzin(o.izin, [MENU.generatePotongan])) return new NextResponse("Tidak berizin", { status: 403 })
     const { periode } = await ctx.params
     if (!PERIODE.test(periode)) return new NextResponse("Periode tidak sah", { status: 400 })
     const staff = request.nextUrl.searchParams.get("staff") ?? ""

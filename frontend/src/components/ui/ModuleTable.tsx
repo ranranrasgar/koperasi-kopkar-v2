@@ -125,10 +125,10 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
             const kolom: KolomTabel[] = activeColumns.map((c) => ({ label: c.label, kanan: c.type === "currency" || c.type === "number", mono: c.mono }))
             const baris = r.items.map((item) => activeColumns.map((col) => {
                 const v = item[col.key]
-                if (v === null || v === undefined || v === "") return ""
+                if (!col.subKey && (v === null || v === undefined || v === "")) return ""
                 if (col.type === "badge" && col.badgeMap) return col.badgeMap[String(v)]?.label ?? String(v)
                 if (col.type === "date") return formatTanggal(String(v), "2-digit")
-                return formatValue(v, col.type)
+                return [formatValue(v, col.type), col.subKey ? item[col.subKey] : ""].filter(Boolean).join("\n")
             }))
             const subjudul = [
                 searchParams?.get("search") ? `Pencarian: ${searchParams.get("search")}` : "",
@@ -147,8 +147,13 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
 
     const handleExport = () => {
         if (data.items.length === 0) return
-        const headers = activeColumns.map((c) => `"${c.label}"`).join(",")
-        const rows = data.items.map((item) => activeColumns.map((col) => {
+        // Baris kecil (subKey) menjadi kolom sendiri, kecuali kolomnya memang sedang ditampilkan.
+        const kolomEkspor = activeColumns.flatMap((col) => {
+            const sub = config.columns.find((c) => c.key === col.subKey)
+            return sub && !activeColumns.includes(sub) ? [col, sub] : [col]
+        })
+        const headers = kolomEkspor.map((c) => `"${c.label}"`).join(",")
+        const rows = data.items.map((item) => kolomEkspor.map((col) => {
             const val = item[col.key]
             if (val === null || val === undefined) return '""'
             const text = col.type === "date" ? formatTanggal(String(val), "2-digit") : String(val)
@@ -307,6 +312,11 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                                                                             </span>
                                                                         ) : null}
                                                                     </div>
+                                                                </div>
+                                                            ) : col.subKey && item[col.subKey] ? (
+                                                                <div className="min-w-0">
+                                                                    <div>{formatValue(val, col.type)}</div>
+                                                                    <div className="mt-0.5 text-[10px] font-normal text-muted-foreground">{String(item[col.subKey])}</div>
                                                                 </div>
                                                             ) : formatValue(val, col.type)}
                                                     </td>

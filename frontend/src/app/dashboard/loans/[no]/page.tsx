@@ -29,7 +29,7 @@ const Isi = ({ label, children, tebal }: { label: string; children: React.ReactN
 )
 
 export default async function DetailPinjamanPage(props: { params: Promise<{ no: string }>; searchParams: Promise<{ tab?: string }> }) {
-    const o = await wajibIzin("/dashboard/loans/cari") // layout tidak dijalankan ulang pada navigasi antarhalaman
+    const o = await wajibIzin("/dashboard/loans/[no]") // layout tidak dijalankan ulang pada navigasi antarhalaman
     const { no: mentah } = await props.params
     const no = decodeURIComponent(mentah)
     if (!/^[A-Za-z0-9._\-/ ]{3,25}$/.test(no)) notFound()

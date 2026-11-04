@@ -216,7 +216,7 @@ docker compose run --rm -w /app admin npm run restore -- /backup/$C --periksa   
 docker compose run --rm -w /app admin npm run restore -- /backup/$C --timpa --yakin kopkar_mjs_2000
 docker compose run --rm -w /app admin npm run anggota:pasang      # tabel/kolom/FK khusus web (aman diulang)
 docker compose run --rm -w /app admin npm run indeks:pasang       # indeks dari schema.sql yang belum ada (aman diulang)
-docker compose run --rm -w /app admin npm run pengaturan:pasang   # tabel pengaturan_web dan izin Mode Aplikasi
+docker compose run --rm -w /app admin npm run pengaturan:pasang   # tabel pengaturan_web, izin Mode Aplikasi, izin menu sidebar
 docker compose run --rm -w /app admin npm run panduan:pasang      # artikel Pusat Panduan yang belum ada
 ```
 

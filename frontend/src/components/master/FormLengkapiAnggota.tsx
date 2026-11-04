@@ -10,6 +10,7 @@ import { Field, selectClass } from "@/components/transaksi/common"
 import type { HasilPendaftaran } from "@/app/actions/pendaftaran"
 
 export interface BahanLengkapi {
+    /** Kosong = anggota ditambah langsung oleh admin (tanpa akun), KPK diisi di form. */
     username: string
     nik: string
     form: LengkapAnggota
@@ -23,22 +24,25 @@ export interface BahanLengkapi {
  * Form kelengkapan anggota baru saat admin menyetujui pendaftaran (atau menjadikan akun sebagai anggota): isian awal dari data karyawan Mattel,
  * nilai awal simpanan dari Pengaturan Perusahaan; semuanya bisa diubah sebelum disimpan.
  */
-export function FormLengkapiAnggota({ bahan, tombol, onTutup, onSimpan }: {
+export function FormLengkapiAnggota({ bahan, tombol, onTutup, onSimpan, judul = "Kelengkapan data anggota baru",
+    keterangan = "Periksa dan lengkapi data anggota sebelum disetujui. Nilai simpanan awal mengikuti Pengaturan Perusahaan dan bisa diubah di sini." }: {
     bahan: BahanLengkapi | null
     tombol: string
     onTutup: () => void
-    onSimpan: (data: LengkapAnggota) => Promise<HasilPendaftaran>
+    onSimpan: (data: LengkapAnggota, nik: string) => Promise<HasilPendaftaran>
+    judul?: string
+    keterangan?: string
 }) {
     return (
-        <ModalForm open={!!bahan} onOpenChange={(b) => { if (!b) onTutup() }} judul="Kelengkapan data anggota baru" lebar="sm:max-w-[44rem]"
-            keterangan="Periksa dan lengkapi data anggota sebelum disetujui. Nilai simpanan awal mengikuti Pengaturan Perusahaan dan bisa diubah di sini.">
+        <ModalForm open={!!bahan} onOpenChange={(b) => { if (!b) onTutup() }} judul={judul} lebar="sm:max-w-[44rem]" keterangan={keterangan}>
             {bahan && <Isi bahan={bahan} tombol={tombol} onTutup={onTutup} onSimpan={onSimpan} />}
         </ModalForm>
     )
 }
 
-function Isi({ bahan, tombol, onTutup, onSimpan }: { bahan: BahanLengkapi; tombol: string; onTutup: () => void; onSimpan: (d: LengkapAnggota) => Promise<HasilPendaftaran> }) {
+function Isi({ bahan, tombol, onTutup, onSimpan }: { bahan: BahanLengkapi; tombol: string; onTutup: () => void; onSimpan: (d: LengkapAnggota, nik: string) => Promise<HasilPendaftaran> }) {
     const [v, setV] = useState<LengkapAnggota>(bahan.form)
+    const [nik, setNik] = useState(bahan.nik)
     const [galat, setGalat] = useState("")
     const [sibuk, mulai] = useTransition()
     const ubah = (k: keyof LengkapAnggota) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => setV((x) => ({ ...x, [k]: e.target.value }))
@@ -47,7 +51,7 @@ function Isi({ bahan, tombol, onTutup, onSimpan }: { bahan: BahanLengkapi; tombo
         e.preventDefault()
         setGalat("")
         mulai(async () => {
-            const h = await onSimpan(v)
+            const h = await onSimpan(v, nik)
             if (!h.ok) { setGalat(h.error); return }
             onTutup()
         })
@@ -56,8 +60,9 @@ function Isi({ bahan, tombol, onTutup, onSimpan }: { bahan: BahanLengkapi; tombo
     const hint = (dari: boolean) => (dari ? "Dari Pengaturan Perusahaan" : "Tebakan dari anggota baru; atur di Pengaturan Perusahaan")
     return (
         <form onSubmit={kirim} className="space-y-4">
-            <p className="rounded-md bg-muted/50 px-3 py-2 text-sm">Akun <b>{bahan.username}</b> · NIK <span className="font-mono">{bahan.nik}</span> (dari data karyawan Mattel)</p>
+            {bahan.username && <p className="rounded-md bg-muted/50 px-3 py-2 text-sm">Akun <b>{bahan.username}</b> · NIK <span className="font-mono">{bahan.nik}</span> (dari data karyawan Mattel)</p>}
             <div className="grid gap-3 sm:grid-cols-2">
+                {!bahan.username && <Field label="KPK" htmlFor="l-kpk" className="sm:col-span-2"><Input id="l-kpk" value={nik} onChange={(e) => setNik(e.target.value)} maxLength={25} required /></Field>}
                 <Field label="Nama lengkap" htmlFor="l-nama"><Input id="l-nama" value={v.nama} onChange={ubah("nama")} maxLength={50} required /></Field>
                 <Field label="Jenis kelamin" htmlFor="l-jk">
                     <select id="l-jk" className={selectClass} value={v.jnsKelamin} onChange={ubah("jnsKelamin")}>

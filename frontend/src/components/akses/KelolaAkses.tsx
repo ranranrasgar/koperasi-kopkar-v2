@@ -1,6 +1,6 @@
 "use client"
 
-import { useActionState, useEffect, useState, useTransition } from "react"
+import { Fragment, useActionState, useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { AlertCircle, CheckCircle2, KeyRound, Loader2, Plus, Search } from "lucide-react"
 import { Input } from "@/components/ui/input"
@@ -9,6 +9,7 @@ import {
     resetPasswordAction, setAksesAction, tambahOperatorAction, ubahAktifOperatorAction, ubahGrupOperatorAction, type HasilKelola,
 } from "@/app/actions/akses"
 import { Field, FormCard, selectClass } from "@/components/transaksi/common"
+import type { IzinBaris, KelompokBaris } from "@/lib/queries/akses"
 import { cn } from "@/lib/utils"
 
 interface Grup { id: number; nama_grup: string }
@@ -39,12 +40,23 @@ function Pesan({ hasil }: { hasil: HasilKelola | null }) {
 
 // ---------- matriks grup x menu ----------
 
-interface MenuBaris { nama: string; web: boolean; grupIzin: number[] }
+function KotakGrup({ izin, grup, label, sibuk, ubah }: { izin: IzinBaris; grup: Grup[]; label: string; sibuk: string | null; ubah: (m: string, g: Grup, boleh: boolean) => void }) {
+    return grup.map((g) => {
+        const kunci = `${izin.nama}|${g.id}`
+        return (
+            <td key={g.id} className="px-3 py-1.5 text-center">
+                {sibuk === kunci ? <Loader2 className="h-4 w-4 animate-spin inline" /> : (
+                    <input type="checkbox" aria-label={`${label} untuk ${g.nama_grup}`} disabled={sibuk !== null}
+                        checked={izin.grupIzin.includes(g.id)} onChange={(e) => ubah(izin.nama, g, e.target.checked)} />
+                )}
+            </td>
+        )
+    })
+}
 
-export function MatriksAkses({ grup, menu }: { grup: Grup[]; menu: MenuBaris[] }) {
-    const [data, setData] = useState(menu)
+export function MatriksAkses({ grup, kelompok }: { grup: Grup[]; kelompok: KelompokBaris[] }) {
+    const [data, setData] = useState(kelompok)
     const [cari, setCari] = useState("")
-    const [hanyaWeb, setHanyaWeb] = useState(false)
     const [hasil, setHasil] = useState<HasilKelola | null>(null)
     const [sibuk, setSibuk] = useState<string | null>(null)
     const [, startTransition] = useTransition()
@@ -55,26 +67,24 @@ export function MatriksAkses({ grup, menu }: { grup: Grup[]; menu: MenuBaris[] }
         startTransition(async () => {
             const r = await setAksesAction(g.id, m, boleh)
             setHasil(r)
-            if (r.ok) setData((d) => d.map((x) => x.nama !== m ? x
-                : { ...x, grupIzin: boleh ? [...x.grupIzin, g.id] : x.grupIzin.filter((id) => id !== g.id) }))
+            if (r.ok) setData((d) => d.map((k) => ({ ...k, menu: k.menu.map((x) => ({ ...x, izin: x.izin.map((i) => i.nama !== m ? i
+                : { ...i, grupIzin: boleh ? [...i.grupIzin, g.id] : i.grupIzin.filter((id) => id !== g.id) }) })) })))
             setSibuk(null)
         })
     }
 
-    const tampil = data.filter((m) => (!hanyaWeb || m.web) && m.nama.toLowerCase().includes(cari.toLowerCase()))
+    const kata = cari.toLowerCase()
+    const cocok = (t: string | null) => !!t && t.toLowerCase().includes(kata)
+    const tampil = data
+        .map((k) => ({ ...k, menu: k.menu.filter((m) => cocok(k.label) || cocok(m.label) || m.izin.some((i) => cocok(i.label))) }))
+        .filter((k) => k.menu.length > 0)
     return (
         <FormCard title="Matriks Hak Akses"
-            description="Centang = grup boleh membuka menu (opr_hak_akses, akses T). Berlaku langsung tanpa login ulang. Grup superadmin selalu punya semua akses.">
+            description="Nama dan urutan sama dengan menu samping. Centang = grup boleh membuka menu itu. Berlaku langsung tanpa login ulang. Grup superadmin selalu punya semua akses.">
             <div className="space-y-3">
-                <div className="flex flex-wrap items-center gap-3">
-                    <div className="relative w-full sm:w-72">
-                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input placeholder="Cari menu" value={cari} onChange={(e) => setCari(e.target.value)} className="pl-8" />
-                    </div>
-                    <label className="flex items-center gap-2 text-sm cursor-pointer">
-                        <input type="checkbox" checked={hanyaWeb} onChange={(e) => setHanyaWeb(e.target.checked)} />
-                        Hanya menu yang dipakai web
-                    </label>
+                <div className="relative w-full sm:w-72">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                    <Input placeholder="Cari menu" value={cari} onChange={(e) => setCari(e.target.value)} className="pl-8" />
                 </div>
                 <Pesan hasil={hasil} />
                 <div className="overflow-auto max-h-[65vh] rounded-md border">
@@ -86,24 +96,28 @@ export function MatriksAkses({ grup, menu }: { grup: Grup[]; menu: MenuBaris[] }
                             </tr>
                         </thead>
                         <tbody>
-                            {tampil.map((m) => (
-                                <tr key={m.nama} className="border-t hover:bg-muted/30">
-                                    <td className="px-3 py-1.5">
-                                        {m.nama}
-                                        {m.web && <span className="ml-2 rounded bg-primary/10 text-primary text-[9px] font-bold uppercase px-1">web</span>}
-                                    </td>
-                                    {grup.map((g) => {
-                                        const kunci = `${m.nama}|${g.id}`
-                                        return (
-                                            <td key={g.id} className="px-3 py-1.5 text-center">
-                                                {sibuk === kunci ? <Loader2 className="h-4 w-4 animate-spin inline" /> : (
-                                                    <input type="checkbox" aria-label={`${m.nama} untuk ${g.nama_grup}`} disabled={sibuk !== null}
-                                                        checked={m.grupIzin.includes(g.id)} onChange={(e) => ubah(m.nama, g, e.target.checked)} />
-                                                )}
-                                            </td>
-                                        )
-                                    })}
-                                </tr>
+                            {tampil.map((k) => (
+                                <Fragment key={k.label}>
+                                    <tr className="border-t bg-muted/50">
+                                        <td colSpan={grup.length + 1} className="px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-muted-foreground">{k.label}</td>
+                                    </tr>
+                                    {k.menu.map((m) => (
+                                        <Fragment key={m.label}>
+                                            <tr className="border-t hover:bg-muted/30">
+                                                <td className="px-3 py-1.5 font-medium">{m.label}</td>
+                                                {m.tetap ? <td colSpan={grup.length} className="px-3 py-1.5 text-center text-xs text-muted-foreground">{m.tetap}</td>
+                                                    : m.izin.length === 1 ? <KotakGrup izin={m.izin[0]} grup={grup} label={m.label} sibuk={sibuk} ubah={ubah} />
+                                                    : <td colSpan={grup.length} />}
+                                            </tr>
+                                            {m.izin.length > 1 && m.izin.map((i) => (
+                                                <tr key={i.nama} className="hover:bg-muted/30">
+                                                    <td className="py-1 pl-8 pr-3 text-muted-foreground">{i.label}</td>
+                                                    <KotakGrup izin={i} grup={grup} label={`${m.label}: ${i.label}`} sibuk={sibuk} ubah={ubah} />
+                                                </tr>
+                                            ))}
+                                        </Fragment>
+                                    ))}
+                                </Fragment>
                             ))}
                         </tbody>
                     </table>

@@ -1,6 +1,7 @@
 import "server-only"
 import { query } from "@/lib/db"
-import { AKSES_HALAMAN, GRUP_SUPERADMIN, MENU } from "@/config/akses"
+import { AKSES_HALAMAN, GRUP_SUPERADMIN, LABEL_IZIN, MENU } from "@/config/akses"
+import { allGroups } from "@/config/menu"
 
 export interface Grup { id: number; urut: number; nama_grup: string }
 
@@ -10,19 +11,30 @@ export const grupBiasa = () =>
 
 export const semuaGrup = () => query<Grup>("SELECT id, urut, nama_grup FROM opr_grup ORDER BY urut")
 
-/** Menu web yang dipakai halaman (selain Kelola Akses, yang khusus superadmin). */
-export const MENU_WEB = new Set(Object.values(AKSES_HALAMAN).flat().filter((m) => m !== MENU.kelolaAkses))
+/** Satu kotak centang per grup: izin di opr_hak_akses. `label` terisi bila menunya punya lebih dari satu izin. */
+export interface IzinBaris { nama: string; label: string | null; grupIzin: number[] }
+/** Satu menu sidebar. `tetap` terisi bila izinnya tidak bisa diatur lewat matriks. */
+export interface MenuBaris { label: string; tetap: string | null; izin: IzinBaris[] }
+export interface KelompokBaris { label: string; menu: MenuBaris[] }
+
+/** Dashboard selalu tampil di sidebar; izinnya hanya mengatur isi ringkasan, jadi tidak ada di AKSES_HALAMAN. */
+const izinItem = (href: string) => href === "/dashboard" ? [MENU.dashboard] : AKSES_HALAMAN[href] ?? []
 
 export async function matriksAkses() {
     const [grup, baris] = await Promise.all([
         grupBiasa(),
         query<{ menu: string; grup_id: number; akses: string }>("SELECT menu, grup_id, akses FROM opr_hak_akses"),
     ])
-    const menu = [...new Set([...baris.map((b) => b.menu), ...MENU_WEB])].filter((m) => m !== MENU.kelolaAkses)
-        .sort((a, b) => a.localeCompare(b, "id"))
     const izin: Record<string, number[]> = {}
     for (const b of baris) if (b.akses === "T") (izin[b.menu] ??= []).push(b.grup_id)
-    return { grup, menu: menu.map((m) => ({ nama: m, web: MENU_WEB.has(m), grupIzin: izin[m] ?? [] })) }
+    const menuBaris = (label: string, nama: string[]): MenuBaris => nama.includes(MENU.kelolaAkses)
+        ? { label, tetap: "Khusus superadmin", izin: [] }
+        : { label, tetap: nama.length ? null : "Semua operator",
+            izin: nama.map((m) => ({ nama: m, label: nama.length > 1 ? LABEL_IZIN[m] ?? m : null, grupIzin: izin[m] ?? [] })) }
+    const kelompok: KelompokBaris[] = allGroups.map((g) => ({ label: g.groupLabel, menu: g.items.map((i) => menuBaris(i.label, izinItem(i.href))) }))
+    // Pesan Anggota dibuka dari ikon di navbar, bukan dari sidebar, tetapi izinnya tetap diatur di sini.
+    kelompok.push({ label: "Navbar", menu: [menuBaris("Pesan Anggota", AKSES_HALAMAN["/dashboard/pesan"])] })
+    return { grup, kelompok }
 }
 
 export interface OperatorBaris {

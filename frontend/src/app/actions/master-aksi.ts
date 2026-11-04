@@ -1,8 +1,9 @@
 "use server"
 
 import { revalidatePath } from "next/cache"
+import { bahanAnggotaBaru, tambahAnggota, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
 import type { Db } from "@kopkar/backend/src/db.ts"
-import { modeUji, tx } from "@/lib/db"
+import { modeUji, pool, tx } from "@/lib/db"
 import { isTanggal } from "@/lib/list"
 import { GalatSesi, operatorAktif, type Operator } from "@/lib/operator"
 import { MENU } from "@/config/akses"
@@ -54,6 +55,24 @@ function angka(f: FormData, k: string, label: string, maks = 999_999_999_999) {
     const n = Number(nilai || "0")
     if (!Number.isFinite(n) || n < 0 || n > maks) throw new Salah(`${label} harus angka antara 0 dan ${maks}`)
     return nilai || "0"
+}
+
+/** Isian awal form Tambah Anggota (nilai simpanan dan daftar grade), dimuat saat form dibuka. */
+export async function bahanAnggotaBaruAction() {
+    try {
+        await operatorAktif([MENU.inputAnggota])
+        return { ok: true as const, ...await bahanAnggotaBaru({ query: (t: string, p?: unknown[]) => pool.query(t, p) } as never) }
+    } catch (e) {
+        return { ok: false as const, error: e instanceof Error ? e.message : "Gagal memuat form" }
+    }
+}
+
+export async function tambahAnggotaAction(nik: string, data: LengkapAnggota): Promise<HasilSimpan> {
+    return simpan([MENU.inputAnggota], "/dashboard/members", async (db, operator) => {
+        const r = await tambahAnggota(db as never, nik, data, { id: operator.id, nama: operator.nama })
+        if (!r.ok) throw new Salah(r.error)
+        return `Anggota baru ${r.kode} (${data.nama.trim()}) ditambahkan oleh ${operator.nama}`
+    })
 }
 
 export async function simpanAnggotaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {

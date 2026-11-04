@@ -29,7 +29,7 @@ export function bersihkanUntukCetak(area: HTMLElement): string {
 
 export interface KolomTabel { label: string; kanan?: boolean; tengah?: boolean; mono?: boolean }
 
-/** Tabel dari data: kolom dan baris yang sudah berupa teks. */
+/** Tabel dari data: kolom dan baris yang sudah berupa teks. Teks sesudah ganti baris tampil sebagai baris kecil di bawahnya. */
 export function tabelHtml(kolom: KolomTabel[], baris: string[][], jumlahBarisTotal?: number, opsi: { kelompok?: { label: string; lebar: number }[]; total?: string[] } = {}): string {
     const kelas = (k: KolomTabel) => (k.kanan ? "kanan" : k.tengah ? "tengah" : "") + (k.mono ? " mono" : "")
     // Kepala berkelompok: baris pertama berisi judul kelompok (lebar = jumlah kolom), baris kedua nama kolom.
@@ -38,7 +38,8 @@ export function tabelHtml(kolom: KolomTabel[], baris: string[][], jumlahBarisTot
         ? `<tr><th class="no" rowspan="2">No.</th>${opsi.kelompok.map((g) => `<th class="tengah" colspan="${g.lebar}">${esc(g.label)}</th>`).join("")}</tr><tr>${kolom.map((k) => `<th class="${kelas(k)}">${esc(k.label)}</th>`).join("")}</tr>`
         : kepala2
     const foot = opsi.total ? `<tfoot><tr><td></td>${opsi.total.map((v, j) => `<td class="${kelas(kolom[j])}"><b>${esc(v)}</b></td>`).join("")}</tr></tfoot>` : ''
-    const body = baris.map((r, i) => `<tr><td class="no">${i + 1}</td>${r.map((v, j) => `<td class="${kelas(kolom[j])}">${esc(v)}</td>`).join("")}</tr>`).join("")
+    const sel = (v: string) => v.split("\n").map((t, i) => i ? `<div class="sub">${esc(t)}</div>` : esc(t)).join("")
+    const body = baris.map((r, i) => `<tr><td class="no">${i + 1}</td>${r.map((v, j) => `<td class="${kelas(kolom[j])}">${sel(v)}</td>`).join("")}</tr>`).join("")
     const catatan = jumlahBarisTotal !== undefined && jumlahBarisTotal > baris.length
         ? `<p class="catatan">Ditampilkan ${baris.length.toLocaleString("id-ID")} dari ${jumlahBarisTotal.toLocaleString("id-ID")} baris. Persempit filter untuk mencetak sisanya.</p>` : ""
     return `<table><thead>${head}</thead><tbody>${body}</tbody>${foot}</table>${catatan}<p class="jumlah">Jumlah data: ${(jumlahBarisTotal ?? baris.length).toLocaleString("id-ID")}</p>`
@@ -88,6 +89,7 @@ body,.kertas,.kertas *{font-family:Arial,Helvetica,sans-serif!important}
 .isi .mono{font-family:"Courier New",monospace!important}
 .isi .tabular-nums{font-variant-numeric:tabular-nums}
 .isi h1,.isi h2,.isi h3{color:#111!important}
+.isi .sub{font-size:9px;color:#444}
 .isi .catatan{font-size:10.5px;color:#92400e;margin:6px 0 0}
 .isi .jumlah{font-size:10.5px;margin:6px 0 0}
 .ttd{margin-top:14px;font-size:10.5px;color:#374151;display:flex;justify-content:space-between;border-top:1px solid #9ca3af;padding-top:5px}

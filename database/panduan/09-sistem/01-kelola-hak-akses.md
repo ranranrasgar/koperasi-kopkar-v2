@@ -7,7 +7,9 @@ Menu **Sistem & Pengaturan → Kelola Hak Akses** hanya untuk grup **superadmin*
 
 ## Matriks Hak Akses
 
-Baris adalah nama menu (sama dengan aplikasi desktop), kolom adalah grup operator. **Centang = grup boleh membuka menu itu.**
+Baris adalah menu dengan nama, kelompok, dan urutan yang sama persis dengan **menu samping**; kolom adalah grup operator. **Centang = grup boleh membuka menu itu**, dan menunya langsung muncul di menu samping operator grup itu.
+
+Beberapa menu punya sub-baris karena izinnya memang terpisah, misalnya **Daftar Pinjaman** (Koperasi, Bank / pihak lain, KPR) dan **Daftar Anggota** (Kelola data, Tambah anggota baru, Lihat laporan). Menu tampil di menu samping bila minimal satu sub-barisnya dicentang, dan isinya mengikuti yang dicentang.
 
 1. Ketik di kotak **Cari menu** untuk menemukan menu.
 2. Centang atau hapus centang pada kotak di kolom grup yang dimaksud.
@@ -18,7 +20,11 @@ Baris adalah nama menu (sama dengan aplikasi desktop), kolom adalah grup operato
 | Aturan | Keterangan |
 | --- | --- |
 | Grup superadmin selalu punya semua akses | Kolomnya tidak bisa diubah: *Grup superadmin selalu punya semua akses* |
-| Kelola Hak Akses tidak bisa diberikan ke grup lain | *Menu ini tidak bisa diberikan ke grup lain* |
+| Operator dan Kelola Hak Akses khusus superadmin | Barisnya bertulisan *Khusus superadmin*, tanpa kotak centang |
+| Pusat Panduan untuk semua operator | Barisnya bertulisan *Semua operator*, tanpa kotak centang |
+| Dashboard selalu tampil | Centangnya hanya mengatur apakah ringkasan angka di Dashboard terlihat |
+| Pesan Anggota ada di kelompok Navbar | Dibuka dari ikon pesan di bagian atas, bukan dari menu samping |
+| Cari Pinjaman mengikuti izin pinjaman | Hasil pencarian hanya memuat grup pinjaman yang boleh dilihat grup itu (laporan, pencairan, angsuran, tunggakan, atau pengajuan) |
 | Izin pencairan dan angsuran pinjaman per grup pinjaman | Lihat panduan *Hak akses dan kenapa menu saya berbeda* |
 
 ## Saran pembagian akses

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import {
-    akunUntukResetEmail, aturEmail, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, bersihkanLengkap, dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, ubahStatusAkun, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
+    akunUntukResetEmail, aturEmail, bahanAnggotaBaru, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, bersihkanLengkap, dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, tambahAnggota, ubahStatusAkun, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
     hashJawaban, hashPasswordAnggota, masukAnggota, pertanyaanUntuk, resetLewatJawaban,
 } from '../src/anggota/akun.ts';
 
@@ -379,6 +379,45 @@ test('hapus keanggotaan: anggota baru dari karyawan Mattel hilang, karyawan kemb
         const tolak = await hapusKeanggotaan(db, a.id);
         assert.equal(tolak.ok, false);
         assert.match((tolak as { error: string }).error, /simpanan/);
+    });
+});
+
+test('tambah anggota dari admin: kode format lama, KPK wajib dan unik, tertaut karyawan Mattel, grade diperiksa', async () => {
+    await inTx(async (db) => {
+        const oleh = (await db.query('SELECT id, nama FROM opr ORDER BY id LIMIT 1')).rows[0];
+        const pelaksana = { id: Number(oleh.id), nama: oleh.nama };
+        const { form, daftarGrade } = await bahanAnggotaBaru(db);
+        const isian = { ...form, nama: 'Anggota Tambah Uji', pokok: '100000', wajib: '50000', sukarela: '0', grade: daftarGrade[0]?.nama ?? '' };
+
+        assert.deepEqual(await tambahAnggota(db, '  ', isian, pelaksana), { ok: false, error: 'KPK wajib diisi' });
+        assert.equal((await tambahAnggota(db, 'UJI-TAMBAH', { ...isian, nama: '' }, pelaksana)).ok, false);
+        assert.equal((await tambahAnggota(db, 'UJI-TAMBAH', { ...isian, grade: 'TIDAK-ADA' }, pelaksana)).ok, false);
+
+        const h = await tambahAnggota(db, ' UJI-TAMBAH ', isian, pelaksana);
+        assert.equal(h.ok, true);
+        const kode = (h as { kode: string }).kode;
+        assert.match(kode, /^\d{4}-\d{4,}$/);
+        const a = (await db.query('SELECT * FROM anggota WHERE kode_agt = $1', [kode])).rows[0];
+        assert.equal(a.nik, 'UJI-TAMBAH');
+        assert.equal(a.aktif, true);
+        assert.equal(a.agt_non_agt, true);
+        assert.equal(a.karyawan_mattel_id, null);
+        assert.equal(Number(a.simpanan_wajib), 50000);
+        assert.equal(Number(a.rp_grade), Number(daftarGrade[0]?.nominal ?? 0));
+        assert.equal((await db.query('SELECT count(*)::int n FROM anggota_detail WHERE anggota_id = $1', [a.id])).rows[0].n, 1);
+
+        // KPK yang sudah terdaftar ditolak, juga bila anggotanya tidak aktif.
+        const ganda = await tambahAnggota(db, 'UJI-TAMBAH', isian, pelaksana);
+        assert.equal(ganda.ok, false);
+        assert.match((ganda as { error: string }).error, /sudah terdaftar/);
+        await db.query('UPDATE anggota SET aktif = false WHERE id = $1', [a.id]);
+        assert.match((await tambahAnggota(db, 'UJI-TAMBAH', isian, pelaksana) as { error: string }).error, /tidak aktif/);
+
+        // KPK karyawan Mattel yang belum anggota: tertaut ke data karyawan.
+        const k = (await db.query(`SELECT k.id, k.nik FROM karyawan_mattel k WHERE NOT EXISTS (SELECT 1 FROM anggota a WHERE a.nik = k.nik) LIMIT 1`)).rows[0];
+        const h2 = await tambahAnggota(db, k.nik, isian, pelaksana);
+        assert.equal(h2.ok, true);
+        assert.equal((await db.query('SELECT karyawan_mattel_id FROM anggota WHERE kode_agt = $1', [(h2 as { kode: string }).kode])).rows[0].karyawan_mattel_id, k.id);
     });
 });
 
