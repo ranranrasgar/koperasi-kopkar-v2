@@ -3,6 +3,7 @@
 import React, { useActionState, useEffect, useTransition } from "react"
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { InputUangBebas } from "@/components/ui/InputUang"
 import { Textarea } from "@/components/ui/textarea"
 import { Field, selectClass } from "@/components/transaksi/common"
 import type { HasilSimpan } from "@/app/actions/master"
@@ -11,7 +12,7 @@ import { cn } from "@/lib/utils"
 export interface FieldSpec {
     name: string
     label: string
-    type?: "text" | "number" | "date" | "select" | "checkbox" | "textarea"
+    type?: "text" | "number" | "uang" | "date" | "select" | "checkbox" | "textarea"
     options?: { value: string; label: string }[]
     required?: boolean
     hint?: string
@@ -61,6 +62,8 @@ export function FormEdit({ fields, nilai, aksi, tombol = "Simpan", onSelesai, ko
                                 </select>
                             ) : f.type === "textarea" ? (
                                 <Textarea id={id} name={f.name} defaultValue={v == null ? "" : String(v)} required={f.required} rows={3} />
+                            ) : f.type === "uang" ? (
+                                <InputUangBebas id={id} name={f.name} defaultValue={v == null ? "" : String(v)} required={f.required} />
                             ) : (
                                 <Input id={id} name={f.name} type={f.type === "number" ? "number" : f.type === "date" ? "date" : "text"}
                                     step={f.type === "number" ? f.step ?? "any" : undefined}

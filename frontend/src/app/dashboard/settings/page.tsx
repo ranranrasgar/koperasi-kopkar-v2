@@ -18,7 +18,7 @@ const FIELDS: FieldSpec[] = [
     { name: "npwp", label: "NPWP" },
     { name: "siup", label: "SIUP" },
     { name: "tdp", label: "TDP" },
-    { name: "rp_adm_bank", label: "Biaya Adm Bank (Rp)", type: "number" },
+    { name: "rp_adm_bank", label: "Biaya Adm Bank (Rp)", type: "uang" },
     { name: "persen_pajak_pendapatan", label: "Pajak Pendapatan (%)", type: "number" },
     { name: "ket_nota", label: "Keterangan Nota", type: "textarea", wide: true },
 ]
@@ -44,9 +44,9 @@ export default async function PerusahaanPage() {
             </FormCard>
             <FormCard title="Nilai Awal Anggota Baru" description="Simpanan bulanan awal untuk anggota baru dari pendaftaran aplikasi. Muncul sebagai isian awal di form kelengkapan saat admin menyetujui, dan bisa diubah di sana. Kosongkan untuk memakai tebakan dari anggota baru bergrade sama.">
                 <FormEdit fields={[
-                    { name: "pokok", label: "Simpanan Pokok (Rp)", type: "number", step: "1000" },
-                    { name: "wajib", label: "Simpanan Wajib (Rp per bulan)", type: "number", step: "1000" },
-                    { name: "sukarela", label: "Simpanan Sukarela (Rp per bulan)", type: "number", step: "1000" },
+                    { name: "pokok", label: "Simpanan Pokok (Rp)", type: "uang" },
+                    { name: "wajib", label: "Simpanan Wajib (Rp per bulan)", type: "uang" },
+                    { name: "sukarela", label: "Simpanan Sukarela (Rp per bulan)", type: "uang" },
                 ]} nilai={nilaiAwal} aksi={simpanNilaiAwalAnggotaAction} kolom={3} />
             </FormCard>
             <FormCard title="Pengaturan Perusahaan" description="Identitas koperasi untuk kop laporan, nota, dan tampilan aplikasi.">

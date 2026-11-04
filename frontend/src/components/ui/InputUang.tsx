@@ -1,5 +1,6 @@
 "use client"
 
+import { useState } from "react"
 import { Input } from "@/components/ui/input"
 
 /** Nilai mentah ("1500000.5") ke tampilan Indonesia ("1.500.000,5"). */
@@ -31,4 +32,11 @@ export function InputUang({ value, onChange, name, readOnly, className, ...rest 
                 value={tampil(value)} onChange={(e) => onChange(mentahkan(e.target.value))} onFocus={(e) => e.currentTarget.select()} />
         </>
     )
+}
+
+/** InputUang yang menyimpan nilainya sendiri, untuk form dengan nilai awal yang dikirim lewat FormData. Nilai dari database ("1500000.0000") dirapikan dulu. */
+export function InputUangBebas({ defaultValue, ...rest }: { defaultValue?: string | number | null; name: string } & Omit<React.ComponentProps<"input">, "value" | "onChange" | "name" | "type" | "defaultValue">) {
+    const awal = defaultValue === null || defaultValue === undefined || defaultValue === "" ? "" : String(Number(defaultValue))
+    const [nilai, setNilai] = useState(awal === "NaN" ? "" : awal)
+    return <InputUang {...rest} value={nilai} onChange={setNilai} />
 }

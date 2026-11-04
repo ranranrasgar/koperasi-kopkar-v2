@@ -87,7 +87,7 @@ export function KelolaGrade({ baris, belumTertaut }: { baris: BarisGrade[]; belu
             <ModalForm open={edit !== null} onOpenChange={(buka) => { if (!buka) setEdit(null) }} judul={edit === "baru" ? "Tambah grade" : "Ubah grade"}
                 keterangan="Nama tanpa spasi, mis. M06. Nominal ialah batas pinjaman per grade (Rp).">
                 {edit && <FormEdit key={edit === "baru" ? "baru" : edit.id}
-                    fields={[{ name: "id", label: "", hidden: true }, { name: "nama", label: "Nama grade", required: true }, { name: "nominal", label: "Nominal plafon (Rp)", type: "number", step: "1000" }]}
+                    fields={[{ name: "id", label: "", hidden: true }, { name: "nama", label: "Nama grade", required: true }, { name: "nominal", label: "Nominal plafon (Rp)", type: "uang" }]}
                     nilai={edit === "baru" ? { id: "" } : { id: edit.id, nama: edit.nama, nominal: edit.nominal }} aksi={simpanGradeAction} onSelesai={selesai} kolom={2} />}
             </ModalForm>
         </div>

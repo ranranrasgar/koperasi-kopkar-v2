@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
+import { InputUang } from "@/components/ui/InputUang"
 import { batasPlafon, pesanPlafon } from "@kopkar/backend/src/posting/plafon.ts"
 import { cairkanPinjamanAction, pratinjauPinjamanAction, riwayatAnggotaAction } from "@/app/actions/transaksi"
 import type { RiwayatAnggota } from "@/lib/queries/pinjaman-riwayat"
@@ -121,7 +122,7 @@ export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = f
                             </Field>
                             <Field label="Pokok Pinjaman (Rp)" htmlFor="pokok"
                                 hint={batas ? `Maksimal ${formatRupiah(batas.batas)} (${batas.sumber === "grade" ? "grade anggota" : "maksimal plafond jenis ini"})` : undefined}>
-                                <Input id="pokok" name="pokok" type="number" min="1" step="any" required value={pokok} onChange={(e) => setPokok(e.target.value)} />
+                                <InputUang id="pokok" name="pokok" required value={pokok} onChange={setPokok} />
                             </Field>
                             <Field label="Lama Angsuran (kali)" htmlFor="lama"
                                 hint={jk && jk.mak_cicilan > 0 ? `Maksimum ${jk.mak_cicilan} kali` : undefined}>

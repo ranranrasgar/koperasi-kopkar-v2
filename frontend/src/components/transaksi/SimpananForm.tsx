@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { Input } from "@/components/ui/input"
+import { InputUang } from "@/components/ui/InputUang"
 import { ambilSimpananAction, infoAnggotaAction, setorSimpananAction, type InfoAnggota } from "@/app/actions/transaksi"
 import type { AnggotaRingkas } from "@/lib/queries/anggota"
 import { formatRupiah } from "@/lib/format"
@@ -20,6 +21,7 @@ export function SimpananForm({ tipe, jenis, akunKas, hariIni, jenisAwal }: Props
     const [anggota, setAnggota] = useState<AnggotaRingkas | null>(null)
     const [info, setInfo] = useState<InfoAnggota | null>(null)
     const form = useRef<HTMLFormElement>(null)
+    const [jumlah, setJumlah] = useState("")
 
     useEffect(() => {
         if (!anggota) { setInfo(null); return }
@@ -31,7 +33,8 @@ export function SimpananForm({ tipe, jenis, akunKas, hariIni, jenisAwal }: Props
     // Setelah berhasil, kosongkan jumlah dan keterangan supaya tidak terkirim dua kali.
     useEffect(() => {
         if (hasil?.ok && form.current) {
-            for (const k of ["jumlah", "deskripsi"]) (form.current.elements.namedItem(k) as HTMLInputElement).value = ""
+            setJumlah("")
+            ;(form.current.elements.namedItem("deskripsi") as HTMLInputElement).value = ""
         }
     }, [hasil])
 
@@ -56,7 +59,7 @@ export function SimpananForm({ tipe, jenis, akunKas, hariIni, jenisAwal }: Props
                                 <Input id="tanggal" name="tanggal" type="date" required defaultValue={hariIni} />
                             </Field>
                             <Field label="Jumlah (Rp)" htmlFor="jumlah">
-                                <Input id="jumlah" name="jumlah" type="number" min="1" step="any" required inputMode="decimal" />
+                                <InputUang id="jumlah" name="jumlah" required value={jumlah} onChange={setJumlah} />
                             </Field>
                             <Field label={tipe === "setor" ? "Masuk ke Kas/Bank" : "Keluar dari Kas/Bank"} htmlFor="kas">
                                 <KasSelect akun={akunKas} />

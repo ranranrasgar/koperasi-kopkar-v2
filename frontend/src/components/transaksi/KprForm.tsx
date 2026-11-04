@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
+import { InputUang } from "@/components/ui/InputUang"
 import { cairkanKprAction } from "@/app/actions/transaksi"
 import type { AnggotaRingkas } from "@/lib/queries/anggota"
 import { formatRupiah } from "@/lib/format"
@@ -41,14 +42,14 @@ export function KprForm({ jenis, akunKas, hariIni }: { jenis: JenisKreditOpsi[];
                             <Input id="tanggal" name="tanggal" type="date" required defaultValue={hariIni} />
                         </Field>
                         <Field label="Pokok KPR (Rp)" htmlFor="pokok">
-                            <Input id="pokok" name="pokok" type="number" min="1" step="any" required value={pokok} onChange={(e) => setPokok(e.target.value)} />
+                            <InputUang id="pokok" name="pokok" required value={pokok} onChange={setPokok} />
                         </Field>
                         <Field label="Lama Angsuran (bulan)" htmlFor="lama" hint={jk && jk.mak_cicilan > 0 ? `Maksimum ${jk.mak_cicilan} bulan` : undefined}>
                             <Input id="lama" name="lama" type="number" min="1" step="1" required value={lama} onChange={(e) => setLama(e.target.value)} />
                         </Field>
                         <Field label="Angsuran per Bulan (Rp)" htmlFor="angsuran"
                             hint={bawaan !== null ? `Kosongkan untuk memakai ${formatRupiah(bawaan)} (pokok / lama)` : "Kosongkan untuk memakai pokok / lama"}>
-                            <Input id="angsuran" name="angsuran" type="number" min="1" step="any" value={angsuran} onChange={(e) => setAngsuran(e.target.value)} />
+                            <InputUang id="angsuran" name="angsuran" value={angsuran} onChange={setAngsuran} />
                         </Field>
                         <Field label="Kas/Bank" htmlFor="kas" className="sm:col-span-2">
                             <KasSelect akun={akunKas} />

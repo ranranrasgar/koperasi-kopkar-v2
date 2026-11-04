@@ -62,7 +62,7 @@ Form tambah dan ubah data (jurnal, bank book, jenis pinjaman, dan lain-lain) ter
 
 ## Isian uang dan pilihan akun
 
-- **Isian uang** (debit, kredit, maksimal plafond) otomatis diformat: ketik `1500000` tampil `1.500.000`. Koma dipakai untuk desimal (`1.500.000,5`).
+- **Semua isian uang** otomatis diformat: ketik `1500000` tampil `1.500.000`. Koma dipakai untuk desimal (`1.500.000,5`).
 - **Pilihan akun** bisa dicari: ketik sebagian kode atau nama akun (misalnya `titipan bri`), pilih dengan panah atas/bawah lalu **Enter** atau klik. **Esc** menutup daftar. Daftarnya tampil melayang di luar jendela sehingga tidak terpotong.
 
 ## Laporan dengan periode

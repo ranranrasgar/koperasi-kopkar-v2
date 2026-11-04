@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { InputUangBebas } from "@/components/ui/InputUang"
 import { Switch } from "@/components/ui/switch"
 import { TombolModal, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { Field, HasilTransaksi, KasSelect, SubmitButton, selectClass, useAksiForm, type Akun } from "@/components/transaksi/common"
@@ -170,13 +171,13 @@ function FormUbah({ periode, kodeAgt, dipotong, alasan, sPokok, sWajib, sSukarel
 
             <div className="grid gap-3 sm:grid-cols-3">
                 <Field label="Simpanan pokok" htmlFor="sPokok" hint="Hanya diposting bila bagian Simpanan Pokok dicentang.">
-                    <Input id="sPokok" name="sPokok" type="number" min="0" step="any" defaultValue={angka(sPokok)} className={ANGKA} />
+                    <InputUangBebas id="sPokok" name="sPokok" defaultValue={angka(sPokok)} className={ANGKA} />
                 </Field>
                 <Field label="Simpanan wajib" htmlFor="sWajib">
-                    <Input id="sWajib" name="sWajib" type="number" min="0" step="any" defaultValue={angka(sWajib)} className={ANGKA} />
+                    <InputUangBebas id="sWajib" name="sWajib" defaultValue={angka(sWajib)} className={ANGKA} />
                 </Field>
                 <Field label="Simpanan sukarela" htmlFor="sSukarela">
-                    <Input id="sSukarela" name="sSukarela" type="number" min="0" step="any" defaultValue={angka(sSukarela)} className={ANGKA} />
+                    <InputUangBebas id="sSukarela" name="sSukarela" defaultValue={angka(sSukarela)} className={ANGKA} />
                 </Field>
             </div>
 
@@ -205,7 +206,7 @@ function FormUbah({ periode, kodeAgt, dipotong, alasan, sPokok, sWajib, sSukarel
                                         <td key={k} className="px-2 py-1.5 text-right">
                                             {p.jenis === "kpr" && k !== "pokok"
                                                 ? <input type="hidden" name={`${k}_${p.id}`} value="0" />
-                                                : <Input name={`${k}_${p.id}`} type="number" min="0" step="any" defaultValue={angka(p[k])} aria-label={`${k} ${p.no_pinjaman}`} className={`${ANGKA} ml-auto`} />}
+                                                : <InputUangBebas name={`${k}_${p.id}`} defaultValue={angka(p[k])} aria-label={`${k} ${p.no_pinjaman}`} className={`${ANGKA} ml-auto`} />}
                                         </td>
                                     ))}
                                 </tr>

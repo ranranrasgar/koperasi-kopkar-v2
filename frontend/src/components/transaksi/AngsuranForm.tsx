@@ -3,12 +3,13 @@
 import { TombolKirimInfo } from "./TombolKirimInfo"
 import { useCallback, useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
+import { InputUangBebas } from "@/components/ui/InputUang"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
     angsuranBerikutnyaAction, bayarAngsuranAction, bayarAngsuranKprAction, infoAnggotaAction, type InfoAnggota,
 } from "@/app/actions/transaksi"
 import type { AnggotaRingkas } from "@/lib/queries/anggota"
-import { formatRupiah, formatTanggal } from "@/lib/format"
+import { formatAngka, formatRupiah, formatTanggal } from "@/lib/format"
 import { AnggotaPicker, Field, FormCard, HasilTransaksi, KasSelect, SubmitButton, selectClass, useAksiForm, type Akun } from "./common"
 
 type Berikutnya = Awaited<ReturnType<typeof angsuranBerikutnyaAction>>
@@ -51,7 +52,7 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai }: { info: InfoAnggot
                             <div key={k}>
                                 <div className="text-[11px] uppercase text-muted-foreground">{k}</div>
                                 {ubah && k !== "pokok" ? (
-                                    <Input name={k} type="number" min="0" step="any" defaultValue={berikut[k]} className="h-8" />
+                                    <InputUangBebas key={`${noPinjaman}-${berikut.ke}`} name={k} defaultValue={berikut[k]} className="h-8" />
                                 ) : <div className="tabular-nums font-semibold">{formatRupiah(berikut[k])}</div>}
                             </div>
                         ))}
@@ -115,7 +116,7 @@ function AngsuranKpr({ info, akunKas, hariIni, onSelesai }: { info: InfoAnggota;
             )}
             <div className="grid gap-4 sm:grid-cols-3">
                 <Field label="Jumlah (Rp)" htmlFor="jumlah-kpr" hint={`Kosongkan untuk ${formatRupiah(bawaan)}; angsuran terakhir mengambil sisa pokok`}>
-                    <Input id="jumlah-kpr" name="jumlah" type="number" min="1" step="any" placeholder={String(bawaan)} />
+                    <InputUangBebas id="jumlah-kpr" name="jumlah" placeholder={formatAngka(bawaan)} />
                 </Field>
                 <Field label="Tanggal Bayar" htmlFor="tanggal-kpr">
                     <Input id="tanggal-kpr" name="tanggal" type="date" required defaultValue={hariIni} />

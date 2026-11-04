@@ -33,7 +33,7 @@ export function AksiCoa({ item }: { item: CoaActionItem }) {
             { value: "D", label: "Debet (D)" }, { value: "C", label: "Kredit (K)" },
         ] },
         { name: "keterangan", label: "Keterangan (mis. BANK/GC)" },
-        { name: "rp_budget", label: "Anggaran", type: "number", step: "0.01" },
+        { name: "rp_budget", label: "Anggaran", type: "uang" },
     ]
     const fieldsHapus: FieldSpec[] = [
         { name: "id", label: "", hidden: true },

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState, useTransition } from "react"
 import { Loader2, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
+import { InputUangBebas } from "@/components/ui/InputUang"
 import {
     bayarAngsuranAction, dataTitipanAction, hapusTitipanAction, infoAnggotaAction, tambahTitipanAction, type DataTitipan, type InfoAnggota,
 } from "@/app/actions/transaksi"
@@ -99,7 +100,7 @@ function InputTitipan({ noPinjaman, hariIni, onSelesai }: { noPinjaman: string; 
             <input type="hidden" name="noPinjaman" value={noPinjaman} />
             <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Tanggal" htmlFor="tanggal-titipan"><Input id="tanggal-titipan" name="tanggal" type="date" required defaultValue={hariIni} /></Field>
-                <Field label="Jumlah (Rp)" htmlFor="jumlah-titipan"><Input id="jumlah-titipan" name="jumlah" type="number" min="1" step="any" required /></Field>
+                <Field label="Jumlah (Rp)" htmlFor="jumlah-titipan"><InputUangBebas id="jumlah-titipan" name="jumlah" required /></Field>
             </div>
             <HasilTransaksi hasil={hasil} />
             <div className="flex justify-end"><SubmitButton pending={pending}>Simpan Titipan</SubmitButton></div>

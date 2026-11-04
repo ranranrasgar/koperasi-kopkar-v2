@@ -40,9 +40,9 @@ export function AksiAnggota({ item }: { item: Baris }) {
         { name: "bank_nama", label: "Bank" },
         { name: "bank_no_rek", label: "No. rekening" },
         { name: "bank_atas_nama", label: "Atas nama rekening" },
-        { name: "simpanan_pokok", label: "Simpanan pokok / bulan", type: "number", step: "0.01" },
-        { name: "simpanan_wajib", label: "Simpanan wajib / bulan", type: "number", step: "0.01" },
-        { name: "simpanan_sukarela", label: "Simpanan sukarela / bulan", type: "number", step: "0.01" },
+        { name: "simpanan_pokok", label: "Simpanan pokok / bulan", type: "uang" },
+        { name: "simpanan_wajib", label: "Simpanan wajib / bulan", type: "uang" },
+        { name: "simpanan_sukarela", label: "Simpanan sukarela / bulan", type: "uang" },
     ]
     const fieldsKeluar: FieldSpec[] = [
         { name: "id", label: "", hidden: true },
