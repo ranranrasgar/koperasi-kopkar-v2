@@ -122,7 +122,7 @@ export function KelolaCadangan({ daftar, folder, ruangKosong, ukuranDatabase, da
 
             {pulih && (
                 <div role="dialog" aria-modal="true" aria-labelledby="judul-pulih" className="fixed inset-0 z-50 grid place-items-center bg-black/50 p-4">
-                    <div className="w-full max-w-md rounded-xl border bg-background p-5 shadow-xl">
+                    <div className="w-full max-w-[28rem] rounded-xl border bg-background p-5 shadow-xl">
                         <h3 id="judul-pulih" className="text-lg font-bold">Pulihkan dari cadangan?</h3>
                         <p className="mt-2 text-sm text-muted-foreground">
                             Seluruh isi database <b>{database}</b> diganti dengan cadangan <b>{waktu(pulih.dibuat)}</b> ({pulih.database}, {pulih.jumlahTabel} tabel).
