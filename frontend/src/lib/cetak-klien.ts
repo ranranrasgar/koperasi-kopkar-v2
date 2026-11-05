@@ -24,6 +24,7 @@ export function bersihkanUntukCetak(area: HTMLElement): string {
     el.querySelectorAll("form").forEach((f) => { if (!f.querySelector("table")) f.remove() })
     el.querySelectorAll("button").forEach((b) => (b.closest("td,th") ? b.replaceWith(document.createTextNode(b.textContent ?? "")) : b.remove()))
     el.querySelectorAll("a").forEach((a) => a.replaceWith(...Array.from(a.childNodes)))
+    el.querySelectorAll("[data-cetak-tampil]").forEach((n) => n.removeAttribute("hidden")) // mis. panel tab yang tertutup tetap ikut tercetak
     return el.innerHTML
 }
 

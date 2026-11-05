@@ -32,8 +32,8 @@ Saldo di ringkasan dihitung dari seluruh riwayat sampai filter **Sampai Tanggal*
 
 1. Ketik kode anggota, KPK, atau nama, lalu pilih anggota.
 2. Isi periode **Dari** dan **Sampai**.
-3. Setiap jenis simpanan tampil sebagai tabel: saldo awal, baris setor/ambil, dan saldo akhir.
-4. Tekan **Cetak** untuk mencetak kartu.
+3. Setiap jenis simpanan tampil sebagai **tab** beserta saldonya. Pilih tab untuk melihat tabelnya: saldo awal, baris setor/ambil, dan saldo akhir.
+4. Tekan **Cetak** untuk mencetak kartu. Semua jenis ikut tercetak, bukan hanya tab yang terbuka.
 
 Jika tidak ada transaksi pada periode itu, tampil *Tidak ada mutasi pada periode ini.*
 

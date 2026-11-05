@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { Search } from "lucide-react"
 import { FormCard } from "@/components/transaksi/common"
+import { TabJenisSimpanan } from "@/components/simpanan/TabJenisSimpanan"
 import { Input } from "@/components/ui/input"
 import { TombolCetak } from "@/components/ui/TombolCetak"
 import { cariAnggotaSemua, kartuSimpanan } from "@/lib/queries/simpanan-lap"
@@ -74,13 +75,13 @@ export default async function KartuSimpananPage(props: PageProps<"/dashboard/sav
                             terdaftar {formatTanggal(kartu.anggota.tglpencatatan)} | periode {dari === "1900-01-01" ? "awal" : formatTanggal(dari)} s/d {formatTanggal(sampai)}
                         </p>
                     </div>
-                    {jenis.map((j) => {
+                    <TabJenisSimpanan tab={jenis.flatMap((j) => {
                         const baris = kartu.mutasi.filter((m) => m.jenis_simpanan === j.kode_simpanan)
                         const awal = kartu.saldoAwal[j.kode_simpanan] ?? 0
-                        if (baris.length === 0 && awal === 0) return null
+                        if (baris.length === 0 && awal === 0) return []
                         const akhir = baris.length ? baris[baris.length - 1].saldo : awal
-                        return (
-                            <div key={j.kode_simpanan} className="rounded-lg border bg-background break-inside-avoid">
+                        return [{ kode: j.kode_simpanan, nama: j.nama_simpanan, saldo: akhir, isi: (
+                            <div className="rounded-lg border bg-background break-inside-avoid">
                                 <div className="flex justify-between px-4 py-2 border-b bg-muted/40">
                                     <span className="font-semibold">{j.nama_simpanan}</span>
                                     <span className="text-sm">Saldo akhir <b className="tabular-nums">{formatAngka(akhir)}</b></span>
@@ -116,8 +117,8 @@ export default async function KartuSimpananPage(props: PageProps<"/dashboard/sav
                                     </tbody>
                                 </table>
                             </div>
-                        )
-                    })}
+                        ) }]
+                    })} />
                     {kartu.mutasi.length === 0 && <p className="text-sm text-muted-foreground">Tidak ada mutasi pada periode ini.</p>}
                 </div>
             )}

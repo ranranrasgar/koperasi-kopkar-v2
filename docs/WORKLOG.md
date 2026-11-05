@@ -37,6 +37,9 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Kartu Simpanan: tab per jenis (5 November)
+- `/dashboard/savings/cards`: tabel per jenis kini di tab (`components/simpanan/TabJenisSimpanan.tsx`), label berisi nama dan saldo akhir. Semua panel tetap dirender dengan atribut `hidden`; `data-cetak-tampil` membuat `bersihkanUntukCetak` membuka panel supaya Cetak memuat semua jenis. Typecheck bersih; belum dicek setelah login, termasuk hasil cetaknya.
+
 ### Buku Simpanan: tautan ke Kartu Simpanan (5 November)
 - Kolom Kode Agt dan Nama di `/dashboard/savings/ledger` menaut ke `/dashboard/savings/cards?kode=...` bila operator punya izin Kartu Simpanan. Opsi baru `ColumnConfig.tautan` (templat teks `{kunci}`, bukan fungsi, karena config dikirim ke komponen klien) dirender di `ModuleTable`. Typecheck bersih; belum dicek setelah login.
 
