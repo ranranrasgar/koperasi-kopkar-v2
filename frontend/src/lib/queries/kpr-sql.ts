@@ -20,9 +20,9 @@ export function sqlDaftarKpr(f: FilterKpr) {
     return {
         values,
         sql: `SELECT k.no_pinjaman, k.tgl_pinjaman::text AS tgl_pinjaman, a.nama, a.nik, a.kode_agt, a.aktif, jk.kode_kredit, jk.nama_kredit,
-                     k.rp_pinjaman_pokok, k.rp_angsuran_per_bulan, k.lama_angsuran, k.jml_cicilan, r.bayar, r.sisa
+                     k.rp_pinjaman_pokok, k.rp_pinjaman_bunga AS jasa, k.rp_angsuran_per_bulan, k.lama_angsuran, k.jml_cicilan, r.bayar, r.bayar_jasa, r.sisa
                 FROM kpr k JOIN anggota a ON a.id = k.anggota_id LEFT JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id
-                JOIN LATERAL (SELECT COALESCE(SUM(x.debit_pokok), 0) AS bayar, COALESCE(SUM(x.kredit_pokok - x.debit_pokok), 0) AS sisa
+                JOIN LATERAL (SELECT COALESCE(SUM(x.debit_pokok), 0) AS bayar, COALESCE(SUM(x.debit_bunga), 0) AS bayar_jasa, COALESCE(SUM(x.kredit_pokok - x.debit_pokok), 0) AS sisa
                                 FROM kpr_rincian x WHERE x.kpr_id = k.id) r ON true
                ${where}
                ORDER BY k.tgl_pinjaman DESC, k.id DESC`,
@@ -33,13 +33,13 @@ export const SQL_JENIS_KPR = `SELECT DISTINCT jk.kode_kredit, jk.nama_kredit FRO
 export const SQL_TAHUN_KPR = `SELECT DISTINCT EXTRACT(YEAR FROM tgl_pinjaman)::int AS tahun FROM kpr WHERE tgl_pinjaman IS NOT NULL ORDER BY tahun DESC`
 
 export const SQL_RINGKAS_KPR = `
-    SELECT k.id, k.no_pinjaman, k.tgl_pinjaman::text AS tgl_pinjaman, a.nama, a.nik, a.kode_agt, jk.kode_kredit, jk.nama_kredit,
-           k.rp_pinjaman_pokok, k.rp_angsuran_per_bulan, k.lama_angsuran, k.jml_cicilan, r.bayar, r.sisa
+    SELECT k.id, k.no_pinjaman, k.tgl_pinjaman::text AS tgl_pinjaman, a.nama, a.nik, a.kode_agt, a.aktif, jk.kode_kredit, jk.nama_kredit,
+           k.rp_pinjaman_pokok, k.rp_pinjaman_bunga AS jasa, k.rp_angsuran_per_bulan, k.lama_angsuran, k.jml_cicilan, r.bayar, r.sisa
       FROM kpr k JOIN anggota a ON a.id = k.anggota_id LEFT JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id
       JOIN LATERAL (SELECT COALESCE(SUM(x.debit_pokok), 0) AS bayar, COALESCE(SUM(x.kredit_pokok - x.debit_pokok), 0) AS sisa
                       FROM kpr_rincian x WHERE x.kpr_id = k.id) r ON true
      WHERE k.no_pinjaman = $1`
 
 export const SQL_RINCIAN_KPR = `
-    SELECT no_bukti, angsuran_ke, tanggal_angsuran::text AS tanggal_angsuran, deskripsi, debit_pokok, kredit_pokok
+    SELECT no_bukti, angsuran_ke, tanggal_angsuran::text AS tanggal_angsuran, deskripsi, debit_pokok, debit_bunga, kredit_pokok, kredit_bunga
       FROM kpr_rincian WHERE kpr_id = $1 ORDER BY tanggal_angsuran, urut, id`

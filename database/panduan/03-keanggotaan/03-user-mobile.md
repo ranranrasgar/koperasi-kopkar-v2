@@ -42,7 +42,7 @@ Anggota memakai **aplikasi anggota** (di browser HP, dan aplikasi Android lama) 
 
 - Password anggota diatur anggota sendiri dan **tidak bisa diubah dari web admin**.
 - Username tidak membedakan huruf besar/kecil. Satu email hanya untuk satu akun.
-- Pengajuan kredit dari aplikasi anggota masuk ke **Pinjaman → Pengajuan Kredit**.
+- Pengajuan kredit dari aplikasi anggota masuk ke **Pinjaman Tunai → Pengajuan Kredit**.
 - Perubahan status akun (diaktifkan atau dinonaktifkan) diberitahukan lewat email ke pemilik akun, **hanya bila email sudah terverifikasi**. Di mode uji tidak ada yang tersimpan maupun terkirim.
 - Notifikasi (himbauan, promo, keputusan pengajuan) juga dikirim ke email anggota, **hanya bila email sudah terverifikasi**. Pesan chat tidak dikirim lewat email.
 - Hak akses halaman ini: menu *User* atau *Request User && Anggota Baru* pada grup operator.

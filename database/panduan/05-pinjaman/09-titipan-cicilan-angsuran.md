@@ -3,7 +3,7 @@ judul: Titipan angsuran pinjaman tunai
 ringkasan: Mencatat uang yang dititipkan anggota sedikit demi sedikit untuk angsuran, lalu menyimpannya ke angsuran sekaligus.
 menu: /dashboard/loans/titipan
 ---
-Menu: **Pinjaman → Titipan Angsuran** (pengganti form desktop *Setoran Titipan Angsuran*). Dipakai bila anggota membayar angsuran pinjaman tunai secara bertahap: setiap setoran dicatat sebagai titipan, dan setelah cukup, titipan disimpan ke angsuran.
+Menu: **Pinjaman Tunai → Titipan Angsuran** (pengganti form desktop *Setoran Titipan Angsuran*). Dipakai bila anggota membayar angsuran pinjaman tunai secara bertahap: setiap setoran dicatat sebagai titipan, dan setelah cukup, titipan disimpan ke angsuran.
 
 ## Mencatat titipan
 

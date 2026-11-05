@@ -16,7 +16,7 @@ export interface MenuGroup {
 
 /*
  * Urutan menu: dari yang paling sering dipakai harian ke yang jarang, mengikuti susunan perangkat lunak akuntansi koperasi simpan pinjam:
- * Dashboard -> Keanggotaan (master) -> Simpanan -> Pinjaman -> Potongan Gaji bulanan -> Akuntansi (jurnal, buku, laporan, COA) ->
+ * Dashboard -> Keanggotaan (master) -> Simpanan -> Pinjaman Tunai -> KPR -> Angsuran & Pemantauan (dipakai keduanya) -> Potongan Gaji bulanan -> Akuntansi (jurnal, buku, laporan, COA) ->
  * Tutup Buku & SHU (proses akhir tahun, berurutan) -> Data Master -> Komunikasi -> Sistem -> Bantuan.
  * Di tiap grup: transaksi harian dulu, lalu laporan dan penelusuran, lalu analisis.
  */
@@ -97,13 +97,8 @@ export const allGroups: MenuGroup[] = [
         ]
     },
     {
-        groupLabel: "Pinjaman",
+        groupLabel: "Pinjaman Tunai",
         items: [
-            {
-                label: "Setoran Angsuran",
-                icon: "sync",
-                href: "/dashboard/loans/payment"
-            },
             {
                 label: "Pengajuan Kredit",
                 icon: "assignment",
@@ -115,29 +110,44 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/loans/create-cash"
             },
             {
-                label: "Input Pinjaman KPR",
-                icon: "real_estate_agent",
-                href: "/dashboard/loans/create-kpr"
-            },
-            {
-                label: "Titipan Angsuran",
-                icon: "savings",
-                href: "/dashboard/loans/titipan"
-            },
-            {
-                label: "Setoran Titipan (Escrow)",
-                icon: "layers",
-                href: "/dashboard/loans/escrow"
-            },
-            {
                 label: "Daftar Pinjaman",
                 icon: "receipt_long",
                 href: "/dashboard/loans"
             },
             {
+                label: "Titipan Angsuran",
+                icon: "savings",
+                href: "/dashboard/loans/titipan"
+            }
+        ]
+    },
+    {
+        groupLabel: "KPR",
+        items: [
+            {
+                label: "Input Pinjaman KPR",
+                icon: "real_estate_agent",
+                href: "/dashboard/loans/create-kpr"
+            },
+            {
                 label: "Daftar KPR",
                 icon: "home_work",
                 href: "/dashboard/loans/kpr"
+            }
+        ]
+    },
+    {
+        groupLabel: "Angsuran & Pemantauan",
+        items: [
+            {
+                label: "Setoran Angsuran",
+                icon: "sync",
+                href: "/dashboard/loans/payment"
+            },
+            {
+                label: "Setoran Titipan (Escrow)",
+                icon: "layers",
+                href: "/dashboard/loans/escrow"
             },
             {
                 label: "Cari Pinjaman",

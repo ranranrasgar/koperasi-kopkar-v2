@@ -3,7 +3,7 @@ judul: Daftar pinjaman
 ringkasan: Laporan semua pinjaman dengan plafond, jasa, angsuran per bulan, sisa, dan tunggakan, bisa disaring per grup, jenis, dan periode.
 menu: /dashboard/loans
 ---
-**Pinjaman → Daftar Pinjaman** menampilkan data pinjaman koperasi beserta ringkasan totalnya.
+**Pinjaman Tunai → Daftar Pinjaman** menampilkan data pinjaman koperasi beserta ringkasan totalnya.
 
 ## Menyaring
 
@@ -28,7 +28,7 @@ Tekan **Terapkan** setelah mengubah filter.
 | Bayar Pokok / Bayar Bunga | Pembayaran yang sudah masuk |
 | Tunggakan | Angsuran yang sudah lewat jatuh tempo tetapi belum dibayar |
 
-Untuk melihat tunggakan secara rinci per pinjaman, buka **Pinjaman → Kredit Macet**.
+Untuk melihat tunggakan secara rinci per pinjaman, buka **Angsuran & Pemantauan → Kredit Macet**.
 
 ## Baris total
 

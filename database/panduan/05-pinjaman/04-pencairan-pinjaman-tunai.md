@@ -3,7 +3,7 @@ judul: Pencairan pinjaman tunai
 ringkasan: Memilih anggota dan membaca riwayatnya, jenis kredit yang sesuai, batas plafon, pratinjau jadwal, data dan jurnal yang terbentuk, serta informasi yang dikirim ke anggota.
 menu: /dashboard/loans/create-cash
 ---
-Menu: **Pinjaman → Input Pinjaman Tunai**. Membutuhkan izin pencairan pinjaman koperasi dan/atau bank. Jenis pinjaman yang tampil hanya yang grupnya Anda izinkan.
+Menu: **Pinjaman Tunai → Input Pinjaman Tunai**. Membutuhkan izin pencairan pinjaman koperasi dan/atau bank. Jenis pinjaman yang tampil hanya yang grupnya Anda izinkan.
 
 ## Syarat sebelum mencairkan
 

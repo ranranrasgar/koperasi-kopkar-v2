@@ -3,7 +3,7 @@ judul: Kredit macet dan tunggakan
 ringkasan: Cara sistem menghitung tunggakan per pinjaman tunai dan KPR, arti setiap kolom, dan cara menyaring.
 menu: /dashboard/loans/bad-debts
 ---
-**Pinjaman → Kredit Macet** menampilkan pinjaman tunai **dan KPR** yang punya angsuran **sudah jatuh tempo menurut jadwal tagih tetapi belum dibayar**.
+**Angsuran & Pemantauan → Kredit Macet** menampilkan pinjaman tunai **dan KPR** yang punya angsuran **sudah jatuh tempo menurut jadwal tagih tetapi belum dibayar**.
 
 **Tunggakan = jumlah angsuran yang jatuh temponya ≤ tanggal laporan − jumlah angsuran yang sudah dibayar.**
 

@@ -3,7 +3,7 @@ judul: Setoran angsuran pinjaman dan KPR
 ringkasan: Membayar angsuran berikutnya, mengubah jasa/adm/provisi, aturan jumlah KPR, pelunasan, dan jurnal angsuran.
 menu: /dashboard/loans/payment
 ---
-Menu: **Pinjaman → Setoran Angsuran**. Ada dua tab: **Pinjaman Tunai** dan **KPR**. Tab yang tampil mengikuti izin Anda.
+Menu: **Angsuran & Pemantauan → Setoran Angsuran**. Ada dua tab: **Pinjaman Tunai** dan **KPR**. Tab yang tampil mengikuti izin Anda.
 
 ## Membatalkan angsuran atau pencairan
 

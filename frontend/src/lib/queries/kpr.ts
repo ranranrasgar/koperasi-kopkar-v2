@@ -4,7 +4,7 @@ import { sqlDaftarKpr, SQL_JENIS_KPR, SQL_RINCIAN_KPR, SQL_RINGKAS_KPR, SQL_TAHU
 
 export interface BarisKpr {
     no_pinjaman: string; tgl_pinjaman: string; nama: string; nik: string | null; kode_agt: string; aktif: boolean; kode_kredit: string | null; nama_kredit: string | null
-    rp_pinjaman_pokok: number; rp_angsuran_per_bulan: number; lama_angsuran: number; jml_cicilan: number; bayar: number; sisa: number
+    rp_pinjaman_pokok: number; jasa: number; rp_angsuran_per_bulan: number; lama_angsuran: number; jml_cicilan: number; bayar: number; bayar_jasa: number; sisa: number
 }
 
 export const daftarKpr = (f: FilterKpr) => {
@@ -18,10 +18,10 @@ export const adaKpr = async (no: string) => (await query("SELECT 1 FROM kpr WHER
 
 /** Ringkasan satu KPR, jadwal (dihitung dari angsuran per bulan, sama dengan PDF untuk anggota), dan seluruh baris buku KPR. */
 export async function detailKpr(no: string) {
-    const [ringkas] = await query<Omit<BarisKpr, "aktif"> & { id: number }>(SQL_RINGKAS_KPR, [no])
+    const [ringkas] = await query<Omit<BarisKpr, "bayar_jasa"> & { id: number }>(SQL_RINGKAS_KPR, [no])
     if (!ringkas) return null
     const [rincian, info] = await Promise.all([
-        query<{ no_bukti: string; angsuran_ke: number; tanggal_angsuran: string; deskripsi: string | null; debit_pokok: number; kredit_pokok: number }>(SQL_RINCIAN_KPR, [ringkas.id]),
+        query<{ no_bukti: string; angsuran_ke: number; tanggal_angsuran: string; deskripsi: string | null; debit_pokok: number; debit_bunga: number; kredit_pokok: number; kredit_bunga: number }>(SQL_RINCIAN_KPR, [ringkas.id]),
         bacaInfoPinjaman(pool, no),
     ])
     return { ringkas, rincian, jadwal: info?.jadwal ?? [] }

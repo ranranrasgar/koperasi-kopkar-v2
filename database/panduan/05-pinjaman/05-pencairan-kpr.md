@@ -9,7 +9,7 @@ KPR (kredit kepemilikan rumah) dibiayai **bank**. Koperasi hanya **memotong angs
 - Angsuran yang diterima dicatat sebagai **titipan** (kewajiban koperasi kepada bank), bukan pendapatan.
 - Pencairan KPR **tidak membentuk jurnal**, karena uang pinjaman langsung dari bank ke anggota, tidak melewati kas koperasi.
 
-Menu: **Pinjaman → Input Pinjaman KPR**. Membutuhkan izin pencairan KPR.
+Menu: **KPR → Input Pinjaman KPR**. Membutuhkan izin pencairan KPR.
 
 ## Langkah
 
@@ -27,13 +27,13 @@ Menu: **Pinjaman → Input Pinjaman KPR**. Membutuhkan izin pencairan KPR.
 | Rincian | Satu baris *PENCAIRAN PINJAMAN* berisi pokok |
 | Jurnal | **Tidak ada** |
 
-Angsurannya dicatat lewat **Setoran Angsuran**, tab KPR. Datanya bisa dilihat di **Pinjaman → Daftar KPR**.
+Angsurannya dicatat lewat **Setoran Angsuran**, tab KPR. Datanya bisa dilihat di **KPR → Daftar KPR**.
 
 ## Informasi untuk anggota
 
 Setelah KPR dicatat, anggota dikabari lewat **notifikasi aplikasi** dan **email** (bila emailnya terverifikasi) yang berisi ringkasan KPR dan **lampiran PDF jadwal angsuran**. Karena KPR berangsuran tetap, jadwalnya dihitung dari angsuran per bulan: jatuh tempo tiap bulan pada tanggal yang diatur di jenis kredit, dan angsuran terakhir melunasi sisa pokok. Gagal mengirim tidak membatalkan pencatatan KPR.
 
-Untuk mengirim ulang, buka **Pinjaman → Setoran Angsuran**, tab **KPR**, pilih anggota dan KPR-nya, lalu tekan **Kirim info ke anggota**.
+Untuk mengirim ulang, buka **Angsuran & Pemantauan → Setoran Angsuran**, tab **KPR**, pilih anggota dan KPR-nya, lalu tekan **Kirim info ke anggota**.
 
 ## Batas plafon
 

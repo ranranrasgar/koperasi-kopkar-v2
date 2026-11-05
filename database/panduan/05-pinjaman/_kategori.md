@@ -1,5 +1,5 @@
 ---
 nama: Pinjaman
 ikon: payments
-keterangan: Aturan pinjaman, pengajuan, pencairan pinjaman tunai dan KPR, angsuran, serta tunggakan.
+keterangan: Menu Pinjaman Tunai, KPR, serta Angsuran & Pemantauan: aturan, pengajuan, pencairan, angsuran, dan tunggakan.
 ---

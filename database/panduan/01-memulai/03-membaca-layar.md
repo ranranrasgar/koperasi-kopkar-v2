@@ -5,7 +5,7 @@ menu: /dashboard/members
 ---
 ## Menu samping
 
-Menu dikelompokkan per fungsi (Keanggotaan, Simpanan, Pinjaman, dan seterusnya). **Menu yang tidak diizinkan untuk grup Anda tidak ditampilkan.** Jika Anda membuka alamat halaman yang tidak diizinkan secara langsung, Anda dikembalikan ke Dashboard dengan pesan akses ditolak.
+Menu dikelompokkan per fungsi (Keanggotaan, Simpanan, Pinjaman Tunai, KPR, dan seterusnya). **Menu yang tidak diizinkan untuk grup Anda tidak ditampilkan.** Jika Anda membuka alamat halaman yang tidak diizinkan secara langsung, Anda dikembalikan ke Dashboard dengan pesan akses ditolak.
 
 - **Klik judul grup** (misalnya SIMPANAN) untuk mengerutkan atau membuka grup itu. Grup yang jarang dipakai bisa dikerutkan supaya menu lebih ringkas.
 - **Dua ikon kecil di sebelah tulisan MENU** membuka semua grup atau mengerutkan semua grup sekaligus.

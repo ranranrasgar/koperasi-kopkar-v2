@@ -3,7 +3,7 @@ judul: Pengajuan kredit dari aplikasi mobile
 ringkasan: Alur pengajuan dari anggota, cara menyetujui atau menolak, dan meneruskannya ke pencairan.
 menu: /dashboard/loans/apply
 ---
-Anggota mengajukan pinjaman lewat **aplikasi anggota** (aplikasi Android lama, atau aplikasi anggota baru di browser HP). Pengajuan masuk ke **Pinjaman → Pengajuan Kredit**.
+Anggota mengajukan pinjaman lewat **aplikasi anggota** (aplikasi Android lama, atau aplikasi anggota baru di browser HP). Pengajuan masuk ke **Pinjaman Tunai → Pengajuan Kredit**.
 
 ## Yang sudah diperiksa sistem (aplikasi anggota baru)
 

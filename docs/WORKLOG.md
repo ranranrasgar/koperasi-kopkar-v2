@@ -40,9 +40,15 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 ### Audit Data: tautan bukti angsuran (6 November)
 - Regex `CR-...` di `audit/page.tsx` ikut mencocokkan bagian `CR-` dari `ANGS-CR-1026-173936`, jadi tautan menuju pinjaman yang tidak ada. Kini nomor pinjaman harus di awal teks atau sesudah spasi. Angsuran tanpa jurnal 2026: 50 baris, Rp 67,9 juta; contoh CR-0723-15842 ke-39 dan CR-0526-22343 ke-5 punya baris buku dan kas, tetapi jurnalnya tidak ada, sedangkan angsuran bulan sebelumnya berjurnal. Penyebab belum diketahui, perlu dicocokkan dengan mutasi bank.
 
+### Menu pinjaman dipisah per jenis (6 November)
+- `menu.ts`: grup Pinjaman dipecah menjadi **Pinjaman Tunai**, **KPR**, dan **Angsuran & Pemantauan** (Setoran Angsuran, Setoran Titipan, Cari Pinjaman, Kredit Macet dipakai kedua jenis). Matriks Kelola Hak Akses mengikuti `allGroups`, jadi ikut terpisah. Izin di `opr_hak_akses` tidak berubah karena terikat nama izin, bukan grup menu.
+- Jalur menu di panduan diperbarui dari `Pinjaman → X`.
+
 ### Daftar KPR terpisah (6 November)
 - Menu baru **Daftar KPR** `/dashboard/loans/kpr` dan detail `/dashboard/loans/kpr/[no]`, membaca tabel `kpr` (`lib/queries/kpr.ts`, `kpr-sql.ts`). Sisa pokok dari `kpr_rincian`, bukan `rp_saldo_pokok`. Jadwal dari `bacaInfoPinjaman`, karena KPR baru tidak menulis `kpr_rincian_tagih`.
 - Izin `lapPinjamanKpr` keluar dari gabungan Daftar Pinjaman jadi baris sendiri; grup `KPR` ditambah ke `MENU_DETAIL_PINJAMAN_GRUP`. Pilihan grup KPR di Daftar Pinjaman dihapus. Cari Pinjaman ikut mencari KPR. `/dashboard/loans/[no]` mengalihkan nomor KPR ke detail KPR, jadi tautan Kredit Macet dan Audit Data tidak 404.
+- Tampilan disamakan dengan Daftar Pinjaman (`components/ui/DaftarKpr.tsx`: lebar penuh, pilih kolom, urut, subtotal, Cetak Laporan, Ekspor). Baris hasil saringan dikirim semua ke klien karena KPR sedikit. Kolom Jasa dan Byr Jasa nol di semua data.
+- Detail KPR disamakan dengan detail pinjaman (dua tab `?tab=`, lencana status). Jumlah menunggak di detail dihitung dari jadwal hasil hitungan, bukan `kpr_rincian_tagih`, jadi bisa beda dengan Kredit Macet.
 - Data aneh yang belum diputuskan: `CR-1217-1045` ada di `kpr` dan `pinjaman_tunai`; satu KPR memakai jenis C21 grup Bank; 42 KPR bersisa minus; `nama_bank_debitur` kosong semua.
 
 ### Audit Data: panduan memperbaiki temuan (6 November)
