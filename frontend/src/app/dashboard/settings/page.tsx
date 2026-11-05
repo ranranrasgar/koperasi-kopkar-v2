@@ -1,11 +1,15 @@
 import { FormCard } from "@/components/transaksi/common"
 import { FormEdit, type FieldSpec } from "@/components/master/FormEdit"
 import { FormLogo } from "@/components/master/FormLogo"
+import { PosterDaftar } from "@/components/master/PosterDaftar"
 import { simpanKontakWaAction, simpanNilaiAwalAnggotaAction, simpanPerusahaanAction } from "@/app/actions/master"
 import { KUNCI_NILAI_AWAL } from "@kopkar/backend/src/anggota/akun.ts"
 import { query } from "@/lib/db"
 import { identitasKoperasi } from "@/lib/koperasi"
 import { wajibIzin } from "@/lib/operator"
+
+/** Dipakai poster bila env ANGGOTA_URL belum diisi. */
+const ALAMAT_ANGGOTA_BAWAAN = "https://anggota.kopkarmjsmattel.com"
 
 const FIELDS: FieldSpec[] = [
     { name: "nama_perusahaan", label: "Nama Koperasi", required: true, hint: "Tampil di sidebar, halaman login, dan judul tab browser." },
@@ -32,6 +36,7 @@ export default async function PerusahaanPage() {
         query<{ nilai: string }>("SELECT nilai FROM pengaturan_web WHERE kunci = 'wa_kontak'").catch(() => []),
         query<{ kunci: string; nilai: string }>("SELECT kunci, nilai FROM pengaturan_web WHERE kunci = ANY($1::text[])", [Object.values(KUNCI_NILAI_AWAL)]).catch(() => []),
     ])
+    const alamatAnggota = (process.env.ANGGOTA_URL || ALAMAT_ANGGOTA_BAWAAN).replace(/\/+$/, "")
     const nilaiAwal = Object.fromEntries(Object.entries(KUNCI_NILAI_AWAL).map(([b, kunci]) => [b, awal.find((r) => r.kunci === kunci)?.nilai ?? ""]))
     return (
         <div className="max-w-4xl space-y-6">
@@ -41,6 +46,9 @@ export default async function PerusahaanPage() {
             <FormCard title="Kontak WhatsApp" description="Tombol Hubungi kami di aplikasi anggota (mis. halaman pendaftaran menunggu verifikasi) membuka chat ke nomor ini.">
                 <FormEdit fields={[{ name: "wa_kontak", label: "Nomor WhatsApp", hint: "Contoh: 081234567890. Kosongkan untuk menyembunyikan tombol." }]}
                     nilai={{ wa_kontak: wa?.nilai ?? "" }} aksi={simpanKontakWaAction} kolom={1} />
+            </FormCard>
+            <FormCard title="QR Pendaftaran Anggota" description="Poster berisi kode QR ke halaman pendaftaran aplikasi anggota, untuk dicetak atau dibagikan pengurus.">
+                <PosterDaftar url={`${alamatAnggota}/daftar`} nama={k.nama} logo={k.logo} wa={wa?.nilai?.trim() || null} tanpaEnv={!process.env.ANGGOTA_URL} />
             </FormCard>
             <FormCard title="Nilai Awal Anggota Baru" description="Simpanan bulanan awal untuk anggota baru dari pendaftaran aplikasi. Muncul sebagai isian awal di form kelengkapan saat admin menyetujui, dan bisa diubah di sana. Kosongkan untuk memakai tebakan dari anggota baru bergrade sama.">
                 <FormEdit fields={[

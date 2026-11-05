@@ -43,3 +43,16 @@ Kartu **Nilai Awal Anggota Baru** berisi **simpanan pokok, wajib, dan sukarela**
 | Keterangan Nota | Catatan di bagian bawah nota (maks. 1.000 karakter) |
 
 Perubahan nama koperasi dan logo langsung terlihat di semua halaman setelah disimpan.
+
+## QR Pendaftaran Anggota
+
+Kartu **QR Pendaftaran Anggota** menampilkan poster ukuran A5 berisi logo, nama koperasi, kode QR ke halaman pendaftaran aplikasi anggota, langkah singkat, dan nomor WhatsApp bila sudah diisi di **Kontak WhatsApp**. Poster mengikuti logo, nama, dan nomor WhatsApp terbaru.
+
+| Tombol | Fungsi |
+| --- | --- |
+| Cetak (A5) | Membuka jendela cetak; bisa juga disimpan sebagai PDF |
+| Unduh Gambar | Mengunduh poster sebagai gambar PNG, misalnya untuk dikirim di grup WhatsApp |
+| Salin Tautan | Menyalin alamat pendaftaran |
+| Bagikan ke WA | Membuka WhatsApp dengan pesan ajakan dan tautan pendaftaran |
+
+Setelah dicetak, coba pindai dulu dengan HP. Untuk poster besar, cetak dari gambar yang diunduh supaya tetap tajam.
