@@ -215,7 +215,8 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                     <Button onClick={handleExport} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={mengekspor || data.items.length === 0}>
                         {mengekspor ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />} Ekspor
                     </Button>
-                    {actions}
+                    {/* Fragment: elemen dari server component tanpa key tidak boleh sejajar langsung dengan tombol di atas (peringatan key React). */}
+                    <>{actions}</>
                 </div>
             </div>
 
