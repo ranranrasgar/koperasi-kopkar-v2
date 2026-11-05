@@ -1,6 +1,7 @@
 "use client"
 
 import React, { useState, useTransition } from "react"
+import Link from "next/link"
 import { useRouter, usePathname, useSearchParams } from "next/navigation"
 import { Search, Printer, Download, Eye, ChevronLeft, ChevronRight, Loader2, ArrowUpDown, Settings2, Filter } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -327,6 +328,9 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                                                                     <div>{formatValue(val, col.type)}</div>
                                                                     <div className="mt-0.5 text-[10px] font-normal text-muted-foreground">{String(item[col.subKey])}</div>
                                                                 </div>
+                                                            ) : col.tautan && val ? (
+                                                                <Link href={col.tautan.replace(/\{(\w+)\}/g, (_, k: string) => encodeURIComponent(String(item[k] ?? "")))}
+                                                                    className="text-primary underline-offset-2 hover:underline">{formatValue(val, col.type)}</Link>
                                                             ) : formatValue(val, col.type)}
                                                     </td>
                                                 )

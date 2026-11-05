@@ -10,6 +10,8 @@ export interface ColumnConfig {
     mono?: boolean
     // Kunci data yang tampil sebagai baris kecil di bawah nilai (tabel dan cetak); di ekspor CSV menjadi kolom sendiri tepat setelah kolom ini.
     subKey?: string
+    // Nilai sel menjadi tautan ke alamat ini; {kunci} diganti data baris. Teks, bukan fungsi, karena config dikirim ke komponen klien.
+    tautan?: string
     // Untuk 'badge': nilai -> { label, color }
     badgeMap?: Record<string, { label: string; color: string }>
 }

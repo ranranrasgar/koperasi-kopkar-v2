@@ -15,6 +15,8 @@ Kolom **Saldo** berlaku seperti rekening koran: saldo anggota untuk jenis simpan
 
 Karena saldonya berjalan, tabel ini hanya bisa diurutkan menurut **Tanggal** (terbaru atau terlama). Kolom lain sengaja tidak bisa diurutkan, supaya baris tetap kronologis dan saldo tetap terbaca.
 
+Klik **Kode Agt** atau **Nama** di tabel untuk membuka Kartu Simpanan anggota itu (bila Anda punya izin Kartu Simpanan).
+
 Saat mencari anggota, muncul ringkasan di atas tabel:
 
 - **Satu anggota cocok**: nama, kode, KPK, kartu **Total Simpanan**, dan satu kartu per jenis simpanan (saldo, jumlah setor, jumlah ambil). Klik kartu jenis untuk menampilkan buku jenis itu di tabel; klik **Total Simpanan** untuk kembali ke semua jenis. Tombol **Kartu Simpanan** membuka kartu anggota tersebut.

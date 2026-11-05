@@ -14,8 +14,11 @@ export default async function SavingsLedgerPage(props: PageProps<"/dashboard/sav
     const o = await wajibIzin("/dashboard/savings/ledger") // layout tidak dijalankan ulang pada navigasi antarhalaman
     const s = await props.searchParams
     const [data, jenis, ringkasan] = await Promise.all([bukuSimpanan(s), jenisSimpanan(), ringkasanBukuSimpanan(s)])
+    const bolehKartu = o.izin.includes(MENU.kartuSimpanan)
     const config = {
         ...savingsLedgerConfig,
+        columns: savingsLedgerConfig.columns.map((c) => bolehKartu && (c.key === "kode_agt" || c.key === "nama")
+            ? { ...c, tautan: "/dashboard/savings/cards?kode={kode_agt}" } : c),
         filters: savingsLedgerConfig.filters?.map((f) => f.key === "jenis"
             ? { ...f, options: jenis.map((j) => ({ label: j.nama_simpanan, value: j.kode_simpanan })) }
             : f),
@@ -23,7 +26,7 @@ export default async function SavingsLedgerPage(props: PageProps<"/dashboard/sav
     return (
         // key: kotak cari mengikuti alamat saat anggota dipilih dari ringkasan.
         <ModuleTable key={sp(s, "search")} config={config} data={data} aksiBaris={AksiBuktiSimpanan} ringkasan={ringkasan && (
-            <RingkasanBukuSimpanan data={ringkasan} s={s} jenisAktif={sp(s, "jenis")} bolehKartu={o.izin.includes(MENU.kartuSimpanan)}
+            <RingkasanBukuSimpanan data={ringkasan} s={s} jenisAktif={sp(s, "jenis")} bolehKartu={bolehKartu}
                 sampai={isTanggal(sp(s, "sampai")) ? sp(s, "sampai") : ""} />
         )} actions={
             <>
