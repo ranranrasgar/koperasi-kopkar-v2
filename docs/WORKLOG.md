@@ -37,6 +37,9 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Daftar Pinjaman: filter bulan/tahun dan pencarian otomatis (6 November)
+- `LoansDashboard.tsx`: filter Bulan dan Tahun (realisasi, bawaan Semua; daftar tahun dari `tahunPinjaman`), Status dan Anggota jadi dropdown (Anggota bawaan Aktif). Dropdown jenis pencarian dihapus: `sqlLaporanPinjaman` dengan `kolomCari: null` mencari no_pinjaman, no_rek, kode_agt, nik, dan nama. Pencarian Kota dan ID Supervisor/Kolektor/Surveyor/Sales dihapus. `detailPinjaman` tetap memakai kolom no_pinjaman saja. Parameter URL lama `searchBy` diabaikan.
+
 ### Setoran Angsuran: cari no. rekening pinjaman (6 November)
 - `AnggotaPicker` prop `cariPinjaman` (hanya `AngsuranForm`): `cariAnggotaAction(kata, true)` menggabung `cariPinjamanBerjalan` (no_pinjaman dan no_rek tunai, no_pinjaman KPR; hanya yang berjalan) dengan pencarian anggota biasa. Pilihan membawa `no_pinjaman`, jadi pinjaman dan tabnya langsung terpilih. `pinjaman_tunai.no_rek` hanya terisi 939 dari 22.957 pinjaman (44 berjalan), jadi nomor pinjamanlah yang praktis dipakai. Typecheck bersih; belum dicek setelah login.
 

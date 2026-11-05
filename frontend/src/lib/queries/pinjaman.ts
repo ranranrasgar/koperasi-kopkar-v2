@@ -26,9 +26,9 @@ export interface LaporanPinjamanRow {
     uang_muka: number; rp_adm: number; angs_pokok: number; angs_jasa: number; total_bayar: number; jatuh_tempo: string | null; opr: string | null
 }
 
-// Kolom pencarian sesuai ComboBox1 aplikasi desktop.
-export const KOLOM_CARI = ["No Pinjaman", "NIK", "Kode Anggota", "Nama", "Kota", "ID Supervisor", "ID Kolektor", "ID Surveyor", "ID Sales"]
-const KOLOM_CARI_SQL = ["p.no_pinjaman", "a.nik", "a.kode_agt", "a.nama", "a.kota", "p.id_supervisor", "p.id_kolektor", "p.id_surveyor", "p.id_sales"]
+/** Tahun realisasi yang ada datanya, terbaru dulu, untuk filter Daftar Pinjaman. */
+export const tahunPinjaman = () => query<{ tahun: number }>(
+    "SELECT DISTINCT EXTRACT(YEAR FROM tgl_pinjaman)::int AS tahun FROM pinjaman_tunai WHERE tgl_pinjaman IS NOT NULL ORDER BY tahun DESC")
 
 /**
  * Laporan pinjaman. Kontrak (plafond, jasa, angsuran) memakai rumus desktop; yang dibayar dan sisa dihitung dari buku pinjaman
@@ -42,7 +42,9 @@ export async function laporanPinjaman(s: SearchParams): Promise<PageData<Laporan
     const q = sqlLaporanPinjaman({
         grup: sp(s, "grup") || "KOPERASI",
         keyword: sp(s, "keyword"),
-        kolomCari: KOLOM_CARI_SQL[parseInt(sp(s, "searchBy") || "0", 10)] ?? null,
+        kolomCari: null,
+        bulan: parseInt(sp(s, "bulan"), 10) || undefined,
+        tahun: parseInt(sp(s, "tahun"), 10) || undefined,
         aktif: sp(s, "aktif") === "S" ? null : sp(s, "aktif") !== "T",
         kredit: sp(s, "kredit"),
         status: parseInt(sp(s, "lunas") || "0", 10) || 0,

@@ -25,6 +25,7 @@ interface Row {
 
 // Kolom sama dengan layar Data Pinjaman Anggota di aplikasi desktop. `teks` untuk dokumen cetak, `jumlah` bila kolom dijumlahkan di baris total.
 interface Kolom { judul: string; urut: string; kanan?: boolean; tengah?: boolean; mono?: boolean; tebal?: boolean; warna?: string; teks: (r: Row) => string; jumlah?: (r: Row) => number }
+const BULAN = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"]
 const angka = (v: number | null | undefined) => formatAngka(Number(v ?? 0))
 const KOLOM: Kolom[] = [
     { judul: "Realisasi", urut: "tgl_pinjaman", teks: (r) => formatTanggal(r.tgl_pinjaman) },
@@ -54,17 +55,17 @@ const KOLOM: Kolom[] = [
 ]
 
 export interface LoansFilter {
-    searchBy: number; keyword: string; aktif: string; grup: string; kredit: string; lunas: number
+    keyword: string; aktif: string; grup: string; kredit: string; lunas: number; bulan: string; tahun: string
 }
 
 interface LoansDashboardProps {
     data: PageData<Row> & { jumlah: Record<string, number> }
     filter: LoansFilter
     jenisKredit: { kode_kredit: string; nama_kredit: string; group_pinjaman: string }[]
-    searchByOptions: string[]
+    daftarTahun: number[]
 }
 
-export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: LoansDashboardProps) {
+export function LoansDashboard({ data, filter, jenisKredit, daftarTahun }: LoansDashboardProps) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -76,12 +77,13 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
     const [isLoading, startTransition] = useTransition()
 
     // Filter mengikuti form desktop; diterapkan ke URL saat tombol ditekan.
-    const [searchBy, setSearchBy] = useState<number>(filter.searchBy)
     const [keyword, setKeyword] = useState<string>(filter.keyword)
     const [isAktif, setIsAktif] = useState<string>(filter.aktif)
     const [selectedGroupPinjaman, setSelectedGroupPinjaman] = useState<string>(filter.grup)
     const [selectedKredit, setSelectedKredit] = useState<string>(filter.kredit)
     const [statusLunas, setStatusLunas] = useState<number>(filter.lunas)
+    const [bulan, setBulan] = useState<string>(filter.bulan)
+    const [tahun, setTahun] = useState<string>(filter.tahun)
 
     const { page, pageSize, totalPages, total: totalRecords } = data
     const rows = data.items
@@ -92,8 +94,8 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
     // baris: parameter pageSize; bawaan ukuran halaman saat ini, supaya pilihan baris ikut saat pindah halaman atau mencari.
     const go = (p: number, baris = pageSize >= MAKS_SEMUA ? "semua" : String(pageSize), urut: { kolom: string; arah: string } | null = null) => {
         const q = new URLSearchParams({
-            page: String(p), searchBy: String(searchBy), keyword, aktif: isAktif, grup: selectedGroupPinjaman,
-            kredit: selectedKredit, lunas: String(statusLunas), pageSize: baris,
+            page: String(p), keyword, aktif: isAktif, grup: selectedGroupPinjaman,
+            kredit: selectedKredit, lunas: String(statusLunas), bulan, tahun, pageSize: baris,
         })
         // Urutan kolom dipertahankan saat pindah halaman, mengganti filter, atau mengubah jumlah baris.
         const kolom = urut ? urut.kolom : urutKolom, arah = urut ? urut.arah : urutArah
@@ -136,7 +138,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
         const jml = (k: Kolom) => formatAngka(items.reduce((t, x) => t + (k.jumlah ? Number(k.jumlah(x)) || 0 : 0), 0))
         const total = kolomTampil.map((k) => (k.judul === "Nama Anggota" ? `Total (${items.length.toLocaleString("id-ID")} pinjaman)` : k.jumlah ? jml(k) : ""))
         const subjudul = [`Grup ${filter.grup}`, filter.kredit !== "All" ? `Jenis ${filter.kredit}` : "",  filter.aktif === "T" ? "Anggota non-aktif" : filter.aktif === "S" ? "Semua anggota" : "Anggota aktif",
-            statusLunasOptions[filter.lunas] && filter.lunas ? `Status ${statusLunasOptions[filter.lunas]}` : "", filter.keyword ? `Pencarian ${(searchByOptions[filter.searchBy] ?? "")}: ${filter.keyword}` : ""].filter(Boolean).join(" · ")
+            statusLunasOptions[filter.lunas] && filter.lunas ? `Status ${statusLunasOptions[filter.lunas]}` : "", filter.bulan ? `Bulan ${BULAN[Number(filter.bulan) - 1]}` : "", filter.tahun ? `Tahun ${filter.tahun}` : "", filter.keyword ? `Pencarian: ${filter.keyword}` : ""].filter(Boolean).join(" · ")
         return { kolom, baris, total, subjudul, jumlah: r.total }
     }
     const handlePrint = async () => {
@@ -187,14 +189,9 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                 {/* Filter: satu baris, rata kiri, di dalam kartu tabel seperti halaman daftar lainnya */}
                 <div className="border-b border-outline-variant bg-surface-container-lowest p-3 print:hidden">
                     <form onSubmit={handleSearch} className="flex flex-wrap items-center gap-2">
-                        <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={searchBy} onChange={(e) => setSearchBy(Number(e.target.value))} aria-label="Cari berdasarkan">
-                            {searchByOptions.map((opt, idx) => (
-                                <option key={idx} value={idx}>{opt}</option>
-                            ))}
-                        </select>
                         <div className="relative w-full md:w-[240px]">
                             <span className="material-symbols-outlined pointer-events-none absolute left-2.5 top-2 text-[18px] text-on-surface-variant">search</span>
-                            <input type="search" className="w-full pl-9 pr-3 h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Kata kunci..." value={keyword} onChange={(e) => setKeyword(e.target.value)} />
+                            <input type="search" className="w-full pl-9 pr-3 h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" placeholder="Kode, KPK, nama, no. rekening" aria-label="Cari pinjaman" value={keyword} onChange={(e) => setKeyword(e.target.value)} />
                         </div>
                         <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={selectedGroupPinjaman} aria-label="Grup pinjaman"
                             onChange={(e) => { setSelectedGroupPinjaman(e.target.value); setSelectedKredit("All") }}>
@@ -209,18 +206,22 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                                 <option key={jk.kode_kredit} value={jk.kode_kredit}>{jk.nama_kredit}</option>
                             ))}
                         </select>
-                        <div className="flex h-9 items-center gap-3 rounded-md border border-outline-variant bg-background px-3" role="radiogroup" aria-label="Status pinjaman">
-                            {statusLunasOptions.map((opt, idx) => (
-                                <label key={idx} className="flex cursor-pointer items-center gap-1.5 text-sm text-on-surface">
-                                    <input type="radio" name="statusLunas" checked={statusLunas === idx} onChange={() => setStatusLunas(idx)} />
-                                    {opt}
-                                </label>
-                            ))}
-                        </div>
-                        <label className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md border border-outline-variant bg-background px-3 text-sm text-on-surface">
-                            <input type="checkbox" checked={isAktif === "Y"} onChange={(e) => setIsAktif(e.target.checked ? "Y" : "S")} />
-                            Anggota aktif
-                        </label>
+                        <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={bulan} onChange={(e) => setBulan(e.target.value)} aria-label="Bulan realisasi">
+                            <option value="">Semua Bulan</option>
+                            {BULAN.map((b, i) => <option key={b} value={i + 1}>{b}</option>)}
+                        </select>
+                        <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={tahun} onChange={(e) => setTahun(e.target.value)} aria-label="Tahun realisasi">
+                            <option value="">Semua Tahun</option>
+                            {daftarTahun.map((t) => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                        <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={statusLunas} onChange={(e) => setStatusLunas(Number(e.target.value))} aria-label="Status pinjaman">
+                            {statusLunasOptions.map((opt, idx) => <option key={idx} value={idx}>{idx === 0 ? "Semua Status" : opt}</option>)}
+                        </select>
+                        <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={isAktif} onChange={(e) => setIsAktif(e.target.value)} aria-label="Status anggota">
+                            <option value="Y">Anggota Aktif</option>
+                            <option value="T">Anggota Non-aktif</option>
+                            <option value="S">Semua Anggota</option>
+                        </select>
                         <button type="submit" disabled={isLoading}
                             className="flex h-9 cursor-pointer items-center gap-1.5 rounded-md bg-primary px-4 text-sm font-semibold text-white shadow-sm transition-opacity hover:opacity-90 disabled:opacity-70">
                             <span className={`material-symbols-outlined text-[18px] ${isLoading ? "animate-spin" : ""}`}>{isLoading ? "refresh" : "filter_alt"}</span>

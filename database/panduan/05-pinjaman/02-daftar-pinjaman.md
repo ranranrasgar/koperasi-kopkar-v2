@@ -8,9 +8,12 @@ menu: /dashboard/loans
 ## Menyaring
 
 - **Grup** (KOPERASI, BANK / PIHAK LAIN) dan **Jenis** pinjaman.
-- **Periode**: pilih bulan dan tahun pencairan, atau **Tahunan** untuk satu tahun penuh.
-- Status anggota **Aktif / Non-Aktif**.
-- **Pencarian**: pilih kolom yang dicari (No Pinjaman, NIK, Kode Anggota, Nama, Kota, ID Supervisor, ID Kolektor, ID Surveyor, atau ID Sales), lalu ketik di kotak **Kata kunci**.
+- **Bulan** dan **Tahun** realisasi. Bawaannya *Semua*. Bulan tanpa tahun menampilkan bulan itu di semua tahun.
+- **Status** pinjaman: Semua, Tunggak, Lunas, atau Belum Lunas.
+- Status **Anggota**: Aktif (bawaan), Non-aktif, atau Semua.
+- **Pencarian**: ketik kode anggota, KPK, nama, nomor pinjaman, atau nomor rekening. Semua kolom itu dicari otomatis.
+
+Tekan **Terapkan** setelah mengubah filter.
 
 ## Kolom
 

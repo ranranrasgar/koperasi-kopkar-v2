@@ -24,7 +24,9 @@
 export interface FilterPinjaman {
     grup: string                 // "All" = semua grup
     keyword: string
-    kolomCari: string | null     // nama kolom SQL dari daftar putih
+    kolomCari: string | null     // nama kolom SQL dari daftar putih; null = semua KOLOM_CARI
+    bulan?: number               // bulan realisasi 1-12
+    tahun?: number               // tahun realisasi
     aktif: boolean | null        // status anggota; null = semua anggota
     kredit: string               // kode_kredit atau "All"
     status: number               // 0 semua, 1 menunggak, 2 lunas, 3 belum lunas
@@ -35,6 +37,8 @@ export interface FilterPinjaman {
 }
 
 export const SISA_LUNAS = 100
+/** Kolom yang dicari dari kotak pencarian Daftar Pinjaman. */
+const KOLOM_CARI = ["p.no_pinjaman", "p.no_rek", "a.kode_agt", "a.nik", "a.nama"]
 /** Kolom hasil yang dijumlahkan di baris "Total seluruh data" Daftar Pinjaman. */
 export const KOLOM_JUMLAH = ["rp_pinjaman_pokok", "uang_muka", "temp_total_plafond", "temp_total_jasa", "rp_adm", "rp_provisi",
     "bayar_pokok", "bayar_bunga", "total_bayar", "sisa_pokok"] as const
@@ -55,7 +59,12 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
     if (f.aktif !== null) where += ` AND a.aktif = ${p(f.aktif)}`
     if (f.grup !== "All") where += ` AND jk.group_pinjaman = ${p(f.grup)}`
     if (f.kredit && f.kredit !== "All") where += ` AND jk.kode_kredit = ${p(f.kredit)}`
-    if (f.keyword && f.kolomCari) where += ` AND ${f.kolomCari} ILIKE ${p(`%${f.keyword}%`)}`
+    if (f.keyword) {
+        const kw = p(`%${f.keyword}%`)
+        where += f.kolomCari ? ` AND ${f.kolomCari} ILIKE ${kw}` : ` AND (${KOLOM_CARI.map((k) => `${k} ILIKE ${kw}`).join(" OR ")})`
+    }
+    if (f.tahun) where += ` AND EXTRACT(YEAR FROM p.tgl_pinjaman) = ${p(f.tahun)}`
+    if (f.bulan) where += ` AND EXTRACT(MONTH FROM p.tgl_pinjaman) = ${p(f.bulan)}`
 
     // Kolom yang boleh dipakai mengurutkan (nama kolom hasil, bukan teks bebas dari pengguna).
     // Kolom kontrak ada di baris dasar sehingga halaman bisa dipilih lebih dulu; kolom hitungan butuh buku pinjaman/jadwal untuk semua baris.
