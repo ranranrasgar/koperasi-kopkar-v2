@@ -1,6 +1,6 @@
 "use client"
 
-import React, { useActionState, useEffect, useTransition } from "react"
+import React, { useActionState, useEffect, useState, useTransition } from "react"
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { InputUangBebas } from "@/components/ui/InputUang"
@@ -19,6 +19,8 @@ export interface FieldSpec {
     wide?: boolean
     step?: string
     hidden?: boolean
+    /** Nama tab; form bertab bila ada field yang mengisinya. Semua isian tetap ikut terkirim. */
+    tab?: string
 }
 
 /** Form ubah data master; nilai awal dari server, simpan lewat server action yang memvalidasi ulang. */
@@ -33,6 +35,13 @@ export function FormEdit({ fields, nilai, aksi, tombol = "Simpan", onSelesai, ko
     const [hasil, jalankan, pending] = useActionState(aksi, null)
     const [, startTransition] = useTransition()
     useEffect(() => { if (hasil?.ok) onSelesai?.() }, [hasil, onSelesai])
+    const tabs = [...new Set(fields.flatMap((f) => (f.tab ? [f.tab] : [])))]
+    const [tabAktif, setTabAktif] = useState(tabs[0])
+    // Isian wajib di tab yang tertutup tidak bisa ditunjuk browser, jadi tab itu dibuka dulu.
+    const onInvalid = (e: React.FormEvent<HTMLFormElement>) => {
+        const f = fields.find((x) => x.name === (e.target as HTMLInputElement).name)
+        if (f?.tab) setTabAktif(f.tab)
+    }
     // Tanpa form action: React 19 mengosongkan isian setelah action, juga saat validasi server menolak (sama dengan useAksiForm).
     const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
@@ -40,9 +49,18 @@ export function FormEdit({ fields, nilai, aksi, tombol = "Simpan", onSelesai, ko
         startTransition(() => jalankan(data))
     }
     return (
-        <form onSubmit={onSubmit} className="space-y-4">
-            <div className={cn("grid gap-4", kolom === 2 && "sm:grid-cols-2", kolom === 3 && "sm:grid-cols-3")}>
-                {fields.map((f) => {
+        <form onSubmit={onSubmit} onInvalidCapture={onInvalid} className="space-y-4">
+            {tabs.length > 0 && (
+                <div role="tablist" className="flex gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    {tabs.map((t) => (
+                        <button key={t} type="button" role="tab" aria-selected={t === tabAktif} onClick={() => setTabAktif(t)}
+                            className={cn("-mb-px shrink-0 whitespace-nowrap border-b-2 px-4 py-2 text-sm transition-colors", t === tabAktif ? "border-blue-600 font-semibold text-foreground" : "border-transparent text-muted-foreground hover:text-foreground")}>{t}</button>
+                    ))}
+                </div>
+            )}
+            {(tabs.length ? tabs : [undefined]).map((tab) => (
+            <div key={tab ?? "semua"} hidden={tab !== undefined && tab !== tabAktif} className={cn("grid gap-4", kolom === 2 && "sm:grid-cols-2", kolom === 3 && "sm:grid-cols-3", tab !== undefined && tab !== tabAktif && "hidden")}>
+                {fields.filter((f) => tab === undefined || f.tab === tab || (f.hidden && tab === tabs[0])).map((f) => {
                     const v = nilai[f.name]
                     const id = `f-${f.name}`
                     if (f.hidden) return <input key={f.name} type="hidden" name={f.name} value={v == null ? "" : String(v)} />
@@ -73,6 +91,7 @@ export function FormEdit({ fields, nilai, aksi, tombol = "Simpan", onSelesai, ko
                     )
                 })}
             </div>
+            ))}
             {hasil && (hasil.ok ? (
                 <div role="status" className="flex items-center gap-2 rounded-md border border-green-300 bg-green-50 dark:bg-green-500/10 p-2.5 text-sm text-green-700 dark:text-green-400">
                     <CheckCircle2 className="h-4 w-4" /> {hasil.pesan}

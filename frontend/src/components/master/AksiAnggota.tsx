@@ -1,9 +1,9 @@
 "use client"
 
-import { useCallback, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { Pencil, RotateCcw, UserRoundX, Trash2 } from "lucide-react"
-import { hapusAnggotaAction, simpanAnggotaAction, ubahStatusAnggotaAction } from "@/app/actions/master-aksi"
+import { Loader2, Pencil, RotateCcw, UserRoundX, Trash2 } from "lucide-react"
+import { detailAnggotaAction, hapusAnggotaAction, simpanAnggotaAction, ubahStatusAnggotaAction } from "@/app/actions/master-aksi"
 import { FormEdit, type FieldSpec } from "@/components/master/FormEdit"
 import { ModalForm } from "@/components/ui/Modal"
 
@@ -13,6 +13,52 @@ const staffOptions = [
     { value: "Staff", label: "Staff" },
     { value: "No Staff", label: "No Staff" },
 ]
+
+const TAB = { pribadi: "Data Pribadi", kontak: "Alamat & Kontak", kerja: "Pekerjaan & Gaji", bank: "Bank & Simpanan" }
+const editFields: FieldSpec[] = [
+    { name: "id", label: "", hidden: true },
+    { name: "nama", label: "Nama lengkap", required: true, tab: TAB.pribadi },
+    { name: "nik", label: "KPK", tab: TAB.pribadi },
+    { name: "jns_kelamin", label: "Jenis kelamin", type: "select", tab: TAB.pribadi, options: [{ value: "L", label: "Laki-laki" }, { value: "P", label: "Perempuan" }] },
+    { name: "status", label: "Status perkawinan", type: "select", tab: TAB.pribadi, options: ["KAWIN", "BELUM KAWIN", "TIDAK KAWIN", "JANDA", "DUDA"].map((v) => ({ value: v, label: v })) },
+    { name: "no_ktp_sim", label: "No. KTP / SIM", tab: TAB.pribadi },
+    { name: "npwp", label: "NPWP", tab: TAB.pribadi },
+    { name: "nama_istri_suami", label: "Nama istri / suami", tab: TAB.pribadi },
+    { name: "jml_tanggungan", label: "Jumlah tanggungan", tab: TAB.pribadi },
+    { name: "jml_anak", label: "Jumlah anak", tab: TAB.pribadi },
+    { name: "alamat", label: "Alamat", type: "textarea", wide: true, tab: TAB.kontak },
+    { name: "kota", label: "Kota", tab: TAB.kontak },
+    { name: "kodepos", label: "Kode pos", tab: TAB.kontak },
+    { name: "hp", label: "No. HP", tab: TAB.kontak },
+    { name: "telp_rmh", label: "Telepon rumah", tab: TAB.kontak },
+    { name: "status_staff", label: "Status staff", type: "select", options: staffOptions, tab: TAB.kerja },
+    { name: "grade", label: "Grade", hint: "Harus cocok dengan Data Master → Grade.", tab: TAB.kerja },
+    { name: "rp_gaji_pokok", label: "Gaji per bulan", type: "uang", hint: "Dipakai menghitung take home pay saat meninjau pengajuan.", tab: TAB.kerja },
+    { name: "jabatan", label: "Jabatan", tab: TAB.kerja },
+    { name: "pekerjaan", label: "Pekerjaan", tab: TAB.kerja },
+    { name: "departemen", label: "Departemen", tab: TAB.kerja },
+    { name: "nama_perusahaan", label: "Nama perusahaan", tab: TAB.kerja },
+    { name: "telp_ktr", label: "Telepon kantor", tab: TAB.kerja },
+    { name: "lama_bekerja_tahun", label: "Lama bekerja (tahun)", tab: TAB.kerja },
+    { name: "lama_bekerja_bulan", label: "Lama bekerja (bulan)", tab: TAB.kerja },
+    { name: "alamat_kerja", label: "Alamat kerja", type: "textarea", wide: true, tab: TAB.kerja },
+    { name: "bank_nama", label: "Bank", tab: TAB.bank },
+    { name: "bank_no_rek", label: "No. rekening", tab: TAB.bank },
+    { name: "bank_atas_nama", label: "Atas nama rekening", tab: TAB.bank },
+    { name: "simpanan_pokok", label: "Simpanan pokok / bulan", type: "uang", tab: TAB.bank },
+    { name: "simpanan_wajib", label: "Simpanan wajib / bulan", type: "uang", tab: TAB.bank },
+    { name: "simpanan_sukarela", label: "Simpanan sukarela / bulan", type: "uang", tab: TAB.bank },
+]
+
+/** Isi form ubah: baris tabel ditambah data rinci yang dibaca saat modal dibuka (tidak ikut di daftar karena memuat gaji). */
+function UbahAnggota({ item, selesai }: { item: Baris; selesai: () => void }) {
+    const [detail, setDetail] = useState<Awaited<ReturnType<typeof detailAnggotaAction>> | null>(null)
+    useEffect(() => { void detailAnggotaAction(Number(item.id)).then(setDetail) }, [item.id])
+    if (!detail) return <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
+    if ("error" in detail) return <p role="alert" className="text-sm text-red-700">{detail.error}</p>
+    return <FormEdit fields={editFields} nilai={{ ...Object.fromEntries(Object.entries(item).map(([k, v]) => [k, v as string | number | boolean | null])), ...detail }}
+        aksi={simpanAnggotaAction} onSelesai={selesai} />
+}
 
 export function AksiAnggota({ item }: { item: Baris }) {
     const router = useRouter()
@@ -25,25 +71,6 @@ export function AksiAnggota({ item }: { item: Baris }) {
         router.refresh()
         setTimeout(() => setModal(null), 1200)
     }, [router])
-    const editFields: FieldSpec[] = [
-        { name: "id", label: "", hidden: true },
-        { name: "nama", label: "Nama lengkap", required: true },
-        { name: "nik", label: "KPK" },
-        { name: "jns_kelamin", label: "Jenis kelamin", type: "select", options: [
-            { value: "L", label: "Laki-laki" }, { value: "P", label: "Perempuan" },
-        ] },
-        { name: "status_staff", label: "Status staff", type: "select", options: staffOptions },
-        { name: "alamat", label: "Alamat", type: "textarea", wide: true },
-        { name: "kota", label: "Kota" },
-        { name: "hp", label: "No. HP" },
-        { name: "grade", label: "Grade", hint: "Harus cocok dengan Data Master → Grade." },
-        { name: "bank_nama", label: "Bank" },
-        { name: "bank_no_rek", label: "No. rekening" },
-        { name: "bank_atas_nama", label: "Atas nama rekening" },
-        { name: "simpanan_pokok", label: "Simpanan pokok / bulan", type: "uang" },
-        { name: "simpanan_wajib", label: "Simpanan wajib / bulan", type: "uang" },
-        { name: "simpanan_sukarela", label: "Simpanan sukarela / bulan", type: "uang" },
-    ]
     const fieldsKeluar: FieldSpec[] = [
         { name: "id", label: "", hidden: true },
         { name: "keluar", label: "", hidden: true },
@@ -77,8 +104,7 @@ export function AksiAnggota({ item }: { item: Baris }) {
 
             <ModalForm open={modal === "ubah"} onOpenChange={(buka) => { if (!buka) setModal(null) }}
                 judul={`Ubah Anggota ${kode}`} keterangan="Kode anggota tidak dapat diubah." lebar="sm:max-w-[44rem]">
-                {modal === "ubah" && <FormEdit fields={editFields} nilai={Object.fromEntries(Object.entries(item).map(([k, v]) => [k, v as string | number | boolean | null]))}
-                    aksi={simpanAnggotaAction} onSelesai={selesai} />}
+                {modal === "ubah" && <UbahAnggota item={item} selesai={selesai} />}
             </ModalForm>
             <ModalForm open={modal === "keluar"} onOpenChange={(buka) => { if (!buka) setModal(null) }}
                 judul={aktif ? `Catat Anggota Keluar: ${kode}` : `Aktifkan Kembali: ${kode}`}

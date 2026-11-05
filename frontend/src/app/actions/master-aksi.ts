@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { bahanAnggotaBaru, tambahAnggota, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
 import { batalTutupPinjaman, tutupPinjaman } from "@kopkar/backend/src/posting/penutupan.ts"
 import type { Db } from "@kopkar/backend/src/db.ts"
-import { modeUji, pool, tx } from "@/lib/db"
+import { modeUji, pool, query, tx } from "@/lib/db"
 import { isTanggal } from "@/lib/list"
 import { GalatSesi, operatorAktif, type Operator } from "@/lib/operator"
 import { AKSES_HALAMAN, MENU } from "@/config/akses"
@@ -98,6 +98,26 @@ export async function tambahAnggotaAction(nik: string, data: LengkapAnggota): Pr
     })
 }
 
+/** Kolom anggota_detail di form Ubah Anggota: nama kolom -> [label, panjang kolom]. */
+const DETAIL_ANGGOTA = {
+    no_ktp_sim: ["No. KTP / SIM", 25], npwp: ["NPWP", 25], nama_istri_suami: ["Nama istri / suami", 25], jml_tanggungan: ["Jumlah tanggungan", 2], jml_anak: ["Jumlah anak", 2],
+    jabatan: ["Jabatan", 25], pekerjaan: ["Pekerjaan", 15], departemen: ["Departemen", 15], nama_perusahaan: ["Nama perusahaan", 25], telp_ktr: ["Telepon kantor", 20],
+    lama_bekerja_tahun: ["Lama bekerja (tahun)", 10], lama_bekerja_bulan: ["Lama bekerja (bulan)", 10], alamat_kerja: ["Alamat kerja", 84],
+} as const
+
+/** Data rinci untuk form Ubah Anggota, termasuk gaji, jadi hanya untuk operator yang boleh mengubah anggota. */
+export async function detailAnggotaAction(id: number) {
+    try {
+        await operatorAktif([MENU.daftarAnggota])
+        const [d] = await query<Record<string, string | number | null>>(
+            `SELECT a.status, NULLIF(a.kodepos, 0) AS kodepos, a.telp_rmh, NULLIF(ad.rp_gaji_pokok, 0) AS rp_gaji_pokok, ${Object.keys(DETAIL_ANGGOTA).map((k) => `ad.${k}`).join(", ")}
+               FROM anggota a LEFT JOIN anggota_detail ad ON ad.anggota_id = a.id WHERE a.id = $1`, [id])
+        return d ?? { error: "Anggota tidak ditemukan" }
+    } catch (e) {
+        return { error: e instanceof Error ? e.message : "Gagal membaca data anggota" }
+    }
+}
+
 export async function simpanAnggotaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
     return simpan([MENU.daftarAnggota], "/dashboard/members", async (db, operator) => {
         const id = idForm(f)
@@ -114,16 +134,27 @@ export async function simpanAnggotaAction(_: HasilSimpan, f: FormData): Promise<
         if (grade && !g) throw new Salah(`Grade ${grade} tidak ada di Data Master`)
         const staff = teks(f, "status_staff", "Status staff", 15)
         if (staff && !["Staff", "No Staff"].includes(staff)) throw new Salah("Status staff tidak valid")
+        const kodepos = teks(f, "kodepos", "Kode pos", 9)
+        if (kodepos && !/^\d+$/.test(kodepos)) throw new Salah("Kode pos harus angka")
         await db.query(
             `UPDATE anggota SET nama=$1, nik=$2, jns_kelamin=$3, alamat=$4, kota=$5, hp=$6, status_staff=$7,
                  grade=$8, grade_id=$9, rp_grade=$10, bank_nama=$11, bank_no_rek=$12, bank_atas_nama=$13,
-                 simpanan_pokok=$14, simpanan_wajib=$15, simpanan_sukarela=$16, opr=$17
+                 simpanan_pokok=$14, simpanan_wajib=$15, simpanan_sukarela=$16, opr=$17,
+                 status=$19, kodepos=$20, telp_rmh=$21
              WHERE id=$18`,
             [nama, nik, jk, teks(f, "alamat", "Alamat", 100), teks(f, "kota", "Kota", 50), teks(f, "hp", "No. HP", 20),
              staff, grade, g?.id ?? null, g?.nominal ?? 0, teks(f, "bank_nama", "Nama bank", 15),
              teks(f, "bank_no_rek", "No. rekening", 15), teks(f, "bank_atas_nama", "Nama pemilik rekening", 50),
              angka(f, "simpanan_pokok", "Simpanan pokok"), angka(f, "simpanan_wajib", "Simpanan wajib"),
-             angka(f, "simpanan_sukarela", "Simpanan sukarela"), operator.nama.slice(0, 15), id])
+             angka(f, "simpanan_sukarela", "Simpanan sukarela"), operator.nama.slice(0, 15), id,
+             teks(f, "status", "Status perkawinan", 15), Number(kodepos || 0), teks(f, "telp_rmh", "Telepon rumah", 20)])
+        // Satu baris per anggota; anggota lama yang belum punya dibuatkan, sama dengan anggota baru (akun.ts).
+        const kolom = Object.keys(DETAIL_ANGGOTA) as (keyof typeof DETAIL_ANGGOTA)[]
+        const isi = kolom.map((k) => teks(f, k, DETAIL_ANGGOTA[k][0], DETAIL_ANGGOTA[k][1]))
+        if (!(await db.query("SELECT 1 FROM anggota_detail WHERE anggota_id = $1", [id])).rowCount)
+            await db.query("INSERT INTO anggota_detail (anggota_id, urut, kode_agt) SELECT $1, COALESCE(MAX(urut), 0) + 1, $2 FROM anggota_detail", [id, lama.kode_agt])
+        await db.query(`UPDATE anggota_detail SET rp_gaji_pokok = $2, ${kolom.map((k, n) => `${k} = $${n + 3}`).join(", ")} WHERE anggota_id = $1`,
+            [id, angka(f, "rp_gaji_pokok", "Gaji"), ...isi])
         return `Anggota ${lama.kode_agt} (${nama}) diubah oleh ${operator.nama}`
     })
 }
