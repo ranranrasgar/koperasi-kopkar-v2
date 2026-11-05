@@ -38,6 +38,25 @@ export async function bukuSimpanan(s: SearchParams) {
     return paged({ base, values, searchParams: s, sortable, defaultSort: "tgl_transaksi DESC, urut DESC, id DESC", kolomHalaman: saldo })
 }
 
+export interface BuktiSimpanan {
+    no_bukti: string; tgl_transaksi: string; jenis_simpanan: string; nama_simpanan: string | null; kode_agt: string; nik: string | null; nama: string
+    rp_setoran: number; rp_pengambilan: number; deskripsi: string | null; opr: string | null
+}
+export interface BarisJurnalBukti { kode_perkiraan: string; nama_perkiraan: string | null; debit: number; kredit: number }
+
+/** Satu bukti simpanan beserta jurnalnya, untuk ditinjau. */
+export async function detailBuktiSimpanan(no: string) {
+    const [[bukti], jurnal] = await Promise.all([
+        query<BuktiSimpanan>(
+            `SELECT s.no_bukti, s.tgl_transaksi::text AS tgl_transaksi, s.jenis_simpanan, j.nama_simpanan, s.kode_agt, a.nik, a.nama, s.rp_setoran, s.rp_pengambilan, s.deskripsi, s.opr
+               FROM simpanan s JOIN anggota a ON a.id = s.anggota_id LEFT JOIN jenis_simpanan j ON j.id = s.jenis_simpanan_id WHERE s.no_bukti = $1`, [no]),
+        query<BarisJurnalBukti>(
+            `SELECT j.kode_perkiraan, p.nama_perkiraan, j.debit_jurnalumum AS debit, j.kredit_jurnalumum AS kredit
+               FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan WHERE j.nomor_bukti = $1 ORDER BY j.urutan`, [no]),
+    ])
+    return bukti ? { bukti, jurnal } : null
+}
+
 export interface JenisSaldo { kode_simpanan: string; nama_simpanan: string; setoran: number; pengambilan: number; saldo: number; transaksi: number }
 export interface AnggotaSimpanan { kode_agt: string; nik: string | null; nama: string; aktif: boolean; total: number; transaksi: number; terakhir: string | null }
 const MAKS_PILIHAN = 20

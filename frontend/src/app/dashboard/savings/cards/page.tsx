@@ -2,6 +2,7 @@ import Link from "next/link"
 import { Search } from "lucide-react"
 import { FormCard } from "@/components/transaksi/common"
 import { TabJenisSimpanan } from "@/components/simpanan/TabJenisSimpanan"
+import { AksiBuktiSimpanan } from "@/components/transaksi/TombolKwitansi"
 import { Input } from "@/components/ui/input"
 import { TombolCetak } from "@/components/ui/TombolCetak"
 import { cariAnggotaSemua, kartuSimpanan } from "@/lib/queries/simpanan-lap"
@@ -95,6 +96,7 @@ export default async function KartuSimpananPage(props: PageProps<"/dashboard/sav
                                             <th className="px-3 py-1.5 text-right">Setor</th>
                                             <th className="px-3 py-1.5 text-right">Ambil</th>
                                             <th className="px-3 py-1.5 text-right">Saldo</th>
+                                            <th className="w-20 px-3 py-1.5" data-tanpa-cetak><span className="sr-only">Aksi</span></th>
                                         </tr>
                                     </thead>
                                     <tbody>
@@ -102,6 +104,7 @@ export default async function KartuSimpananPage(props: PageProps<"/dashboard/sav
                                             <tr className="border-b bg-muted/20">
                                                 <td colSpan={5} className="px-3 py-1.5 italic text-muted-foreground">Saldo awal</td>
                                                 <td className="px-3 py-1.5 text-right tabular-nums">{formatAngka(awal)}</td>
+                                                <td data-tanpa-cetak />
                                             </tr>
                                         )}
                                         {baris.map((m) => (
@@ -112,6 +115,7 @@ export default async function KartuSimpananPage(props: PageProps<"/dashboard/sav
                                                 <td className="px-3 py-1.5 text-right tabular-nums">{m.rp_setoran ? formatAngka(m.rp_setoran) : ""}</td>
                                                 <td className="px-3 py-1.5 text-right tabular-nums">{m.rp_pengambilan ? formatAngka(m.rp_pengambilan) : ""}</td>
                                                 <td className="px-3 py-1.5 text-right tabular-nums font-semibold">{formatAngka(m.saldo)}</td>
+                                                <td className="px-2 py-0.5 text-right whitespace-nowrap" data-tanpa-cetak><AksiBuktiSimpanan item={{ no_bukti: m.no_bukti }} /></td>
                                             </tr>
                                         ))}
                                     </tbody>

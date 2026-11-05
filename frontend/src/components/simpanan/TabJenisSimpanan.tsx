@@ -12,7 +12,7 @@ export function TabJenisSimpanan({ tab }: { tab: { kode: string; nama: string; s
     if (tab.length === 0) return null
     return (
         <div className="space-y-3">
-            <div role="tablist" aria-label="Jenis simpanan" className="flex gap-1 overflow-x-auto border-b print:hidden">
+            <div role="tablist" aria-label="Jenis simpanan" className="flex gap-1 overflow-x-auto border-b [scrollbar-width:none] [&::-webkit-scrollbar]:hidden print:hidden">
                 {tab.map((t) => {
                     const aktif = t.kode === pilih
                     return (

@@ -280,6 +280,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/settings/akses"
             },
             {
+                label: "Audit Data",
+                icon: "fact_check",
+                href: "/dashboard/settings/audit"
+            },
+            {
                 label: "Backup & Restore",
                 icon: "backup",
                 href: "/dashboard/settings/backup"

@@ -15,6 +15,8 @@ Kolom **Saldo** berlaku seperti rekening koran: saldo anggota untuk jenis simpan
 
 Karena saldonya berjalan, tabel ini hanya bisa diurutkan menurut **Tanggal** (terbaru atau terlama). Kolom lain sengaja tidak bisa diurutkan, supaya baris tetap kronologis dan saldo tetap terbaca.
 
+Di ujung setiap baris Buku Simpanan dan Kartu Simpanan ada dua ikon: **Lihat bukti** menampilkan rincian transaksi dan jurnalnya, **Cetak ulang kwitansi** mencetak kwitansi bertanda *CETAK ULANG*. Keduanya hanya membaca.
+
 Klik **Kode Agt** atau **Nama** di tabel untuk membuka Kartu Simpanan anggota itu (bila Anda punya izin Kartu Simpanan).
 
 Saat mencari anggota, muncul ringkasan di atas tabel:

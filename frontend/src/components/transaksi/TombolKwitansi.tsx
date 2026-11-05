@@ -5,13 +5,14 @@ import { Loader2, Printer } from "lucide-react"
 import { dataBuktiAction } from "@/app/actions/kwitansi"
 import { bukaBuku, bukaKwitansi } from "@/lib/cetak-kwitansi"
 import type { JenisBukti } from "@/lib/kwitansi-tipe"
+import { LihatBuktiSimpanan } from "./LihatBuktiSimpanan"
 
-/** Cetak kwitansi atau buku pinjaman untuk dot matrix. `ikon`: tombol kecil tanpa teks untuk baris tabel. */
-export function TombolKwitansi({ jenis, no, label = "Cetak Kwitansi", ikon = false }: { jenis: JenisBukti; no: string; label?: string; ikon?: boolean }) {
+/** Cetak kwitansi atau buku pinjaman untuk dot matrix. `ikon`: tombol kecil tanpa teks untuk baris tabel. `ulang`: judul kwitansi diberi tanda cetak ulang. */
+export function TombolKwitansi({ jenis, no, label = "Cetak Kwitansi", ikon = false, ulang = false }: { jenis: JenisBukti; no: string; label?: string; ikon?: boolean; ulang?: boolean }) {
     const [sibuk, mulai] = useTransition()
     const cetak = () => mulai(async () => {
         const r = await dataBuktiAction(jenis, no)
-        const galat = "error" in r ? r.error : "buku" in r ? bukaBuku(r.buku, r.kop) : bukaKwitansi(r.kwitansi, r.kop)
+        const galat = "error" in r ? r.error : "buku" in r ? bukaBuku(r.buku, r.kop) : bukaKwitansi(ulang ? { ...r.kwitansi, judul: `${r.kwitansi.judul} (CETAK ULANG)` } : r.kwitansi, r.kop)
         if (galat) alert(galat)
     })
     const Ikon = sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />
@@ -23,7 +24,8 @@ export function TombolKwitansi({ jenis, no, label = "Cetak Kwitansi", ikon = fal
     )
 }
 
-/** Aksi baris di Buku Simpanan: cetak ulang kwitansi. */
+/** Aksi baris di Buku Simpanan dan Kartu Simpanan: lihat bukti dan jurnalnya, cetak ulang kwitansi. */
 export function AksiBuktiSimpanan({ item }: { item: Record<string, unknown> }) {
-    return <TombolKwitansi jenis="simpanan" no={String(item.no_bukti ?? "")} ikon />
+    const no = String(item.no_bukti ?? "")
+    return <><LihatBuktiSimpanan no={no} /><TombolKwitansi jenis="simpanan" no={no} label="Cetak ulang kwitansi" ikon ulang /></>
 }

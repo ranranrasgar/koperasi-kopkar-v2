@@ -74,6 +74,7 @@ export const MENU = {
     generatePotongan: "Generate & Posting Potongan (web)",
     jurnalPenyesuaian: "Jurnal Penyesuaian (web)",
     jurnalBermasalah: "Jurnal Bermasalah (web)",
+    auditData: "Audit Data (web)",
     bukuBesarKas: "Buku Besar Kas (web)",
     neracaLajur: "Neraca Lajur (web)",
     gradeAnggota: "Grade Anggota (web)",
@@ -184,6 +185,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     // Pusat Panduan (/dashboard/panduan) sengaja tanpa entri: semua operator boleh membaca.
     "/dashboard/panduan/kelola": [MENU.kelolaPanduan],
     "/dashboard/settings/mode": [MENU.modeAplikasi],
+    "/dashboard/settings/audit": [MENU.auditData],
     "/dashboard/settings/backup": [MENU.backupRestore],
     "/dashboard/notifikasi": [MENU.kirimNotifikasi],
     "/dashboard/himbauan": [MENU.kelolaPengumuman],

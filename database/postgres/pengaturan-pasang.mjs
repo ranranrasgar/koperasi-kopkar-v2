@@ -26,6 +26,7 @@ const PECAHAN_IZIN = {
     'Buku Besar Kas (web)': ['Buku Kas && Bank (Bank Book)'],
     'Neraca Lajur (web)': ['Neraca Saldo'],
     'Grade Anggota (web)': ['Jenis Pinjaman'],
+    'Audit Data (web)': [MENU_MODE], // menu baru, bukan pecahan: awalnya sama dengan penerima Mode Aplikasi (grup admin)
 };
 
 function envLokal() {
