@@ -2,6 +2,7 @@ import Link from "next/link"
 import { notFound } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 import { TombolKirimInfo } from "@/components/transaksi/TombolKirimInfo"
+import { TombolKwitansi } from "@/components/transaksi/TombolKwitansi"
 import { TombolBatalTutup, TombolTutupPinjaman } from "@/components/transaksi/TombolTutupPinjaman"
 import { TombolEkspor } from "@/components/laporan/TombolEkspor"
 import { TombolCetak } from "@/components/ui/TombolCetak"
@@ -110,6 +111,8 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                 <span className="ml-auto flex items-center gap-2 print:hidden">
                     <TombolCetak judul={judulCetak} subjudul={subjudulCetak} bagian={bagian} />
                     <TombolEkspor nama={`pinjaman_${r.no_pinjaman}`} judul={judulCetak} subjudul={subjudulCetak} bagian={bagian} />
+                    <TombolKwitansi jenis="pencairan" no={r.no_pinjaman} label="Bukti Pencairan" />
+                    <TombolKwitansi jenis="buku" no={r.no_pinjaman} label="Buku Pinjaman" />
                     <TombolKirimInfo noPinjaman={r.no_pinjaman} />
                     {admin && !r.lunas && <TombolTutupPinjaman noPinjaman={r.no_pinjaman} sisa={rp(r.sisa_pokok)} />}
                     {admin && penutupan && <TombolBatalTutup noPinjaman={r.no_pinjaman} />}
@@ -223,6 +226,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                                     <th className={`${th} text-right`}>Cair Pokok</th>
                                     <th className={`${th} text-right`}>Jasa Dibebankan</th>
                                     <th className={`${th} text-right`}>Sisa Pokok</th>
+                                    <th className={`${th} print:hidden`}></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -237,6 +241,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                                         <td className="px-3 py-2 text-right tabular-nums">{b.kredit_pokok ? formatAngka(b.kredit_pokok) : ""}</td>
                                         <td className="px-3 py-2 text-right tabular-nums">{b.kredit_bunga ? formatAngka(b.kredit_bunga) : ""}</td>
                                         <td className="px-3 py-2 text-right tabular-nums font-semibold">{formatAngka(b.saldo)}</td>
+                                        <td className="px-1 py-1 text-right print:hidden">{b.angsuran_ke > 0 && b.no_bukti && <TombolKwitansi jenis="angsuran" no={b.no_bukti} ikon />}</td>
                                     </tr>
                                 ))}
                             </tbody>
@@ -248,6 +253,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                                     <td className="px-3 py-2 text-right tabular-nums">{formatAngka(bayar.reduce((t, b) => t + b.kredit_pokok, 0))}</td>
                                     <td className="px-3 py-2 text-right tabular-nums">{formatAngka(bayar.reduce((t, b) => t + b.kredit_bunga, 0))}</td>
                                     <td className="px-3 py-2 text-right tabular-nums">{formatAngka(saldo)}</td>
+                                    <td className="print:hidden" />
                                 </tr>
                             </tfoot>
                         </table>

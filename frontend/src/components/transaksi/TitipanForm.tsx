@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState, useTransition } from "react"
 import { Loader2, Trash2 } from "lucide-react"
+import { TombolKwitansi } from "@/components/transaksi/TombolKwitansi"
 import { Input } from "@/components/ui/input"
 import { InputUangBebas } from "@/components/ui/InputUang"
 import {
@@ -171,7 +172,7 @@ function DaftarTitipan({ data, semua, setSemua, onHapus }: { data: DataTitipan; 
                             <td className="px-3 py-1.5">{t.status === "POSTING"
                                 ? <span className="rounded-full bg-green-100 px-2 py-0.5 text-[10px] font-bold text-green-700">POSTING</span>
                                 : <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-bold text-amber-700">BELUM</span>}</td>
-                            <td className="px-3 py-1.5 text-right">{t.status !== "POSTING" && (
+                            <td className="px-3 py-1.5 text-right"><TombolKwitansi jenis="titipan" no={String(t.id)} ikon />{t.status !== "POSTING" && (
                                 <button type="button" disabled={sibuk} onClick={() => hapus(t.id, t.rp_jumlah)} title="Hapus titipan"
                                     className="text-red-600 hover:text-red-700 disabled:opacity-50">{sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</button>
                             )}</td>

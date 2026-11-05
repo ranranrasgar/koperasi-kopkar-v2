@@ -1,3 +1,4 @@
+import { AksiBuktiSimpanan } from "@/components/transaksi/TombolKwitansi"
 import Link from "next/link"
 import { Plus, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
@@ -17,7 +18,7 @@ export default async function SavingsLedgerPage(props: PageProps<"/dashboard/sav
             : f),
     }
     return (
-        <ModuleTable config={config} data={data} actions={
+        <ModuleTable config={config} data={data} aksiBaris={AksiBuktiSimpanan} actions={
             <>
                 {o.izin.includes(MENU.pencairanSimpanan) && (
                     <Button asChild size="sm" variant="outline" className="h-9">

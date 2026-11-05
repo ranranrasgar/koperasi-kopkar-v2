@@ -31,3 +31,11 @@ Baris **Jumlah** ada per kelompok dan **Total titipan** di bawah. Klik **kode ak
 > **Catatan:** Halaman ini hanya merangkum; titipan dicatat oleh transaksi lain: angsuran KPR di **Setoran Angsuran** tab KPR, serta jurnal umum atau Bank Book untuk fee dan titipan lain. Titipan cicilan angsuran pinjaman tunai dari anggota (tanpa jurnal sampai diposting) dicatat di **Pinjaman → Titipan Angsuran**.
 
 Untuk menerima pembayaran angsuran, pakai **Pinjaman → Setoran Angsuran**.
+
+## Mencetak kwitansi
+
+Setelah transaksi tersimpan, tombol **Cetak Kwitansi** muncul di kotak hasil. Jendela cetak terbuka dengan pilihan kertas **Continuous 9,5 x 5,5 in** atau **A4/2**; pilih yang sama di pengaturan printer, lalu tekan **Cetak**. Tampilannya hitam polos supaya tajam di printer dot matrix seperti LX-300 dan Epson 2210.
+
+Cetak ulang: tekan ikon printer di baris titipan pada daftar titipan.
+
+Dalam Mode Uji transaksi tidak tersimpan, jadi tombol ini tidak muncul.

@@ -1,5 +1,6 @@
 "use client"
 
+import { TombolKwitansi } from "@/components/transaksi/TombolKwitansi"
 import React, { useActionState, useEffect, useRef, useState, useTransition } from "react"
 import { CheckCircle2, AlertCircle, Loader2, Search, X } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -72,6 +73,7 @@ export function HasilTransaksi({ hasil }: { hasil: Hasil }) {
                     ))}
                 </dl>
             )}
+            {hasil.cetak && <div className="mt-2 flex flex-wrap gap-2">{hasil.cetak.map((c) => <TombolKwitansi key={c.jenis} jenis={c.jenis} no={c.no} label={c.label} />)}</div>}
             {hasil.jadwal && <JadwalTable jadwal={hasil.jadwal} />}
         </div>
     )

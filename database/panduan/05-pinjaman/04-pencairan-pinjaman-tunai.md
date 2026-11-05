@@ -76,3 +76,14 @@ Setelah pencairan tersimpan, anggota otomatis dikabari:
 Pesan hasil di layar menyebutkan apakah notifikasi dan email terkirim. Kegagalan mengirim **tidak membatalkan pencairan**. Di mode uji tidak ada yang dikirim.
 
 Bila anggota belum menerima atau meminta salinan, buka **detail pinjaman** (klik nomor pinjaman di Daftar Pinjaman atau Cari Pinjaman) lalu tekan **Kirim info ke anggota**.
+
+## Bukti pencairan dan buku pinjaman
+
+Setelah pinjaman cair, kotak hasil menampilkan dua tombol:
+
+- **Cetak Bukti Pencairan**: kwitansi setengah lembar yang ditandatangani anggota dan petugas.
+- **Cetak Buku Pinjaman**: jadwal seluruh angsuran dengan kolom **Paraf Petugas** dan **Paraf Pengurus**. Pilih kertas **Continuous 9,5 x 11 in** atau **A4**.
+
+Keduanya bisa dicetak ulang dari halaman detail pinjaman lewat tombol **Bukti Pencairan** dan **Buku Pinjaman**. Buku yang dicetak ulang sudah berisi tanggal dan jumlah angsuran yang dibayar.
+
+Dalam Mode Uji pinjaman tidak tersimpan, jadi tombol ini tidak muncul.

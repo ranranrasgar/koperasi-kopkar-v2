@@ -34,3 +34,11 @@ Contoh setoran sukarela Rp 500.000 ke Kas Simp. Sukarela:
 > **Tips:** Untuk setoran simpanan berjangka, buka form ini dari halaman **Simpanan Berjangka**; jenis *Simpanan Berjangka* langsung terpilih.
 
 Kesalahan input yang sudah tersimpan dibetulkan dengan **transaksi pembalik** (misalnya pengambilan dengan jumlah yang sama) atas sepengetahuan bagian akuntansi. Transaksi tidak dihapus, supaya jejak audit tetap utuh.
+
+## Mencetak kwitansi
+
+Setelah transaksi tersimpan, tombol **Cetak Kwitansi** muncul di kotak hasil. Jendela cetak terbuka dengan pilihan kertas **Continuous 9,5 x 5,5 in** atau **A4/2**; pilih yang sama di pengaturan printer, lalu tekan **Cetak**. Tampilannya hitam polos supaya tajam di printer dot matrix seperti LX-300 dan Epson 2210.
+
+Cetak ulang: buka **Buku Simpanan**, lalu tekan ikon printer di baris transaksinya.
+
+Dalam Mode Uji transaksi tidak tersimpan, jadi tombol ini tidak muncul.

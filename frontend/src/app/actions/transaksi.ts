@@ -1,5 +1,6 @@
 "use server"
 
+import type { TombolCetakBukti } from "@/lib/kwitansi-tipe"
 import { revalidatePath } from "next/cache"
 import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpanan.ts"
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
@@ -19,7 +20,7 @@ import { transaksiBankBook, type TransaksiBankBook } from "@/lib/queries/laporan
 import { riwayatAnggota, type RiwayatAnggota } from "@/lib/queries/pinjaman-riwayat"
 import { kprBerjalan, pinjamanBerjalan, type KprBerjalan, type PinjamanBerjalan } from "@/lib/queries/pinjaman"
 
-export type Hasil = { ok: true; pesan: string; rincian?: Record<string, string | number>; jadwal?: Jadwal[] } | { ok: false; error: string } | null
+export type Hasil = { ok: true; pesan: string; rincian?: Record<string, string | number>; jadwal?: Jadwal[]; cetak?: TombolCetakBukti[] } | { ok: false; error: string } | null
 export type Jadwal = { ke: number; tanggal: string; pokok: number; jasa: number; adm: number; provisi: number }
 
 const TANGGAL = /^\d{4}-\d{2}-\d{2}$/
@@ -68,7 +69,7 @@ async function posting(menu: readonly string[], fn: (o: Operator) => Promise<Exc
     try {
         const o = await operatorAktif(menu)
         const res = await fn(o)
-        if (res.ok && await modeUji()) return { ...res, pesan: `MODE UJI, tidak tersimpan: ${res.pesan}` }
+        if (res.ok && await modeUji()) return { ...res, cetak: undefined, pesan: `MODE UJI, tidak tersimpan: ${res.pesan}` } // tidak tersimpan, jadi tidak ada bukti untuk dicetak
         revalidatePath("/dashboard", "layout")
         return res
     } catch (e) {
@@ -117,7 +118,8 @@ async function simpanan(tipe: "setor" | "ambil", f: FormData): Promise<Hasil> {
         }
         const r = await tx((db) => (tipe === "setor" ? setorSimpanan : ambilSimpanan)(db, input))
         return { ok: true, pesan: `${tipe === "setor" ? "Setoran" : "Pengambilan"} tercatat dengan nomor ${r.noBukti}`,
-            rincian: { "No. Bukti": r.noBukti, "Jumlah": rp(input.jumlah), "Saldo setelah transaksi": rp(r.saldoSetelah) } }
+            rincian: { "No. Bukti": r.noBukti, "Jumlah": rp(input.jumlah), "Saldo setelah transaksi": rp(r.saldoSetelah) },
+            cetak: [{ label: "Cetak Kwitansi", jenis: "simpanan", no: r.noBukti }] }
     })
 }
 
@@ -199,6 +201,7 @@ export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasi
         const kabar = await kabariAnggota(r.noPinjaman)
         return { ok: true, pesan: `Pinjaman ${r.noPinjaman} dicairkan${kabar}`,
             rincian: { "No. Pinjaman": r.noPinjaman, "Total jasa": rp(r.jasaTotal) },
+            cetak: [{ label: "Cetak Bukti Pencairan", jenis: "pencairan", no: r.noPinjaman }, { label: "Cetak Buku Pinjaman", jenis: "buku", no: r.noPinjaman }],
             jadwal: r.jadwal.map((j) => ({ ke: j.ke, tanggal: j.tanggal, pokok: rp(j.pokok), jasa: rp(j.jasa), adm: 0, provisi: 0 })) }
     })
 }
@@ -243,7 +246,8 @@ export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil>
         const total = toUnits(r.pokok) + toUnits(r.jasa) + toUnits(r.adm) + toUnits(r.provisi)
         return { ok: true, pesan: `Angsuran ke-${r.ke} tercatat dengan nomor ${r.noBukti}${r.lunas ? " (LUNAS)" : ""}${titip ? `; ${titip.jumlah} titipan (${formatRupiah(Number(titip.total))}) ditandai POSTING` : ""}`,
             rincian: { "No. Bukti": r.noBukti, "Pokok": rp(r.pokok), "Jasa": rp(r.jasa), "Adm": rp(r.adm), "Provisi": rp(r.provisi),
-                "Total": rp(total), "Sisa pokok": rp(r.sisaPokok) } }
+                "Total": rp(total), "Sisa pokok": rp(r.sisaPokok) },
+            cetak: [{ label: "Cetak Kwitansi", jenis: "angsuran", no: r.noBukti }] }
     })
 }
 
@@ -269,7 +273,8 @@ export async function bayarAngsuranKprAction(_: Hasil, f: FormData): Promise<Has
             jumlah: uangOpsional(f, "jumlah", "Jumlah"),
         }))
         return { ok: true, pesan: `Angsuran KPR ke-${r.ke} tercatat dengan nomor ${r.noBukti}${r.lunas ? " (LUNAS)" : ""}`,
-            rincian: { "No. Bukti": r.noBukti, "Jumlah": rp(r.jumlah), "Sisa pokok": rp(r.sisaPokok) } }
+            rincian: { "No. Bukti": r.noBukti, "Jumlah": rp(r.jumlah), "Sisa pokok": rp(r.sisaPokok) },
+            cetak: [{ label: "Cetak Kwitansi", jenis: "kpr", no: r.noBukti }] }
     })
 }
 
@@ -421,8 +426,9 @@ export async function dataTitipanAction(noPinjaman: string, semua: boolean): Pro
 export async function tambahTitipanAction(_: Hasil, f: FormData): Promise<Hasil> {
     return posting([MENU.titipan], async () => {
         const noPinjaman = teks(f, "noPinjaman"), jumlah = uang(f, "jumlah", "Jumlah titipan")
-        await tx((db) => tambahTitipan(db, { noPinjaman, tanggal: tanggal(f), jumlah }))
-        return { ok: true, pesan: `Titipan ${formatRupiah(Number(jumlah))} untuk ${noPinjaman} tersimpan (belum diposting ke angsuran)` }
+        const t = await tx((db) => tambahTitipan(db, { noPinjaman, tanggal: tanggal(f), jumlah }))
+        return { ok: true, pesan: `Titipan ${formatRupiah(Number(jumlah))} untuk ${noPinjaman} tersimpan (belum diposting ke angsuran)`,
+            cetak: [{ label: "Cetak Kwitansi", jenis: "titipan", no: String(t.id) }] }
     })
 }
 

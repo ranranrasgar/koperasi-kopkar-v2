@@ -52,3 +52,11 @@ Contoh angsuran ke-1 pinjaman C01 Rp 6.000.000:
 ## Mengirim ulang informasi kredit
 
 Di tab **KPR**, di bawah ringkasan KPR yang dipilih ada tautan **Kirim info ke anggota**: mengirim ulang notifikasi dan email berisi ringkasan serta PDF jadwal angsuran ke anggota pemilik KPR itu. Untuk pinjaman tunai, tombolnya ada di halaman detail pinjaman.
+
+## Mencetak kwitansi
+
+Setelah transaksi tersimpan, tombol **Cetak Kwitansi** muncul di kotak hasil. Jendela cetak terbuka dengan pilihan kertas **Continuous 9,5 x 5,5 in** atau **A4/2**; pilih yang sama di pengaturan printer, lalu tekan **Cetak**. Tampilannya hitam polos supaya tajam di printer dot matrix seperti LX-300 dan Epson 2210.
+
+Cetak ulang angsuran pinjaman tunai: buka detail pinjaman, tab **Riwayat Pembayaran**, lalu tekan ikon printer di baris angsurannya.
+
+Dalam Mode Uji transaksi tidak tersimpan, jadi tombol ini tidak muncul.
