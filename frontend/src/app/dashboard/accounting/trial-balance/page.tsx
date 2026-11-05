@@ -41,11 +41,11 @@ export default async function NeracaSaldoPage(props: PageProps<"/dashboard/accou
                             <tr>
                                 <th rowSpan={2} className="px-2 py-2 text-left">Kode</th>
                                 <th rowSpan={2} className="px-2 py-2 text-left">Nama Akun</th>
-                                <th colSpan={2} className="px-2 py-1 text-center border-b">Saldo Awal</th>
-                                <th colSpan={2} className="px-2 py-1 text-center border-b">Mutasi</th>
-                                <th colSpan={2} className="px-2 py-1 text-center border-b">Saldo Akhir</th>
+                                <th colSpan={2} className="px-2 py-1 text-center border-b border-l-2">Saldo Awal</th>
+                                <th colSpan={2} className="px-2 py-1 text-center border-b border-l-2">Mutasi</th>
+                                <th colSpan={2} className="px-2 py-1 text-center border-b border-l-2">Saldo Akhir</th>
                             </tr>
-                            <tr>{["Debit", "Kredit", "Debit", "Kredit", "Debit", "Kredit"].map((h, i) => <th key={i} className="px-2 py-1 text-right">{h}</th>)}</tr>
+                            <tr>{["Debit", "Kredit", "Debit", "Kredit", "Debit", "Kredit"].map((h, i) => <th key={i} className={`px-2 py-1 text-right ${i % 2 === 0 ? "border-l-2" : "border-l"}`}>{h}</th>)}</tr>
                         </thead>
                         <tbody>
                             {akun.map((a) => {
@@ -55,7 +55,7 @@ export default async function NeracaSaldoPage(props: PageProps<"/dashboard/accou
                                         <td className="px-2 py-1 font-mono text-xs">{a.kode_perkiraan}</td>
                                         <td className="px-2 py-1">{a.nama_perkiraan}</td>
                                         {[aw.d, aw.k, a.debit, a.kredit, ak.d, ak.k].map((v, i) => (
-                                            <td key={i} className="px-2 py-1 text-right tabular-nums">{v ? formatAngka(v) : ""}</td>
+                                            <td key={i} className={`px-2 py-1 text-right tabular-nums ${i % 2 === 0 ? "border-l-2" : "border-l"}`}>{v ? formatAngka(v) : ""}</td>
                                         ))}
                                     </tr>
                                 )
@@ -64,7 +64,7 @@ export default async function NeracaSaldoPage(props: PageProps<"/dashboard/accou
                         <tfoot className="border-t-2 font-semibold bg-muted/40">
                             <tr>
                                 <td colSpan={2} className="px-2 py-2 text-right">Total</td>
-                                {[tot.ad, tot.ak, tot.md, tot.mk, tot.zd, tot.zk].map((v, i) => <td key={i} className="px-2 py-2 text-right tabular-nums">{formatAngka(v)}</td>)}
+                                {[tot.ad, tot.ak, tot.md, tot.mk, tot.zd, tot.zk].map((v, i) => <td key={i} className={`px-2 py-2 text-right tabular-nums ${i % 2 === 0 ? "border-l-2" : "border-l"}`}>{formatAngka(v)}</td>)}
                             </tr>
                         </tfoot>
                     </table>

@@ -68,9 +68,9 @@ export default async function NeracaLajurPage(props: PageProps<"/dashboard/accou
                             <tr>
                                 <th rowSpan={2} className="px-2 py-2 text-left">Kode</th>
                                 <th rowSpan={2} className="px-2 py-2 text-left">Nama Akun</th>
-                                {KOLOM.map((k) => <th key={k} colSpan={2} className="border-b border-l px-2 py-1 text-center">{k}</th>)}
+                                {KOLOM.map((k) => <th key={k} colSpan={2} className="border-b border-l-2 px-2 py-1 text-center">{k}</th>)}
                             </tr>
-                            <tr>{KOLOM.flatMap((k) => ["Debit", "Kredit"].map((h, i) => <th key={`${k}${h}`} className={`px-2 py-1 text-right ${i === 0 ? "border-l" : ""}`}>{h}</th>))}</tr>
+                            <tr>{KOLOM.flatMap((k) => ["Debit", "Kredit"].map((h, i) => <th key={`${k}${h}`} className={`px-2 py-1 text-right ${i === 0 ? "border-l-2" : "border-l"}`}>{h}</th>))}</tr>
                         </thead>
                         <tbody>
                             {baris.map((b) => (
@@ -78,14 +78,14 @@ export default async function NeracaLajurPage(props: PageProps<"/dashboard/accou
                                     <td className="px-2 py-1 font-mono">{b.a.kode_perkiraan}</td>
                                     <td className="px-2 py-1">{b.a.nama_perkiraan}{b.tanpaCoa && <span className="ml-1 text-amber-700">(tidak masuk laba rugi/neraca)</span>}</td>
                                     {[...b.ns, ...b.adj, ...b.nsd, ...b.lr, ...b.nr].map((v, i) => (
-                                        <td key={i} className={`px-2 py-1 text-right tabular-nums ${i % 2 === 0 ? "border-l" : ""} ${i >= 2 && i < 4 && v ? "font-semibold text-indigo-700 dark:text-indigo-300" : ""}`}>{lajur(v)}</td>
+                                        <td key={i} className={`px-2 py-1 text-right tabular-nums ${i % 2 === 0 ? "border-l-2" : "border-l"} ${i >= 2 && i < 4 && v ? "font-semibold text-indigo-700 dark:text-indigo-300" : ""}`}>{lajur(v)}</td>
                                     ))}
                                 </tr>
                             ))}
                             <tr className="border-t font-semibold">
                                 <td colSpan={2} className="px-2 py-1">{laba >= 0 ? "Laba bersih" : "Rugi bersih"}</td>
                                 {[0, 0, 0, 0, 0, 0, laba > 0 ? laba : 0, laba < 0 ? -laba : 0, laba < 0 ? -laba : 0, laba > 0 ? laba : 0].map((v, i) => (
-                                    <td key={i} className={`px-2 py-1 text-right tabular-nums ${i % 2 === 0 ? "border-l" : ""}`}>{lajur(v)}</td>
+                                    <td key={i} className={`px-2 py-1 text-right tabular-nums ${i % 2 === 0 ? "border-l-2" : "border-l"}`}>{lajur(v)}</td>
                                 ))}
                             </tr>
                         </tbody>
@@ -93,7 +93,7 @@ export default async function NeracaLajurPage(props: PageProps<"/dashboard/accou
                             <tr>
                                 <td colSpan={2} className="px-2 py-2 text-right">Jumlah</td>
                                 {[tot.nsD, tot.nsK, tot.adjD, tot.adjK, tot.nsdD, tot.nsdK, lrTotal[0], lrTotal[1], nrTotal[0], nrTotal[1]].map((v, i) => (
-                                    <td key={i} className={`px-2 py-2 text-right tabular-nums ${i % 2 === 0 ? "border-l" : ""}`}>{formatAngka(v)}</td>
+                                    <td key={i} className={`px-2 py-2 text-right tabular-nums ${i % 2 === 0 ? "border-l-2" : "border-l"}`}>{formatAngka(v)}</td>
                                 ))}
                             </tr>
                         </tfoot>

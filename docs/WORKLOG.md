@@ -37,6 +37,9 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Garis kolom di Trial Balance dan Neraca Lajur (5 November)
+Garis 1px antara Debit dan Kredit, garis 2px antar kelompok kolom, di kepala, isi, dan total kedua tabel. Dicek di port 3100 lewat gaya terhitung. Dokumen cetak dan Excel sudah berbingkai di semua sel.
+
 ### Disk penuh merusak server dev, dan peringatan key ModuleTable (5 November)
 Peringatan React "unique key ... ModuleTable" berasal dari elemen `actions` dari server component yang sejajar dengan tombol Cetak dan Ekspor; `ModuleTable` kini membungkusnya dengan Fragment. **Jebakan**: disk C: sisa 87 MB membuat `frontend/.next` rusak, gejalanya `routes.d.ts` terpotong, halaman 404 padahal slug ada, dan galat memuat skrip. Empat folder cache `.next` dan `.next-uji` dihapus atas persetujuan pengguna (sisa 4 GB). `Get-NetTCPConnection` sempat tidak menampilkan server 3100 yang masih hidup (PID 6612), jadi cache terhapus saat server berjalan dan halaman jadi 500; server itu dihentikan lalu dinyalakan ulang. **Sebelum menghapus cache, pastikan lewat `preview_start` atau curl, jangan hanya Get-NetTCPConnection.** Sesudahnya panduan tampil dan typecheck penuh bersih. Log konsol panel menyimpan pesan lama, jadi tidak bisa dipakai sendirian untuk membuktikan peringatan hilang.
 
