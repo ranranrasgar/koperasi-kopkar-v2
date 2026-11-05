@@ -56,7 +56,7 @@ export function RiwayatAnggotaPanel({ data, batas }: { data: RiwayatAnggota; bat
         <section className="rounded-lg border bg-background shadow-sm" aria-label="Riwayat pinjaman anggota">
             <div className="border-b px-4 py-3">
                 <h2 className="font-semibold">Riwayat pinjaman: {a.nama} <span className="font-mono text-xs font-normal text-muted-foreground">{a.kode_agt}</span></h2>
-                <p className="text-xs text-muted-foreground">{a.status_staff?.trim() || "-"}{a.aktif ? "" : " · NON-AKTIF"}{lamaBulan !== null ? ` · anggota ${lamaBulan} bulan (sejak ${formatTanggal(a.tgl_masuk)})` : ""}</p>
+                <p className="text-xs text-muted-foreground">{a.status_staff?.trim() || "-"}{a.aktif ? "" : " · NON-AKTIF"}{lamaBulan !== null ? ` · anggota ${lamaBulan} bulan (sejak ${formatTanggal(a.tgl_masuk)})` : ""} · {r.total} pinjaman tercatat ({r.lunas} lunas) · simpanan {formatRupiah(a.simpanan)}</p>
             </div>
             <div className="grid gap-3 p-4 sm:grid-cols-2 lg:grid-cols-4">
                 <Kartu judul="Sisa utang berjalan" nilai={formatRupiah(r.sisa_pokok)} ket={`${r.berjalan} pinjaman · ${formatRupiah(r.angsuran_bulan)} per bulan`} />
@@ -64,7 +64,6 @@ export function RiwayatAnggotaPanel({ data, batas }: { data: RiwayatAnggota; bat
                     ket={r.tunggak_kali > 0 ? `${r.tunggak_kali} angsuran · ${formatAngka(r.hari_tunggak)} hari · ${r.kolektibilitas}` : "Semua angsuran jatuh tempo sudah dibayar"} />
                 <Kartu judul="Pernah macet" nilai={r.pernah_macet > 0 ? `Ya (${r.pernah_macet} pinjaman)` : "Tidak"} gaya={r.pernah_macet > 0 ? "text-red-600" : "text-green-600"}
                     ket={`Terlambat bayar terlama ${formatAngka(r.maks_telat)} hari · ${r.kali_telat}× lebih dari 30 hari`} />
-                <Kartu judul="Pinjaman tercatat" nilai={`${r.total} (${r.lunas} lunas)`} ket={`Simpanan ${formatRupiah(a.simpanan)}`} />
                 <Kartu judul="Grade (plafon) anggota" nilai={a.rp_grade > 0 ? formatRupiah(a.rp_grade) : "Belum diisi"} gaya={a.rp_grade > 0 ? undefined : "text-amber-600"}
                     ket={batas === null ? "Jenis terpilih tidak dibatasi plafon" : `Batas jenis terpilih ${formatRupiah(batas.batas)} (${batas.sumber === "grade" ? "grade" : "maksimal plafond"})`} />
             </div>

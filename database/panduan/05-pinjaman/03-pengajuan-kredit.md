@@ -34,14 +34,16 @@ Pilih status di kotak di atas tabel untuk melihat pengajuan per status, atau **S
 1. Tekan **Lihat** pada baris pengajuan. Jendela tinjauan menampilkan:
    - rincian pengajuan (jenis, pokok, lama, bunga, keperluan) dan peringatan merah bila pokok melebihi batas plafon;
    - ringkasan risiko berwarna: macet sekarang (merah), menunggak (oranye), pernah terlambat atau pernah macet (kuning), atau bersih (hijau);
-   - identitas anggota: kode/KPK, KTP, alamat, telepon, bank, bagian dan tanggal mulai kerja (dari data karyawan Mattel bila tertaut), jabatan, grade, gaji pokok;
+   - identitas anggota: kode/KPK, HP, bank, bagian dan tanggal mulai kerja (dari data karyawan Mattel bila tertaut), jabatan, grade, dan alamat; isian yang kosong tidak ditampilkan;
    - kartu sisa utang berjalan, angsuran per bulan, tunggakan beserta kolektibilitasnya, pernah macet, jumlah pinjaman, simpanan, dan grade;
    - tabel semua pinjaman tunai dan KPR anggota (pokok, angsuran dibayar, sisa pokok, keterlambatan terlama, status).
 
    Ringkasan dan tabel ini sama dengan panel riwayat di form pencairan pinjaman tunai.
 
+   Bagian **Potongan bulanan** menampilkan potongan gaji anggota (simpanan wajib, sukarela, angsuran berjalan, dan adm bank, sama dengan Generate Potongan), ditambah angsuran pengajuan ini. **Gaji per bulan** terisi dari data anggota (Daftar Anggota, tab *Pekerjaan & Gaji*) dan menghasilkan **perkiraan take home pay**. Gaji bisa diganti di sini untuk simulasi; perubahannya tidak disimpan. Perkiraan ini belum termasuk potongan perusahaan lain seperti pajak dan BPJS.
+
    Di atas jendela tinjauan ada dua tombol:
-   - **Cetak / PDF**: membuka dokumen berkop koperasi (A4) berisi seluruh tinjauan. Untuk berkas PDF, tekan **Cetak** lalu pilih tujuan **Simpan sebagai PDF**. Tabel riwayat ikut tercetak sebanyak yang tampil; tekan *Tampilkan semua* dulu bila perlu semua pinjaman.
+   - **Cetak / PDF**: membuka ringkasan satu lembar A4 berkop koperasi: pengajuan, kondisi pinjaman, potongan bulanan, dan pinjaman berjalan (maksimal 6). Untuk berkas PDF, tekan **Cetak** lalu pilih tujuan **Simpan sebagai PDF**.
    - **Kirim ke WA**: membuka WhatsApp ke nomor HP anggota dengan pesan ringkasan pengajuan (jenis, pokok, lama, sisa utang, tunggakan). WhatsApp tidak bisa menerima lampiran dari tautan, jadi lampirkan PDF hasil cetak secara manual di chat itu. Tombol nonaktif bila HP anggota kosong atau bukan nomor HP.
 2. Nilai kemampuan bayar anggota dari data itu, misalnya pinjaman yang masih berjalan, tunggakan, dan potongan gaji bulanannya.
 3. Tekan **Setujui** atau **Tolak** (di jendela tinjauan atau di baris tabel), lalu konfirmasi.

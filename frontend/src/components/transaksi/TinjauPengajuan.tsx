@@ -1,11 +1,12 @@
 "use client"
 
-import { useEffect, useRef, useState } from "react"
+import { useEffect, useState } from "react"
 import { AlertTriangle, Check, Loader2, MessageCircle, Printer, X } from "lucide-react"
 import { pesanPlafon } from "@kopkar/backend/src/posting/plafon.ts"
 import { tinjauPengajuanAction, type TinjauanPengajuan } from "@/app/actions/pengajuan"
 import { ModalForm } from "@/components/ui/Modal"
-import { bukaCetak } from "@/lib/cetak-klien"
+import { InputUang } from "@/components/ui/InputUang"
+import { bukaCetak, esc } from "@/lib/cetak-klien"
 import type { Pengajuan } from "@/lib/queries/keanggotaan"
 import { formatAngka2, formatRupiah, formatTanggal } from "@/lib/format"
 import { RiwayatAnggotaPanel, RingkasRisiko } from "./RiwayatAnggota"
@@ -18,9 +19,75 @@ function nomorWa(hp: string | null | undefined) {
     return /^628\d{7,12}$/.test(n) ? n : null
 }
 
-const Baris = ({ label, nilai }: { label: string; nilai: React.ReactNode }) => (
-    <div className="flex gap-2 py-0.5"><dt className="w-32 shrink-0 text-muted-foreground">{label}</dt><dd className="min-w-0 break-words">{nilai || "-"}</dd></div>
-)
+type Tinjauan = Extract<TinjauanPengajuan, { ok: true }>
+
+/** Angka potongan setelah pengajuan ini; `gaji` 0 = belum diisi. Angsuran pengajuan memakai angsuran ke-2 dst., biaya adm dan provisi hanya sekali. */
+function hitungThp(t: Tinjauan, gaji: number) {
+    const baru = t.estimasi?.berikutnya ?? 0, total = t.potongan.total + baru
+    return { baru, total, thp: gaji - total, rasio: gaji > 0 ? Math.round((total / gaji) * 100) : null }
+}
+
+/** Dokumen cetak satu lembar: ringkasan untuk keputusan, tanpa identitas lengkap dan riwayat pinjaman yang sudah lunas. */
+function htmlTinjauan(t: Tinjauan, gaji: number) {
+    const p = t.pengajuan, r = t.riwayat.ringkas, h = hitungThp(t, gaji)
+    const baris = (l: string, v: string, tebal = false) => `<tr><td style="padding:2px 6px">${esc(l)}</td><td style="padding:2px 6px;text-align:right;${tebal ? "font-weight:700" : ""}">${esc(v)}</td></tr>`
+    const berjalan = t.riwayat.daftar.filter((x) => x.status !== "Lunas").slice(0, 6)
+    return `<div style="font-size:12px;line-height:1.4">
+<table style="width:100%;margin-bottom:8px"><tbody>
+${baris("Jenis", `${p.kd_kredit} ${p.nama_kredit ?? ""}`)}${baris("Pokok diajukan", formatRupiah(p.rp_pinjaman_pokok), true)}
+${baris("Lama / jasa", `${p.lama_angsuran}x · ${formatAngka2(p.persen_bunga)}%`)}${baris("Keperluan", p.keterangan ?? "-")}
+${baris("KPK / bank", `${p.nik || "-"} · ${[p.bank_nama, p.bank_no_rek].filter(Boolean).join(" ") || "-"}`)}${baris("Grade (plafon)", formatRupiah(t.riwayat.anggota.rp_grade))}
+${baris("Simpanan", formatRupiah(t.riwayat.anggota.simpanan))}
+${baris("Sisa utang berjalan", `${formatRupiah(r.sisa_pokok)} (${r.berjalan} pinjaman)`)}
+${baris("Tunggakan", r.tunggak_kali > 0 ? `${formatRupiah(r.rp_tunggak)} (${r.tunggak_kali} angsuran, ${r.kolektibilitas})` : "Tidak ada")}
+${baris("Riwayat macet", r.pernah_macet > 0 ? `Ya (${r.pernah_macet} pinjaman)` : "Tidak")}
+</tbody></table>
+<b>Potongan bulanan</b>
+<table style="width:100%;margin-bottom:8px"><tbody>
+${baris("Simpanan wajib + sukarela", formatRupiah(t.potongan.wajib + t.potongan.sukarela))}
+${baris("Angsuran berjalan", formatRupiah(t.potongan.angsuran.reduce((x, a) => x + a.jumlah, 0)))}${baris("Adm bank", formatRupiah(t.potongan.admBank))}
+${baris("Angsuran pengajuan ini", formatRupiah(h.baru))}${baris("Total potongan", formatRupiah(h.total), true)}
+${gaji > 0 ? baris("Gaji", formatRupiah(gaji)) + baris(`Perkiraan take home pay (potongan ${h.rasio}% dari gaji)`, formatRupiah(h.thp), true) : ""}
+</tbody></table>
+${berjalan.length ? `<b>Pinjaman berjalan</b><table style="width:100%"><tbody>${berjalan.map((x) => baris(`${x.no_pinjaman} ${x.nama_kredit ?? ""} (${x.dibayar}/${x.lama})`, `sisa ${formatRupiah(x.sisa_pokok)}`)).join("")}</tbody></table>` : ""}
+</div>`
+}
+
+/** Potongan bulanan anggota setelah pengajuan ini, dan perkiraan take home pay dari gaji yang diisi pengurus (gaji tidak disimpan). */
+function PotonganGaji({ t, gaji, setGaji }: { t: Tinjauan; gaji: string; setGaji: (v: string) => void }) {
+    const nilai = Number(gaji) || 0, h = hitungThp(t, nilai), b = t.potongan
+    const Rincian = ({ label, rp, tebal }: { label: string; rp: number; tebal?: boolean }) => (
+        <tr className={tebal ? "border-t font-semibold" : ""}><td className="py-0.5 pr-3">{label}</td><td className="py-0.5 text-right tabular-nums">{formatRupiah(rp)}</td></tr>
+    )
+    return (
+        <section className="grid gap-4 rounded-md border p-3 text-sm sm:grid-cols-2" aria-label="Potongan bulanan">
+            <div>
+                <h3 className="mb-1 font-semibold">Potongan bulanan</h3>
+                <table className="w-full"><tbody>
+                    <Rincian label="Simpanan wajib" rp={b.wajib} />
+                    <Rincian label="Simpanan sukarela" rp={b.sukarela} />
+                    {b.angsuran.map((a) => <Rincian key={a.no_pinjaman} label={`Angsuran ${a.no_pinjaman}`} rp={a.jumlah} />)}
+                    <Rincian label="Adm bank" rp={b.admBank} />
+                    <Rincian label="Potongan saat ini" rp={b.total} tebal />
+                    <Rincian label="Angsuran pengajuan ini" rp={h.baru} />
+                    <Rincian label="Total setelah disetujui" rp={h.total} tebal />
+                </tbody></table>
+                {t.estimasi && t.estimasi.pertama !== t.estimasi.berikutnya && <p className="mt-1 text-xs text-muted-foreground">Angsuran pertama {formatRupiah(t.estimasi.pertama)}, termasuk adm dan provisi.</p>}
+            </div>
+            <div>
+                <h3 className="mb-1 font-semibold">Perkiraan take home pay</h3>
+                <label className="block"><span className="mb-1 block text-xs text-muted-foreground">Gaji per bulan (perubahan di sini tidak disimpan)</span>
+                    <InputUang aria-label="Gaji per bulan" className="text-right" value={gaji} onChange={setGaji} /></label>
+                {nilai > 0 ? (
+                    <div className="mt-2">
+                        <div className={`text-xl font-bold tabular-nums ${h.thp < 0 ? "text-red-600" : "text-green-600"}`}>{formatRupiah(h.thp)}</div>
+                        <p className="text-xs text-muted-foreground">Total potongan {h.rasio}% dari gaji. Belum termasuk potongan perusahaan lain, seperti pajak dan BPJS.</p>
+                    </div>
+                ) : <p className="mt-2 text-xs text-muted-foreground">Gaji belum diisi di data anggota. Isi di sini, atau di Daftar Anggota tab Pekerjaan & Gaji.</p>}
+            </div>
+        </section>
+    )
+}
 
 /**
  * Modal tinjauan pengajuan: rincian pengajuan, cek plafon, ringkasan risiko (tunggakan/macet), identitas anggota, dan riwayat pinjaman,
@@ -30,7 +97,7 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
     p: Pengajuan | null; onTutup: () => void; onPutuskan: (p: Pengajuan, setuju: boolean) => void; sibuk: boolean
 }) {
     const [data, setData] = useState<TinjauanPengajuan | null>(null)
-    const area = useRef<HTMLDivElement>(null)
+    const [gaji, setGaji] = useState("")
     useEffect(() => {
         if (!p) return
         let batal = false
@@ -39,6 +106,8 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
         return () => { batal = true }
     }, [p])
 
+    // Gaji dari data anggota; boleh diganti di sini untuk simulasi.
+    useEffect(() => { setGaji(data?.ok && data.pengajuan.rp_gaji_pokok ? String(data.pengajuan.rp_gaji_pokok) : "") }, [data])
     const t = data?.ok ? data : null
     const i = t?.pengajuan
     const lebihPlafon = t ? pesanPlafon(t.pengajuan.rp_pinjaman_pokok, t.batas, "anggota") : null
@@ -46,8 +115,9 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
 
     /** Dokumen cetak berkop (A4); dari jendela cetak bisa disimpan sebagai PDF untuk dikirim ke anggota. */
     const cetak = async () => {
-        if (!p || !area.current) return
-        const galat = await bukaCetak({ judul: "Tinjauan Pengajuan Kredit", subjudul: `${p.nama} (${p.kd_anggota}) · diajukan ${formatTanggal(p.tgl_realisasi)}`, isi: area.current })
+        if (!p || !t || !i) return
+        const galat = await bukaCetak({ judul: "Tinjauan Pengajuan Kredit", subjudul: `${p.nama} (${p.kd_anggota}) · realisasi ${formatTanggal(p.tgl_realisasi)}`, orientasi: "potret",
+            isi: htmlTinjauan(t, Number(gaji) || 0) })
         if (galat) alert(galat)
     }
     /** Buka WhatsApp ke HP anggota dengan ringkasan pengajuan; PDF dilampirkan manual (wa.me tidak bisa membawa berkas). */
@@ -79,7 +149,7 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
                         <button type="button" onClick={kirimWa} disabled={!wa} title={wa ? `Buka WhatsApp ke ${i.hp}; lampirkan PDF hasil cetak` : "Nomor HP anggota kosong atau tidak valid"}
                             className="inline-flex h-9 items-center gap-1.5 rounded-md border border-green-300 px-3 text-sm font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"><MessageCircle className="h-4 w-4" />Kirim ke WA</button>
                     </div>
-                    <div ref={area} className="space-y-4">
+                    <div className="space-y-4">
                     <section className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-4" aria-label="Rincian pengajuan">
                         <div><div className="text-xs text-muted-foreground">Jenis</div><div className="font-medium">{i.kd_kredit} {i.nama_kredit}</div></div>
                         <div><div className="text-xs text-muted-foreground">Pokok diajukan</div><div className="font-bold tabular-nums">{formatRupiah(i.rp_pinjaman_pokok)}</div></div>
@@ -94,21 +164,17 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
                     <RingkasRisiko data={t.riwayat} memuat={false} />
                     <section className="rounded-md border p-3" aria-label="Identitas anggota">
                         <h3 className="mb-2 text-sm font-semibold">Identitas anggota</h3>
-                        <dl className="grid gap-x-6 text-sm sm:grid-cols-2">
-                            <Baris label="Kode / KPK" nilai={`${t.riwayat.anggota.kode_agt} / ${i.nik || "-"}`} />
-                            <Baris label="No. KTP/SIM" nilai={i.no_ktp} />
-                            <Baris label="Jenis kelamin" nilai={i.jns_kelamin === "L" ? "Laki-laki" : i.jns_kelamin === "P" ? "Perempuan" : i.jns_kelamin} />
-                            <Baris label="Status" nilai={i.status} />
-                            <Baris label="Tanggal lahir" nilai={i.tgl_lahir ? formatTanggal(i.tgl_lahir) : null} />
-                            <Baris label="HP / telepon" nilai={[i.hp, i.telp_rmh].filter(Boolean).join(" / ")} />
-                            <Baris label="Alamat" nilai={[i.alamat, i.kota].filter(Boolean).join(", ")} />
-                            <Baris label="Bank" nilai={[i.bank_nama, i.bank_no_rek, i.bank_atas_nama].filter(Boolean).join(" · ")} />
-                            <Baris label="Plant / bagian" nilai={[i.plant, i.deptname, i.sectname].filter(Boolean).join(" · ")} />
-                            <Baris label="Jabatan / grade" nilai={[i.jabatan, i.grade].filter(Boolean).join(" · ")} />
-                            <Baris label="Mulai bekerja" nilai={i.joindate ? formatTanggal(i.joindate) : null} />
-                            <Baris label="Gaji pokok" nilai={i.rp_gaji_pokok ? formatRupiah(i.rp_gaji_pokok) : null} />
+                        <dl className="grid gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
+                            {([["Kode / KPK", `${t.riwayat.anggota.kode_agt} / ${i.nik || "-"}`],
+                                ["HP", i.hp || i.telp_rmh], ["Bank", [i.bank_nama, i.bank_no_rek].filter(Boolean).join(" · ")],
+                                ["Bagian", [i.plant, i.deptname, i.sectname].filter(Boolean).join(" · ")], ["Jabatan / grade", [i.jabatan, i.grade].filter(Boolean).join(" · ")],
+                                ["Mulai bekerja", i.joindate ? formatTanggal(i.joindate) : ""], ["Alamat", [i.alamat, i.kota].filter(Boolean).join(", ")]] as const)
+                                .filter(([, v]) => v).map(([k, v]) => (
+                                    <div key={k} className={k === "Alamat" ? "min-w-0 sm:col-span-2" : "min-w-0"}><dt className="text-xs text-muted-foreground">{k}</dt><dd className="break-words">{v}</dd></div>
+                                ))}
                         </dl>
                     </section>
+                    <PotonganGaji t={t} gaji={gaji} setGaji={setGaji} />
                     <RiwayatAnggotaPanel data={t.riwayat} batas={t.batas} />
                     </div>
                     {p.status === "P" && (

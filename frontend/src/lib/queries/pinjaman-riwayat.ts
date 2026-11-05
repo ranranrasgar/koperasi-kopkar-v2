@@ -1,4 +1,5 @@
 import "server-only"
+import { SQL_ANGSURAN_POTONGAN } from "@kopkar/backend/src/posting/potongan.ts"
 import { query } from "@/lib/db"
 
 /** Batas kolektibilitas umum perbankan (OJK), dipakai juga di Kredit Macet: hari keterlambatan -> kategori. */
@@ -92,6 +93,25 @@ export async function riwayatAnggota(kodeAgt: string): Promise<RiwayatAnggota | 
     }
 }
 
+export interface PotonganBulanan {
+    wajib: number; sukarela: number; admBank: number
+    angsuran: { no_pinjaman: string; grup: string; jumlah: number }[]
+    total: number
+}
+
+/** Potongan gaji bulan berikutnya untuk satu anggota, dengan aturan yang sama dengan Generate Potongan (generatePotongan). */
+export async function potonganBulanan(anggotaId: number): Promise<PotonganBulanan> {
+    const [[a], angsuran] = await Promise.all([
+        query<{ wajib: number; sukarela: number; adm: number }>(
+            `SELECT COALESCE(simpanan_wajib, 0) AS wajib, COALESCE(simpanan_sukarela, 0) AS sukarela,
+                    COALESCE((SELECT rp_adm_bank FROM perusahaan ORDER BY id LIMIT 1), 0) AS adm FROM anggota WHERE id = $1`, [anggotaId]),
+        query<PotonganBulanan["angsuran"][number]>(
+            `SELECT x.no_pinjaman, x.grup, x.pokok + x.jasa + x.adm + x.provisi AS jumlah FROM (${SQL_ANGSURAN_POTONGAN}) x WHERE x.anggota_id = $1 ORDER BY x.no_pinjaman`, [anggotaId]),
+    ])
+    const wajib = a?.wajib ?? 0, sukarela = a?.sukarela ?? 0, admBank = a?.adm ?? 0
+    return { wajib, sukarela, admBank, angsuran, total: wajib + sukarela + admBank + angsuran.reduce((t, x) => t + x.jumlah, 0) }
+}
+
 export interface IdentitasAnggota {
     nik: string; jns_kelamin: string; status: string; alamat: string; kota: string; hp: string; telp_rmh: string
     bank_nama: string; bank_no_rek: string; bank_atas_nama: string; grade: string; no_ktp: string | null; jabatan: string | null; rp_gaji_pokok: number | null
@@ -103,9 +123,11 @@ export async function pengajuanUntukDitinjau(id: number) {
     const [p] = await query<{
         anggota_id: number; kode_agt: string; rp_pinjaman_pokok: number; lama_angsuran: number; persen_bunga: number; keterangan: string | null; status: string
         kd_kredit: string; nama_kredit: string | null; kunci_grade: boolean; maks_plafond: number
+        persen_adm: number; persen_provisi: number; per_angsuran: boolean
     } & IdentitasAnggota>(`
         SELECT pp.anggota_id, a.kode_agt, pp.rp_pinjaman_pokok, pp.lama_angsuran, pp.persen_bunga, pp.keterangan, pp.status, pp.kd_kredit, jk.nama_kredit,
                COALESCE(jk.kunci_jika_melebihi_grade = 1, false) AS kunci_grade, COALESCE(jk.maks_plafond, 0) AS maks_plafond,
+               COALESCE(pp.persen_adm, 0) AS persen_adm, COALESCE(pp.persen_provisi, 0) AS persen_provisi, upper(COALESCE(jk.bunga_per, '')) = 'PER ANGSURAN' AS per_angsuran,
                a.nik, a.jns_kelamin, a.status, a.alamat, a.kota, a.hp, a.telp_rmh, a.bank_nama, a.bank_no_rek, a.bank_atas_nama, a.grade,
                ad.no_ktp_sim AS no_ktp, ad.jabatan, ad.rp_gaji_pokok,
                k.plant, k.deptname, k.sectname, k.joindate::text AS joindate, k.tgl_lahir::text AS tgl_lahir
