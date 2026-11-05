@@ -27,6 +27,10 @@ menu: /dashboard/loans
 
 Untuk melihat tunggakan secara rinci per pinjaman, buka **Pinjaman → Kredit Macet**.
 
+## Baris total
+
+Di bawah tabel ada dua baris yang tetap terlihat saat tabel digulir: **Subtotal halaman ini** (hanya baris yang tampil) dan **Total seluruh data** (semua pinjaman hasil saringan, walaupun terbagi ke beberapa halaman). Yang dijumlahkan: Pinjaman, Uang Muka, Sisa Pinjaman, Jasa, Adm, Provisi, Byr Pokok, Byr Jasa, Total Bayar, dan Sisa Pokok. Kolom yang disembunyikan lewat pengaturan kolom tidak ikut tampil di baris total.
+
 ## Detail pinjaman dan kirim info ke anggota
 
 Klik **nomor pinjaman** untuk membuka detail: jadwal angsuran dan riwayat pembayaran. Di kanan atas detail ada tombol **Kirim info ke anggota** yang mengirim ulang notifikasi dan email (dengan PDF jadwal angsuran) ke anggota pemilik pinjaman. Tombol ini memakai izin yang sama dengan melihat detail pinjaman grup itu; di mode uji tidak ada yang dikirim.

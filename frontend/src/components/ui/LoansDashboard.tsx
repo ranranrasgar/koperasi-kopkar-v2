@@ -58,7 +58,7 @@ export interface LoansFilter {
 }
 
 interface LoansDashboardProps {
-    data: PageData<Row>
+    data: PageData<Row> & { jumlah: Record<string, number> }
     filter: LoansFilter
     jenisKredit: { kode_kredit: string; nama_kredit: string; group_pinjaman: string }[]
     searchByOptions: string[]
@@ -114,6 +114,17 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
     }
 
     const formatIDR = (val: number) => formatRupiah(val)
+
+    // Baris total: judul mengisi kolom sampai sebelum kolom angka pertama yang tampil (kolom bisa disembunyikan pengguna).
+    const awalTotal = kolomTampil.findIndex((k) => k.jumlah)
+    const BarisTotal = ({ label, nilai }: { label: string; nilai: (k: Kolom) => number }) => (
+        <tr className="border-t border-outline-variant">
+            <td colSpan={awalTotal + 1} className="px-3 py-2 text-right">{label}</td>
+            {kolomTampil.slice(awalTotal).map((k) => (
+                <td key={k.judul} className={`px-3 py-2 ${k.kanan ? "text-right font-mono" : ""}`}>{k.jumlah ? formatAngka(nilai(k)) : ""}</td>
+            ))}
+        </tr>
+    )
 
     // Cetak dan Ekspor berisi SEMUA pinjaman sesuai filter yang sedang diterapkan (bukan hanya halaman ini), dengan kop dan total.
     const siapkan = async () => {
@@ -221,10 +232,11 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                         </div>
                     </form>
                 </div>
-                <div className="relative min-h-[16rem] overflow-x-auto w-full">
+                {/* Tinggi dibatasi seperti Rekap Simpanan: judul kolom dan baris total tetap terlihat saat tabel digulir. */}
+                <div className="relative min-h-[16rem] max-h-[calc(100dvh-20rem)] overflow-auto w-full">
                     <MemuatData aktif={isLoading} pesan="Memuat data pinjaman..." />
                         <table className="w-full text-left font-body-md whitespace-nowrap">
-                            <thead className="bg-surface-container-lowest border-b border-outline-variant text-on-surface-variant font-label-md text-xs">
+                            <thead className="sticky top-0 z-10 bg-surface-container-lowest border-b border-outline-variant text-on-surface-variant font-label-md text-xs">
                                 <tr>
                                     <th className="p-3 font-medium">No</th>
                                     {kolomTampil.map((k) => {
@@ -276,14 +288,20 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                                     })
                                 )}
                             </tbody>
+                            {rows.length > 0 && awalTotal >= 0 && (
+                                <tfoot className="sticky bottom-0 z-10 bg-muted font-bold border-t-2 border-outline-variant text-sm">
+                                    <BarisTotal label="Subtotal halaman ini" nilai={(k) => rows.reduce((t, r) => t + (Number(k.jumlah?.(r)) || 0), 0)} />
+                                    <BarisTotal label={`Total seluruh data (${totalRecords.toLocaleString("id-ID")} pinjaman)`} nilai={(k) => data.jumlah[k.urut] ?? 0} />
+                                </tfoot>
+                            )}
                         </table>
+                </div>
                         <div className="flex flex-wrap items-center gap-x-5 gap-y-1 border-t border-outline-variant px-4 py-2 text-[11px] text-on-surface-variant">
                             <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-blue-500/40" />Jatuh tempo hari ini</span>
                             <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-red-500/40" />Sudah jatuh tempo (tunggak)</span>
                             <span className="flex items-center gap-1.5"><span className="size-3 rounded-sm bg-surface-variant" />Pinjaman lunas</span>
                             <span>* Lunas menurut cicilan, tetapi saldo buku pinjaman masih tersisa (diselesaikan di luar angsuran koperasi: top-up atau pelunasan langsung ke bank, dibereskan lewat jurnal balik)</span>
                         </div>
-                </div>
 
                 {/* Halaman (bawah) */}
                 <Paginasi page={page} totalPages={totalPages} pageSize={pageSize} total={totalRecords} disabled={isLoading} onHalaman={(p) => go(p)} onBaris={(v) => go(1, v)}

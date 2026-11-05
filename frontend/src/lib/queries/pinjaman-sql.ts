@@ -35,6 +35,9 @@ export interface FilterPinjaman {
 }
 
 export const SISA_LUNAS = 100
+/** Kolom hasil yang dijumlahkan di baris "Total seluruh data" Daftar Pinjaman. */
+export const KOLOM_JUMLAH = ["rp_pinjaman_pokok", "uang_muka", "temp_total_plafond", "temp_total_jasa", "rp_adm", "rp_provisi",
+    "bayar_pokok", "bayar_bunga", "total_bayar", "sisa_pokok"] as const
 /** Tanggal hari ini zona Jakarta, dasar hitungan tunggakan. */
 const HARI_INI = "(now() AT TIME ZONE 'Asia/Jakarta')::date"
 /**
@@ -110,7 +113,9 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
 
     const jumlahWhere = values.length
     // Placeholder LIMIT/OFFSET ditambahkan setelah WHERE, jadi query hitung memakai parameter WHERE saja.
-    const hasil = (sqlCount: string, sqlItems: string) => ({ sqlCount, sqlItems, valuesCount: values.slice(0, jumlahWhere), valuesItems: [...values] })
+    // Total selalu untuk seluruh hasil filter, jadi buku pinjaman semua baris dihitung (termasuk kolom sisa_pokok).
+    const sqlJumlah = `WITH f AS (${kontrak}) SELECT ${KOLOM_JUMLAH.map((k) => `COALESCE(SUM(${k}), 0) AS ${k}`).join(", ")} FROM (${lengkap("f")}) x ${kondisiStatus}`
+    const hasil = (sqlCount: string, sqlItems: string) => ({ sqlCount, sqlItems, sqlJumlah, valuesCount: values.slice(0, jumlahWhere), valuesItems: [...values] })
     if (!kondisiStatus && !hitungDulu) {
         // Halaman dipilih dulu (urut + LIMIT), baru buku pinjamannya dihitung untuk baris itu saja.
         const items = `WITH f AS (${kontrak}), h AS (SELECT * FROM f ORDER BY ${urut} LIMIT ${p(f.limit)} OFFSET ${p(f.offset)})

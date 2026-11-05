@@ -3,7 +3,7 @@ import { query } from "@/lib/db"
 import { params, sp, type SearchParams } from "@/lib/list"
 import type { PageData } from "@/config/modules"
 import { ukuranHalaman } from "@/lib/halaman"
-import { sqlLaporanPinjaman } from "@/lib/queries/pinjaman-sql"
+import { sqlLaporanPinjaman, type KOLOM_JUMLAH } from "@/lib/queries/pinjaman-sql"
 
 export const GRUP_PINJAMAN = ["KOPERASI", "BANK / PIHAK LAIN", "KPR"]
 
@@ -34,7 +34,9 @@ const KOLOM_CARI_SQL = ["p.no_pinjaman", "a.nik", "a.kode_agt", "a.nama", "a.kot
  * Laporan pinjaman. Kontrak (plafond, jasa, angsuran) memakai rumus desktop; yang dibayar dan sisa dihitung dari buku pinjaman
  * (lihat pinjaman-sql.ts). Hanya halaman yang tampil yang dihitung dari buku, sehingga cepat walau tabel besar.
  */
-export async function laporanPinjaman(s: SearchParams): Promise<PageData<LaporanPinjamanRow>> {
+export type JumlahPinjaman = Record<(typeof KOLOM_JUMLAH)[number], number>
+
+export async function laporanPinjaman(s: SearchParams): Promise<PageData<LaporanPinjamanRow> & { jumlah: JumlahPinjaman }> {
     const page = Math.max(1, parseInt(sp(s, "page") || "1", 10) || 1)
     const pageSize = ukuranHalaman(sp(s, "pageSize"), 25)
     const q = sqlLaporanPinjaman({
@@ -49,12 +51,13 @@ export async function laporanPinjaman(s: SearchParams): Promise<PageData<Laporan
         limit: pageSize,
         offset: (page - 1) * pageSize,
     })
-    const [count, items] = await Promise.all([
+    const [count, items, [jumlah]] = await Promise.all([
         query<{ total: number }>(q.sqlCount, q.valuesCount),
         query<LaporanPinjamanRow>(q.sqlItems, q.valuesItems),
+        query<JumlahPinjaman>(q.sqlJumlah, q.valuesCount),
     ])
     const total = count[0]?.total ?? 0
-    return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)) }
+    return { items, total, page, pageSize, totalPages: Math.max(1, Math.ceil(total / pageSize)), jumlah }
 }
 
 export interface PinjamanBerjalan {

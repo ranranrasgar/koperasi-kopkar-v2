@@ -37,6 +37,11 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Daftar Pinjaman: baris total di footer (5 November)
+- `LoansDashboard.tsx`: `tfoot` melekat di bawah dengan **Subtotal halaman ini** dan **Total seluruh data**, seperti Rekap Simpanan. Wadah tabel kini `overflow-auto` + `max-h-[calc(100dvh-20rem)]` dan `thead` melekat di atas; keterangan warna dipindah ke luar area gulir. Judul baris mengisi kolom sebelum kolom angka pertama yang tampil, karena kolom bisa disembunyikan.
+- Total seluruh data dari `sqlJumlah` (`lib/queries/pinjaman-sql.ts`, kolom `KOLOM_JUMLAH`), dihitung di `laporanPinjaman`. Query ini selalu menghitung buku pinjaman semua baris hasil filter (±0,45 detik untuk 15.112 pinjaman KOPERASI aktif).
+- Verifikasi: typecheck frontend bersih; `sqlJumlah` dibandingkan dengan penjumlahan semua baris untuk status Semua, Tunggak, dan Belum Lunas: tidak ada selisih pada 10 kolom. `/dashboard/loans` terkompilasi (307 ke login). Tampilan belum dicek setelah login. Panduan `05-pinjaman/02-daftar-pinjaman.md` diperbarui.
+
 ### Kwitansi dot matrix dan buku pinjaman (5 November)
 Permintaan: kwitansi untuk setoran/pengambilan simpanan, angsuran, titipan, dan pencairan di continuous form atau A4/2 (LX-300, Epson 2210), plus buku pinjaman yang bisa diparaf pengurus.
 - `lib/queries/kwitansi.ts` membaca per bukti, `app/actions/kwitansi.ts` (`dataBuktiAction`, hanya baca; izin menu terkait + grup pinjaman seperti halaman detail), `lib/cetak-kwitansi.ts` membuat dokumen Courier hitam dengan pilihan kertas, `lib/terbilang.ts` baru.
