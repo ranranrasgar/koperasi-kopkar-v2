@@ -2,7 +2,7 @@
 
 import React, { useActionState, useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { AlertCircle, CheckCircle2, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { AlertCircle, CheckCircle2, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { batasPlafon } from "@kopkar/backend/src/posting/plafon.ts"
 import { hapusJenisPinjamanAction, simpanJenisPinjamanAction, type HasilSimpan } from "@/app/actions/master"
 import { AkunBox } from "@/components/bankbook/AkunBox"
@@ -190,7 +190,12 @@ const lencana = "rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold t
 export function DaftarJenisPinjaman({ baris, akun, grade }: { baris: JenisPinjaman[]; akun: Akun[]; grade: GradeAnggota[] }) {
     const router = useRouter()
     const [edit, setEdit] = useState<JenisPinjaman | "baru" | null>(null)
+    const [cari, setCari] = useState("")
     const selesai = () => { router.refresh(); setEdit(null) }
+    const kata = cari.trim().toLowerCase()
+    const tampil = kata
+        ? baris.filter((b) => [b.kode_kredit, b.nama_kredit, b.group_pinjaman, b.jenis_pinjaman, b.coa_kredit].some((v) => (v ?? "").toLowerCase().includes(kata)))
+        : baris
     return (
         <div className="space-y-4">
             <div className="flex flex-col gap-1">
@@ -198,8 +203,13 @@ export function DaftarJenisPinjaman({ baris, akun, grade }: { baris: JenisPinjam
                 <p className="text-sm text-muted-foreground">Bunga, biaya, akun, dan aturan pengajuan tiap jenis pinjaman. Berlaku untuk pencairan di web dan pengajuan di aplikasi anggota.</p>
             </div>
             <div className="rounded-lg border bg-background shadow-sm overflow-clip">
-                <div className="flex justify-end border-b p-3">
-                    <button type="button" onClick={() => setEdit("baru")} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"><Plus className="h-4 w-4" /> Tambah</button>
+                <div className="flex flex-wrap items-center gap-3 border-b p-3">
+                    <div className="relative w-full sm:w-72">
+                        <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                        <Input type="search" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="Cari kode, nama, grup, jenis, atau COA" aria-label="Cari jenis pinjaman" className="pl-8" />
+                    </div>
+                    {kata && <span className="text-sm text-muted-foreground">{tampil.length} dari {baris.length} jenis</span>}
+                    <button type="button" onClick={() => setEdit("baru")} className="ml-auto inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"><Plus className="h-4 w-4" /> Tambah</button>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -212,7 +222,8 @@ export function DaftarJenisPinjaman({ baris, akun, grade }: { baris: JenisPinjam
                             </tr>
                         </thead>
                         <tbody>
-                            {baris.map((b) => (
+                            {tampil.length === 0 && <tr><td colSpan={12} className="p-8 text-center text-muted-foreground">Tidak ada jenis pinjaman yang cocok dengan &quot;{cari}&quot;.</td></tr>}
+                            {tampil.map((b) => (
                                 <tr key={b.id} className={cn("border-t hover:bg-muted/30", b.hide && "text-muted-foreground")}>
                                     <td className="px-3 py-1.5 font-mono text-xs">{b.kode_kredit}</td>
                                     <td className="px-3 py-1.5 font-medium">{b.nama_kredit}</td>

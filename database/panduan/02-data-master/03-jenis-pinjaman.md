@@ -5,6 +5,8 @@ menu: /dashboard/settings/jenis-pinjaman
 ---
 Jenis pinjaman (jenis kredit) adalah **aturan baku** setiap produk pinjaman. Saat pencairan dan angsuran, mesin posting mengambil bunga, biaya, batas cicilan, dan akun dari sini.
 
+Kotak **Cari** di atas daftar menyaring langsung menurut kode, nama, grup, jenis, atau COA Kredit.
+
 ## Isian jenis pinjaman
 
 Susunan layarnya sama dengan layar desktop *Jenis Pinjaman (Credit)*.
