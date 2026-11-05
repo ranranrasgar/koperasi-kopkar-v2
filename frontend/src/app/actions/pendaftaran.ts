@@ -21,6 +21,7 @@ const bolehHapusAkunAnggota = (o: Pick<Operator, "superadmin" | "grup">) => o.su
 export async function putuskanPendaftaranAction(id: number, setuju: boolean, lengkap?: LengkapAnggota): Promise<HasilPendaftaran> {
     try {
         const o = await operatorAktif(MENU_USER)
+        wajibAksi(o, MENU_USER, "ubah")
         const r = await tx((db) => putuskanPendaftaran(db as never, id, setuju, { id: o.id, nama: o.nama }, lengkap))
         if (!r.ok) return r
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
@@ -68,7 +69,7 @@ export async function putuskanPendaftaranAction(id: number, setuju: boolean, len
  */
 export async function ubahStatusAkunAction(id: number, aktif: boolean): Promise<HasilPendaftaran> {
     try {
-        await operatorAktif(MENU_USER)
+        wajibAksi(await operatorAktif(MENU_USER), MENU_USER, "ubah")
         const r = await tx((db) => ubahStatusAkun(db as never, id, aktif))
         if (!r.ok) return r
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
@@ -121,6 +122,7 @@ export async function dataLengkapiAnggotaAction(id: number): Promise<DataLengkap
 export async function jadikanAnggotaAction(id: number, lengkap?: LengkapAnggota): Promise<HasilPendaftaran> {
     try {
         const o = await operatorAktif(MENU_USER)
+        wajibAksi(o, MENU_USER, "ubah")
         const r = await tx((db) => jadikanAnggota(db as never, id, { id: o.id, nama: o.nama }, lengkap))
         if (!r.ok) return r
         const pesan = r.dibuat ? `Akun dijadikan anggota, kode anggota ${r.kode}` : `Akun ditautkan ke anggota ${r.kode}`

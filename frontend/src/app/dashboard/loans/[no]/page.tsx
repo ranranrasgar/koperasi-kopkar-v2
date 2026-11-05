@@ -8,7 +8,7 @@ import { TombolBatalTutup, TombolTutupPinjaman } from "@/components/transaksi/To
 import { TombolEkspor } from "@/components/laporan/TombolEkspor"
 import { TombolCetak } from "@/components/ui/TombolCetak"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
-import { MENU, MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
+import { bolehAksi, MENU, MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
 import { AKSES_HALAMAN } from "@/config/akses"
 import { wajibIzin } from "@/lib/operator"
 import { detailPinjaman, type BarisBayar } from "@/lib/queries/pinjaman-detail"
@@ -42,7 +42,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
     if (!d) notFound()
     const { ringkas: r, info, jadwal, bayar, penutupan, batalCair } = d
     const admin = o.superadmin || o.grup?.trim().toLowerCase() === "admin"
-    const bolehBatal = o.izin.includes(MENU.batalTransaksi)
+    const bolehBatal = bolehAksi(o.izin, o.aksiTolak, [MENU.batalTransaksi], "hapus")
     // Boleh dilihat bila operator menangani pinjaman grup ini (menu laporan, pencairan, angsuran, tunggakan, atau pengajuan); tanpa harus berizin Daftar Pinjaman.
     const menuGrup = MENU_DETAIL_PINJAMAN_GRUP[info.group_pinjaman ?? ""] ?? []
     if (!menuGrup.some((m) => o.izin.includes(m))) {

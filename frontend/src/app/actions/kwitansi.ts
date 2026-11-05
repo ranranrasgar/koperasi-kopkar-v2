@@ -1,7 +1,7 @@
 "use server"
 
 import { kopCetakAction, type KopCetak } from "@/app/actions/cetak"
-import { AKSES_HALAMAN, MENU, MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
+import { AKSES_HALAMAN, bolehAksi, MENU, MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
 import type { DataBuku, DataKwitansi, JenisBukti } from "@/lib/kwitansi-tipe"
 import { operatorAktif } from "@/lib/operator"
 import { dataBuku, dataKwitansi } from "@/lib/queries/kwitansi"
@@ -19,7 +19,7 @@ export async function detailBuktiSimpananAction(no: string): Promise<HasilDetail
     try {
         const o = await operatorAktif(MENU_SIMPANAN)
         const d = await detailBuktiSimpanan(no)
-        return d ? { ...d, bolehBatal: o.izin.includes(MENU.batalTransaksi) } : { error: `Bukti ${no} tidak ditemukan.` }
+        return d ? { ...d, bolehBatal: bolehAksi(o.izin, o.aksiTolak, [MENU.batalTransaksi], "hapus") } : { error: `Bukti ${no} tidak ditemukan.` }
     } catch (e) {
         return { error: e instanceof Error ? e.message : "Gagal membaca bukti" }
     }

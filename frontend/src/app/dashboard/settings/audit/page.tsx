@@ -2,7 +2,7 @@ import Link from "next/link"
 import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
 import { BatalLewatNomor } from "@/components/transaksi/BatalBukti"
 import { FormPeriode, KopLaporan } from "@/components/laporan/Periode"
-import { AKSES_HALAMAN, MENU, punyaIzin } from "@/config/akses"
+import { AKSES_HALAMAN, bolehAksi, MENU, punyaIzin } from "@/config/akses"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
 import { isTanggal, sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
@@ -150,7 +150,7 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
                             </div>
                         </section>
 
-                        {o.izin.includes(MENU.batalTransaksi) && <BatalLewatNomor />}
+                        {bolehAksi(o.izin, o.aksiTolak, [MENU.batalTransaksi], "hapus") && <BatalLewatNomor />}
 
                         <section>
                             <h2 className="mb-2 font-semibold">Riwayat koreksi</h2>

@@ -19,7 +19,7 @@ Di ujung setiap baris Buku Simpanan dan Kartu Simpanan ada dua ikon: **Lihat buk
 
 ### Membatalkan transaksi simpanan
 
-Transaksi yang sudah diposting tidak bisa diubah atau dihapus. Bila salah, operator berizin **Batalkan transaksi** (Kelola Hak Akses, baris Audit Data; awalnya hanya superadmin) membuka **Lihat bukti**, mengisi alasan minimal 10 karakter, lalu menekan **Batalkan Transaksi**.
+Transaksi yang sudah diposting tidak bisa diubah atau dihapus. Bila salah, operator berizin **D** di baris Audit Data pada Kelola Hak Akses (awalnya hanya superadmin) membuka **Lihat bukti**, mengisi alasan minimal 10 karakter, lalu menekan **Batalkan Transaksi**.
 
 - Transaksi asal tetap ada dan ditandai **Dibatalkan**. Sistem membuat bukti pembalik `BTL-...` bertanggal hari ini: setoran dibalik menjadi pengambilan dan sebaliknya, beserta jurnal kebalikannya. Bila nilainya salah, input ulang transaksi yang benar.
 - Pembatalan tidak bisa diurungkan, dan bukti yang sudah dibatalkan atau bukti pembalik tidak bisa dibatalkan lagi.

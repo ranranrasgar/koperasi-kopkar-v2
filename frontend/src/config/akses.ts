@@ -217,6 +217,29 @@ export const AKSI_IZIN: Record<string, readonly AksiIzin[]> = {
     [MENU.generatePotongan]: ["tambah", "ubah"], [MENU.tutupBuku]: TAMBAH, [MENU.hitungShu]: TAMBAH, [MENU.shu]: ["tambah", "hapus"],
 }
 
+/**
+ * Menu sidebar yang terdiri dari beberapa izin desktop (per fungsi atau per grup pinjaman), di matriks digabung menjadi satu baris C R U D; kunci = izin pertama di
+ * AKSES_HALAMAN. Izin desktop tetap tersimpan terpisah dan dibaca server action seperti biasa: R membuka semua izin `lihat`, tiap aksi membuka atau menutup
+ * semua izin dalam daftarnya, jadi satu centang berlaku untuk semua grup pinjaman. Pembacaan: cukup salah satu izin yang boleh.
+ */
+const gabung = (semua: readonly string[], lihat: readonly string[] = semua, aksi: Partial<Record<AksiIzin, readonly string[]>> = {}) => ({ semua, lihat, aksi })
+const ANGSUR = [MENU.angsurKoperasi, MENU.angsurBank, MENU.angsurKpr], CAIR = [MENU.cairKoperasi, MENU.cairBank]
+const KARYAWAN = [MENU.karyawanMattel, MENU.daftarKaryawan], USER = [MENU.user, MENU.requestUser]
+export const GABUNGAN_IZIN: Record<string, ReturnType<typeof gabung>> = {
+    [MENU.daftarAnggota]: gabung([MENU.daftarAnggota, MENU.inputAnggota, MENU.lapDaftarAnggota], [MENU.lapDaftarAnggota],
+        { tambah: [MENU.inputAnggota], ubah: [MENU.daftarAnggota], hapus: [MENU.daftarAnggota] }),
+    [MENU.karyawanMattel]: gabung([...KARYAWAN, MENU.lapDaftarKaryawan], [MENU.lapDaftarKaryawan], { ubah: KARYAWAN, hapus: KARYAWAN }),
+    [MENU.user]: gabung(USER, [MENU.user], { ubah: USER, hapus: [MENU.user] }),
+    [MENU.angsurKoperasi]: gabung(ANGSUR, ANGSUR, { tambah: ANGSUR }),
+    [MENU.cairKoperasi]: gabung(CAIR, CAIR, { tambah: CAIR }),
+    [MENU.lapPinjamanKoperasi]: gabung([MENU.lapPinjamanKoperasi, MENU.lapPinjamanBank, MENU.lapPinjamanKpr]),
+    [MENU.lapTunggakanKoperasi]: gabung([MENU.lapTunggakanKoperasi, MENU.lapTunggakanBank, MENU.lapTunggakanKpr, MENU.jenisMacet]),
+    [MENU.potonganSemua]: gabung([MENU.potonganSemua, MENU.potonganKoperasi, MENU.potonganBank, MENU.potonganKpr, MENU.potonganSimpanan]),
+    [MENU.bukuBesar]: gabung([MENU.bukuBesar, MENU.bukuBesarKas]),
+    [MENU.lapShu]: gabung([MENU.lapShu, MENU.shu, MENU.hitungShu], [MENU.lapShu], { tambah: [MENU.shu, MENU.hitungShu], hapus: [MENU.shu] }),
+    [MENU.auditData]: gabung([MENU.auditData, MENU.batalTransaksi], [MENU.auditData], { hapus: [MENU.batalTransaksi] }),
+}
+
 /** `tolak` berisi "menu|aksi" yang dimatikan untuk grup operator. Cukup satu menu yang boleh. */
 export const bolehAksi = (izin: readonly string[], tolak: readonly string[], menu: readonly string[], aksi: AksiIzin) =>
     menu.some((m) => izin.includes(m) && !tolak.includes(`${m}|${aksi}`))

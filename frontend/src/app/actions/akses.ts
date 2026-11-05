@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { query } from "@/lib/db"
 import { GalatSesi, operatorAktif } from "@/lib/operator"
 import { hashPassword, passwordAcak } from "@/lib/password"
-import { AKSI_IZIN, GRUP_SUPERADMIN, LABEL_AKSI, MENU, type AksiIzin } from "@/config/akses"
+import { AKSI_IZIN, GABUNGAN_IZIN, GRUP_SUPERADMIN, LABEL_AKSI, MENU, type AksiIzin } from "@/config/akses"
 
 export type HasilKelola = { ok: true; pesan: string; passwordSementara?: string } | { ok: false; error: string }
 
@@ -40,16 +40,32 @@ const superadminLain = async (kecuali: number) =>
 
 // ---------- matriks hak akses ----------
 
+const KOLOM_AKSI = ["boleh_tambah", "boleh_ubah", "boleh_hapus"]
+
+/** Buka izin untuk menu gabungan. Izin yang tadinya tertutup dibuka tanpa aksi lain, supaya centang R tidak diam-diam memberi C, U, atau D. */
+async function bukaIzin(g: { id: number; urut: number }, menu: string, nyala?: string) {
+    const kolom = KOLOM_AKSI.join(", "), nilai = KOLOM_AKSI.map((k) => String(k === nyala)).join(", ")
+    const ubah = KOLOM_AKSI.map((k) => (k === nyala ? `${k} = true` : `${k} = CASE WHEN opr_hak_akses.akses = 'T' THEN opr_hak_akses.${k} ELSE false END`)).join(", ")
+    await query(
+        `INSERT INTO opr_hak_akses (urut, id_opr, menu, akses, grup_id, ${kolom}) VALUES (nextval('seq_opr_hak_akses_urut'), $1, $2, 'T', $3, ${nilai})
+         ON CONFLICT (grup_id, menu) DO UPDATE SET akses = 'T', ${ubah}`, [g.urut, menu, g.id])
+}
+
 export async function setAksesAction(grupId: number, menu: string, boleh: boolean): Promise<HasilKelola> {
     return jalankan(async () => {
         await superadmin()
         const g = await grup(grupId)
         if (g.nama_grup === GRUP_SUPERADMIN) throw new Salah("Grup superadmin selalu punya semua akses")
         if (menu === MENU.kelolaAkses || !menu.trim()) throw new Salah("Menu ini tidak bisa diberikan ke grup lain")
-        // id_opr di opr_hak_akses = opr_grup.urut (data desktop); urut baris dari sequence.
-        await query(
-            `INSERT INTO opr_hak_akses (urut, id_opr, menu, akses, grup_id) VALUES (nextval('seq_opr_hak_akses_urut'), $1, $2, $3, $4)
-             ON CONFLICT (grup_id, menu) DO UPDATE SET akses = EXCLUDED.akses`, [g.urut, menu, boleh ? "T" : "F", g.id])
+        const gab = GABUNGAN_IZIN[menu]
+        if (gab && !boleh) await query("UPDATE opr_hak_akses SET akses = 'F' WHERE grup_id = $1 AND menu = ANY($2)", [g.id, gab.semua])
+        else if (gab) for (const m of gab.lihat) await bukaIzin(g, m)
+        else {
+            // id_opr di opr_hak_akses = opr_grup.urut (data desktop); urut baris dari sequence.
+            await query(
+                `INSERT INTO opr_hak_akses (urut, id_opr, menu, akses, grup_id) VALUES (nextval('seq_opr_hak_akses_urut'), $1, $2, $3, $4)
+                 ON CONFLICT (grup_id, menu) DO UPDATE SET akses = EXCLUDED.akses`, [g.urut, menu, boleh ? "T" : "F", g.id])
+        }
         return { ok: true, pesan: `${menu}: ${boleh ? "diizinkan" : "ditutup"} untuk grup ${g.nama_grup}` }
     })
 }
@@ -60,8 +76,18 @@ export async function setAksiAction(grupId: number, menu: string, aksi: AksiIzin
         await superadmin()
         const g = await grup(grupId)
         if (g.nama_grup === GRUP_SUPERADMIN) throw new Salah("Grup superadmin selalu punya semua akses")
-        if (!AKSI_IZIN[menu]?.includes(aksi)) throw new Salah("Aksi ini tidak berlaku untuk menu tersebut")
         const kolom = { tambah: "boleh_tambah", ubah: "boleh_ubah", hapus: "boleh_hapus" }[aksi]
+        const gab = GABUNGAN_IZIN[menu]
+        if (gab) {
+            const tujuan = gab.aksi[aksi]
+            if (!tujuan) throw new Salah("Aksi ini tidak berlaku untuk menu tersebut")
+            if (!boleh) await query(`UPDATE opr_hak_akses SET ${kolom} = false WHERE grup_id = $1 AND menu = ANY($2)`, [g.id, tujuan])
+            else {
+                for (const m of tujuan) await bukaIzin(g, m, kolom)
+            }
+            return { ok: true, pesan: `${LABEL_AKSI[aksi]} ${boleh ? "diizinkan" : "ditutup"} untuk grup ${g.nama_grup}` }
+        }
+        if (!AKSI_IZIN[menu]?.includes(aksi)) throw new Salah("Aksi ini tidak berlaku untuk menu tersebut")
         const r = await query<{ id: number }>(`UPDATE opr_hak_akses SET ${kolom} = $1 WHERE grup_id = $2 AND menu = $3 AND akses = 'T' RETURNING id`, [boleh, g.id, menu])
         if (!r.length) throw new Salah("Centang menunya dulu")
         return { ok: true, pesan: `${menu}: ${LABEL_AKSI[aksi]} ${boleh ? "diizinkan" : "ditutup"} untuk grup ${g.nama_grup}` }

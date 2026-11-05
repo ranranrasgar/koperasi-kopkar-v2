@@ -7,7 +7,7 @@ Menu: **Pinjaman → Setoran Angsuran**. Ada dua tab: **Pinjaman Tunai** dan **K
 
 ## Membatalkan angsuran atau pencairan
 
-Transaksi yang sudah diposting tidak bisa diubah atau dihapus. Operator berizin **Batalkan transaksi** (Kelola Hak Akses, baris Audit Data; awalnya hanya superadmin) bisa membatalkannya dengan alasan minimal 10 karakter:
+Transaksi yang sudah diposting tidak bisa diubah atau dihapus. Operator berizin **D** di baris Audit Data pada Kelola Hak Akses (awalnya hanya superadmin) bisa membatalkannya dengan alasan minimal 10 karakter:
 
 - **Pinjaman tunai**: buka detail pinjaman. Ikon batal ada di baris **angsuran terakhir**; tombol **Batalkan Pencairan** ada bila belum ada angsuran.
 - **KPR**: masukkan nomor buktinya di **Sistem → Audit Data**, bagian *Batalkan transaksi lewat nomor bukti*.

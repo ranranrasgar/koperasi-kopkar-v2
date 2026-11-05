@@ -1,6 +1,6 @@
 import "server-only"
 import { query } from "@/lib/db"
-import { AKSES_HALAMAN, AKSI_IZIN, GRUP_SUPERADMIN, LABEL_IZIN, MENU, type AksiIzin } from "@/config/akses"
+import { AKSES_HALAMAN, AKSI_IZIN, GABUNGAN_IZIN, GRUP_SUPERADMIN, LABEL_IZIN, MENU, type AksiIzin } from "@/config/akses"
 import { allGroups } from "@/config/menu"
 
 export interface Grup { id: number; urut: number; nama_grup: string }
@@ -36,7 +36,16 @@ export async function matriksAkses() {
         if (b.akses === "T") (izin[b.menu] ??= []).push(b.grup_id)
         for (const a of ["tambah", "ubah", "hapus"] as const) if (!b[`boleh_${a}`]) ((tolak[b.menu] ??= {})[a] ??= []).push(b.grup_id)
     }
-    const menuBaris = (label: string, nama: string[]): MenuBaris => nama.includes(MENU.kelolaAkses)
+    const baca = (menu: string, g: number) => baris.find((b) => b.menu === menu && b.grup_id === g && b.akses === "T")
+    /** Satu baris untuk menu gabungan: R bila salah satu izinnya terbuka, aksi bila salah satu izin aksi itu boleh. */
+    const gabungan = (utama: string): IzinBaris => {
+        const g = GABUNGAN_IZIN[utama], aksi = (["tambah", "ubah", "hapus"] as const).filter((a) => g.aksi[a])
+        return { nama: utama, label: null, grupIzin: grup.filter((x) => g.semua.some((m) => baca(m, x.id))).map((x) => x.id), aksi,
+            tolak: Object.fromEntries(aksi.map((a) => [a, grup.filter((x) => !g.aksi[a]!.some((m) => baca(m, x.id)?.[`boleh_${a}`])).map((x) => x.id)])) }
+    }
+    const menuBaris = (label: string, nama: string[]): MenuBaris => GABUNGAN_IZIN[nama[0]]
+        ? { label, tetap: null, izin: [gabungan(nama[0])] }
+        : nama.includes(MENU.kelolaAkses)
         ? { label, tetap: "Khusus superadmin", izin: [] }
         : { label, tetap: nama.length ? null : "Semua operator",
             izin: nama.map((m) => ({ nama: m, label: nama.length > 1 ? LABEL_IZIN[m] ?? m : null, grupIzin: izin[m] ?? [], aksi: AKSI_IZIN[m] ?? [], tolak: tolak[m] ?? {} })) }
