@@ -37,6 +37,11 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Izin tambah, ubah, hapus per menu (6 November)
+- Kolom web `opr_hak_akses.boleh_tambah/ubah/hapus` (`pengaturan-web.sql`, bawaan true; **wajib `pengaturan:pasang` sebelum image baru dipakai** karena `operatorSesi` membacanya). `akses='T'` tetap berarti boleh melihat; desktop tidak terpengaruh. Superadmin selalu lolos.
+- `config/akses.ts`: `AKSI_IZIN` (aksi per menu, hanya yang benar-benar ada di server action), `bolehAksi`. `lib/operator.ts`: `Operator.aksiTolak`, `wajibAksi`. Parameter aksi wajib di pembungkus `simpan` (master, master-aksi), `posting` (transaksi), `proses` (shu), `aksi` (potongan). Menambah server action tulis = tentukan aksinya.
+- Matriks: satu baris centang C R U D per sel, empat kolom tetap supaya sejajar (`setAksiAction`). Tombol disembunyikan lewat `useBolehAksi` di anggota, karyawan, COA, grade, jenis pinjaman, jurnal, Bank Book. Form transaksi (simpanan, pencairan, angsuran, titipan, potongan, SHU) belum menyembunyikan tombol: server menolak dengan pesan. Pendaftaran User Mobile hanya `hapus` yang ditegakkan.
+
 ### Ubah Anggota: Grade dari tabel grade (6 November)
 - Isian Grade kini select dari tabel `grade` (`detailAnggotaAction` mengembalikan `{ data, grade }`), nilainya tetap nama; `simpanAnggotaAction` menurunkan `grade_id` dan `rp_grade` dari tabel itu. Grade lama yang tidak ada di master tetap tampil berlabel, dan ditolak saat disimpan sampai diganti. Form Tambah Anggota memang sudah memakai select.
 

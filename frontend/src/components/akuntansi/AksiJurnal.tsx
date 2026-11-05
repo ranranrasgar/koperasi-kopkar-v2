@@ -1,5 +1,7 @@
 "use client"
 
+import { useBolehAksi } from "@/components/layout/SidebarContext"
+import { MENU } from "@/config/akses"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Printer, Scale, Trash2 } from "lucide-react"
@@ -30,6 +32,7 @@ export function TombolVoucher({ nomorBukti }: { nomorBukti: string }) {
  * Bukti transaksi lain ditolak server dengan pesan alasannya.
  */
 export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
+    const boleh = useBolehAksi()
     const router = useRouter()
     const [sibuk, mulai] = useTransition()
     const nomor = String(item.nomor_bukti ?? "")
@@ -54,12 +57,12 @@ export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
     return (
         <>
             <TombolVoucher nomorBukti={nomor} />
-            {ju && <TombolJurnalUbah nomorBukti={nomor} hariIni={hariIni()} />}
+            {ju && boleh([MENU.jurnalUmum, MENU.jurnalPenyesuaian], "ubah") && <TombolJurnalUbah nomorBukti={nomor} hariIni={hariIni()} />}
             {nomor.startsWith("JU/") && (
                 <button type="button" title={penyesuaian ? "Kembalikan ke jurnal umum biasa" : "Tandai sebagai jurnal penyesuaian"} onClick={tandai} disabled={sibuk}
                     className={`${tombol} ${penyesuaian ? "text-indigo-600" : "text-gray-500"}`}><Scale className="h-4 w-4" /></button>
             )}
-            {(ju || bb) && (
+            {(ju || bb) && boleh(bb ? [MENU.bankBook] : [MENU.jurnalUmum, MENU.jurnalPenyesuaian], "hapus") && (
                 <button type="button" title="Hapus bukti" onClick={hapus} disabled={sibuk} className={`${tombol} text-red-600`}>
                     {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 </button>

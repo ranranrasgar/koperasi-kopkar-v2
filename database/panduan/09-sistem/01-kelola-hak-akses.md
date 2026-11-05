@@ -37,3 +37,18 @@ Beberapa menu punya sub-baris karena izinnya memang terpisah, misalnya **Daftar 
 | Pengawas | Laporan saja (tanpa transaksi) |
 
 Berikan akses paling sedikit yang dibutuhkan untuk pekerjaan masing-masing, terutama untuk menu pencairan dan jurnal umum.
+
+## Mengatur tambah, lihat, ubah, dan hapus
+
+Setiap sel berisi satu baris centang **C R U D**:
+
+| Centang | Arti |
+| --- | --- |
+| **C** (Create) | Tambah: input data atau transaksi baru, termasuk proses seperti posting, tutup buku, dan hitung SHU |
+| **R** (Read) | Lihat: grup boleh membuka menu itu |
+| **U** (Update) | Ubah: mengubah data atau bukti yang sudah ada, termasuk memutuskan pengajuan |
+| **D** (Delete) | Hapus: menghapus data atau bukti |
+
+Hanya aksi yang tersedia di menu itu yang tampil, misalnya Setoran Simpanan hanya punya C dan R, dan laporan hanya R. Lepas C, U, dan D untuk membuat grup hanya bisa melihat. Bawaannya semua dicentang, jadi grup yang sudah punya akses tidak berubah sampai Anda mengaturnya.
+
+C, U, dan D baru aktif bila R dicentang. Tombol yang tidak diizinkan disembunyikan di menu master, jurnal, dan Bank Book; di form transaksi lain, simpan ditolak dengan pesan *Grup ... tidak boleh ...*. Pembatalan transaksi diatur terpisah lewat *Batalkan transaksi* di baris Audit Data.

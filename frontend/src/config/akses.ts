@@ -202,6 +202,25 @@ export const MENU_TRANSAKSI = [MENU.setoranSimpanan, MENU.pencairanSimpanan, MEN
 
 export const punyaIzin = (izin: readonly string[], menu: readonly string[]) => menu.some((m) => izin.includes(m))
 
+/** Rincian izin di bawah "boleh melihat". Pengguna sama seperti opr_hak_akses.boleh_tambah/ubah/hapus. */
+export type AksiIzin = "tambah" | "ubah" | "hapus"
+export const LABEL_AKSI: Record<AksiIzin, string> = { tambah: "Tambah", ubah: "Ubah", hapus: "Hapus" }
+const TAMBAH = ["tambah"] as const, UBAH = ["ubah"] as const, UBAH_HAPUS = ["ubah", "hapus"] as const, SEMUA = ["tambah", "ubah", "hapus"] as const
+
+/** Aksi yang bisa diatur per menu, hanya yang benar-benar ada di server action. Menu lain cukup izin lihat. Proses (tutup buku, hitung SHU, posting) dihitung tambah. */
+export const AKSI_IZIN: Record<string, readonly AksiIzin[]> = {
+    [MENU.daftarAnggota]: UBAH_HAPUS, [MENU.inputAnggota]: TAMBAH, [MENU.karyawanMattel]: UBAH_HAPUS, [MENU.daftarKaryawan]: UBAH_HAPUS, [MENU.user]: UBAH_HAPUS,
+    [MENU.company]: UBAH, [MENU.jenisSimpanan]: UBAH, [MENU.jenisPinjaman]: SEMUA, [MENU.gradeAnggota]: SEMUA, [MENU.coa]: UBAH_HAPUS,
+    [MENU.setoranSimpanan]: TAMBAH, [MENU.pencairanSimpanan]: TAMBAH, [MENU.pengajuan]: UBAH,
+    [MENU.cairKoperasi]: TAMBAH, [MENU.cairBank]: TAMBAH, [MENU.cairKpr]: TAMBAH, [MENU.angsurKoperasi]: TAMBAH, [MENU.angsurBank]: TAMBAH, [MENU.angsurKpr]: TAMBAH,
+    [MENU.titipan]: ["tambah", "hapus"], [MENU.jurnalUmum]: SEMUA, [MENU.jurnalPenyesuaian]: SEMUA, [MENU.bankBook]: SEMUA,
+    [MENU.generatePotongan]: ["tambah", "ubah"], [MENU.tutupBuku]: TAMBAH, [MENU.hitungShu]: TAMBAH, [MENU.shu]: ["tambah", "hapus"],
+}
+
+/** `tolak` berisi "menu|aksi" yang dimatikan untuk grup operator. Cukup satu menu yang boleh. */
+export const bolehAksi = (izin: readonly string[], tolak: readonly string[], menu: readonly string[], aksi: AksiIzin) =>
+    menu.some((m) => izin.includes(m) && !tolak.includes(`${m}|${aksi}`))
+
 export function bolehHalaman(href: string, izin: readonly string[]) {
     const perlu = AKSES_HALAMAN[href]
     return !perlu || punyaIzin(izin, perlu)

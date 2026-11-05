@@ -14,8 +14,8 @@ import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
 import { formatRupiah, hariIni } from "@/lib/format"
 import { modeUji, pool, query, tx } from "@/lib/db"
-import { GalatSesi, operatorAktif, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
-import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_DETAIL_PINJAMAN_GRUP, MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
+import { GalatSesi, operatorAktif, wajibAksi, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
+import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_DETAIL_PINJAMAN_GRUP, MENU_TRANSAKSI, punyaIzin, type AksiIzin } from "@/config/akses"
 import { cariAnggota, cariPinjamanBerjalan, type AnggotaRingkas } from "@/lib/queries/anggota"
 import { transaksiBankBook, type TransaksiBankBook } from "@/lib/queries/laporan"
 import { riwayatAnggota, type RiwayatAnggota } from "@/lib/queries/pinjaman-riwayat"
@@ -66,9 +66,10 @@ const rp = (v: string | bigint) => Number(typeof v === "bigint" ? fromUnits(v) :
  * Jalankan posting dalam satu transaksi; pesan galat mesin posting diteruskan ke kasir.
  * `menu`: menu desktop yang mengizinkan aksi ini (cukup salah satu); pemeriksaan per grup pinjaman di dalam fn.
  */
-async function posting(menu: readonly string[], fn: (o: Operator) => Promise<Exclude<Hasil, null>>): Promise<Hasil> {
+async function posting(menu: readonly string[], aksi: AksiIzin | null, fn: (o: Operator) => Promise<Exclude<Hasil, null>>): Promise<Hasil> {
     try {
         const o = await operatorAktif(menu)
+        if (aksi) wajibAksi(o, menu, aksi)
         const res = await fn(o)
         if (res.ok && await modeUji()) return { ...res, cetak: undefined, pesan: `MODE UJI, tidak tersimpan: ${res.pesan}` } // tidak tersimpan, jadi tidak ada bukti untuk dicetak
         revalidatePath("/dashboard", "layout")
@@ -115,7 +116,7 @@ export async function infoAnggotaAction(kodeAgt: string): Promise<InfoAnggota> {
 // ---------- simpanan ----------
 
 async function simpanan(tipe: "setor" | "ambil", f: FormData): Promise<Hasil> {
-    return posting([tipe === "setor" ? MENU.setoranSimpanan : MENU.pencairanSimpanan], async ({ nama: opr }) => {
+    return posting([tipe === "setor" ? MENU.setoranSimpanan : MENU.pencairanSimpanan], "tambah", async ({ nama: opr }) => {
         const input = {
             kodeAgt: teks(f, "kodeAgt"), jenisSimpanan: teks(f, "jenisSimpanan"), tanggal: tanggal(f),
             jumlah: uang(f, "jumlah", "Jumlah"), kasPerkiraanId: teks(f, "kas"), opr, deskripsi: teks(f, "deskripsi", false) || null,
@@ -186,7 +187,7 @@ export async function pratinjauPinjamanAction(p: { kodeKredit: string; tglPinjam
 }
 
 export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting([MENU.cairKoperasi, MENU.cairBank], async (o) => {
+    return posting([MENU.cairKoperasi, MENU.cairBank], null, async (o) => {
         const opr = o.nama
         const [jk] = await query<{ group_pinjaman: string; bunga_kredit: string }>("SELECT group_pinjaman, bunga_kredit::text FROM jenis_kredit WHERE kode_kredit = $1", [teks(f, "kodeKredit")])
         if (!jk) throw new InputSalah("Jenis kredit tidak ada")
@@ -194,7 +195,7 @@ export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasi
         const bungaIsian = uangOpsional(f, "persenBunga", "Persen bunga")
         if (bungaIsian !== undefined && !bolehUbahBunga(o) && Number(bungaIsian) !== Number(jk.bunga_kredit)) throw new InputSalah("Bunga hanya bisa diubah oleh admin atau superadmin")
         if (!MENU_CAIR_GRUP[jk.group_pinjaman]) throw new InputSalah(`Jenis kredit grup ${jk.group_pinjaman} dicairkan lewat form KPR`)
-        wajibMenu(o, [MENU_CAIR_GRUP[jk.group_pinjaman]])
+        wajibAksi(o, [MENU_CAIR_GRUP[jk.group_pinjaman]], "tambah")
         const r = await tx((db) => cairkanPinjaman(db, {
             kodeAgt: teks(f, "kodeAgt"), kodeKredit: teks(f, "kodeKredit"), tglPinjaman: tanggal(f),
             pokok: uang(f, "pokok", "Pokok pinjaman"), lama: bulat(f, "lama", "Lama angsuran"), kasPerkiraanId: teks(f, "kas"), opr,
@@ -230,11 +231,11 @@ async function angsuranBerikutnya(noPinjaman: string) {
 }
 
 export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting([MENU.angsurKoperasi, MENU.angsurBank], async (o) => {
+    return posting([MENU.angsurKoperasi, MENU.angsurBank], null, async (o) => {
         const opr = o.nama
         const [jk] = await query<{ group_pinjaman: string }>(
             "SELECT jk.group_pinjaman FROM pinjaman_tunai p JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id WHERE p.no_pinjaman = $1", [teks(f, "noPinjaman")])
-        if (jk) wajibMenu(o, [MENU_ANGSUR_GRUP[jk.group_pinjaman] ?? MENU.angsurKoperasi])
+        if (jk) wajibAksi(o, [MENU_ANGSUR_GRUP[jk.group_pinjaman] ?? MENU.angsurKoperasi], "tambah")
         const override = {
             jasa: uangOpsional(f, "jasa", "Jasa"), adm: uangOpsional(f, "adm", "Adm"), provisi: uangOpsional(f, "provisi", "Provisi"),
         }
@@ -258,7 +259,7 @@ export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil>
 // ---------- KPR ----------
 
 export async function cairkanKprAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting([MENU.cairKpr], async ({ nama: opr }) => {
+    return posting([MENU.cairKpr], "tambah", async ({ nama: opr }) => {
         const r = await tx((db) => cairkanKpr(db, {
             kodeAgt: teks(f, "kodeAgt"), kodeKredit: teks(f, "kodeKredit"), tglPinjaman: tanggal(f),
             pokok: uang(f, "pokok", "Pokok KPR"), lama: bulat(f, "lama", "Lama angsuran"), kasPerkiraanId: teks(f, "kas"), opr,
@@ -271,7 +272,7 @@ export async function cairkanKprAction(_: Hasil, f: FormData): Promise<Hasil> {
 }
 
 export async function bayarAngsuranKprAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting([MENU.angsurKpr], async ({ nama: opr }) => {
+    return posting([MENU.angsurKpr], "tambah", async ({ nama: opr }) => {
         const r = await tx((db) => bayarAngsuranKpr(db, {
             noPinjaman: teks(f, "noPinjaman"), tanggal: tanggal(f), kasPerkiraanId: teks(f, "kas"), opr,
             jumlah: uangOpsional(f, "jumlah", "Jumlah"),
@@ -289,7 +290,7 @@ const MENU_JURNAL = [MENU.jurnalUmum, MENU.jurnalPenyesuaian]
 
 export async function jurnalUmumAction(_: Hasil, f: FormData): Promise<Hasil> {
     const menu = f.get("nomorBukti") ? MENU_JURNAL : [f.get("penyesuaian") === "1" ? MENU.jurnalPenyesuaian : MENU.jurnalUmum]
-    return posting(menu, async ({ nama: opr }) => {
+    return posting(menu, f.get("nomorBukti") ? "ubah" : "tambah", async ({ nama: opr }) => {
         const akun = f.getAll("akun").map(String), debit = f.getAll("debit").map(String), kredit = f.getAll("kredit").map(String)
         const ket = f.getAll("ketBaris").map(String)
         const lines = akun.map((a, i) => {
@@ -317,7 +318,7 @@ export async function nomorJurnalBerikutAction(penyesuaian: boolean): Promise<nu
 
 /** Tandai jurnal umum JU/ sebagai penyesuaian, atau kembalikan ke jurnal umum biasa (jurnal lama yang ternyata penyesuaian, mis. penyusutan). */
 export async function tandaiPenyesuaianAction(nomorBukti: string, penyesuaian: boolean): Promise<Hasil> {
-    return posting(MENU_JURNAL, async () => {
+    return posting(MENU_JURNAL, "ubah", async () => {
         await tx((db) => tandaiPenyesuaian(db, nomorBukti, penyesuaian))
         return { ok: true, pesan: `Bukti ${nomorBukti} ${penyesuaian ? "ditandai sebagai jurnal penyesuaian" : "dikembalikan menjadi jurnal umum biasa"}` }
     })
@@ -327,7 +328,7 @@ export async function tandaiPenyesuaianAction(nomorBukti: string, penyesuaian: b
 
 /** Simpan bukti Bank Book baru, atau ubah bukti lama bila `nomorBukti` terisi. */
 export async function bankBookAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting([MENU.bankBook], async ({ nama: opr }) => {
+    return posting([MENU.bankBook], f.get("nomorBukti") ? "ubah" : "tambah", async ({ nama: opr }) => {
         const kode = f.getAll("lawan").map(String), debit = f.getAll("debit").map(String), kredit = f.getAll("kredit").map(String), ket = f.getAll("ketBaris").map(String)
         const lawan = kode.map((k, i) => {
             const d = (debit[i] || "0").replace(/,/g, "."), c = (kredit[i] || "0").replace(/,/g, ".")
@@ -342,7 +343,7 @@ export async function bankBookAction(_: Hasil, f: FormData): Promise<Hasil> {
 }
 
 export async function hapusBankBookAction(nomorBukti: string): Promise<Hasil> {
-    return posting([MENU.bankBook], async () => {
+    return posting([MENU.bankBook], "hapus", async () => {
         await tx((db) => hapusBankBook(db, nomorBukti))
         return { ok: true, pesan: `Bukti ${nomorBukti} dihapus` }
     })
@@ -388,7 +389,7 @@ export async function bacaJurnalAction(nomorBukti: string): Promise<{ bukti: Buk
 
 /** Hapus bukti JU/ atau JP/ (izin Jurnal Umum / Jurnal Penyesuaian) atau BB/ (izin Bank Book) yang belum direkonsiliasi. */
 export async function hapusJurnalAction(nomorBukti: string): Promise<Hasil> {
-    return posting(nomorBukti.startsWith("BB/") ? [MENU.bankBook] : MENU_JURNAL, async () => {
+    return posting(nomorBukti.startsWith("BB/") ? [MENU.bankBook] : MENU_JURNAL, "hapus", async () => {
         await tx((db) => hapusJurnalUmum(db, nomorBukti))
         return { ok: true, pesan: `Bukti ${nomorBukti} dihapus` }
     })
@@ -416,7 +417,7 @@ export async function riwayatAnggotaAction(kodeAgt: string): Promise<RiwayatAngg
 
 /** Batalkan satu bukti dengan pembalik bertanggal hari ini. Aturannya di backend/src/posting/koreksi.ts. */
 export async function batalBuktiAction(noBukti: string, alasan: string): Promise<Hasil> {
-    return posting([MENU.batalTransaksi], async (o) => {
+    return posting([MENU.batalTransaksi], null, async (o) => {
         const r = await tx((db) => batalBukti(db, { noBukti, tanggal: hariIni(), alasan, opr: o.nama, operatorId: o.id }))
         return { ok: true, pesan: `Bukti ${noBukti} dibatalkan dengan pembalik ${r.noBukti}` }
     })
@@ -444,7 +445,7 @@ export async function dataTitipanAction(noPinjaman: string, semua: boolean): Pro
 }
 
 export async function tambahTitipanAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return posting([MENU.titipan], async () => {
+    return posting([MENU.titipan], "tambah", async () => {
         const noPinjaman = teks(f, "noPinjaman"), jumlah = uang(f, "jumlah", "Jumlah titipan")
         const t = await tx((db) => tambahTitipan(db, { noPinjaman, tanggal: tanggal(f), jumlah }))
         return { ok: true, pesan: `Titipan ${formatRupiah(Number(jumlah))} untuk ${noPinjaman} tersimpan (belum diposting ke angsuran)`,
@@ -453,7 +454,7 @@ export async function tambahTitipanAction(_: Hasil, f: FormData): Promise<Hasil>
 }
 
 export async function hapusTitipanAction(id: number): Promise<Hasil> {
-    return posting([MENU.titipan], async () => {
+    return posting([MENU.titipan], "hapus", async () => {
         await tx((db) => hapusTitipan(db, id))
         return { ok: true, pesan: "Titipan dihapus" }
     })

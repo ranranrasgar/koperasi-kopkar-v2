@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, ubahStatusAkun, type DataLengkapi, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
 import { antreEmail } from "@kopkar/backend/src/email/antrean.ts"
 import { modeUji, pool, query, tx } from "@/lib/db"
-import { GalatSesi, operatorAktif, type Operator } from "@/lib/operator"
+import { GalatSesi, operatorAktif, wajibAksi, type Operator } from "@/lib/operator"
 import { MENU } from "@/config/akses"
 
 export type HasilPendaftaran = { ok: true; pesan: string } | { ok: false; error: string }
@@ -140,6 +140,7 @@ export async function jadikanAnggotaAction(id: number, lengkap?: LengkapAnggota)
 export async function hapusUserMobileAction(id: number, kodeHapusAnggota?: string): Promise<HasilPendaftaran> {
     try {
         const o = await operatorAktif(MENU_USER)
+        wajibAksi(o, [MENU.user], "hapus")
         const [u] = await query<{ anggota_id: string | null; kode: string | null }>(
             "SELECT u.anggota_id::text, a.kode_agt AS kode FROM app_user u LEFT JOIN anggota a ON a.id = u.anggota_id WHERE u.id = $1", [id])
         if (!u) return { ok: false, error: "Akun tidak ditemukan" }

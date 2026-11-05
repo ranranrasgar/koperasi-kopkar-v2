@@ -1,5 +1,7 @@
 "use client"
 
+import { useBolehAksi } from "@/components/layout/SidebarContext"
+import { MENU } from "@/config/akses"
 import React, { useActionState, useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { AlertCircle, CheckCircle2, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react"
@@ -64,6 +66,7 @@ function FormJenis({ awal, akun, grade, selesai }: { awal: JenisPinjaman | null;
     const onSubmit = (e: React.FormEvent<HTMLFormElement>) => { e.preventDefault(); const d = new FormData(e.currentTarget); mulai(() => jalankan(d)) }
     const router = useRouter()
     const [hapus, mulaiHapus] = useTransition()
+    const boleh = useBolehAksi()
     const baru = awal === null
     const [adm, setAdm] = useState(baru ? false : awal.pakai_adm === 1 || awal.persen_adm > 0)
     const [provisi, setProvisi] = useState(baru ? false : awal.persen_provisi > 0)
@@ -173,7 +176,7 @@ function FormJenis({ awal, akun, grade, selesai }: { awal: JenisPinjaman | null;
 
             <PesanSimpan hasil={hasil} />
             <div className="flex items-center justify-between gap-2">
-                <div>{awal && (
+                <div>{awal && boleh([MENU.jenisPinjaman], "hapus") && (
                     <button type="button" onClick={hapusIni} disabled={hapus} className="inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-sm font-medium text-red-700 hover:bg-red-50 disabled:opacity-50">
                         {hapus ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Hapus
                     </button>
@@ -188,6 +191,7 @@ const lencana = "rounded-full bg-muted px-1.5 py-0.5 text-[10px] font-semibold t
 
 /** Daftar jenis pinjaman (seperti grid desktop) dengan form tambah/ubah di modal. */
 export function DaftarJenisPinjaman({ baris, akun, grade }: { baris: JenisPinjaman[]; akun: Akun[]; grade: GradeAnggota[] }) {
+    const boleh = useBolehAksi()
     const router = useRouter()
     const [edit, setEdit] = useState<JenisPinjaman | "baru" | null>(null)
     const [cari, setCari] = useState("")
@@ -209,7 +213,7 @@ export function DaftarJenisPinjaman({ baris, akun, grade }: { baris: JenisPinjam
                         <Input type="search" value={cari} onChange={(e) => setCari(e.target.value)} placeholder="Cari kode, nama, grup, jenis, atau COA" aria-label="Cari jenis pinjaman" className="pl-8" />
                     </div>
                     {kata && <span className="text-sm text-muted-foreground">{tampil.length} dari {baris.length} jenis</span>}
-                    <button type="button" onClick={() => setEdit("baru")} className="ml-auto inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"><Plus className="h-4 w-4" /> Tambah</button>
+                    {boleh([MENU.jenisPinjaman], "tambah") && <button type="button" onClick={() => setEdit("baru")} className="ml-auto inline-flex items-center gap-1.5 h-9 px-3 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold"><Plus className="h-4 w-4" /> Tambah</button>}
                 </div>
                 <div className="overflow-x-auto">
                     <table className="w-full text-sm">
@@ -243,7 +247,7 @@ export function DaftarJenisPinjaman({ baris, akun, grade }: { baris: JenisPinjam
                                         {b.hitung_shu === 1 ? <span className={lencana}>SHU</span> : null}
                                         {b.hide ? <span className={lencana}>Tanpa mobile</span> : null}
                                     </span></td>
-                                    <td className="px-2 py-1 text-right"><button type="button" title="Ubah" onClick={() => setEdit(b)} className="p-1.5 rounded hover:bg-muted"><Pencil className="h-4 w-4" /></button></td>
+                                    <td className="px-2 py-1 text-right">{boleh([MENU.jenisPinjaman], "ubah") && <button type="button" title="Ubah" onClick={() => setEdit(b)} className="p-1.5 rounded hover:bg-muted"><Pencil className="h-4 w-4" /></button>}</td>
                                 </tr>
                             ))}
                         </tbody>

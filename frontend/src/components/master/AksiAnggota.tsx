@@ -1,5 +1,7 @@
 "use client"
 
+import { useBolehAksi } from "@/components/layout/SidebarContext"
+import { MENU } from "@/config/akses"
 import { useCallback, useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Pencil, RotateCcw, UserRoundX, Trash2 } from "lucide-react"
@@ -68,6 +70,7 @@ function UbahAnggota({ item, selesai }: { item: Baris; selesai: () => void }) {
 
 export function AksiAnggota({ item }: { item: Baris }) {
     const router = useRouter()
+    const boleh = useBolehAksi()
     const [modal, setModal] = useState<"ubah" | "keluar" | "hapus" | null>(null)
     const aktif = item.aktif === true
     const id = String(item.id ?? "")
@@ -94,19 +97,19 @@ export function AksiAnggota({ item }: { item: Baris }) {
 
     return (
         <>
-            <button type="button" title="Ubah data anggota" aria-label="Ubah data anggota" onClick={() => setModal("ubah")}
+            {boleh([MENU.daftarAnggota], "ubah") && <button type="button" title="Ubah data anggota" aria-label="Ubah data anggota" onClick={() => setModal("ubah")}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
                 <Pencil className="h-4 w-4" />
-            </button>
-            <button type="button" title={aktif ? "Catat anggota keluar" : "Aktifkan kembali"} aria-label={aktif ? "Catat anggota keluar" : "Aktifkan kembali"}
+            </button>}
+            {boleh([MENU.daftarAnggota], "ubah") && <button type="button" title={aktif ? "Catat anggota keluar" : "Aktifkan kembali"} aria-label={aktif ? "Catat anggota keluar" : "Aktifkan kembali"}
                 onClick={() => setModal("keluar")} className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
                 {aktif ? <UserRoundX className="h-4 w-4" /> : <RotateCcw className="h-4 w-4" />}
-            </button>
-            <button type="button" title={bisaHapus ? "Hapus anggota" : "Punya transaksi atau akun terkait, gunakan Keluar"}
+            </button>}
+            {boleh([MENU.daftarAnggota], "hapus") && <button type="button" title={bisaHapus ? "Hapus anggota" : "Punya transaksi atau akun terkait, gunakan Keluar"}
                 aria-label={bisaHapus ? "Hapus anggota" : "Tidak dapat dihapus"} disabled={!bisaHapus}
                 onClick={() => setModal("hapus")} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30">
                 <Trash2 className="h-4 w-4" />
-            </button>
+            </button>}
 
             <ModalForm open={modal === "ubah"} onOpenChange={(buka) => { if (!buka) setModal(null) }}
                 judul={`Ubah Anggota ${kode}`} keterangan="Kode anggota tidak dapat diubah." lebar="sm:max-w-[44rem]">

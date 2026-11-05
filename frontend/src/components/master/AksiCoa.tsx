@@ -1,5 +1,7 @@
 "use client"
 
+import { useBolehAksi } from "@/components/layout/SidebarContext"
+import { MENU } from "@/config/akses"
 import { useCallback, useState } from "react"
 import { useRouter } from "next/navigation"
 import { Pencil, Trash2 } from "lucide-react"
@@ -20,6 +22,7 @@ interface CoaActionItem {
 export function AksiCoa({ item }: { item: CoaActionItem }) {
     const router = useRouter()
     const [modal, setModal] = useState<"ubah" | "hapus" | null>(null)
+    const boleh = useBolehAksi()
     const kode = String(item.kode_perkiraan ?? "")
     const bisaHapus = item._bisa_hapus === true
     const selesai = useCallback(() => {
@@ -43,15 +46,15 @@ export function AksiCoa({ item }: { item: CoaActionItem }) {
 
     return (
         <>
-            <button type="button" title="Ubah akun COA" aria-label="Ubah akun COA" onClick={() => setModal("ubah")}
+            {boleh([MENU.coa], "ubah") && <button type="button" title="Ubah akun COA" aria-label="Ubah akun COA" onClick={() => setModal("ubah")}
                 className="inline-flex h-8 w-8 items-center justify-center rounded-md hover:bg-muted">
                 <Pencil className="h-4 w-4" />
-            </button>
-            <button type="button" title={bisaHapus ? "Hapus akun COA" : "Akun masih dipakai, tidak bisa dihapus"}
+            </button>}
+            {boleh([MENU.coa], "hapus") && <button type="button" title={bisaHapus ? "Hapus akun COA" : "Akun masih dipakai, tidak bisa dihapus"}
                 aria-label={bisaHapus ? "Hapus akun COA" : "Akun masih digunakan"} disabled={!bisaHapus}
                 onClick={() => setModal("hapus")} className="inline-flex h-8 w-8 items-center justify-center rounded-md text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30">
                 <Trash2 className="h-4 w-4" />
-            </button>
+            </button>}
             <ModalForm open={modal === "ubah"} onOpenChange={(buka) => { if (!buka) setModal(null) }}
                 judul={`Ubah COA ${kode}`} keterangan="Kode akun tidak dapat diubah karena sudah dipakai jurnal.">
                 {modal === "ubah" && <FormEdit fields={fields} nilai={nilai} aksi={simpanCoaAction} onSelesai={selesai} kolom={2} />}

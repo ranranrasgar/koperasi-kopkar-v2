@@ -3,7 +3,7 @@ import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
 import { query } from "@/lib/db"
 import { bacaSesi, COOKIE_SESI, sidikPassword } from "@/lib/sesi"
-import { AKSES_HALAMAN, GRUP_SUPERADMIN, MENU, punyaIzin } from "@/config/akses"
+import { AKSES_HALAMAN, bolehAksi, GRUP_SUPERADMIN, LABEL_AKSI, MENU, punyaIzin, type AksiIzin } from "@/config/akses"
 
 export interface Operator {
     id: number
@@ -14,6 +14,8 @@ export interface Operator {
     wajibGantiPassword: boolean
     /** Nama menu desktop yang berizin ('T') untuk grup operator, dari opr_hak_akses. */
     izin: string[]
+    /** "menu|aksi" yang dimatikan untuk grup operator (opr_hak_akses.boleh_*). Kosong untuk superadmin. */
+    aksiTolak: string[]
     /** Grup superadmin: semua menu berizin, termasuk Kelola Akses. */
     superadmin: boolean
 }
@@ -45,11 +47,14 @@ export async function operatorSesi(): Promise<Operator | null> {
     if (!o || !oprAktif(o) || !o.password_hash || sidikPassword(o.password_hash) !== s.pv) return null
     const superadmin = o.nama_grup === GRUP_SUPERADMIN
     // Superadmin: semua menu yang dikenal (desktop dan web), tanpa melihat opr_hak_akses grupnya.
+    const baris = superadmin ? [] : await query<{ menu: string; boleh_tambah: boolean; boleh_ubah: boolean; boleh_hapus: boolean }>(
+        "SELECT DISTINCT menu, boleh_tambah, boleh_ubah, boleh_hapus FROM opr_hak_akses WHERE grup_id = $1 AND akses = 'T'", [o.grup_id])
     const izin = superadmin
         ? [...new Set([...(await query<{ menu: string }>("SELECT DISTINCT menu FROM opr_hak_akses")).map((r) => r.menu), ...Object.values(MENU)])]
-        : (await query<{ menu: string }>("SELECT DISTINCT menu FROM opr_hak_akses WHERE grup_id = $1 AND akses = 'T'", [o.grup_id])).map((r) => r.menu)
+        : baris.map((r) => r.menu)
+    const aksiTolak = baris.flatMap((r) => (["tambah", "ubah", "hapus"] as const).filter((a) => !r[`boleh_${a}`]).map((a) => `${r.menu}|${a}`))
     return { id: o.id, nama: o.nama, namaLengkap: o.nama_lengkap || o.nama, status: o.status, grup: o.nama_grup,
-        wajibGantiPassword: o.wajib_ganti_password, izin, superadmin }
+        wajibGantiPassword: o.wajib_ganti_password, izin, aksiTolak, superadmin }
 }
 
 /** Untuk halaman: alihkan ke login bila belum masuk, ke ganti password bila wajib. */
@@ -81,6 +86,12 @@ export async function operatorAktif(menu?: readonly string[]): Promise<Operator>
     if (o.wajibGantiPassword) throw new GalatSesi("Ganti password awal terlebih dahulu")
     if (menu) wajibMenu(o, menu)
     return o
+}
+
+/** Seperti wajibMenu, ditambah aksi tambah/ubah/hapus pada menu itu. */
+export function wajibAksi(o: Operator, menu: readonly string[], aksi: AksiIzin) {
+    wajibMenu(o, menu)
+    if (!bolehAksi(o.izin, o.aksiTolak, menu, aksi)) throw new GalatSesi(`Grup ${o.grup ?? "-"} tidak boleh ${LABEL_AKSI[aksi].toLowerCase()} di ${menu.join(" / ")}`)
 }
 
 export function wajibMenu(o: Operator, menu: readonly string[]) {

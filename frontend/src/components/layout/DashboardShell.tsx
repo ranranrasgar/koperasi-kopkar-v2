@@ -5,7 +5,7 @@ import { useSidebar, SidebarProvider, type KoperasiTampil } from "./SidebarConte
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 
-export interface OperatorTampil { nama: string; namaLengkap: string; grup: string | null; izin: string[] }
+export interface OperatorTampil { nama: string; namaLengkap: string; grup: string | null; izin: string[]; aksiTolak: string[] }
 
 function ShellContent({ children, operator }: { children: React.ReactNode; operator: OperatorTampil }) {
     const { isOpen } = useSidebar()
@@ -57,7 +57,7 @@ const lebarPenuh = (path: string) => HALAMAN_LEBAR.some((p) => (p.endsWith("/") 
 
 export function DashboardShell({ children, operator, koperasi, lencana = {} }: { children: React.ReactNode; operator: OperatorTampil; koperasi: KoperasiTampil; lencana?: Record<string, number> }) {
     return (
-        <SidebarProvider izin={operator.izin} koperasi={koperasi} lencana={lencana}>
+        <SidebarProvider izin={operator.izin} aksiTolak={operator.aksiTolak} koperasi={koperasi} lencana={lencana}>
             <ShellContent operator={operator}>{children}</ShellContent>
         </SidebarProvider>
     )

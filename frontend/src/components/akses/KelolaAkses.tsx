@@ -6,10 +6,11 @@ import { AlertCircle, CheckCircle2, KeyRound, Loader2, Plus, Search } from "luci
 import { Input } from "@/components/ui/input"
 import { TombolModal } from "@/components/ui/Modal"
 import {
-    resetPasswordAction, setAksesAction, tambahOperatorAction, ubahAktifOperatorAction, ubahGrupOperatorAction, type HasilKelola,
+    resetPasswordAction, setAksesAction, setAksiAction, tambahOperatorAction, ubahAktifOperatorAction, ubahGrupOperatorAction, type HasilKelola,
 } from "@/app/actions/akses"
 import { Field, FormCard, selectClass } from "@/components/transaksi/common"
 import type { IzinBaris, KelompokBaris } from "@/lib/queries/akses"
+import { LABEL_AKSI, type AksiIzin } from "@/config/akses"
 import { cn } from "@/lib/utils"
 
 interface Grup { id: number; nama_grup: string }
@@ -40,14 +41,30 @@ function Pesan({ hasil }: { hasil: HasilKelola | null }) {
 
 // ---------- matriks grup x menu ----------
 
-function KotakGrup({ izin, grup, label, sibuk, ubah }: { izin: IzinBaris; grup: Grup[]; label: string; sibuk: string | null; ubah: (m: string, g: Grup, boleh: boolean) => void }) {
+const HURUF_AKSI: Record<AksiIzin, string> = { tambah: "C", ubah: "U", hapus: "D" }
+
+function KotakGrup({ izin, grup, label, sibuk, ubah, ubahAksi }: {
+    izin: IzinBaris; grup: Grup[]; label: string; sibuk: string | null; ubah: (m: string, g: Grup, boleh: boolean) => void
+    ubahAksi: (m: string, g: Grup, a: AksiIzin, boleh: boolean) => void
+}) {
     return grup.map((g) => {
         const kunci = `${izin.nama}|${g.id}`
+        const lihat = izin.grupIzin.includes(g.id)
+        const kotak = (huruf: string, nama: string, checked: boolean, onChange: (v: boolean) => void, mati: boolean) => (
+            <label title={nama} className={cn("inline-flex items-center gap-0.5 text-[10px] font-semibold text-muted-foreground", mati && "opacity-40")}>
+                <input type="checkbox" className="h-3.5 w-3.5" aria-label={`${nama}: ${label} untuk ${g.nama_grup}`} disabled={sibuk !== null || mati} checked={checked} onChange={(e) => onChange(e.target.checked)} />
+                {huruf}
+            </label>
+        )
         return (
-            <td key={g.id} className="px-3 py-1.5 text-center">
-                {sibuk === kunci ? <Loader2 className="h-4 w-4 animate-spin inline" /> : (
-                    <input type="checkbox" aria-label={`${label} untuk ${g.nama_grup}`} disabled={sibuk !== null}
-                        checked={izin.grupIzin.includes(g.id)} onChange={(e) => ubah(izin.nama, g, e.target.checked)} />
+            <td key={g.id} className="px-2 py-1.5">
+                {sibuk === kunci ? <div className="text-center"><Loader2 className="inline h-4 w-4 animate-spin" /></div> : (
+                    // Empat kolom tetap (C R U D) supaya sejajar antarbaris; aksi yang tidak ada di menu ini dibiarkan kosong.
+                    <div className="mx-auto grid w-max grid-cols-4 gap-x-1.5">
+                        {(["tambah", null, "ubah", "hapus"] as const).map((a) => a === null
+                            ? <span key="baca">{kotak("R", "Lihat", lihat, (v) => ubah(izin.nama, g, v), false)}</span>
+                            : <span key={a}>{izin.aksi.includes(a) && kotak(HURUF_AKSI[a], LABEL_AKSI[a], lihat && !izin.tolak[a]?.includes(g.id), (v) => ubahAksi(izin.nama, g, a, v), !lihat)}</span>)}
+                    </div>
                 )}
             </td>
         )
@@ -73,6 +90,20 @@ export function MatriksAkses({ grup, kelompok }: { grup: Grup[]; kelompok: Kelom
         })
     }
 
+    const ubahAksi = (m: string, g: Grup, a: AksiIzin, boleh: boolean) => {
+        setSibuk(`${m}|${g.id}`)
+        startTransition(async () => {
+            const r = await setAksiAction(g.id, m, a, boleh)
+            setHasil(r)
+            if (r.ok) setData((d) => d.map((k) => ({ ...k, menu: k.menu.map((x) => ({ ...x, izin: x.izin.map((i) => {
+                if (i.nama !== m) return i
+                const lain = (i.tolak[a] ?? []).filter((id) => id !== g.id)
+                return { ...i, tolak: { ...i.tolak, [a]: boleh ? lain : [...lain, g.id] } }
+            }) })) })))
+            setSibuk(null)
+        })
+    }
+
     const kata = cari.toLowerCase()
     const cocok = (t: string | null) => !!t && t.toLowerCase().includes(kata)
     const tampil = data
@@ -80,7 +111,7 @@ export function MatriksAkses({ grup, kelompok }: { grup: Grup[]; kelompok: Kelom
         .filter((k) => k.menu.length > 0)
     return (
         <FormCard title="Matriks Hak Akses"
-            description="Nama dan urutan sama dengan menu samping. Centang = grup boleh membuka menu itu. Berlaku langsung tanpa login ulang. Grup superadmin selalu punya semua akses.">
+            description="Nama dan urutan sama dengan menu samping. C = tambah, R = lihat, U = ubah, D = hapus. C, U, dan D aktif bila R dicentang; hanya aksi yang ada di menu itu yang tampil. Berlaku langsung tanpa login ulang. Grup superadmin selalu punya semua akses.">
             <div className="space-y-3">
                 <div className="relative w-full sm:w-72">
                     <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
@@ -106,13 +137,13 @@ export function MatriksAkses({ grup, kelompok }: { grup: Grup[]; kelompok: Kelom
                                             <tr className="border-t hover:bg-muted/30">
                                                 <td className="px-3 py-1.5 font-medium">{m.label}</td>
                                                 {m.tetap ? <td colSpan={grup.length} className="px-3 py-1.5 text-center text-xs text-muted-foreground">{m.tetap}</td>
-                                                    : m.izin.length === 1 ? <KotakGrup izin={m.izin[0]} grup={grup} label={m.label} sibuk={sibuk} ubah={ubah} />
+                                                    : m.izin.length === 1 ? <KotakGrup izin={m.izin[0]} grup={grup} label={m.label} sibuk={sibuk} ubah={ubah} ubahAksi={ubahAksi} />
                                                     : <td colSpan={grup.length} />}
                                             </tr>
                                             {m.izin.length > 1 && m.izin.map((i) => (
                                                 <tr key={i.nama} className="hover:bg-muted/30">
                                                     <td className="py-1 pl-8 pr-3 text-muted-foreground">{i.label}</td>
-                                                    <KotakGrup izin={i} grup={grup} label={`${m.label}: ${i.label}`} sibuk={sibuk} ubah={ubah} />
+                                                    <KotakGrup izin={i} grup={grup} label={`${m.label}: ${i.label}`} sibuk={sibuk} ubah={ubah} ubahAksi={ubahAksi} />
                                                 </tr>
                                             ))}
                                         </Fragment>

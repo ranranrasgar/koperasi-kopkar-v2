@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache"
 import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
 import { modeUji, pool, tx } from "@/lib/db"
-import { GalatSesi, operatorAktif } from "@/lib/operator"
+import { GalatSesi, operatorAktif, wajibAksi } from "@/lib/operator"
 import { MENU } from "@/config/akses"
 import { batasPlafon, type BatasPlafon } from "@kopkar/backend/src/posting/plafon.ts"
 import { estimasiAngsuran, type Estimasi } from "@kopkar/backend/src/anggota/pengajuan-hitung.ts"
@@ -17,7 +17,7 @@ export type HasilPengajuan = { ok: true; pesan: string } | { ok: false; error: s
  */
 export async function putuskanPengajuanAction(id: number, setuju: boolean): Promise<HasilPengajuan> {
     try {
-        await operatorAktif([MENU.pengajuan])
+        wajibAksi(await operatorAktif([MENU.pengajuan]), [MENU.pengajuan], "ubah")
         const r = await tx(async (db) => (await db.query<{ kd_anggota: string; anggota_id: number | null; rp_pinjaman_pokok: string; lama_angsuran: number; jenis_kredit_id: string | null }>(
             // Tolak juga membatalkan persetujuan yang belum dicairkan, supaya kunci "belum lunas" anggota terbuka lagi.
             "UPDATE pengajuan_pinjaman SET status = $1, menunggu_cair = $3 WHERE id = $2 AND (status = 'P' OR (status = 'Y' AND menunggu_cair AND NOT $3)) RETURNING kd_anggota, anggota_id, rp_pinjaman_pokok, lama_angsuran, jenis_kredit_id", [setuju ? "Y" : "N", id, setuju])).rows)

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { query } from "@/lib/db"
 import { GalatSesi, operatorAktif } from "@/lib/operator"
 import { hashPassword, passwordAcak } from "@/lib/password"
-import { GRUP_SUPERADMIN, MENU } from "@/config/akses"
+import { AKSI_IZIN, GRUP_SUPERADMIN, LABEL_AKSI, MENU, type AksiIzin } from "@/config/akses"
 
 export type HasilKelola = { ok: true; pesan: string; passwordSementara?: string } | { ok: false; error: string }
 
@@ -51,6 +51,20 @@ export async function setAksesAction(grupId: number, menu: string, boleh: boolea
             `INSERT INTO opr_hak_akses (urut, id_opr, menu, akses, grup_id) VALUES (nextval('seq_opr_hak_akses_urut'), $1, $2, $3, $4)
              ON CONFLICT (grup_id, menu) DO UPDATE SET akses = EXCLUDED.akses`, [g.urut, menu, boleh ? "T" : "F", g.id])
         return { ok: true, pesan: `${menu}: ${boleh ? "diizinkan" : "ditutup"} untuk grup ${g.nama_grup}` }
+    })
+}
+
+/** Tambah, ubah, atau hapus pada menu yang sudah boleh dilihat grup itu. Kolomnya dari daftar tetap, bukan dari isian. */
+export async function setAksiAction(grupId: number, menu: string, aksi: AksiIzin, boleh: boolean): Promise<HasilKelola> {
+    return jalankan(async () => {
+        await superadmin()
+        const g = await grup(grupId)
+        if (g.nama_grup === GRUP_SUPERADMIN) throw new Salah("Grup superadmin selalu punya semua akses")
+        if (!AKSI_IZIN[menu]?.includes(aksi)) throw new Salah("Aksi ini tidak berlaku untuk menu tersebut")
+        const kolom = { tambah: "boleh_tambah", ubah: "boleh_ubah", hapus: "boleh_hapus" }[aksi]
+        const r = await query<{ id: number }>(`UPDATE opr_hak_akses SET ${kolom} = $1 WHERE grup_id = $2 AND menu = $3 AND akses = 'T' RETURNING id`, [boleh, g.id, menu])
+        if (!r.length) throw new Salah("Centang menunya dulu")
+        return { ok: true, pesan: `${menu}: ${LABEL_AKSI[aksi]} ${boleh ? "diizinkan" : "ditutup"} untuk grup ${g.nama_grup}` }
     })
 }
 

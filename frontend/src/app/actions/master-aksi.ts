@@ -6,15 +6,16 @@ import { batalTutupPinjaman, tutupPinjaman } from "@kopkar/backend/src/posting/p
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { modeUji, pool, query, tx } from "@/lib/db"
 import { isTanggal } from "@/lib/list"
-import { GalatSesi, operatorAktif, type Operator } from "@/lib/operator"
-import { AKSES_HALAMAN, MENU } from "@/config/akses"
+import { GalatSesi, operatorAktif, wajibAksi, type Operator } from "@/lib/operator"
+import { AKSES_HALAMAN, MENU, type AksiIzin } from "@/config/akses"
 import type { HasilSimpan } from "./master"
 
 class Salah extends Error {}
 
-async function simpan(menu: readonly string[], path: string, fn: (db: Db, operator: Operator) => Promise<string>): Promise<HasilSimpan> {
+async function simpan(menu: readonly string[], path: string, aksi: AksiIzin | null, fn: (db: Db, operator: Operator) => Promise<string>): Promise<HasilSimpan> {
     try {
         const operator = await operatorAktif(menu)
+        if (aksi) wajibAksi(operator, menu, aksi)
         const pesan = await tx(async (db) => {
             const hasil = await fn(db, operator)
             await catatRiwayat(db, operator, hasil)
@@ -64,7 +65,7 @@ const wajibAdmin = (o: Operator) => {
 }
 
 export async function tutupPinjamanAction(noPinjaman: string, alasan: string): Promise<HasilSimpan> {
-    return simpan(AKSES_HALAMAN["/dashboard/loans/[no]"], "/dashboard/loans", async (db, operator) => {
+    return simpan(AKSES_HALAMAN["/dashboard/loans/[no]"], "/dashboard/loans", null, async (db, operator) => {
         wajibAdmin(operator)
         const h = await tutupPinjaman(db as never, { noPinjaman, alasan, opr: operator.nama, operatorId: operator.id }).catch((e: Error) => { throw new Salah(e.message) })
         const draf = h.drafPotongan.length ? ` Generate ulang Potongan Gaji ${h.drafPotongan.join(", ")}.` : ""
@@ -73,7 +74,7 @@ export async function tutupPinjamanAction(noPinjaman: string, alasan: string): P
 }
 
 export async function batalTutupPinjamanAction(noPinjaman: string): Promise<HasilSimpan> {
-    return simpan(AKSES_HALAMAN["/dashboard/loans/[no]"], "/dashboard/loans", async (db, operator) => {
+    return simpan(AKSES_HALAMAN["/dashboard/loans/[no]"], "/dashboard/loans", null, async (db, operator) => {
         wajibAdmin(operator)
         await batalTutupPinjaman(db as never, { noPinjaman, opr: operator.nama }).catch((e: Error) => { throw new Salah(e.message) })
         return `Penutupan pinjaman ${noPinjaman} dibatalkan`
@@ -91,7 +92,7 @@ export async function bahanAnggotaBaruAction() {
 }
 
 export async function tambahAnggotaAction(nik: string, data: LengkapAnggota): Promise<HasilSimpan> {
-    return simpan([MENU.inputAnggota], "/dashboard/members", async (db, operator) => {
+    return simpan([MENU.inputAnggota], "/dashboard/members", "tambah", async (db, operator) => {
         const r = await tambahAnggota(db as never, nik, data, { id: operator.id, nama: operator.nama })
         if (!r.ok) throw new Salah(r.error)
         return `Anggota baru ${r.kode} (${data.nama.trim()}) ditambahkan oleh ${operator.nama}`
@@ -120,7 +121,7 @@ export async function detailAnggotaAction(id: number) {
 }
 
 export async function simpanAnggotaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan([MENU.daftarAnggota], "/dashboard/members", async (db, operator) => {
+    return simpan([MENU.daftarAnggota], "/dashboard/members", "ubah", async (db, operator) => {
         const id = idForm(f)
         const { rows: [lama] } = await db.query<{ kode_agt: string }>("SELECT kode_agt FROM anggota WHERE id = $1 FOR UPDATE", [id])
         if (!lama) throw new Salah("Anggota tidak ditemukan")
@@ -161,7 +162,7 @@ export async function simpanAnggotaAction(_: HasilSimpan, f: FormData): Promise<
 }
 
 export async function ubahStatusAnggotaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan([MENU.daftarAnggota], "/dashboard/members", async (db, operator) => {
+    return simpan([MENU.daftarAnggota], "/dashboard/members", "ubah", async (db, operator) => {
         const id = idForm(f)
         const keluar = f.get("keluar") === "true"
         const { rows: [anggota] } = await db.query<{ kode_agt: string; aktif: boolean }>(
@@ -183,7 +184,7 @@ export async function ubahStatusAnggotaAction(_: HasilSimpan, f: FormData): Prom
 }
 
 export async function hapusAnggotaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan([MENU.daftarAnggota], "/dashboard/members", async (db, operator) => {
+    return simpan([MENU.daftarAnggota], "/dashboard/members", "hapus", async (db, operator) => {
         const id = idForm(f)
         const { rows: [anggota] } = await db.query<{ kode_agt: string; nama: string }>(
             "SELECT kode_agt, nama FROM anggota WHERE id = $1 FOR UPDATE", [id])
@@ -216,7 +217,7 @@ export async function hapusAnggotaAction(_: HasilSimpan, f: FormData): Promise<H
 }
 
 export async function simpanKaryawanMattelAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan([MENU.karyawanMattel, MENU.daftarKaryawan], "/dashboard/members/karyawan-mattel", async (db) => {
+    return simpan([MENU.karyawanMattel, MENU.daftarKaryawan], "/dashboard/members/karyawan-mattel", "ubah", async (db) => {
         const id = idForm(f)
         const { rows: [lama] } = await db.query<{ nik: string }>("SELECT nik FROM karyawan_mattel WHERE id=$1 FOR UPDATE", [id])
         if (!lama) throw new Salah("Karyawan tidak ditemukan")
@@ -237,7 +238,7 @@ export async function simpanKaryawanMattelAction(_: HasilSimpan, f: FormData): P
 }
 
 export async function hapusKaryawanMattelAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan([MENU.karyawanMattel, MENU.daftarKaryawan], "/dashboard/members/karyawan-mattel", async (db) => {
+    return simpan([MENU.karyawanMattel, MENU.daftarKaryawan], "/dashboard/members/karyawan-mattel", "hapus", async (db) => {
         const id = idForm(f)
         const { rows: [k] } = await db.query<{ nik: string; nama: string | null }>(
             "SELECT nik, nama FROM karyawan_mattel WHERE id=$1 FOR UPDATE", [id])
@@ -255,7 +256,7 @@ export async function hapusKaryawanMattelAction(_: HasilSimpan, f: FormData): Pr
 }
 
 export async function simpanCoaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan([MENU.coa], "/dashboard/accounting/coa", async (db) => {
+    return simpan([MENU.coa], "/dashboard/accounting/coa", "ubah", async (db) => {
         const id = idForm(f)
         const { rows: [lama] } = await db.query<{ kode_perkiraan: string }>(
             "SELECT kode_perkiraan FROM perkiraan WHERE id=$1 FOR UPDATE", [id])
@@ -270,7 +271,7 @@ export async function simpanCoaAction(_: HasilSimpan, f: FormData): Promise<Hasi
 }
 
 export async function hapusCoaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan([MENU.coa], "/dashboard/accounting/coa", async (db, operator) => {
+    return simpan([MENU.coa], "/dashboard/accounting/coa", "hapus", async (db, operator) => {
         const id = idForm(f)
         const { rows: [akun] } = await db.query<{ kode_perkiraan: string; pr_id: number; rp_saldo_awal: string }>(
             "SELECT kode_perkiraan, pr_id, rp_saldo_awal FROM perkiraan WHERE id=$1 FOR UPDATE", [id])

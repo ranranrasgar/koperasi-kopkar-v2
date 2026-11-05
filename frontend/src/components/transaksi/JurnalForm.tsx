@@ -1,5 +1,7 @@
 "use client"
 
+import { useBolehAksi } from "@/components/layout/SidebarContext"
+import { MENU } from "@/config/akses"
 import { useEffect, useState } from "react"
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
 import { AkunBox } from "@/components/bankbook/AkunBox"
@@ -136,6 +138,8 @@ function JurnalForm({ akun, hariIni, selesai, awal, penyesuaian = false }: { aku
 
 /** Tombol "Jurnal Baru" di daftar jurnal: form di modal. */
 export function TombolJurnalBaru({ akun, hariIni, penyesuaian = false }: { akun: Akun[]; hariIni: string; penyesuaian?: boolean }) {
+    const boleh = useBolehAksi()
+    if (!boleh([penyesuaian ? MENU.jurnalPenyesuaian : MENU.jurnalUmum], "tambah")) return null
     return (
         <TombolModal label={<><Plus className="h-4 w-4" /> {penyesuaian ? "Penyesuaian Baru" : "Jurnal Baru"}</>} judul={penyesuaian ? "Jurnal Penyesuaian Baru" : "Jurnal Umum Baru"} lebar="sm:max-w-4xl" className={tombolModalUtama}
             keterangan={penyesuaian ? "Jurnal penyesuaian akhir periode; nomor JP/yymmdd/n dan status Penyesuaian diberikan mesin posting. Debit dan kredit harus seimbang."

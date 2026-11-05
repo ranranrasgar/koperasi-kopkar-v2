@@ -3,8 +3,8 @@
 import { revalidatePath } from "next/cache"
 import { batalkanPencairan, cairkanShu, hitungShu, postingKeSukarela, postingShu, tutupBuku } from "@kopkar/backend/src/posting/shu.ts"
 import { modeUji, tx } from "@/lib/db"
-import { GalatSesi, operatorAktif, type Operator } from "@/lib/operator"
-import { MENU } from "@/config/akses"
+import { GalatSesi, operatorAktif, wajibAksi, type Operator } from "@/lib/operator"
+import { MENU, type AksiIzin } from "@/config/akses"
 import type { Hasil } from "@/app/actions/transaksi"
 
 const TANGGAL = /^\d{4}-\d{2}-\d{2}$/
@@ -15,9 +15,10 @@ function wajibAdmin(o: Operator) {
 }
 
 /** Jalankan satu proses SHU dalam transaksi; mode uji tidak menyimpan, pesan galat diteruskan ke pengguna. */
-async function proses(menu: readonly string[], admin: boolean, fn: (o: Operator) => Promise<{ pesan: string; rincian?: Record<string, string | number> }>): Promise<Hasil> {
+async function proses(menu: readonly string[], jenis: AksiIzin, admin: boolean, fn: (o: Operator) => Promise<{ pesan: string; rincian?: Record<string, string | number> }>): Promise<Hasil> {
     try {
         const o = await operatorAktif(menu)
+        wajibAksi(o, menu, jenis)
         if (admin) wajibAdmin(o)
         const r = await fn(o)
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}`, rincian: r.rincian }
@@ -41,7 +42,7 @@ const tanggalDari = (v: unknown) => {
 const angka = (v: string) => Number(v)
 
 export async function tutupBukuAction(tahun: number): Promise<Hasil> {
-    return proses([MENU.tutupBuku], true, async (o) => {
+    return proses([MENU.tutupBuku], "tambah", true, async (o) => {
         const r = await tx((db) => tutupBuku(db, { tahun: tahunDari(tahun), opr: o.nama }))
         return {
             pesan: `Tutup buku ${tahun} selesai (${r.nomorBukti}, ${r.baris} baris). Lanjutkan ke Hitung SHU.`,
@@ -52,14 +53,14 @@ export async function tutupBukuAction(tahun: number): Promise<Hasil> {
 }
 
 export async function hitungShuAction(tahun: number, sukarela: boolean): Promise<Hasil> {
-    return proses([MENU.hitungShu], false, async (o) => {
+    return proses([MENU.hitungShu], "tambah", false, async (o) => {
         const r = await tx((db) => hitungShu(db, { tahun: tahunDari(tahun), opr: o.nama, sukarela }))
         return { pesan: `SHU ${tahun} dihitung untuk ${r.anggota} anggota. Periksa hasilnya, lalu posting.`, rincian: { "SHU anggota (kolam)": angka(r.kolam), "Total bagian": angka(r.totalBagian) } }
     })
 }
 
 export async function postingShuAction(tahun: number): Promise<Hasil> {
-    return proses([MENU.hitungShu], true, async (o) => {
+    return proses([MENU.hitungShu], "tambah", true, async (o) => {
         const r = await tx((db) => postingShu(db, { tahun: tahunDari(tahun), opr: o.nama }))
         return { pesan: `SHU ${tahun} diposting untuk ${r.anggota} anggota; siap dicairkan.` }
     })
@@ -67,7 +68,7 @@ export async function postingShuAction(tahun: number): Promise<Hasil> {
 
 /** Cairkan SHU satu anggota tunai (form modal: akun kas/bank dan tanggal). */
 export async function cairkanShuAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return proses([MENU.shu], false, async (o) => {
+    return proses([MENU.shu], "tambah", false, async (o) => {
         const r = await tx((db) => cairkanShu(db, { tahun: tahunDari(f.get("tahun")), kodeAgt: String(f.get("kodeAgt") ?? ""), akunKas: String(f.get("akunKas") ?? ""),
             tanggal: tanggalDari(f.get("tanggal")), opr: o.nama }))
         return { pesan: `SHU dicairkan dengan nomor ${r.nomorBukti}`, rincian: { "No. Bukti": r.nomorBukti, "Jumlah": angka(r.jumlah) } }
@@ -75,7 +76,7 @@ export async function cairkanShuAction(_: Hasil, f: FormData): Promise<Hasil> {
 }
 
 export async function batalkanShuAction(tahun: number, kodeAgt: string): Promise<Hasil> {
-    return proses([MENU.shu], true, async () => {
+    return proses([MENU.shu], "hapus", true, async () => {
         await tx((db) => batalkanPencairan(db, { tahun: tahunDari(tahun), kodeAgt }))
         return { pesan: `Pencairan SHU ${kodeAgt} dibatalkan` }
     })
@@ -83,7 +84,7 @@ export async function batalkanShuAction(tahun: number, kodeAgt: string): Promise
 
 /** Pindahkan semua SHU yang belum diambil ke simpanan sukarela (form modal: tanggal). */
 export async function postingSukarelaAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return proses([MENU.shu], true, async (o) => {
+    return proses([MENU.shu], "tambah", true, async (o) => {
         const r = await tx((db) => postingKeSukarela(db, { tahun: tahunDari(f.get("tahun")), tanggal: tanggalDari(f.get("tanggal")), opr: o.nama }))
         return { pesan: `${r.anggota} anggota: SHU dipindahkan ke simpanan sukarela`, rincian: { "Anggota": r.anggota, "Jumlah": angka(r.jumlah) } }
     })

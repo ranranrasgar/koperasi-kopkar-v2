@@ -20,7 +20,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
         Promise.all([hitungPengumumanBaru(pool, o.id), hitungNotifAdminBaru(pool, o.id)]).then(([a, b]) => a + b),
     ])
     return (
-        <DashboardShell operator={{ nama: o.nama, namaLengkap: o.namaLengkap, grup: o.grup, izin: o.izin }} koperasi={{ nama: k.nama, logo: k.logo }} lencana={{ "/dashboard/pesan": pesanBaru, "/dashboard/pengumuman": pengumumanBaru }}>
+        <DashboardShell operator={{ nama: o.nama, namaLengkap: o.namaLengkap, grup: o.grup, izin: o.izin, aksiTolak: o.aksiTolak }} koperasi={{ nama: k.nama, logo: k.logo }} lencana={{ "/dashboard/pesan": pesanBaru, "/dashboard/pengumuman": pengumumanBaru }}>
             {/* Tema operator (Pengaturan Tampilan): variabel warna dan penggantian kelas biru; nilainya sudah divalidasi #rrggbb. */}
             {tema && <style dangerouslySetInnerHTML={{ __html: cssTema(tema) }} />}
             <Suspense fallback={null}><BilahProgres /></Suspense>

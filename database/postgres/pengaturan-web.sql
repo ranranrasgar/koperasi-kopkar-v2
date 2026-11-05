@@ -15,6 +15,12 @@ ALTER TABLE jenis_kredit ADD COLUMN IF NOT EXISTS maks_plafond numeric(18,2) NOT
 -- semua baris punya keterangan sendiri (form Jurnal Umum mengisinya dengan nama akun). Kosong untuk jurnal lama.
 ALTER TABLE jurnal_umum ADD COLUMN IF NOT EXISTS keterangan_bukti text;
 
+-- Rincian izin per menu: baris opr_hak_akses berakses 'T' berarti boleh melihat; kolom ini membatasi tambah, ubah, dan hapus.
+-- Bawaan true supaya grup yang sudah punya akses tidak berubah. Menu yang berlaku ada di AKSI_IZIN (frontend/src/config/akses.ts).
+ALTER TABLE opr_hak_akses ADD COLUMN IF NOT EXISTS boleh_tambah boolean NOT NULL DEFAULT true;
+ALTER TABLE opr_hak_akses ADD COLUMN IF NOT EXISTS boleh_ubah boolean NOT NULL DEFAULT true;
+ALTER TABLE opr_hak_akses ADD COLUMN IF NOT EXISTS boleh_hapus boolean NOT NULL DEFAULT true;
+
 -- Log koreksi transaksi yang sudah diposting. Baris asal tidak diubah: pembatalan membuat transaksi pembalik (no_bukti_pembalik).
 -- data_lama dan data_baru menyimpan isi saat koreksi. Aplikasi hanya menambah baris di sini, tidak pernah mengubah atau menghapus.
 CREATE TABLE IF NOT EXISTS transaksi_koreksi (

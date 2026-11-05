@@ -4,8 +4,8 @@ import { revalidatePath } from "next/cache"
 import { BAGIAN, generatePotongan, postingPotongan, setDipotong, ubahPotongan, type Bagian } from "@kopkar/backend/src/posting/potongan.ts"
 import { NAMA_BAGIAN, detailAnggotaPeriode, satuPeriode } from "@/lib/queries/potongan-gaji"
 import { modeUji, tx } from "@/lib/db"
-import { GalatSesi, operatorAktif } from "@/lib/operator"
-import { MENU } from "@/config/akses"
+import { GalatSesi, operatorAktif, wajibAksi } from "@/lib/operator"
+import { MENU, type AksiIzin } from "@/config/akses"
 import type { Hasil } from "@/app/actions/transaksi"
 
 const PERIODE = /^\d{4}-(0[1-9]|1[0-2])$/
@@ -23,9 +23,10 @@ function periode(f: FormData) {
 const uang = (f: FormData, k: string) => teks(f, k).replace(",", ".") || "0"
 
 /** Pola sama dengan posting() di actions/transaksi: satu transaksi, mode uji di-rollback, galat diteruskan ke operator. */
-async function aksi(fn: (opr: string) => Promise<Exclude<Hasil, null>>): Promise<Hasil> {
+async function aksi(jenis: AksiIzin, fn: (opr: string) => Promise<Exclude<Hasil, null>>): Promise<Hasil> {
     try {
         const o = await operatorAktif(MENU_POTONGAN)
+        wajibAksi(o, MENU_POTONGAN, jenis)
         const res = await fn(o.nama)
         if (res.ok && await modeUji()) return { ...res, pesan: `MODE UJI, tidak tersimpan: ${res.pesan}` }
         revalidatePath("/dashboard", "layout")
@@ -37,7 +38,7 @@ async function aksi(fn: (opr: string) => Promise<Exclude<Hasil, null>>): Promise
 }
 
 export async function generatePotonganAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return aksi(async (opr) => {
+    return aksi("tambah", async (opr) => {
         const r = await tx((db) => generatePotongan(db, periode(f), opr))
         return { ok: true, pesan: `Potongan ${r.periode} digenerate: ${r.anggota} anggota, ${r.pinjaman} pinjaman`,
             rincian: { "Anggota": r.anggota, "Pinjaman": r.pinjaman, "Total potongan": Number(r.total) } }
@@ -45,7 +46,7 @@ export async function generatePotonganAction(_: Hasil, f: FormData): Promise<Has
 }
 
 export async function ubahPotonganAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return aksi(async (opr) => {
+    return aksi("ubah", async (opr) => {
         const p = periode(f), kode = teks(f, "kodeAgt")
         const dipotong = f.get("dipotong") === "1"
         const pinjaman = teks(f, "pinjamanIds").split(",").filter(Boolean).map((id) => ({
@@ -59,7 +60,7 @@ export async function ubahPotonganAction(_: Hasil, f: FormData): Promise<Hasil> 
 
 /** Saklar Dipotong di grid (seperti centang tmp di desktop). */
 export async function setDipotongAction(p: string, kodeAgt: string, dipotong: boolean): Promise<Hasil> {
-    return aksi(async (opr) => {
+    return aksi("ubah", async (opr) => {
         if (!PERIODE.test(p)) throw new InputSalah("Periode tidak valid")
         await tx((db) => setDipotong(db, p, kodeAgt, dipotong, null, opr))
         return { ok: true, pesan: `${kodeAgt} ${dipotong ? "dipotong" : "tidak dipotong"}` }
@@ -75,7 +76,7 @@ export async function detailPotonganAction(p: string, kodeAgt: string) {
 }
 
 export async function postingPotonganAction(_: Hasil, f: FormData): Promise<Hasil> {
-    return aksi(async (opr) => {
+    return aksi("tambah", async (opr) => {
         const p = periode(f), tanggal = teks(f, "tanggal"), kas = teks(f, "kas")
         if (teks(f, "konfirmasi") !== p) throw new InputSalah(`Ketik ${p} untuk mengonfirmasi posting`)
         if (!/^\d{4}-\d{2}-\d{2}$/.test(tanggal)) throw new InputSalah("Tanggal posting tidak valid")

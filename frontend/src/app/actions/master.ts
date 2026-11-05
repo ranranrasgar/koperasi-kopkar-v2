@@ -4,9 +4,9 @@ import { revalidatePath } from "next/cache"
 import { modeUji, tx } from "@/lib/db"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { KUNCI_NILAI_AWAL } from "@kopkar/backend/src/anggota/akun.ts"
-import { GalatSesi, operatorAktif } from "@/lib/operator"
+import { GalatSesi, operatorAktif, wajibAksi } from "@/lib/operator"
 import { jenisGambar } from "@/lib/gambar"
-import { MENU } from "@/config/akses"
+import { MENU, type AksiIzin } from "@/config/akses"
 
 export type HasilSimpan = { ok: true; pesan: string } | { ok: false; error: string } | null
 
@@ -16,9 +16,9 @@ class Salah extends Error {}
  * Semua tulis master dalam satu transaksi lewat tx(), sehingga ikut di-rollback di mode uji.
  * `jenis` "layout": segarkan layout di bawah `path` juga (identitas koperasi tampil di sidebar semua halaman).
  */
-async function simpan(menu: string, path: string, fn: (db: Db) => Promise<string>, jenis?: "layout"): Promise<HasilSimpan> {
+async function simpan(menu: string, path: string, aksi: AksiIzin, fn: (db: Db) => Promise<string>, jenis?: "layout"): Promise<HasilSimpan> {
     try {
-        await operatorAktif([menu])
+        wajibAksi(await operatorAktif([menu]), [menu], aksi)
         const pesan = await tx(fn)
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
         revalidatePath(path, jenis)
@@ -54,7 +54,7 @@ async function akun(db: Db, f: FormData, k: string, label: string) {
 // ---------- perusahaan ----------
 
 export async function simpanPerusahaanAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan(MENU.company, "/", async (db) => {
+    return simpan(MENU.company, "/", "ubah", async (db) => {
         const v = [
             teks(f, "nama_perusahaan", "Nama koperasi", true, 100), teks(f, "alamat_perusahaan1", "Alamat"), teks(f, "alamat_perusahaan2", "Alamat 2 / telepon"),
             teks(f, "kota_perusahaan", "Kota"), teks(f, "email", "Email"), teks(f, "http", "Website"), teks(f, "npwp", "NPWP"),
@@ -75,7 +75,7 @@ export async function simpanPerusahaanAction(_: HasilSimpan, f: FormData): Promi
  * berawalan 62; kosong = tombol tidak tampil.
  */
 export async function simpanKontakWaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan(MENU.company, "/dashboard/settings", async (db) => {
+    return simpan(MENU.company, "/dashboard/settings", "ubah", async (db) => {
         const mentah = teks(f, "wa_kontak", "Nomor WhatsApp", false, 30)
         if (mentah && !/^[0-9+\s().-]+$/.test(mentah)) throw new Salah("Nomor WhatsApp hanya boleh angka")
         const nomor = mentah.replace(/\D/g, "").replace(/^0/, "62")
@@ -92,7 +92,7 @@ export async function simpanKontakWaAction(_: HasilSimpan, f: FormData): Promise
  * kelengkapan saat menyetujui. Kosong = kunci dihapus, sehingga dipakai tebakan dari anggota baru bergrade sama.
  */
 export async function simpanNilaiAwalAnggotaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan(MENU.company, "/dashboard/settings", async (db) => {
+    return simpan(MENU.company, "/dashboard/settings", "ubah", async (db) => {
         for (const [bidang, label] of [["pokok", "Simpanan pokok"], ["wajib", "Simpanan wajib"], ["sukarela", "Simpanan sukarela"]] as const) {
             const mentah = String(f.get(bidang) ?? "").trim()
             const kunci = KUNCI_NILAI_AWAL[bidang]
@@ -109,7 +109,7 @@ export async function simpanNilaiAwalAnggotaAction(_: HasilSimpan, f: FormData):
 
 /** Tambah atau ubah grade (tabel grade). Mengubah nama atau nominal berlaku untuk semua anggota bergrade itu (trigger database). */
 export async function simpanGradeAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan(MENU.gradeAnggota, "/dashboard/settings/grade", async (db) => {
+    return simpan(MENU.gradeAnggota, "/dashboard/settings/grade", f.get("id") ? "ubah" : "tambah", async (db) => {
         const id = Number(f.get("id") || 0)
         const nama = teks(f, "nama", "Nama grade", true, 15)
         if (/\s/.test(nama)) throw new Salah("Nama grade tidak boleh memakai spasi (contoh: M06)")
@@ -128,7 +128,7 @@ export async function simpanGradeAction(_: HasilSimpan, f: FormData): Promise<Ha
 
 /** Hapus grade yang belum dipakai anggota mana pun. */
 export async function hapusGradeAction(id: number): Promise<HasilSimpan> {
-    return simpan(MENU.gradeAnggota, "/dashboard/settings/grade", async (db) => {
+    return simpan(MENU.gradeAnggota, "/dashboard/settings/grade", "hapus", async (db) => {
         const { rows: [g] } = await db.query<{ nama: string; n: string }>(
             "SELECT g.nama, (SELECT count(*) FROM anggota a WHERE a.grade_id = g.id) n FROM grade g WHERE g.id = $1", [id])
         if (!g) throw new Salah("Grade tidak ada")
@@ -143,7 +143,7 @@ export async function hapusGradeAction(id: number): Promise<HasilSimpan> {
  * disamakan dengan tabel. Mengubah plafon pinjaman anggota yang nilainya berbeda, jadi hanya dijalankan atas permintaan admin.
  */
 export async function terapkanGradeAction(): Promise<HasilSimpan> {
-    return simpan(MENU.gradeAnggota, "/dashboard/settings/grade", async (db) => {
+    return simpan(MENU.gradeAnggota, "/dashboard/settings/grade", "ubah", async (db) => {
         const tautan = await db.query("UPDATE anggota a SET grade_id = g.id FROM grade g WHERE a.grade_id IS NULL AND a.grade = g.nama")
         const sama = await db.query("UPDATE anggota a SET rp_grade = g.nominal FROM grade g WHERE a.grade_id = g.id AND a.rp_grade <> g.nominal")
         return `${tautan.rowCount ?? 0} anggota ditautkan ke grade, ${sama.rowCount ?? 0} nominal grade anggota disamakan dengan tabel`
@@ -154,7 +154,7 @@ const MAKS_LOGO = 500 * 1024
 
 /** Unggah logo koperasi ke perusahaan.logo, atau hapus (aksi=hapus) supaya web memakai logo bawaan. */
 export async function simpanLogoAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan(MENU.company, "/", async (db) => {
+    return simpan(MENU.company, "/", "ubah", async (db) => {
         let isi: Buffer | null = null
         if (f.get("aksi") !== "hapus") {
             const file = f.get("logo")
@@ -172,7 +172,7 @@ export async function simpanLogoAction(_: HasilSimpan, f: FormData): Promise<Has
 // ---------- jenis simpanan ----------
 
 export async function simpanJenisSimpananAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan(MENU.jenisSimpanan, "/dashboard/settings/jenis-simpanan", async (db) => {
+    return simpan(MENU.jenisSimpanan, "/dashboard/settings/jenis-simpanan", "ubah", async (db) => {
         const id = Number(f.get("id"))
         const coa = await akun(db, f, "coa_id", "Akun simpanan")
         const { rows: r } = await db.query(`UPDATE jenis_simpanan SET nama_simpanan=$1, persen_laba=$2, up_persen=$3, endapan=$4, coa_id=$5, coa_simpanan=$6
@@ -199,7 +199,7 @@ async function akunKode(db: Db, f: FormData, k: string, label: string) {
  * (UM jika melebihi grade, kunci jika melebihi grade, staff, kunci jika belum lunas, hitung SHU, tidak untuk mobile), ditambah Maksimal Plafond.
  */
 export async function simpanJenisPinjamanAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
-    return simpan(MENU.jenisPinjaman, "/dashboard/settings/jenis-pinjaman", async (db) => {
+    return simpan(MENU.jenisPinjaman, "/dashboard/settings/jenis-pinjaman", f.get("id") ? "ubah" : "tambah", async (db) => {
         const id = Number(f.get("id") || 0)
         const grup = teks(f, "group_pinjaman", "Grup", true)
         if (!["KOPERASI", "BANK / PIHAK LAIN", "KPR"].includes(grup)) throw new Salah("Grup tidak dikenal")
@@ -244,7 +244,7 @@ export async function simpanJenisPinjamanAction(_: HasilSimpan, f: FormData): Pr
 
 /** Hapus jenis pinjaman yang belum pernah dipakai (pinjaman tunai, KPR, atau pengajuan); yang sudah dipakai cukup disembunyikan (Tidak untuk mobile). */
 export async function hapusJenisPinjamanAction(id: number): Promise<HasilSimpan> {
-    return simpan(MENU.jenisPinjaman, "/dashboard/settings/jenis-pinjaman", async (db) => {
+    return simpan(MENU.jenisPinjaman, "/dashboard/settings/jenis-pinjaman", "hapus", async (db) => {
         const { rows: [pakai] } = await db.query<{ n: string }>(
             `SELECT (SELECT COUNT(*) FROM pinjaman_tunai WHERE jenis_kredit_id = $1) + (SELECT COUNT(*) FROM kpr WHERE jenis_kredit_id = $1)
                   + (SELECT COUNT(*) FROM pengajuan_pinjaman WHERE jenis_kredit_id = $1) AS n`, [id])

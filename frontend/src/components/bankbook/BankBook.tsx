@@ -1,5 +1,7 @@
 "use client"
 
+import { useBolehAksi } from "@/components/layout/SidebarContext"
+import { MENU } from "@/config/akses"
 import { useEffect, useRef, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Pencil, Plus, Trash2 } from "lucide-react"
@@ -131,6 +133,8 @@ function FormBukti({ akunBank, semuaAkun, hariIni, awal, selesai }: Props & { aw
 }
 
 export function TombolBankBookBaru(props: Props) {
+    const boleh = useBolehAksi()
+    if (!boleh([MENU.bankBook], "tambah")) return null
     return (
         <TombolModal label={<><Plus className="h-4 w-4" /> Entri Baru</>} judul="Entri Bank Book" lebar="sm:max-w-3xl" className={tombolModalUtama}
             keterangan="Satu akun kas/bank melawan satu atau lebih akun. Nomor bukti BB/yymmdd/NNN diberikan otomatis.">
@@ -150,6 +154,8 @@ function MuatUbah({ nomorBukti, props, selesai }: { nomorBukti: string; props: P
 }
 
 export function TombolBankBookUbah({ nomorBukti, ...props }: Props & { nomorBukti: string }) {
+    const boleh = useBolehAksi()
+    if (!boleh([MENU.bankBook], "ubah")) return null
     return (
         <TombolModal label={<Pencil className="h-4 w-4" />} judul={`Ubah ${nomorBukti}`} lebar="sm:max-w-3xl" className="p-1.5 rounded hover:bg-muted text-blue-600">
             {(selesai) => <MuatUbah nomorBukti={nomorBukti} props={props} selesai={selesai} />}
@@ -158,6 +164,7 @@ export function TombolBankBookUbah({ nomorBukti, ...props }: Props & { nomorBukt
 }
 
 export function TombolBankBookHapus({ nomorBukti }: { nomorBukti: string }) {
+    const boleh = useBolehAksi()
     const router = useRouter()
     const [sibuk, mulai] = useTransition()
     const hapus = () => {
@@ -168,6 +175,7 @@ export function TombolBankBookHapus({ nomorBukti }: { nomorBukti: string }) {
             router.refresh()
         })
     }
+    if (!boleh([MENU.bankBook], "hapus")) return null
     return (
         <button type="button" title="Hapus bukti" onClick={hapus} disabled={sibuk} className="p-1.5 rounded hover:bg-muted text-red-600 disabled:opacity-50">
             {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}

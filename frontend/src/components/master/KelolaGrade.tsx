@@ -1,5 +1,7 @@
 "use client"
 
+import { useBolehAksi } from "@/components/layout/SidebarContext"
+import { MENU } from "@/config/akses"
 import { useCallback, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Pencil, Plus, RefreshCw, Trash2 } from "lucide-react"
@@ -14,6 +16,7 @@ const rp = (n: number) => `Rp ${n.toLocaleString("id-ID", { maximumFractionDigit
 
 /** Kelola tabel grade: nama dan nominal plafon, jumlah anggota, serta penerapan ke anggota yang nominalnya masih berbeda. */
 export function KelolaGrade({ baris, belumTertaut }: { baris: BarisGrade[]; belumTertaut: number }) {
+    const boleh = useBolehAksi()
     const router = useRouter()
     const [edit, setEdit] = useState<BarisGrade | "baru" | null>(null)
     const [sibuk, mulai] = useTransition()
@@ -45,10 +48,10 @@ export function KelolaGrade({ baris, belumTertaut }: { baris: BarisGrade[]; belu
                                 </button>
                             </div>
                         ) : <span className="text-xs text-muted-foreground">Semua anggota sudah sesuai dengan tabel grade.</span>}
-                        <button type="button" onClick={() => setEdit("baru")}
+                        {boleh([MENU.gradeAnggota], "tambah") && <button type="button" onClick={() => setEdit("baru")}
                             className="inline-flex h-9 items-center gap-1.5 rounded-md bg-blue-600 px-3 text-sm font-semibold text-white hover:bg-blue-700">
                             <Plus className="h-4 w-4" /> Tambah grade
-                        </button>
+                        </button>}
                     </div>
                     <div className="overflow-x-auto rounded-md border">
                         <table className="w-full text-sm">
@@ -71,10 +74,10 @@ export function KelolaGrade({ baris, belumTertaut }: { baris: BarisGrade[]; belu
                                         <td className="px-3 py-1.5 text-right tabular-nums">{Number(b.jumlah).toLocaleString("id-ID")}</td>
                                         <td className="px-3 py-1.5 text-right tabular-nums">{Number(b.beda) > 0 ? <span className="font-semibold text-amber-700">{Number(b.beda).toLocaleString("id-ID")}</span> : "-"}</td>
                                         <td className="px-3 py-1.5 text-right">
-                                            <button type="button" title="Ubah" onClick={() => setEdit(b)} className="rounded p-1.5 hover:bg-muted"><Pencil className="h-4 w-4" /></button>
-                                            <button type="button" title={Number(b.jumlah) > 0 ? "Masih dipakai anggota" : "Hapus"} disabled={Number(b.jumlah) > 0 || sibuk}
+                                            {boleh([MENU.gradeAnggota], "ubah") && <button type="button" title="Ubah" onClick={() => setEdit(b)} className="rounded p-1.5 hover:bg-muted"><Pencil className="h-4 w-4" /></button>}
+                                            {boleh([MENU.gradeAnggota], "hapus") && <button type="button" title={Number(b.jumlah) > 0 ? "Masih dipakai anggota" : "Hapus"} disabled={Number(b.jumlah) > 0 || sibuk}
                                                 onClick={() => jalankan(`Hapus grade ${b.nama}?`, () => hapusGradeAction(b.id))}
-                                                className="rounded p-1.5 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>
+                                                className="rounded p-1.5 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>}
                                         </td>
                                     </tr>
                                 ))}
