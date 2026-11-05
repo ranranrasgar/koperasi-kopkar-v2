@@ -108,6 +108,7 @@ export const savingsLedgerConfig: ModuleConfig = {
         { key: "rp_setoran", label: "Setoran", type: "currency" },
         { key: "rp_pengambilan", label: "Pengambilan", type: "currency" },
         { key: "rp_saldo", label: "Saldo", type: "currency" },
+        { key: "status_koreksi", label: "Status", type: "badge", badgeMap: { batal: { label: "Dibatalkan", color: "red" }, pembalik: { label: "Pembalik", color: "orange" } } },
         { key: "deskripsi", label: "Keterangan", type: "string", hidden: true },
         { key: "opr", label: "Operator", type: "string", hidden: true },
     ],

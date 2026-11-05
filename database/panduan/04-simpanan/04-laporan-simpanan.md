@@ -17,6 +17,16 @@ Karena saldonya berjalan, tabel ini hanya bisa diurutkan menurut **Tanggal** (te
 
 Di ujung setiap baris Buku Simpanan dan Kartu Simpanan ada dua ikon: **Lihat bukti** menampilkan rincian transaksi dan jurnalnya, **Cetak ulang kwitansi** mencetak kwitansi bertanda *CETAK ULANG*. Keduanya hanya membaca.
 
+### Membatalkan transaksi simpanan
+
+Transaksi yang sudah diposting tidak bisa diubah atau dihapus. Bila salah, operator berizin **Batalkan transaksi** (Kelola Hak Akses, baris Audit Data; awalnya hanya superadmin) membuka **Lihat bukti**, mengisi alasan minimal 10 karakter, lalu menekan **Batalkan Transaksi**.
+
+- Transaksi asal tetap ada dan ditandai **Dibatalkan**. Sistem membuat bukti pembalik `BTL-...` bertanggal hari ini: setoran dibalik menjadi pengambilan dan sebaliknya, beserta jurnal kebalikannya. Bila nilainya salah, input ulang transaksi yang benar.
+- Pembatalan tidak bisa diurungkan, dan bukti yang sudah dibatalkan atau bukti pembalik tidak bisa dibatalkan lagi.
+- Ditolak bila saldo tersisa tidak cukup untuk membatalkan setoran, untuk bukti SHU, dan untuk bukti dari Potongan Gaji yang diposting di web.
+- Di aplikasi anggota, pembalik tampil sebagai mutasi biasa.
+- Semua pembatalan tercatat di **Sistem → Audit Data**, bagian Riwayat koreksi.
+
 Klik **Kode Agt** atau **Nama** di tabel untuk membuka Kartu Simpanan anggota itu (bila Anda punya izin Kartu Simpanan).
 
 Saat mencari anggota, muncul ringkasan di atas tabel:

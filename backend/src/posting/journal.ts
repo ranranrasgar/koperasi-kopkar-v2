@@ -36,6 +36,19 @@ export interface JournalInput {
     status?: string;
 }
 
+/** Tolak tanggal di tahun yang sudah ditutup: saldonya sudah dipindah oleh jurnal tutup buku (TBT), jadi perubahan di sana membuat neraca berselisih. */
+async function cekPeriodeTerbuka(db: Pick<Db, 'query'>, tanggal: string) {
+    const o = (await db.query<{ t: string | null }>(
+        `SELECT MAX(tanggal_jurnalumum)::text t FROM jurnal_umum WHERE nomor_bukti LIKE 'TBT/%' AND tanggal_jurnalumum = date_trunc('year', tanggal_jurnalumum)::date`)).rows[0].t;
+    if (o && tanggal < o) throw new Error(`Periode sampai ${o.slice(0, 4)}-01-01 sudah ditutup; tanggal ${tanggal} tidak bisa diubah`);
+}
+
+/** Pemeriksaan yang sama untuk bukti yang akan dihapus. */
+export async function cekBuktiTerbuka(db: Pick<Db, 'query'>, nomorBukti: string) {
+    const t = (await db.query<{ t: string | null }>('SELECT MIN(tanggal_jurnalumum)::text t FROM jurnal_umum WHERE nomor_bukti = $1', [nomorBukti])).rows[0].t;
+    if (t) await cekPeriodeTerbuka(db, t);
+}
+
 const yymmdd = (d: string) => d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10);
 
 /**
@@ -49,6 +62,12 @@ export async function postJournal(db: Db, j: JournalInput): Promise<number> {
     const k = lines.reduce((s, l) => s + toUnits(l.kredit ?? 0), 0n);
     if (lines.length === 0) throw new Error(`Jurnal ${j.nomorBukti} kosong`);
     if (d !== k && !j.izinTakSeimbang) throw new Error(`Jurnal ${j.nomorBukti} tidak seimbang: debit ${fromUnits(d)} kredit ${fromUnits(k)}`);
+
+    // Jurnal tutup buku memang bertanggal di akhir tahun yang ditutup. Jurnal yang digantikan (bukti sama) ikut diperiksa.
+    if (!j.nomorBukti.startsWith('TBT/')) {
+        await cekPeriodeTerbuka(db, lines.map((l) => l.tanggal ?? j.tanggal).sort()[0]);
+        if (!j.tambah) await cekBuktiTerbuka(db, j.nomorBukti);
+    }
 
     const kodes = [...new Set(lines.map((l) => l.kodePerkiraan))];
     const acc = await db.query<{ id: string; kode_perkiraan: string }>(

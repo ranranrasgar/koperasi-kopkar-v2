@@ -5,6 +5,10 @@ import { isTanggal, paged, params, sp, type SearchParams } from "@/lib/list"
 export const jenisSimpanan = () =>
     query<{ kode_simpanan: string; nama_simpanan: string }>("SELECT kode_simpanan, nama_simpanan FROM jenis_simpanan ORDER BY kode_simpanan")
 
+/** 'batal' bila bukti ini dibatalkan, 'pembalik' bila bukti ini pembalik dari bukti lain, selain itu NULL. */
+export const statusKoreksi = (bukti: string) => `(SELECT CASE WHEN k.no_bukti = ${bukti} THEN 'batal' ELSE 'pembalik' END FROM transaksi_koreksi k
+    WHERE k.jenis = 'simpanan' AND (k.no_bukti = ${bukti} OR k.no_bukti_pembalik = ${bukti}) LIMIT 1)`
+
 export async function bukuSimpanan(s: SearchParams) {
     const { values, p } = params()
     const where: string[] = []
@@ -31,7 +35,8 @@ export async function bukuSimpanan(s: SearchParams) {
     // Urutan transaksi: (tanggal, urut, id), karena urut tidak unik. Dihitung hanya untuk baris halaman (indeks anggota/jenis/tanggal).
     const saldo = `(SELECT SUM(x.rp_setoran - x.rp_pengambilan) FROM simpanan x
         WHERE x.anggota_id = t.anggota_id AND x.jenis_simpanan_id = t.jenis_simpanan_id
-          AND (x.tgl_transaksi, x.urut, x.id) <= (t.tgl_transaksi, t.urut, t.id)) AS rp_saldo`
+          AND (x.tgl_transaksi, x.urut, x.id) <= (t.tgl_transaksi, t.urut, t.id)) AS rp_saldo,
+        ${statusKoreksi("t.no_bukti")} AS status_koreksi`
     // Hanya urut kronologis (terbaru atau terlama) supaya saldo berjalan tetap terbaca. Satu kunci gabungan, sehingga
     // arah urut juga berlaku untuk transaksi pada tanggal yang sama.
     const sortable = { tgl_transaksi: "tgl_transaksi {d}, urut {d}, id {d}" }
@@ -42,19 +47,23 @@ export interface BuktiSimpanan {
     no_bukti: string; tgl_transaksi: string; jenis_simpanan: string; nama_simpanan: string | null; kode_agt: string; nik: string | null; nama: string
     rp_setoran: number; rp_pengambilan: number; deskripsi: string | null; opr: string | null
 }
+export interface KoreksiBukti { waktu: string; opr: string; alasan: string; no_bukti: string; no_bukti_pembalik: string | null }
 export interface BarisJurnalBukti { kode_perkiraan: string; nama_perkiraan: string | null; debit: number; kredit: number }
 
 /** Satu bukti simpanan beserta jurnalnya, untuk ditinjau. */
 export async function detailBuktiSimpanan(no: string) {
-    const [[bukti], jurnal] = await Promise.all([
+    const [[bukti], jurnal, [koreksi]] = await Promise.all([
         query<BuktiSimpanan>(
             `SELECT s.no_bukti, s.tgl_transaksi::text AS tgl_transaksi, s.jenis_simpanan, j.nama_simpanan, s.kode_agt, a.nik, a.nama, s.rp_setoran, s.rp_pengambilan, s.deskripsi, s.opr
                FROM simpanan s JOIN anggota a ON a.id = s.anggota_id LEFT JOIN jenis_simpanan j ON j.id = s.jenis_simpanan_id WHERE s.no_bukti = $1`, [no]),
         query<BarisJurnalBukti>(
             `SELECT j.kode_perkiraan, p.nama_perkiraan, j.debit_jurnalumum AS debit, j.kredit_jurnalumum AS kredit
                FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan WHERE j.nomor_bukti = $1 ORDER BY j.urutan`, [no]),
+        query<KoreksiBukti>(
+            `SELECT waktu::text AS waktu, opr, alasan, no_bukti, no_bukti_pembalik FROM transaksi_koreksi
+              WHERE jenis = 'simpanan' AND (no_bukti = $1 OR no_bukti_pembalik = $1) LIMIT 1`, [no]),
     ])
-    return bukti ? { bukti, jurnal } : null
+    return bukti ? { bukti, jurnal, koreksi: koreksi ?? null } : null
 }
 
 export interface JenisSaldo { kode_simpanan: string; nama_simpanan: string; setoran: number; pengambilan: number; saldo: number; transaksi: number }

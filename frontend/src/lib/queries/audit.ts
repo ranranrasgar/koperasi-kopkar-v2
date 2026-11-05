@@ -31,6 +31,12 @@ export async function saldoBukuVsBesar(hari: string) {
     })
 }
 
+export interface BarisKoreksi { waktu: string; jenis: string; no_bukti: string; no_bukti_pembalik: string | null; aksi: string; alasan: string; opr: string }
+
+export const riwayatKoreksi = (batas: number) => query<BarisKoreksi>(
+    `SELECT TO_CHAR(waktu AT TIME ZONE 'Asia/Jakarta', 'YYYY-MM-DD HH24:MI') AS waktu, jenis, no_bukti, no_bukti_pembalik, aksi, alasan, opr
+       FROM transaksi_koreksi ORDER BY waktu DESC LIMIT ${batas}`)
+
 export async function ringkasJurnalBermasalah(sampai: string) {
     const { tidakSeimbang, tanpaAkun, sejak } = await jurnalBermasalah(sampai)
     return { tidakSeimbang: tidakSeimbang.length, selisih: tidakSeimbang.reduce((t, b) => t + b.selisih, 0), tanpaAkun: tanpaAkun.length, sejak }

@@ -1,5 +1,5 @@
 import type { Db } from '../db.ts';
-import { postJournal, type JournalLine } from './journal.ts';
+import { cekBuktiTerbuka, postJournal, type JournalLine } from './journal.ts';
 
 /** Nilai kolom status jurnal_umum untuk jurnal penyesuaian (dipakai neraca lajur untuk memisahkan kolom penyesuaian). */
 export const STATUS_PENYESUAIAN = 'Penyesuaian';
@@ -105,5 +105,6 @@ export async function hapusJurnalUmum(db: Db, nomorBukti: string) {
     const b = await bacaJurnalUmum(db, nomorBukti);
     if (!b) throw new Error(`Bukti ${nomorBukti} tidak ditemukan`);
     if (b.terkunci) throw new Error(`Bukti ${nomorBukti}: ${b.terkunci}`);
+    await cekBuktiTerbuka(db, nomorBukti);
     await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [nomorBukti]);
 }

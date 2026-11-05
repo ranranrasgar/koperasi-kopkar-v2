@@ -5,7 +5,7 @@ import { AKSES_HALAMAN, MENU, punyaIzin } from "@/config/akses"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
 import { isTanggal, sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
-import { barisAudit, ringkasanAudit, ringkasJurnalBermasalah, saldoBukuVsBesar, type BarisAudit } from "@/lib/queries/audit"
+import { barisAudit, ringkasanAudit, ringkasJurnalBermasalah, riwayatKoreksi, saldoBukuVsBesar, type BarisAudit } from "@/lib/queries/audit"
 import { CEK_AUDIT, type ModulAudit } from "@/lib/queries/audit-sql"
 
 export const dynamic = "force-dynamic"
@@ -23,8 +23,8 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
     const sampai = isTanggal(sp(s, "sampai")) ? sp(s, "sampai") : hari
     const dari = isTanggal(sp(s, "dari")) ? sp(s, "dari") : `${sampai.slice(0, 4)}-01-01`
     const cek = CEK_AUDIT.find((c) => c.id === sp(s, "cek"))
-    const [ringkas, saldo, jurnal, baris] = await Promise.all([
-        ringkasanAudit(dari, sampai), saldoBukuVsBesar(hari), ringkasJurnalBermasalah(sampai),
+    const [ringkas, saldo, jurnal, koreksi, baris] = await Promise.all([
+        ringkasanAudit(dari, sampai), saldoBukuVsBesar(hari), ringkasJurnalBermasalah(sampai), riwayatKoreksi(100),
         cek ? barisAudit(cek.id, dari, sampai, BATAS_EKSPOR) : Promise.resolve([] as BarisAudit[]),
     ])
     const alamat = (ubah: Record<string, string>) => `?${new URLSearchParams({ dari, sampai, ...ubah }).toString()}`
@@ -146,6 +146,32 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
                                     </tbody>
                                 </table>
                             </div>
+                        </section>
+
+                        <section>
+                            <h2 className="mb-2 font-semibold">Riwayat koreksi</h2>
+                            {koreksi.length === 0 ? <p className="text-sm text-muted-foreground">Belum ada koreksi.</p> : (
+                                <div className="overflow-x-auto rounded-md border">
+                                    <table className="w-full text-sm">
+                                        <thead className="bg-muted text-xs text-muted-foreground">
+                                            <tr><th className="px-3 py-2 text-left">Waktu</th><th className="px-3 py-2 text-left">Bukti</th><th className="px-3 py-2 text-left">Pembalik</th>
+                                                <th className="px-3 py-2 text-left">Alasan</th><th className="px-3 py-2 text-left">Operator</th></tr>
+                                        </thead>
+                                        <tbody>
+                                            {koreksi.map((k) => (
+                                                <tr key={`${k.jenis}-${k.no_bukti}`} className="border-t">
+                                                    <td className="px-3 py-1.5 whitespace-nowrap">{k.waktu}</td>
+                                                    <td className="px-3 py-1.5 font-mono text-xs">{k.no_bukti}</td>
+                                                    <td className="px-3 py-1.5 font-mono text-xs">{k.no_bukti_pembalik ?? "-"}</td>
+                                                    <td className="px-3 py-1.5">{k.alasan}</td>
+                                                    <td className="px-3 py-1.5">{k.opr}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            )}
+                            {koreksi.length === 100 && <p className="mt-1 text-xs text-muted-foreground">Menampilkan 100 koreksi terakhir.</p>}
                         </section>
                     </>
                 )}

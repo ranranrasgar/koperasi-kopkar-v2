@@ -27,6 +27,7 @@ const PECAHAN_IZIN = {
     'Neraca Lajur (web)': ['Neraca Saldo'],
     'Grade Anggota (web)': ['Jenis Pinjaman'],
     'Audit Data (web)': [MENU_MODE], // menu baru, bukan pecahan: awalnya sama dengan penerima Mode Aplikasi (grup admin)
+    'Batal Transaksi (web)': [], // mengubah saldo: awalnya hanya superadmin, grup lain diberi lewat Kelola Hak Akses
 };
 
 function envLokal() {

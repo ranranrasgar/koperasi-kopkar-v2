@@ -1,5 +1,5 @@
 import type { Db } from '../db.ts';
-import { postJournal, type JournalLine } from './journal.ts';
+import { cekBuktiTerbuka, postJournal, type JournalLine } from './journal.ts';
 import { fromUnits, toUnits } from './money.ts';
 
 /**
@@ -92,6 +92,7 @@ export async function simpanBankBook(db: Db, i: BankBookInput & { nomorBukti?: s
 
 export async function hapusBankBook(db: Db, nomorBukti: string) {
     await cekBisaDiubah(db, nomorBukti);
+    await cekBuktiTerbuka(db, nomorBukti);
     await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [nomorBukti]);
 }
 

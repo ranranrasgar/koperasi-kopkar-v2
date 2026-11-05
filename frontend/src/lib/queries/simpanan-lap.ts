@@ -1,9 +1,10 @@
 import "server-only"
 import { query } from "@/lib/db"
+import { statusKoreksi } from "@/lib/queries/simpanan"
 
 export interface MutasiKartu {
     jenis_simpanan: string; nama_simpanan: string | null; tgl_transaksi: string; no_bukti: string; deskripsi: string | null
-    rp_setoran: number; rp_pengambilan: number; saldo: number; opr: string | null
+    rp_setoran: number; rp_pengambilan: number; saldo: number; opr: string | null; status_koreksi: string | null
 }
 
 /** Kartu simpanan satu anggota: mutasi per jenis dengan saldo berjalan (saldo awal = mutasi sebelum `dari`). */
@@ -17,7 +18,7 @@ export async function kartuSimpanan(kodeAgt: string, dari: string, sampai: strin
                FROM jenis_simpanan j LEFT JOIN simpanan s ON s.jenis_simpanan_id = j.id AND s.kode_agt = $1 AND s.tgl_transaksi < $2
               GROUP BY j.kode_simpanan`, [kodeAgt, dari]),
         query<MutasiKartu>(
-            `SELECT s.jenis_simpanan, j.nama_simpanan, s.tgl_transaksi, s.no_bukti, s.deskripsi, s.rp_setoran, s.rp_pengambilan, s.opr,
+            `SELECT s.jenis_simpanan, j.nama_simpanan, s.tgl_transaksi, s.no_bukti, s.deskripsi, s.rp_setoran, s.rp_pengambilan, s.opr, ${statusKoreksi("s.no_bukti")} AS status_koreksi,
                     SUM(s.rp_setoran - s.rp_pengambilan) OVER (PARTITION BY s.jenis_simpanan ORDER BY s.tgl_transaksi, s.urut, s.id) AS saldo
                FROM simpanan s LEFT JOIN jenis_simpanan j ON j.id = s.jenis_simpanan_id
               WHERE s.kode_agt = $1 AND s.tgl_transaksi BETWEEN $2 AND $3

@@ -111,7 +111,7 @@ export default async function KartuSimpananPage(props: PageProps<"/dashboard/sav
                                             <tr key={m.no_bukti} className="border-b last:border-0">
                                                 <td className="px-3 py-1.5 whitespace-nowrap">{formatTanggal(m.tgl_transaksi)}</td>
                                                 <td className="px-3 py-1.5 font-mono text-xs">{m.no_bukti}</td>
-                                                <td className="px-3 py-1.5">{m.deskripsi}</td>
+                                                <td className="px-3 py-1.5">{m.deskripsi}{m.status_koreksi === "batal" && <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-bold text-red-700">DIBATALKAN</span>}</td>
                                                 <td className="px-3 py-1.5 text-right tabular-nums">{m.rp_setoran ? formatAngka(m.rp_setoran) : ""}</td>
                                                 <td className="px-3 py-1.5 text-right tabular-nums">{m.rp_pengambilan ? formatAngka(m.rp_pengambilan) : ""}</td>
                                                 <td className="px-3 py-1.5 text-right tabular-nums font-semibold">{formatAngka(m.saldo)}</td>

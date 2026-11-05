@@ -4,6 +4,7 @@ import type { TombolCetakBukti } from "@/lib/kwitansi-tipe"
 import { revalidatePath } from "next/cache"
 import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpanan.ts"
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
+import { batalSimpanan } from "@kopkar/backend/src/posting/koreksi.ts"
 import { hapusTitipan, postingTitipan, tambahTitipan } from "@kopkar/backend/src/posting/titipan.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
 import { kirimInfoPencairan } from "@kopkar/backend/src/anggota/info-pinjaman.ts"
@@ -11,7 +12,7 @@ import { bacaJurnalUmum, hapusJurnalUmum, postJurnalUmum, tandaiPenyesuaian, uba
 import { bacaBankBook, hapusBankBook, simpanBankBook, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
-import { formatRupiah } from "@/lib/format"
+import { formatRupiah, hariIni } from "@/lib/format"
 import { modeUji, pool, query, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
 import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_DETAIL_PINJAMAN_GRUP, MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
@@ -400,6 +401,16 @@ export async function riwayatAnggotaAction(kodeAgt: string): Promise<RiwayatAngg
     const o = await wajibLogin() // sesi habis: alihkan ke login
     if (!punyaIzin(o.izin, [MENU.cairKoperasi, MENU.cairBank, MENU.cairKpr, MENU.angsurKoperasi, MENU.angsurBank, MENU.angsurKpr])) return null
     return riwayatAnggota(kodeAgt)
+}
+
+// ---------- koreksi ----------
+
+/** Batalkan transaksi simpanan dengan transaksi pembalik bertanggal hari ini. Aturannya di backend/src/posting/koreksi.ts. */
+export async function batalSimpananAction(noBukti: string, alasan: string): Promise<Hasil> {
+    return posting([MENU.batalTransaksi], async (o) => {
+        const r = await tx((db) => batalSimpanan(db, { noBukti, tanggal: hariIni(), alasan, opr: o.nama, operatorId: o.id }))
+        return { ok: true, pesan: `Bukti ${noBukti} dibatalkan dengan pembalik ${r.noBukti}` }
+    })
 }
 
 // ---------- titipan angsuran pinjaman tunai ----------

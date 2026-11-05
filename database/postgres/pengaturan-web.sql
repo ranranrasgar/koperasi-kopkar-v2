@@ -11,6 +11,26 @@ CREATE TABLE IF NOT EXISTS pengaturan_web (
 -- grade yang diutamakan; maksimal ini berlaku untuk jenis tanpa kunci grade, atau anggota yang nominal gradenya belum diisi.
 ALTER TABLE jenis_kredit ADD COLUMN IF NOT EXISTS maks_plafond numeric(18,2) NOT NULL DEFAULT 0;
 
+-- Log koreksi transaksi yang sudah diposting. Baris asal tidak diubah: pembatalan membuat transaksi pembalik (no_bukti_pembalik).
+-- data_lama dan data_baru menyimpan isi saat koreksi. Aplikasi hanya menambah baris di sini, tidak pernah mengubah atau menghapus.
+CREATE TABLE IF NOT EXISTS transaksi_koreksi (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    waktu timestamptz NOT NULL DEFAULT now(),
+    jenis varchar(20) NOT NULL,
+    sumber_id bigint,
+    no_bukti varchar(100) NOT NULL,
+    aksi varchar(20) NOT NULL,
+    alasan varchar(255) NOT NULL,
+    no_bukti_pembalik varchar(100),
+    opr varchar(100) NOT NULL,
+    operator_id bigint,
+    data_lama jsonb NOT NULL,
+    data_baru jsonb
+);
+CREATE UNIQUE INDEX IF NOT EXISTS uq_transaksi_koreksi_batal ON transaksi_koreksi (jenis, no_bukti) WHERE aksi = 'batal';
+CREATE INDEX IF NOT EXISTS ix_transaksi_koreksi_pembalik ON transaksi_koreksi (no_bukti_pembalik);
+CREATE INDEX IF NOT EXISTS ix_transaksi_koreksi_waktu ON transaksi_koreksi (waktu DESC);
+
 -- Tema tampilan admin per operator (halaman Pengaturan Tampilan): enam warna #rrggbb dalam JSON. Tanpa baris = tampilan awal.
 CREATE TABLE IF NOT EXISTS opr_tampilan (
     operator_id bigint PRIMARY KEY,

@@ -30,4 +30,6 @@ Bagian **Buku Besar** menampilkan jumlah bukti tidak seimbang dan baris ke akun 
 
 Bagian **Saldo buku dibandingkan Buku Besar** membandingkan saldo simpanan, pinjaman, dan KPR dengan saldo akunnya, posisi hari ini.
 
-> **Penting:** Temuan adalah bahan pemeriksaan, belum tentu kesalahan. Data akhir 2017 kemungkinan saldo awal saat pindah data, dan selisih bisa berasal dari jurnal manual. Telusuri bersama akuntan sebelum mengoreksi. Koreksi dilakukan lewat transaksi atau jurnal, bukan dari halaman ini.
+Bagian **Riwayat koreksi** menampilkan 100 pembatalan terakhir: waktu, bukti, pembalik, alasan, dan operatornya.
+
+> **Penting:** Temuan adalah bahan pemeriksaan, belum tentu kesalahan. Data akhir 2017 kemungkinan saldo awal saat pindah data, dan selisih bisa berasal dari jurnal manual. Telusuri bersama akuntan sebelum mengoreksi. Koreksi dilakukan lewat pembatalan transaksi atau jurnal, bukan dari halaman ini.

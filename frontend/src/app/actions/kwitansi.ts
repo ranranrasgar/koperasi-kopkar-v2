@@ -12,13 +12,14 @@ const MENU_PINJAMAN = [...AKSES_HALAMAN["/dashboard/loans/[no]"], MENU.angsurKpr
 
 export type HasilBukti = { kop: KopCetak | null; kwitansi: DataKwitansi } | { kop: KopCetak | null; buku: DataBuku } | { error: string }
 
-export type HasilDetailBukti = NonNullable<Awaited<ReturnType<typeof detailBuktiSimpanan>>> | { error: string }
+export type HasilDetailBukti = (NonNullable<Awaited<ReturnType<typeof detailBuktiSimpanan>>> & { bolehBatal: boolean }) | { error: string }
 
 /** Rincian satu bukti simpanan dan jurnalnya untuk ditinjau; hanya membaca. */
 export async function detailBuktiSimpananAction(no: string): Promise<HasilDetailBukti> {
     try {
-        await operatorAktif(MENU_SIMPANAN)
-        return (await detailBuktiSimpanan(no)) ?? { error: `Bukti ${no} tidak ditemukan.` }
+        const o = await operatorAktif(MENU_SIMPANAN)
+        const d = await detailBuktiSimpanan(no)
+        return d ? { ...d, bolehBatal: o.izin.includes(MENU.batalTransaksi) } : { error: `Bukti ${no} tidak ditemukan.` }
     } catch (e) {
         return { error: e instanceof Error ? e.message : "Gagal membaca bukti" }
     }
