@@ -31,7 +31,21 @@ if [ "$(awk '/SwapTotal/ {print int($2/1024)}' /proc/meminfo)" -lt 1500 ] && [ "
 fi
 
 # Bila langkah mana pun gagal setelah aplikasi dihentikan, nyalakan lagi versi yang lama supaya situs tidak mati.
-nyalakan_lama() { echo "==> GAGAL: menyalakan kembali aplikasi (versi lama)" >&2; docker compose up -d; }
+# Bila build sudah selesai, image yang dinyalakan sudah versi baru, jadi langkah 4-5 tetap harus diselesaikan.
+nyalakan_lama() { echo "==> GAGAL: menyalakan kembali aplikasi. Bila build sudah selesai, jalankan ulang skrip ini setelah penyebabnya dibereskan." >&2; docker compose up -d; }
+
+# Disk penuh membuat PostgreSQL gagal menyala setelah build (6 November). Periksa sebelum aplikasi dihentikan; volume database tidak disentuh.
+RUANG_MIN_GB=3
+ruang_gb() { df --output=avail -BG "$(docker info --format '{{.DockerRootDir}}')" | tail -1 | tr -dc 0-9; }
+bersihkan_docker() { docker builder prune -af >/dev/null; docker image prune -f >/dev/null; }
+if [ "$(ruang_gb)" -lt "$RUANG_MIN_GB" ]; then
+    echo "==> Ruang disk tinggal $(ruang_gb) GB, membersihkan cache build Docker"
+    bersihkan_docker
+fi
+if [ "$(ruang_gb)" -lt "$RUANG_MIN_GB" ]; then
+    echo "GAGAL: ruang disk tinggal $(ruang_gb) GB, perlu minimal $RUANG_MIN_GB GB. Aplikasi tidak dihentikan. Periksa: df -h, docker system df, du -sh /var/backups/kopkar" >&2
+    exit 1
+fi
 
 echo "==> 2/6 Hentikan aplikasi dan database (bebaskan RAM untuk build; db dinyalakan lagi di langkah 4 untuk cadangan)"
 # VPS OpenVZ 2 GB tanpa swap: dengan PostgreSQL tetap hidup, build Next.js dimatikan kernel ("Killed", 3 November).
@@ -40,6 +54,8 @@ trap nyalakan_lama ERR
 
 echo "==> 3/6 Bangun ulang image (beberapa menit)"
 KOPKAR_COMMIT="$(git rev-parse --short HEAD)" nice -n 19 docker compose build admin
+# Cache build dan image lama dibuang sebelum database menyala, supaya disk tidak penuh. Build berikutnya mengulang npm ci.
+bersihkan_docker
 
 echo "==> 4/6 Cadangan database sebelum perubahan skema"
 docker compose up -d db
