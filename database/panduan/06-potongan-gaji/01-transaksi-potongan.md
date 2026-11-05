@@ -29,3 +29,7 @@ Rumusnya sama dengan proses *generate* potongan di aplikasi desktop. Kolom **Gen
 > **Penting:** Halaman ini **hanya proyeksi**. Tidak ada transaksi yang tersimpan. Setelah gaji dipotong, setiap setoran simpanan dan angsuran tetap harus **dicatat** di menu masing-masing (Setoran Simpanan, Setoran Angsuran), supaya saldo anggota dan jurnal ikut berubah.
 
 Karena dihitung dari angsuran berikutnya, angka potongan seorang anggota otomatis berubah begitu angsuran bulan ini dicatat. Cetak daftar potongan **sebelum** mencatat angsuran bulan itu.
+
+## Daftar potongan per periode
+
+Halaman detail satu periode di **Generate & Posting** dan cetakannya memakai kolom yang sama dengan sistem desktop: KPK, Nama, CB (cara bayar, selalu P), Accrek, Namarek, Bank, Kota, Pokok, Wajib, Sukarela, Koperasi, Bank, Kpr, Adm Bank, Total, dan Keterangan. Klik nama untuk mengubah nominal. **Total** tidak termasuk Pokok, karena simpanan pokok diposting terpisah bila bagiannya dicentang. **Ekspor** tetap berupa file potongan untuk bank.
