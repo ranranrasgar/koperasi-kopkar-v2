@@ -11,6 +11,8 @@ export interface JurnalUmumInput {
     lines: JournalLine[]; // deskripsi per baris boleh diisi, seperti jurnal memorial desktop
     /** Jurnal penyesuaian: nomor JP/yymmdd/n dan status 'Penyesuaian' pada tiap barisnya. Hanya berlaku untuk jurnal baru. */
     penyesuaian?: boolean;
+    /** No. Reff (kolom no_bukti_transaksi). Kosong = sama dengan nomor bukti. */
+    noReff?: string;
 }
 
 const yymmdd = (d: string) => d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10);
@@ -21,6 +23,18 @@ const yymmdd = (d: string) => d.slice(2, 4) + d.slice(5, 7) + d.slice(8, 10);
  * (postJournal menghapus baris dengan nomor yang sama sebelum mengisi ulang).
  * Jurnal penyesuaian memakai tabel yang sama dengan nomor JP/yymmdd/n (seq_jurnal_penyesuaian_no) dan status 'Penyesuaian'.
  */
+/** Nomor urut berikutnya untuk pratinjau di form, tanpa memakai sequence. Nomor final diberikan saat simpan, jadi bisa berbeda bila ada jurnal lain lebih dulu. */
+export async function nomorJurnalBerikut(db: Pick<Db, 'query'>, penyesuaian: boolean): Promise<number> {
+    const r = await db.query<{ n: string }>(`SELECT CASE WHEN is_called THEN last_value + 1 ELSE last_value END n FROM ${penyesuaian ? 'seq_jurnal_penyesuaian_no' : 'seq_jurnal_umum_no'}`);
+    return Number(r.rows[0].n);
+}
+
+const cekReff = (r?: string) => {
+    const v = r?.trim();
+    if (v && v.length > 100) throw new Error('No. Reff maksimal 100 karakter');
+    return v || undefined;
+};
+
 export async function postJurnalUmum(db: Db, i: JurnalUmumInput): Promise<{ nomorBukti: string; baris: number }> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(i.tanggal)) throw new Error('Tanggal jurnal tidak valid');
     if (!i.deskripsi.trim()) throw new Error('Keterangan jurnal wajib diisi');
@@ -32,14 +46,14 @@ export async function postJurnalUmum(db: Db, i: JurnalUmumInput): Promise<{ nomo
     const baris = await postJournal(db, {
         nomorBukti, tanggal: i.tanggal, deskripsi: i.deskripsi.trim(), opr: i.opr,
         sumberTipe: i.penyesuaian ? 'penyesuaian' : 'jurnal', sumberId: null, tahunPrefix: awalan, lines: i.lines,
-        status: i.penyesuaian ? STATUS_PENYESUAIAN : '',
+        noBuktiTransaksi: cekReff(i.noReff), status: i.penyesuaian ? STATUS_PENYESUAIAN : '',
     });
     return { nomorBukti, baris };
 }
 
 export interface BarisBukti { kodePerkiraan: string; namaPerkiraan: string; deskripsi: string; debit: string; kredit: string }
 export interface BuktiJurnal {
-    nomorBukti: string; tanggal: string; deskripsi: string; opr: string; baris: BarisBukti[];
+    nomorBukti: string; noReff: string; tanggal: string; deskripsi: string; opr: string; baris: BarisBukti[];
     /** Bukti bertanda jurnal penyesuaian (semua barisnya berstatus 'Penyesuaian'). */
     penyesuaian: boolean;
     /** Alasan bukti tidak boleh diubah/dihapus lewat web, atau null bila boleh. */
@@ -58,17 +72,18 @@ export function alasanTerkunci(nomorBukti: string): string | null {
 /** Baca satu bukti lengkap (untuk voucher dan form ubah); null bila tidak ada. */
 export async function bacaJurnalUmum(db: Pick<Db, 'query'>, nomorBukti: string): Promise<BuktiJurnal | null> {
     const r = await db.query<{ kode_perkiraan: string; nama_perkiraan: string | null; deskripsi: string | null; d: string; k: string;
-        tanggal: string; opr: string | null; status: string | null }>(
-        `SELECT j.kode_perkiraan, p.nama_perkiraan, j.deskripsi, j.debit_jurnalumum d, j.kredit_jurnalumum k, j.tanggal_jurnalumum::text tanggal, j.opr, j.status
+        tanggal: string; opr: string | null; status: string | null; no_bukti_transaksi: string; keterangan_bukti: string | null }>(
+        `SELECT j.kode_perkiraan, p.nama_perkiraan, j.deskripsi, j.debit_jurnalumum d, j.kredit_jurnalumum k, j.tanggal_jurnalumum::text tanggal, j.opr, j.status,
+                j.no_bukti_transaksi, j.keterangan_bukti
            FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan
           WHERE j.nomor_bukti = $1 ORDER BY CASE WHEN j.debit_jurnalumum > 0 THEN 0 ELSE 1 END, j.urutan`, [nomorBukti]);
     if (!r.rows.length) return null;
     const baris = r.rows.map((x) => ({ kodePerkiraan: x.kode_perkiraan, namaPerkiraan: x.nama_perkiraan ?? '', deskripsi: x.deskripsi ?? '', debit: x.d, kredit: x.k }));
     return {
-        nomorBukti, tanggal: r.rows[0].tanggal, opr: r.rows[0].opr ?? '', baris,
+        nomorBukti, noReff: r.rows[0].no_bukti_transaksi || nomorBukti, tanggal: r.rows[0].tanggal, opr: r.rows[0].opr ?? '', baris,
         penyesuaian: r.rows.every((x) => x.status === STATUS_PENYESUAIAN),
-        // Keterangan jurnal = keterangan baris yang paling sering (baris tanpa keterangan sendiri memakainya).
-        deskripsi: [...baris.reduce((m, x) => m.set(x.deskripsi, (m.get(x.deskripsi) ?? 0) + 1), new Map<string, number>())]
+        // Jurnal lama tanpa keterangan_bukti: keterangan baris yang paling sering (baris tanpa keterangan sendiri memakainya).
+        deskripsi: r.rows[0].keterangan_bukti ?? [...baris.reduce((m, x) => m.set(x.deskripsi, (m.get(x.deskripsi) ?? 0) + 1), new Map<string, number>())]
             .sort((a, b) => b[1] - a[1])[0][0],
         terkunci: alasanTerkunci(nomorBukti),
     };
@@ -85,7 +100,7 @@ export async function ubahJurnalUmum(db: Db, nomorBukti: string, i: JurnalUmumIn
     const awalan = nomorBukti.slice(0, 2);
     const baris = await postJournal(db, { nomorBukti, tanggal: i.tanggal, deskripsi: i.deskripsi.trim(), opr: i.opr,
         sumberTipe: awalan === 'JP' ? 'penyesuaian' : 'jurnal', sumberId: null, tahunPrefix: awalan, lines: i.lines,
-        status: b.penyesuaian ? STATUS_PENYESUAIAN : '' });
+        noBuktiTransaksi: cekReff(i.noReff), status: b.penyesuaian ? STATUS_PENYESUAIAN : '' });
     return { nomorBukti, baris };
 }
 

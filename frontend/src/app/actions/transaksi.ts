@@ -8,7 +8,7 @@ import { batalBukti } from "@kopkar/backend/src/posting/koreksi.ts"
 import { hapusTitipan, postingTitipan, tambahTitipan } from "@kopkar/backend/src/posting/titipan.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
 import { kirimInfoPencairan } from "@kopkar/backend/src/anggota/info-pinjaman.ts"
-import { bacaJurnalUmum, hapusJurnalUmum, postJurnalUmum, tandaiPenyesuaian, ubahJurnalUmum, type BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
+import { bacaJurnalUmum, hapusJurnalUmum, nomorJurnalBerikut, postJurnalUmum, tandaiPenyesuaian, ubahJurnalUmum, type BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { bacaBankBook, hapusBankBook, simpanBankBook, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
@@ -301,12 +301,18 @@ export async function jurnalUmumAction(_: Hasil, f: FormData): Promise<Hasil> {
         if (lines.length < 2) throw new InputSalah("Jurnal minimal dua baris berisi nilai")
         const nomor = teks(f, "nomorBukti", false)
         const penyesuaian = f.get("penyesuaian") === "1"
-        const input = { tanggal: tanggal(f), deskripsi: teks(f, "deskripsi"), opr, lines, penyesuaian }
+        const input = { tanggal: tanggal(f), deskripsi: teks(f, "deskripsi"), opr, lines, penyesuaian, noReff: teks(f, "noReff", false) }
         const r = await tx((db) => nomor ? ubahJurnalUmum(db, nomor, input) : postJurnalUmum(db, input))
         const total = lines.reduce((s, l) => s + toUnits(l.debit), 0n)
         return { ok: true, pesan: `Jurnal ${r.nomorBukti.startsWith("JP/") ? "penyesuaian " : ""}${r.nomorBukti} ${nomor ? "diubah" : "tercatat"} (${r.baris} baris)`,
             rincian: { "No. Bukti": r.nomorBukti, "Total debit = kredit": rp(total) } }
     })
+}
+
+/** Pratinjau nomor urut jurnal berikutnya untuk form jurnal baru; 0 bila tidak berizin. */
+export async function nomorJurnalBerikutAction(penyesuaian: boolean): Promise<number> {
+    const o = await wajibLogin() // sesi habis: alihkan ke login
+    return punyaIzin(o.izin, [penyesuaian ? MENU.jurnalPenyesuaian : MENU.jurnalUmum]) ? nomorJurnalBerikut(pool, penyesuaian) : 0
 }
 
 /** Tandai jurnal umum JU/ sebagai penyesuaian, atau kembalikan ke jurnal umum biasa (jurnal lama yang ternyata penyesuaian, mis. penyusutan). */

@@ -37,6 +37,11 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Form Jurnal Umum: No. Bukti, No. Reff, keterangan baris (6 November)
+- `JurnalForm.tsx`: No. Bukti tampil (baru: pratinjau `nomorJurnalBerikut` tanpa memakai sequence, nomor final saat simpan; ubah: nomor asli), No. Reff (`no_bukti_transaksi`) bawaan sama dengan No. Bukti dan bisa diganti (`noReff`, hanya terkirim bila diganti), keterangan baris otomatis nama akun selama belum diketik sendiri. Berlaku juga untuk Jurnal Penyesuaian.
+- Kolom web baru `jurnal_umum.keterangan_bukti` (`pengaturan-web.sql`, wajib `pengaturan:pasang` sebelum image baru dipakai karena `postJournal` menulisnya; `update-vps.sh` sudah menjalankannya): tanpa ini keterangan jurnal hilang saat form dibuka lagi, karena semua baris kini punya keterangan sendiri. Jurnal lama memakai cara lama (keterangan baris terbanyak). Akibat: Buku Besar dan kolom Keterangan menampilkan nama akun untuk jurnal baru.
+- Uji baru di `jurnal-umum.test.ts`. Bank Book tidak diubah.
+
 ### Daftar Pinjaman: filter bulan/tahun dan pencarian otomatis (6 November)
 - `LoansDashboard.tsx`: filter Bulan dan Tahun (realisasi, bawaan Semua; daftar tahun dari `tahunPinjaman`), Status dan Anggota jadi dropdown (Anggota bawaan Aktif). Dropdown jenis pencarian dihapus: `sqlLaporanPinjaman` dengan `kolomCari: null` mencari no_pinjaman, no_rek, kode_agt, nik, dan nama. Pencarian Kota dan ID Supervisor/Kolektor/Surveyor/Sales dihapus. `detailPinjaman` tetap memakai kolom no_pinjaman saja. Parameter URL lama `searchBy` diabaikan.
 

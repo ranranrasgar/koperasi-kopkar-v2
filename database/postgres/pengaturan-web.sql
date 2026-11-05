@@ -11,6 +11,10 @@ CREATE TABLE IF NOT EXISTS pengaturan_web (
 -- grade yang diutamakan; maksimal ini berlaku untuk jenis tanpa kunci grade, atau anggota yang nominal gradenya belum diisi.
 ALTER TABLE jenis_kredit ADD COLUMN IF NOT EXISTS maks_plafond numeric(18,2) NOT NULL DEFAULT 0;
 
+-- Keterangan bukti jurnal apa adanya. Kolom deskripsi berisi keterangan per baris, jadi keterangan buktinya tidak bisa dibaca lagi bila
+-- semua baris punya keterangan sendiri (form Jurnal Umum mengisinya dengan nama akun). Kosong untuk jurnal lama.
+ALTER TABLE jurnal_umum ADD COLUMN IF NOT EXISTS keterangan_bukti text;
+
 -- Log koreksi transaksi yang sudah diposting. Baris asal tidak diubah: pembatalan membuat transaksi pembalik (no_bukti_pembalik).
 -- data_lama dan data_baru menyimpan isi saat koreksi. Aplikasi hanya menambah baris di sini, tidak pernah mengubah atau menghapus.
 CREATE TABLE IF NOT EXISTS transaksi_koreksi (

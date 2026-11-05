@@ -8,6 +8,18 @@ const ROLLBACK = new Error('rollback-uji');
 const inTx = async (fn: (db: Db) => Promise<void>) => {
     await assert.rejects(withTx(pool, async (db) => { await fn(db); throw ROLLBACK; }), (e) => e === ROLLBACK);
 };
+test('No. Reff bawaan sama dengan nomor bukti dan bisa diganti; keterangan bukti tetap terbaca walau tiap baris punya keterangan', async () => {
+    await inTx(async (db) => {
+        const lines = [{ kodePerkiraan: '5.1.00.40', debit: 1000, deskripsi: 'Baris debit' }, { kodePerkiraan: '1.1.01.41', kredit: 1000, deskripsi: 'Baris kredit' }];
+        const a = await postJurnalUmum(db, { tanggal: '2026-10-22', deskripsi: 'Keterangan bukti', opr: 'uji', lines });
+        const b1 = await bacaJurnalUmum(db, a.nomorBukti);
+        assert.equal(b1?.noReff, a.nomorBukti);
+        assert.equal(b1?.deskripsi, 'Keterangan bukti');
+        await ubahJurnalUmum(db, a.nomorBukti, { tanggal: '2026-10-22', deskripsi: 'Keterangan bukti', opr: 'uji', lines, noReff: ' REF-01 ' });
+        assert.equal((await bacaJurnalUmum(db, a.nomorBukti))?.noReff, 'REF-01');
+    });
+});
+
 test.after(() => pool.end());
 
 test('jurnal umum: nomor JU baru, tahun berawalan JU, keterangan per baris, seimbang', async () => {

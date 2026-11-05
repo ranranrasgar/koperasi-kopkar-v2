@@ -33,8 +33,8 @@ Tanda *Reconcile* yang tampak pada baris kas/bank bukan rekonsiliasi bank: aplik
 Pakai jurnal memorial untuk transaksi yang tidak punya form sendiri, misalnya biaya operasional, penyusutan, atau koreksi.
 
 1. Tekan **Jurnal Baru**; form terbuka di jendela (hanya tertutup lewat tombol X).
-2. Isi **Tanggal** dan **Keterangan Jurnal** (wajib).
-3. Isi baris: pilih **Akun** (ketik kode atau nama untuk mencari), lalu isi **Debit** atau **Kredit**. Isian uang diformat ribuan otomatis. Keterangan baris boleh diisi; bila kosong memakai keterangan jurnal.
+2. Isi **Tanggal** dan **Keterangan Jurnal** (wajib). **No. Bukti** tampil otomatis mengikuti tanggal; nomor finalnya diberikan saat disimpan, jadi bisa berbeda bila ada jurnal lain yang tersimpan lebih dulu. **No. Reff** bawaan sama dengan No. Bukti dan boleh diganti, misalnya dengan nomor nota atau faktur.
+3. Isi baris: pilih **Akun** (ketik kode atau nama untuk mencari), lalu isi **Debit** atau **Kredit**. Isian uang diformat ribuan otomatis. Keterangan baris terisi otomatis dengan nama akun dan boleh diganti; bila dikosongkan memakai keterangan jurnal.
 4. Tambah baris sesuai kebutuhan; hapus baris dengan ikon tempat sampah.
 5. Tunggu sampai penanda **Seimbang** muncul, lalu tekan **Simpan Jurnal**.
 

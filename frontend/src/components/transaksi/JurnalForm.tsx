@@ -6,7 +6,7 @@ import { AkunBox } from "@/components/bankbook/AkunBox"
 import { InputUang } from "@/components/ui/InputUang"
 import { TombolModal, tombolModalUtama, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { Input } from "@/components/ui/input"
-import { bacaJurnalAction, jurnalUmumAction } from "@/app/actions/transaksi"
+import { bacaJurnalAction, jurnalUmumAction, nomorJurnalBerikutAction } from "@/app/actions/transaksi"
 import type { BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { formatRupiah } from "@/lib/format"
 import { Field, HasilTransaksi, SubmitButton, useAksiForm, type Akun } from "./common"
@@ -25,6 +25,13 @@ function JurnalForm({ akun, hariIni, selesai, awal, penyesuaian = false }: { aku
             debit: Number(b.debit) ? String(Number(b.debit)) : "", kredit: Number(b.kredit) ? String(Number(b.kredit)) : "" }))
         : [barisBaru(), barisBaru()])
     const [deskripsi, setDeskripsi] = useState(awal?.deskripsi ?? "")
+    const [tanggal, setTanggal] = useState(awal?.tanggal ?? hariIni)
+    // Nomor bukti final diberikan saat simpan; di sini pratinjau dari nomor urut berikutnya dan tanggal.
+    const [urutBerikut, setUrutBerikut] = useState(0)
+    useEffect(() => { if (!awal) void nomorJurnalBerikutAction(penyesuaian).then(setUrutBerikut) }, [awal, penyesuaian, hasil])
+    const nomorBukti = awal?.nomorBukti ?? (urutBerikut ? `${penyesuaian ? "JP" : "JU"}/${tanggal.slice(2, 4)}${tanggal.slice(5, 7)}${tanggal.slice(8, 10)}/${urutBerikut}` : "")
+    // null = mengikuti nomor bukti; kolom ini hanya terkirim bila diganti pengguna.
+    const [noReff, setNoReff] = useState<string | null>(awal && awal.noReff !== awal.nomorBukti ? awal.noReff : null)
 
     useEffect(() => {
         if (hasil?.ok && !awal) { setBaris([barisBaru(), barisBaru()]); setDeskripsi("") }
@@ -32,6 +39,10 @@ function JurnalForm({ akun, hariIni, selesai, awal, penyesuaian = false }: { aku
 
     const ubah = (id: number, k: keyof Omit<Baris, "id">, v: string) =>
         setBaris((bs) => bs.map((b) => (b.id === id ? { ...b, [k]: v } : b)))
+    // Keterangan baris mengikuti nama akun, kecuali sudah diketik sendiri oleh pengguna.
+    const namaAkun = (kode: string) => akun.find((a) => a.kode_perkiraan === kode)?.nama_perkiraan ?? ""
+    const pilihAkun = (id: number, kode: string) => setBaris((bs) => bs.map((b) => b.id !== id ? b
+        : { ...b, akun: kode, ket: !b.ket || b.ket === namaAkun(b.akun) ? namaAkun(kode) : b.ket }))
     // Nilai dibandingkan dalam sen supaya pecahan tidak salah dibulatkan float.
     const totalD = baris.reduce((s, b) => s + Math.round(angka(b.debit) * 100), 0)
     const totalK = baris.reduce((s, b) => s + Math.round(angka(b.kredit) * 100), 0)
@@ -42,9 +53,16 @@ function JurnalForm({ akun, hariIni, selesai, awal, penyesuaian = false }: { aku
             <form onSubmit={onSubmit} className="space-y-4">
                 {awal && <input type="hidden" name="nomorBukti" value={awal.nomorBukti} />}
                 {(penyesuaian || awal?.penyesuaian) && <input type="hidden" name="penyesuaian" value="1" />}
-                <div className="grid gap-4 sm:grid-cols-4">
+                <input type="hidden" name="noReff" value={noReff ?? ""} />
+                <div className="grid gap-4 sm:grid-cols-3">
                     <Field label="Tanggal" htmlFor="tanggal" hint={awal ? "Bagian dari nomor bukti; tidak bisa diubah." : undefined}>
-                        <Input id="tanggal" name="tanggal" type="date" required defaultValue={awal?.tanggal ?? hariIni} readOnly={Boolean(awal)} />
+                        <Input id="tanggal" name="tanggal" type="date" required value={tanggal} onChange={(e) => setTanggal(e.target.value)} readOnly={Boolean(awal)} />
+                    </Field>
+                    <Field label="No. Bukti" htmlFor="tampil-bukti" hint={awal ? undefined : "Otomatis; nomor final diberikan saat disimpan."}>
+                        <Input id="tampil-bukti" value={nomorBukti} readOnly tabIndex={-1} className="bg-muted/40 font-mono text-xs" />
+                    </Field>
+                    <Field label="No. Reff" htmlFor="tampil-reff" hint="Bawaan sama dengan No. Bukti; bisa diganti.">
+                        <Input id="tampil-reff" maxLength={100} className="font-mono text-xs" value={noReff ?? nomorBukti} onChange={(e) => setNoReff(e.target.value)} />
                     </Field>
                     <Field label="Keterangan Jurnal" htmlFor="deskripsi" className="sm:col-span-3">
                         <Input id="deskripsi" name="deskripsi" required maxLength={200} value={deskripsi} onChange={(e) => setDeskripsi(e.target.value)} />
@@ -56,7 +74,7 @@ function JurnalForm({ akun, hariIni, selesai, awal, penyesuaian = false }: { aku
                         <thead className="bg-muted/50 text-muted-foreground text-xs">
                             <tr>
                                 <th className="px-2 py-2 text-left w-[34%]">Akun</th>
-                                <th className="px-2 py-2 text-left">Keterangan baris (opsional)</th>
+                                <th className="px-2 py-2 text-left">Keterangan baris</th>
                                 <th className="px-2 py-2 text-right w-36">Debit</th>
                                 <th className="px-2 py-2 text-right w-36">Kredit</th>
                                 <th className="w-10"></th>
@@ -66,7 +84,7 @@ function JurnalForm({ akun, hariIni, selesai, awal, penyesuaian = false }: { aku
                             {baris.map((b, i) => (
                                 <tr key={b.id} className="border-t">
                                     <td className="px-2 py-1.5">
-                                        <AkunBox akun={akun} nilai={b.akun} onUbah={(k) => ubah(b.id, "akun", k)} dataF={`${b.id}:akun`} name="akun" label={`Akun baris ${i + 1}`} />
+                                        <AkunBox akun={akun} nilai={b.akun} onUbah={(k) => pilihAkun(b.id, k)} dataF={`${b.id}:akun`} name="akun" label={`Akun baris ${i + 1}`} />
                                     </td>
                                     <td className="px-2 py-1.5">
                                         <Input name="ketBaris" aria-label={`Keterangan baris ${i + 1}`} maxLength={200} value={b.ket} onChange={(e) => ubah(b.id, "ket", e.target.value)} />
