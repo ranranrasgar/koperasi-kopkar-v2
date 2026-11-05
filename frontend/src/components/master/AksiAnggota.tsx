@@ -6,6 +6,7 @@ import { Loader2, Pencil, RotateCcw, UserRoundX, Trash2 } from "lucide-react"
 import { detailAnggotaAction, hapusAnggotaAction, simpanAnggotaAction, ubahStatusAnggotaAction } from "@/app/actions/master-aksi"
 import { FormEdit, type FieldSpec } from "@/components/master/FormEdit"
 import { ModalForm } from "@/components/ui/Modal"
+import { formatRupiah } from "@/lib/format"
 
 type Baris = Record<string, unknown>
 
@@ -32,7 +33,7 @@ const editFields: FieldSpec[] = [
     { name: "hp", label: "No. HP", tab: TAB.kontak },
     { name: "telp_rmh", label: "Telepon rumah", tab: TAB.kontak },
     { name: "status_staff", label: "Status staff", type: "select", options: staffOptions, tab: TAB.kerja },
-    { name: "grade", label: "Grade", hint: "Harus cocok dengan Data Master → Grade.", tab: TAB.kerja },
+    { name: "grade", label: "Grade", type: "select", hint: "Dari Data Master → Grade.", tab: TAB.kerja },
     { name: "rp_gaji_pokok", label: "Gaji per bulan", type: "uang", hint: "Dipakai menghitung take home pay saat meninjau pengajuan.", tab: TAB.kerja },
     { name: "jabatan", label: "Jabatan", tab: TAB.kerja },
     { name: "pekerjaan", label: "Pekerjaan", tab: TAB.kerja },
@@ -56,7 +57,12 @@ function UbahAnggota({ item, selesai }: { item: Baris; selesai: () => void }) {
     useEffect(() => { void detailAnggotaAction(Number(item.id)).then(setDetail) }, [item.id])
     if (!detail) return <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
     if ("error" in detail) return <p role="alert" className="text-sm text-red-700">{detail.error}</p>
-    return <FormEdit fields={editFields} nilai={{ ...Object.fromEntries(Object.entries(item).map(([k, v]) => [k, v as string | number | boolean | null])), ...detail }}
+    // Grade lama yang tidak ada di master tetap tampil, supaya tidak terhapus diam-diam; menyimpannya ditolak server sampai diganti.
+    const lama = String(item.grade ?? "")
+    const opsiGrade = [...detail.grade.map((g) => ({ value: g.nama, label: `${g.nama} · ${formatRupiah(g.nominal)}` })),
+        ...(lama && !detail.grade.some((g) => g.nama === lama) ? [{ value: lama, label: `${lama} (tidak ada di master)` }] : [])]
+    return <FormEdit fields={editFields.map((f) => (f.name === "grade" ? { ...f, options: opsiGrade } : f))}
+        nilai={{ ...Object.fromEntries(Object.entries(item).map(([k, v]) => [k, v as string | number | boolean | null])), ...detail.data }}
         aksi={simpanAnggotaAction} onSelesai={selesai} />
 }
 

@@ -37,6 +37,9 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Ubah Anggota: Grade dari tabel grade (6 November)
+- Isian Grade kini select dari tabel `grade` (`detailAnggotaAction` mengembalikan `{ data, grade }`), nilainya tetap nama; `simpanAnggotaAction` menurunkan `grade_id` dan `rp_grade` dari tabel itu. Grade lama yang tidak ada di master tetap tampil berlabel, dan ditolak saat disimpan sampai diganti. Form Tambah Anggota memang sudah memakai select.
+
 ### Ubah Anggota bertab dengan data rinci dan gaji (6 November)
 - `FormEdit` mendukung `FieldSpec.tab` (semua isian tetap di DOM dan terkirim; isian wajib yang tidak valid membuka tabnya). `AksiAnggota`: empat tab, data rinci dibaca saat modal dibuka (`detailAnggotaAction`, gaji tidak ikut di payload daftar). `simpanAnggotaAction` kini juga menulis `status`, `kodepos`, `telp_rmh`, dan 14 kolom `anggota_detail` termasuk `rp_gaji_pokok` (baris dibuat bila belum ada).
 - Tinjau pengajuan: gaji bawaan dari `rp_gaji_pokok`. **Saat ini gaji kosong untuk semua anggota**, perlu diisi pengurus. Kolom pengajuan lama, jaminan, BPKB, sertifikat, dan biaya di `anggota_detail` sengaja tidak dimasukkan karena kosong semua. Typecheck bersih; belum dicoba setelah login.

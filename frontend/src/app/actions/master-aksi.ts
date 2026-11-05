@@ -109,10 +109,11 @@ const DETAIL_ANGGOTA = {
 export async function detailAnggotaAction(id: number) {
     try {
         await operatorAktif([MENU.daftarAnggota])
-        const [d] = await query<Record<string, string | number | null>>(
+        const [[d], grade] = await Promise.all([query<Record<string, string | number | null>>(
             `SELECT a.status, NULLIF(a.kodepos, 0) AS kodepos, a.telp_rmh, NULLIF(ad.rp_gaji_pokok, 0) AS rp_gaji_pokok, ${Object.keys(DETAIL_ANGGOTA).map((k) => `ad.${k}`).join(", ")}
-               FROM anggota a LEFT JOIN anggota_detail ad ON ad.anggota_id = a.id WHERE a.id = $1`, [id])
-        return d ?? { error: "Anggota tidak ditemukan" }
+               FROM anggota a LEFT JOIN anggota_detail ad ON ad.anggota_id = a.id WHERE a.id = $1`, [id]),
+            query<{ nama: string; nominal: number }>("SELECT nama, nominal FROM grade ORDER BY nominal, nama")])
+        return d ? { data: d, grade } : { error: "Anggota tidak ditemukan" }
     } catch (e) {
         return { error: e instanceof Error ? e.message : "Gagal membaca data anggota" }
     }
