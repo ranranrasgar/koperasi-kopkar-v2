@@ -3,11 +3,12 @@ import { notFound } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 import { TombolKirimInfo } from "@/components/transaksi/TombolKirimInfo"
 import { TombolKwitansi } from "@/components/transaksi/TombolKwitansi"
+import { TombolBatalBukti } from "@/components/transaksi/BatalBukti"
 import { TombolBatalTutup, TombolTutupPinjaman } from "@/components/transaksi/TombolTutupPinjaman"
 import { TombolEkspor } from "@/components/laporan/TombolEkspor"
 import { TombolCetak } from "@/components/ui/TombolCetak"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
-import { MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
+import { MENU, MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
 import { AKSES_HALAMAN } from "@/config/akses"
 import { wajibIzin } from "@/lib/operator"
 import { detailPinjaman, type BarisBayar } from "@/lib/queries/pinjaman-detail"
@@ -39,8 +40,9 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
     if (!/^[A-Za-z0-9._\-/ ]{3,25}$/.test(no)) notFound()
     const d = await detailPinjaman(no)
     if (!d) notFound()
-    const { ringkas: r, info, jadwal, bayar, penutupan } = d
+    const { ringkas: r, info, jadwal, bayar, penutupan, batalCair } = d
     const admin = o.superadmin || o.grup?.trim().toLowerCase() === "admin"
+    const bolehBatal = o.izin.includes(MENU.batalTransaksi)
     // Boleh dilihat bila operator menangani pinjaman grup ini (menu laporan, pencairan, angsuran, tunggakan, atau pengajuan); tanpa harus berizin Daftar Pinjaman.
     const menuGrup = MENU_DETAIL_PINJAMAN_GRUP[info.group_pinjaman ?? ""] ?? []
     if (!menuGrup.some((m) => o.izin.includes(m))) {
@@ -116,8 +118,15 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                     <TombolKirimInfo noPinjaman={r.no_pinjaman} />
                     {admin && !r.lunas && <TombolTutupPinjaman noPinjaman={r.no_pinjaman} sisa={rp(r.sisa_pokok)} />}
                     {admin && penutupan && <TombolBatalTutup noPinjaman={r.no_pinjaman} />}
+                    {bolehBatal && !batalCair && !penutupan && r.jml_cicilan === 0 && <TombolBatalBukti no={r.no_pinjaman} label="Batalkan Pencairan" />}
                 </span>
             </div>
+
+            {batalCair && (
+                <div role="note" className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-800 dark:bg-red-500/10 dark:text-red-200">
+                    <b>Pencairan dibatalkan</b> oleh {batalCair.opr}, {formatTanggal(batalCair.waktu.slice(0, 10), "long")}, dengan pembalik {batalCair.no_bukti_pembalik}. Alasan: {batalCair.alasan}.
+                </div>
+            )}
 
             {penutupan && (
                 <div role="note" className="rounded-md border border-amber-300 bg-amber-50 px-3 py-2 text-sm text-amber-900 dark:bg-amber-500/10 dark:text-amber-200">
@@ -241,7 +250,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                                         <td className="px-3 py-2 text-right tabular-nums">{b.kredit_pokok ? formatAngka(b.kredit_pokok) : ""}</td>
                                         <td className="px-3 py-2 text-right tabular-nums">{b.kredit_bunga ? formatAngka(b.kredit_bunga) : ""}</td>
                                         <td className="px-3 py-2 text-right tabular-nums font-semibold">{formatAngka(b.saldo)}</td>
-                                        <td className="px-1 py-1 text-right print:hidden">{b.angsuran_ke > 0 && b.no_bukti && <TombolKwitansi jenis="angsuran" no={b.no_bukti} ikon />}</td>
+                                        <td className="px-1 py-1 text-right print:hidden">{b.angsuran_ke > 0 && b.no_bukti && <TombolKwitansi jenis="angsuran" no={b.no_bukti} ikon />}{bolehBatal && !penutupan && b.angsuran_ke > 0 && b.angsuran_ke === r.jml_cicilan && b.no_bukti && <TombolBatalBukti no={b.no_bukti} label="Batalkan angsuran" ikon />}</td>
                                     </tr>
                                 ))}
                             </tbody>

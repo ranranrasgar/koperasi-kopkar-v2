@@ -4,7 +4,7 @@ import type { TombolCetakBukti } from "@/lib/kwitansi-tipe"
 import { revalidatePath } from "next/cache"
 import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpanan.ts"
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
-import { batalSimpanan } from "@kopkar/backend/src/posting/koreksi.ts"
+import { batalBukti } from "@kopkar/backend/src/posting/koreksi.ts"
 import { hapusTitipan, postingTitipan, tambahTitipan } from "@kopkar/backend/src/posting/titipan.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
 import { kirimInfoPencairan } from "@kopkar/backend/src/anggota/info-pinjaman.ts"
@@ -405,10 +405,10 @@ export async function riwayatAnggotaAction(kodeAgt: string): Promise<RiwayatAngg
 
 // ---------- koreksi ----------
 
-/** Batalkan transaksi simpanan dengan transaksi pembalik bertanggal hari ini. Aturannya di backend/src/posting/koreksi.ts. */
-export async function batalSimpananAction(noBukti: string, alasan: string): Promise<Hasil> {
+/** Batalkan satu bukti dengan pembalik bertanggal hari ini. Aturannya di backend/src/posting/koreksi.ts. */
+export async function batalBuktiAction(noBukti: string, alasan: string): Promise<Hasil> {
     return posting([MENU.batalTransaksi], async (o) => {
-        const r = await tx((db) => batalSimpanan(db, { noBukti, tanggal: hariIni(), alasan, opr: o.nama, operatorId: o.id }))
+        const r = await tx((db) => batalBukti(db, { noBukti, tanggal: hariIni(), alasan, opr: o.nama, operatorId: o.id }))
         return { ok: true, pesan: `Bukti ${noBukti} dibatalkan dengan pembalik ${r.noBukti}` }
     })
 }

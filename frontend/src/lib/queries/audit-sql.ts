@@ -62,7 +62,7 @@ export const CEK_AUDIT: CekAudit[] = [
         arti: "Baris angsuran bernilai yang tidak punya jurnal dengan nomor bukti sama. Sisa pinjaman berkurang, tetapi kas dan piutang di Buku Besar tidak.",
         sql: `SELECT r.tanggal_angsuran AS tanggal, r.no_bukti AS bukti, a.nama AS anggota, a.kode_agt AS kode_agt, 'Pinjaman ' || p.no_pinjaman AS keterangan, ${NILAI_ANGSURAN} AS nilai
                 FROM pinjaman_tunai_rincian r JOIN pinjaman_tunai p ON p.id = r.pinjaman_tunai_id JOIN anggota a ON a.id = p.anggota_id
-               WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND ${NILAI_ANGSURAN} <> 0
+               WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND ${NILAI_ANGSURAN} <> 0 AND r.no_bukti NOT LIKE 'BTL%'
                  AND NOT EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.nomor_bukti = r.no_bukti)`,
     },
     {
@@ -72,7 +72,7 @@ export const CEK_AUDIT: CekAudit[] = [
                      'Pinjaman ' || p.no_pinjaman || ', jurnal ' || TO_CHAR(j.debit, 'FM999G999G999G990') AS keterangan, ABS(${NILAI_ANGSURAN} - j.debit) AS nilai
                 FROM pinjaman_tunai_rincian r JOIN pinjaman_tunai p ON p.id = r.pinjaman_tunai_id JOIN anggota a ON a.id = p.anggota_id
                 JOIN LATERAL (SELECT SUM(x.debit_jurnalumum) AS debit FROM jurnal_umum x WHERE x.nomor_bukti = r.no_bukti) j ON j.debit IS NOT NULL
-               WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND ${NILAI_ANGSURAN} <> 0 AND ABS(${NILAI_ANGSURAN} - j.debit) >= 1`,
+               WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND ${NILAI_ANGSURAN} <> 0 AND r.no_bukti NOT LIKE 'BTL%' AND ABS(${NILAI_ANGSURAN} - j.debit) >= 1`,
     },
     {
         id: "cicilan-beda-rincian", modul: "Pinjaman Tunai", judul: "Hitungan cicilan berbeda dengan buku",
@@ -80,7 +80,7 @@ export const CEK_AUDIT: CekAudit[] = [
         sql: `SELECT p.tgl_pinjaman AS tanggal, p.no_pinjaman AS bukti, a.nama AS anggota, a.kode_agt AS kode_agt,
                      'Bayar ' || p.jml_cicilan || ', baris buku ' || r.n AS keterangan, ABS(p.jml_cicilan - r.n)::numeric AS nilai
                 FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id
-                JOIN LATERAL (SELECT COUNT(*)::int AS n FROM pinjaman_tunai_rincian x WHERE x.pinjaman_tunai_id = p.id AND x.debit_pokok + x.debit_bunga > 0) r ON true
+                JOIN LATERAL (SELECT COUNT(*)::int AS n FROM pinjaman_tunai_rincian x WHERE x.pinjaman_tunai_id = p.id AND x.angsuran_ke > 0 AND x.debit_pokok + x.debit_bunga > 0) r ON true
                WHERE p.tgl_pinjaman BETWEEN $1 AND $2 AND p.jml_cicilan <> r.n`,
     },
     {
@@ -105,7 +105,7 @@ export const CEK_AUDIT: CekAudit[] = [
         arti: "Baris angsuran KPR yang tidak punya jurnal. Pencairan KPR memang tidak berjurnal, jadi hanya angsuran yang diperiksa.",
         sql: `SELECT r.tanggal_angsuran AS tanggal, r.no_bukti AS bukti, a.nama AS anggota, a.kode_agt AS kode_agt, 'KPR ' || k.no_pinjaman AS keterangan, r.debit_pokok AS nilai
                 FROM kpr_rincian r JOIN kpr k ON k.id = r.kpr_id JOIN anggota a ON a.id = k.anggota_id
-               WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND r.debit_pokok <> 0
+               WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND r.debit_pokok <> 0 AND r.no_bukti NOT LIKE 'BTL%'
                  AND NOT EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.nomor_bukti = r.no_bukti)`,
     },
     {
@@ -115,7 +115,7 @@ export const CEK_AUDIT: CekAudit[] = [
                      'KPR ' || k.no_pinjaman || ', jurnal ' || TO_CHAR(j.debit, 'FM999G999G999G990') AS keterangan, ABS(r.debit_pokok - j.debit) AS nilai
                 FROM kpr_rincian r JOIN kpr k ON k.id = r.kpr_id JOIN anggota a ON a.id = k.anggota_id
                 JOIN LATERAL (SELECT SUM(x.debit_jurnalumum) AS debit FROM jurnal_umum x WHERE x.nomor_bukti = r.no_bukti) j ON j.debit IS NOT NULL
-               WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND r.debit_pokok <> 0 AND ABS(r.debit_pokok - j.debit) >= 1`,
+               WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND r.debit_pokok <> 0 AND r.no_bukti NOT LIKE 'BTL%' AND ABS(r.debit_pokok - j.debit) >= 1`,
     },
     {
         id: "kpr-bayar-lebih", modul: "KPR", judul: "Pokok KPR dibayar melebihi pinjaman",

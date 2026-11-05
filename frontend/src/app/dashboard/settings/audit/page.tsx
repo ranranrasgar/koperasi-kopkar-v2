@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
+import { BatalLewatNomor } from "@/components/transaksi/BatalBukti"
 import { FormPeriode, KopLaporan } from "@/components/laporan/Periode"
 import { AKSES_HALAMAN, MENU, punyaIzin } from "@/config/akses"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
@@ -13,6 +14,7 @@ export const dynamic = "force-dynamic"
 const TAMPIL = 500 // baris temuan di layar; Ekspor sampai BATAS_EKSPOR
 const BATAS_EKSPOR = 5000
 const MODUL: ModulAudit[] = ["Simpanan", "Pinjaman Tunai", "KPR"]
+const JENIS_KOREKSI: Record<string, string> = { simpanan: "Simpanan", angsuran: "Angsuran", pencairan: "Pencairan", kpr_angsuran: "Angsuran KPR", kpr_pencairan: "Pencairan KPR" }
 const KOLOM_TEMUAN = ["Tanggal", "Bukti", "Anggota", "Kode", "Keterangan", "Nilai"]
 
 /** Pemeriksaan kesesuaian data. Hanya membaca: temuan tidak mengubah apa pun, koreksinya dikerjakan lewat transaksi atau jurnal. */
@@ -148,19 +150,22 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
                             </div>
                         </section>
 
+                        {o.izin.includes(MENU.batalTransaksi) && <BatalLewatNomor />}
+
                         <section>
                             <h2 className="mb-2 font-semibold">Riwayat koreksi</h2>
                             {koreksi.length === 0 ? <p className="text-sm text-muted-foreground">Belum ada koreksi.</p> : (
                                 <div className="overflow-x-auto rounded-md border">
                                     <table className="w-full text-sm">
                                         <thead className="bg-muted text-xs text-muted-foreground">
-                                            <tr><th className="px-3 py-2 text-left">Waktu</th><th className="px-3 py-2 text-left">Bukti</th><th className="px-3 py-2 text-left">Pembalik</th>
+                                            <tr><th className="px-3 py-2 text-left">Waktu</th><th className="px-3 py-2 text-left">Jenis</th><th className="px-3 py-2 text-left">Bukti</th><th className="px-3 py-2 text-left">Pembalik</th>
                                                 <th className="px-3 py-2 text-left">Alasan</th><th className="px-3 py-2 text-left">Operator</th></tr>
                                         </thead>
                                         <tbody>
                                             {koreksi.map((k) => (
                                                 <tr key={`${k.jenis}-${k.no_bukti}`} className="border-t">
                                                     <td className="px-3 py-1.5 whitespace-nowrap">{k.waktu}</td>
+                                                    <td className="px-3 py-1.5 whitespace-nowrap">{JENIS_KOREKSI[k.jenis] ?? k.jenis}</td>
                                                     <td className="px-3 py-1.5 font-mono text-xs">{k.no_bukti}</td>
                                                     <td className="px-3 py-1.5 font-mono text-xs">{k.no_bukti_pembalik ?? "-"}</td>
                                                     <td className="px-3 py-1.5">{k.alasan}</td>

@@ -5,6 +5,21 @@ menu: /dashboard/loans/payment
 ---
 Menu: **Pinjaman → Setoran Angsuran**. Ada dua tab: **Pinjaman Tunai** dan **KPR**. Tab yang tampil mengikuti izin Anda.
 
+## Membatalkan angsuran atau pencairan
+
+Transaksi yang sudah diposting tidak bisa diubah atau dihapus. Operator berizin **Batalkan transaksi** (Kelola Hak Akses, baris Audit Data; awalnya hanya superadmin) bisa membatalkannya dengan alasan minimal 10 karakter:
+
+- **Pinjaman tunai**: buka detail pinjaman. Ikon batal ada di baris **angsuran terakhir**; tombol **Batalkan Pencairan** ada bila belum ada angsuran.
+- **KPR**: masukkan nomor buktinya di **Sistem → Audit Data**, bagian *Batalkan transaksi lewat nomor bukti*.
+
+Sistem membuat pembalik `BTL...` bertanggal hari ini beserta jurnal kebalikannya. Baris asal tetap terlihat di buku pinjaman dengan tanda *DIBATALKAN*.
+
+- Angsuran hanya bisa dibatalkan dari yang terakhir. Jadwal dan hitungan cicilan kembali, jadi angsuran itu bisa dibayar lagi.
+- Pencairan hanya bisa dibatalkan bila belum ada angsuran. Pinjamannya tetap ada di Daftar Pinjaman dengan sisa 0 dan tampil sebagai lunas; detailnya menampilkan keterangan pembatalan.
+- Ditolak untuk angsuran dari Potongan Gaji yang diposting di web, pinjaman yang sedang ditutup tanpa jurnal, serta pencairan yang masih ada di periode Potongan Gaji belum selesai atau masih punya titipan.
+- Titipan yang sudah **POSTING** tidak kembali otomatis saat angsurannya dibatalkan.
+- Pembatalan tidak bisa diurungkan, dan tercatat di **Audit Data**, bagian Riwayat koreksi.
+
 ## Angsuran pinjaman tunai
 
 1. Pilih **Anggota**. Daftar **Pinjaman** berisi pinjaman yang masih berjalan, dengan format *nomor | jenis | pokok | sudah dibayar/lama*.
