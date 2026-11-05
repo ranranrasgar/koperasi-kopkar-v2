@@ -50,6 +50,6 @@ export async function detailPinjaman(no: string) {
     const [penutupan] = await query<{ alasan: string; oleh: string; pada: string; cicilan_sebelum: number }>(
         "SELECT alasan, oleh, pada::text, cicilan_sebelum FROM pinjaman_penutupan WHERE pinjaman_tunai_id = $1 AND dibatalkan_pada IS NULL", [info.id])
     const [batalCair] = await query<{ alasan: string; opr: string; waktu: string; no_bukti_pembalik: string }>(
-        "SELECT alasan, opr, waktu::text AS waktu, no_bukti_pembalik FROM transaksi_koreksi WHERE jenis = 'pencairan' AND no_bukti = $1", [no])
+        "SELECT alasan, opr, waktu::text AS waktu, no_bukti_pembalik FROM transaksi_koreksi WHERE jenis = 'pencairan' AND aksi = 'batal' AND no_bukti = $1", [no])
     return { ringkas, info, jadwal, bayar, penutupan: penutupan ?? null, batalCair: batalCair ?? null }
 }

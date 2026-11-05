@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
-import { batalBukti, batalSimpanan } from '../src/posting/koreksi.ts';
+import { batalBukti, batalSimpanan, buatJurnalSusulan, rancangJurnalSusulan } from '../src/posting/koreksi.ts';
 import { bayarAngsuranKpr, cairkanKpr } from '../src/posting/kpr.ts';
 import { bayarAngsuran, cairkanPinjaman } from '../src/posting/pinjaman.ts';
 import { cekBuktiTerbuka, postJournal } from '../src/posting/journal.ts';
@@ -153,5 +153,26 @@ test('batal KPR: angsuran terakhir dibalik dengan jurnal, pencairan tanpa jurnal
         assert.equal(rc.jenis, 'kpr_pencairan');
         assert.equal(await sisa(), 0);
         assert.equal((await jurnalBukti(db, rc.noBukti)).length, 0, 'pencairan KPR tidak berjurnal');
+    });
+});
+
+test('jurnal susulan: baris sama dengan jurnal asli, tercatat, tidak bisa diulang, batal tetap jalan', async () => {
+    const a = (await pool.query('SELECT kode_agt FROM anggota WHERE rp_grade >= 1000000 ORDER BY id LIMIT 1')).rows[0].kode_agt;
+    await inTx(async (db) => {
+        const kas = (await db.query("SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'")).rows[0].id;
+        const urut = (j: { k: string; d: number; c: number }[]) => j.map((x) => [x.k, x.d, x.c]).sort();
+        const uji = async (no: string) => {
+            const asal = await jurnalBukti(db, no);
+            await gagal(db, () => rancangJurnalSusulan(db, no), /sudah punya jurnal/);
+            await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [no]);
+            await buatJurnalSusulan(db, { noBukti: no, alasan, opr: 'uji' });
+            assert.deepEqual(urut(await jurnalBukti(db, no)), urut(asal), no);
+        };
+        const c = await cairkanPinjaman(db, { kodeAgt: a, kodeKredit: 'C01', tglPinjaman: TANGGAL, pokok: 1000000, lama: 6, kasPerkiraanId: kas, opr: 'uji' });
+        const x = await bayarAngsuran(db, { noPinjaman: c.noPinjaman, tanggal: TANGGAL, kasPerkiraanId: kas, opr: 'uji' });
+        const s = await setorSimpanan(db, { kodeAgt: a, jenisSimpanan: '03', tanggal: TANGGAL, jumlah: 50000, kasPerkiraanId: kas, opr: 'uji' });
+        await uji(c.noPinjaman); await uji(x.noBukti); await uji(s.noBukti);
+        assert.equal((await db.query("SELECT count(*)::int n FROM transaksi_koreksi WHERE aksi = 'jurnal_susulan' AND no_bukti = $1", [s.noBukti])).rows[0].n, 1);
+        await batalBukti(db, { noBukti: s.noBukti, tanggal: TANGGAL, alasan, opr: 'uji' });
     });
 });

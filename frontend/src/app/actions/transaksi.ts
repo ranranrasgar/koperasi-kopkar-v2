@@ -4,7 +4,7 @@ import type { TombolCetakBukti } from "@/lib/kwitansi-tipe"
 import { revalidatePath } from "next/cache"
 import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpanan.ts"
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
-import { batalBukti } from "@kopkar/backend/src/posting/koreksi.ts"
+import { batalBukti, buatJurnalSusulan, rancangJurnalSusulan, type RancanganJurnal } from "@kopkar/backend/src/posting/koreksi.ts"
 import { hapusTitipan, postingTitipan, tambahTitipan } from "@kopkar/backend/src/posting/titipan.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
 import { kirimInfoPencairan } from "@kopkar/backend/src/anggota/info-pinjaman.ts"
@@ -420,6 +420,24 @@ export async function batalBuktiAction(noBukti: string, alasan: string): Promise
     return posting([MENU.batalTransaksi], "hapus", async (o) => {
         const r = await tx((db) => batalBukti(db, { noBukti, tanggal: hariIni(), alasan, opr: o.nama, operatorId: o.id }))
         return { ok: true, pesan: `Bukti ${noBukti} dibatalkan dengan pembalik ${r.noBukti}` }
+    })
+}
+
+/** Pratinjau jurnal susulan; hanya membaca. */
+export async function pratinjauSusulanAction(noBukti: string): Promise<RancanganJurnal | { error: string }> {
+    try {
+        wajibAksi(await operatorAktif([MENU.jurnalUmum]), [MENU.jurnalUmum], "tambah")
+        return await rancangJurnalSusulan(pool, noBukti)
+    } catch (e) {
+        return { error: e instanceof Error ? e.message : "Gagal membaca bukti" }
+    }
+}
+
+/** Tulis jurnal yang hilang dari temuan Audit Data, dengan nomor bukti dan tanggal transaksi aslinya. */
+export async function jurnalSusulanAction(noBukti: string, alasan: string): Promise<Hasil> {
+    return posting([MENU.jurnalUmum], "tambah", async (o) => {
+        const r = await tx((db) => buatJurnalSusulan(db, { noBukti, alasan, opr: o.nama, operatorId: o.id }))
+        return { ok: true, pesan: `Jurnal susulan ${r.noBukti} tanggal ${r.tanggal} tersimpan` }
     })
 }
 

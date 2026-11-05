@@ -11,6 +11,14 @@ Menu: **Sistem → Audit Data**. Halaman ini mencari data yang tidak cocok antar
 2. Setiap pemeriksaan menampilkan jumlah temuan dan nilainya, atau **Bersih** bila tidak ada temuan.
 3. Klik judul pemeriksaan untuk melihat rinciannya. Layar menampilkan 500 baris terbaru; **Ekspor** memuat sampai 5.000 baris. Klik nomor bukti untuk membuka asalnya.
 
+## Memperbaiki transaksi tanpa jurnal
+
+Cocokkan dulu dengan mutasi bank. Bila uangnya benar masuk atau keluar, tekan ikon **Buat jurnal susulan** di baris temuan, pada pemeriksaan Simpanan, Pencairan, Angsuran, atau Angsuran KPR tanpa jurnal. Pemakainya perlu izin **C** di Jurnal Umum.
+
+Jendelanya menampilkan jurnal yang akan dibuat, dengan rumus dan akun yang sama dengan posting aslinya. Isi alasan minimal 10 karakter lalu simpan. Jurnal memakai nomor bukti dan tanggal transaksi aslinya, jadi temuan itu hilang dari daftar, dan tercatat di Riwayat koreksi.
+
+Ditolak bila bukti sudah punya jurnal, tahunnya sudah ditutup, atau akun kasnya tidak tercatat di transaksi. Untuk yang ditolak, buat jurnal di periode berjalan lewat Jurnal Umum bersama akuntan. Bila uangnya ternyata tidak pernah ada, batalkan transaksinya, jangan buat jurnal.
+
 ## Daftar pemeriksaan
 
 | Modul | Pemeriksaan | Artinya |
@@ -28,7 +36,7 @@ Menu: **Sistem → Audit Data**. Halaman ini mencari data yang tidak cocok antar
 
 Bagian **Buku Besar** menampilkan jumlah bukti tidak seimbang dan baris ke akun yang tidak ada di COA, dengan tautan ke **Jurnal Bermasalah**.
 
-Bagian **Saldo buku dibandingkan Buku Besar** membandingkan saldo simpanan, pinjaman, dan KPR dengan saldo akunnya, posisi hari ini.
+Bagian **Saldo buku dibandingkan Buku Besar** membandingkan saldo simpanan, pinjaman, dan KPR dengan saldo akunnya, posisi hari ini. Bagian ini dihitung saat Anda menekan **Hitung perbandingan saldo**, karena memeriksa semua pinjaman.
 
 Bagian **Riwayat koreksi** menampilkan 100 pembatalan terakhir: waktu, bukti, pembalik, alasan, dan operatornya.
 

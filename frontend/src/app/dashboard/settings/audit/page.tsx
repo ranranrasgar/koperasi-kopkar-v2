@@ -1,6 +1,7 @@
 import Link from "next/link"
 import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
 import { BatalLewatNomor } from "@/components/transaksi/BatalBukti"
+import { TombolJurnalSusulan } from "@/components/transaksi/JurnalSusulan"
 import { FormPeriode, KopLaporan } from "@/components/laporan/Periode"
 import { AKSES_HALAMAN, bolehAksi, MENU, punyaIzin } from "@/config/akses"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
@@ -15,6 +16,8 @@ const TAMPIL = 500 // baris temuan di layar; Ekspor sampai BATAS_EKSPOR
 const BATAS_EKSPOR = 5000
 const MODUL: ModulAudit[] = ["Simpanan", "Pinjaman Tunai", "KPR"]
 const JENIS_KOREKSI: Record<string, string> = { simpanan: "Simpanan", angsuran: "Angsuran", pencairan: "Pencairan", kpr_angsuran: "Angsuran KPR", kpr_pencairan: "Pencairan KPR" }
+/** Pemeriksaan yang temuannya bisa diberi jurnal susulan. */
+const CEK_SUSULAN = ["simpanan-tanpa-jurnal", "pencairan-tanpa-jurnal", "angsuran-tanpa-jurnal", "kpr-angsuran-tanpa-jurnal"]
 const KOLOM_TEMUAN = ["Tanggal", "Bukti", "Anggota", "Kode", "Keterangan", "Nilai"]
 
 /** Pemeriksaan kesesuaian data. Hanya membaca: temuan tidak mengubah apa pun, koreksinya dikerjakan lewat transaksi atau jurnal. */
@@ -25,8 +28,10 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
     const sampai = isTanggal(sp(s, "sampai")) ? sp(s, "sampai") : hari
     const dari = isTanggal(sp(s, "dari")) ? sp(s, "dari") : `${sampai.slice(0, 4)}-01-01`
     const cek = CEK_AUDIT.find((c) => c.id === sp(s, "cek"))
+    // Rincian satu pemeriksaan tidak memerlukan ringkasan; perbandingan saldo menghitung semua pinjaman, jadi hanya saat diminta.
+    const tampilSaldo = !cek && sp(s, "saldo") === "1"
     const [ringkas, saldo, jurnal, koreksi, baris] = await Promise.all([
-        ringkasanAudit(dari, sampai), saldoBukuVsBesar(hari), ringkasJurnalBermasalah(sampai), riwayatKoreksi(100),
+        cek ? [] : ringkasanAudit(dari, sampai), tampilSaldo ? saldoBukuVsBesar(hari) : [], cek ? null : ringkasJurnalBermasalah(sampai), cek ? [] : riwayatKoreksi(100),
         cek ? barisAudit(cek.id, dari, sampai, BATAS_EKSPOR) : Promise.resolve([] as BarisAudit[]),
     ])
     const alamat = (ubah: Record<string, string>) => `?${new URLSearchParams({ dari, sampai, ...ubah }).toString()}`
@@ -37,9 +42,10 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
             if (cek.id === "jurnal-simpanan-yatim") return bolehJurnal ? `/dashboard/accounting/journal?search=${encodeURIComponent(b.bukti)}` : null
             return bolehBuku ? `/dashboard/savings/ledger?search=${encodeURIComponent(b.bukti)}` : null
         }
-        const no = cek?.modul === "Pinjaman Tunai" ? `${b.bukti} ${b.keterangan ?? ""}`.match(/\bCR-\d+-\d+/)?.[0] : null
+        const no = cek?.modul === "Pinjaman Tunai" ? `${b.bukti} ${b.keterangan ?? ""}`.match(/(?:^|\s)(CR-\d+-\d+)/)?.[1] : null // bukan bagian dari ANGS-CR-...
         return no && bolehPinjaman ? `/dashboard/loans/${encodeURIComponent(no)}` : null
     }
+    const bolehSusulan = !!cek && CEK_SUSULAN.includes(cek.id) && bolehAksi(o.izin, o.aksiTolak, [MENU.jurnalUmum], "tambah")
     const adaSelisih = saldo.filter((x) => Math.abs(x.selisih) >= 1)
     const ekspor = cek
         ? { nama: `audit-${cek.id}_${dari}_${sampai}`, baris: [KOLOM_TEMUAN, ...baris.map((b) => [b.tanggal, b.bukti, b.anggota ?? "", b.kode_agt ?? "", b.keterangan ?? "", String(b.nilai)])] }
@@ -69,7 +75,7 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
                                 <table className="w-full text-sm">
                                     <thead className="bg-muted text-xs text-muted-foreground">
                                         <tr><th className="w-10 px-3 py-2 text-center">No.</th><th className="px-3 py-2 text-left">Tanggal</th><th className="px-3 py-2 text-left">Bukti</th>
-                                            <th className="px-3 py-2 text-left">Anggota</th><th className="px-3 py-2 text-left">Keterangan</th><th className="px-3 py-2 text-right">Nilai</th></tr>
+                                            <th className="px-3 py-2 text-left">Anggota</th><th className="px-3 py-2 text-left">Keterangan</th><th className="px-3 py-2 text-right">Nilai</th>{bolehSusulan && <th className="w-10 px-3 py-2" />}</tr>
                                     </thead>
                                     <tbody>
                                         {baris.slice(0, TAMPIL).map((b, i) => {
@@ -82,6 +88,7 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
                                                     <td className="px-3 py-1.5">{b.anggota ?? "-"}{b.kode_agt && <span className="ml-1 font-mono text-[11px] text-muted-foreground">{b.kode_agt}</span>}</td>
                                                     <td className="px-3 py-1.5">{b.keterangan ?? "-"}</td>
                                                     <td className="px-3 py-1.5 text-right tabular-nums">{formatAngka(b.nilai)}</td>
+                                                    {bolehSusulan && <td className="px-2 py-1 text-right"><TombolJurnalSusulan no={b.bukti} /></td>}
                                                 </tr>
                                             )
                                         })}
@@ -114,17 +121,18 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
                             ))}
                         </section>
 
-                        <section className="rounded-md border p-3 text-sm">
+                        {jurnal && <section className="rounded-md border p-3 text-sm">
                             <h2 className="font-semibold">Buku Besar</h2>
                             <p className="mt-1">
                                 <b className="tabular-nums">{formatAngka(jurnal.tidakSeimbang)}</b> bukti tidak seimbang (selisih {formatAngka(jurnal.selisih)}) dan{" "}
                                 <b className="tabular-nums">{formatAngka(jurnal.tanpaAkun)}</b> baris ke akun yang tidak ada di COA{jurnal.sejak ? `, sejak saldo pembuka ${formatTanggal(jurnal.sejak)}` : ""}.
                                 {o.izin.includes(MENU.jurnalBermasalah) && <> <Link href="/dashboard/accounting/journal/tidak-seimbang" className="text-primary hover:underline">Lihat Jurnal Bermasalah</Link></>}
                             </p>
-                        </section>
+                        </section>}
 
                         <section>
                             <h2 className="font-semibold">Saldo buku dibandingkan Buku Besar</h2>
+                            {!tampilSaldo ? <Link href={alamat({ saldo: "1" })} className="mt-1 inline-block text-sm text-primary hover:underline">Hitung perbandingan saldo</Link> : <>
                             <p className="mb-2 mt-1 text-sm text-muted-foreground">
                                 Posisi hari ini, tidak mengikuti periode di atas. {adaSelisih.length} dari {saldo.length} akun berselisih.
                                 Sisa pinjaman memakai aturan Daftar Pinjaman. Selisih dapat berasal dari saldo awal pindah data, jurnal manual, atau transaksi tanpa jurnal; penyebab tiap akun perlu ditelusuri akuntan.
@@ -148,6 +156,7 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
                                     </tbody>
                                 </table>
                             </div>
+                            </>}
                         </section>
 
                         {bolehAksi(o.izin, o.aksiTolak, [MENU.batalTransaksi], "hapus") && <BatalLewatNomor />}
@@ -158,15 +167,16 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
                                 <div className="overflow-x-auto rounded-md border">
                                     <table className="w-full text-sm">
                                         <thead className="bg-muted text-xs text-muted-foreground">
-                                            <tr><th className="px-3 py-2 text-left">Waktu</th><th className="px-3 py-2 text-left">Jenis</th><th className="px-3 py-2 text-left">Bukti</th><th className="px-3 py-2 text-left">Pembalik</th>
+                                            <tr><th className="px-3 py-2 text-left">Waktu</th><th className="px-3 py-2 text-left">Jenis</th><th className="px-3 py-2 text-left">Bukti</th><th className="px-3 py-2 text-left">Aksi</th><th className="px-3 py-2 text-left">Pembalik</th>
                                                 <th className="px-3 py-2 text-left">Alasan</th><th className="px-3 py-2 text-left">Operator</th></tr>
                                         </thead>
                                         <tbody>
                                             {koreksi.map((k) => (
-                                                <tr key={`${k.jenis}-${k.no_bukti}`} className="border-t">
+                                                <tr key={`${k.jenis}-${k.no_bukti}-${k.aksi}`} className="border-t">
                                                     <td className="px-3 py-1.5 whitespace-nowrap">{k.waktu}</td>
                                                     <td className="px-3 py-1.5 whitespace-nowrap">{JENIS_KOREKSI[k.jenis] ?? k.jenis}</td>
                                                     <td className="px-3 py-1.5 font-mono text-xs">{k.no_bukti}</td>
+                                                    <td className="px-3 py-1.5 whitespace-nowrap">{k.aksi === "batal" ? "Batal" : "Jurnal susulan"}</td>
                                                     <td className="px-3 py-1.5 font-mono text-xs">{k.no_bukti_pembalik ?? "-"}</td>
                                                     <td className="px-3 py-1.5">{k.alasan}</td>
                                                     <td className="px-3 py-1.5">{k.opr}</td>

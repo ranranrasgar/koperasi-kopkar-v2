@@ -1,6 +1,7 @@
 import type { Db } from '../db.ts';
-import { postJournal } from './journal.ts';
-import { fromUnits, toUnits } from './money.ts';
+import { postJournal, type JournalLine } from './journal.ts';
+import { fromUnits, round2, toUnits } from './money.ts';
+import { barisJurnalAngsuran } from './pinjaman.ts';
 
 // Koreksi transaksi yang sudah diposting. Tidak ada baris yang dihapus: pembatalan membuat pembalik bertanggal hari pembatalan, sehingga
 // saldo dan Buku Besar periode lama tetap utuh, dan setiap koreksi tercatat di transaksi_koreksi.
@@ -34,7 +35,7 @@ function bersihkanAlasan(a: string) {
 
 async function cekBelumDikoreksi(db: Db, jenis: JenisKoreksi, no: string) {
     const ada = (await db.query<{ no_bukti: string }>(
-        'SELECT no_bukti FROM transaksi_koreksi WHERE jenis = $1 AND (no_bukti = $2 OR no_bukti_pembalik = $2)', [jenis, no])).rows[0];
+        "SELECT no_bukti FROM transaksi_koreksi WHERE jenis = $1 AND aksi = 'batal' AND (no_bukti = $2 OR no_bukti_pembalik = $2)", [jenis, no])).rows[0];
     if (ada) throw new Error(ada.no_bukti === no ? `Bukti ${no} sudah dibatalkan` : `Bukti ${no} adalah pembalik dari ${ada.no_bukti}; tidak bisa dibatalkan`);
 }
 
@@ -241,17 +242,94 @@ async function batalPencairanKpr(db: Db, i: BatalInput): Promise<BatalHasil> {
     return { jenis: 'kpr_pencairan', noBukti };
 }
 
-/** Batalkan satu bukti: sumbernya dicari dari nomor bukti, lalu diproses dengan aturan sumber itu. */
-export async function batalBukti(db: Db, i: BatalInput): Promise<BatalHasil> {
+/** Sumber satu nomor bukti. Nomor yang dipakai lebih dari satu sumber ditolak, supaya koreksi tidak mengenai transaksi yang salah. */
+async function sumberBukti(db: Pick<Db, 'query'>, no: string): Promise<JenisKoreksi> {
     const ada = (await db.query<{ jenis: JenisKoreksi }>(
         `SELECT 'simpanan' jenis FROM simpanan WHERE no_bukti = $1
          UNION ALL SELECT 'angsuran' FROM pinjaman_tunai_rincian WHERE no_bukti = $1 AND no_bukti <> no_pinjaman
          UNION ALL SELECT 'pencairan' FROM pinjaman_tunai WHERE no_pinjaman = $1
          UNION ALL SELECT 'kpr_angsuran' FROM kpr_rincian WHERE no_bukti = $1
-         UNION ALL SELECT 'kpr_pencairan' FROM kpr WHERE no_pinjaman = $1`, [i.noBukti])).rows;
+         UNION ALL SELECT 'kpr_pencairan' FROM kpr WHERE no_pinjaman = $1`, [no])).rows;
     const jenis = [...new Set(ada.map((x) => x.jenis))];
-    if (jenis.length === 0) throw new Error(`Bukti ${i.noBukti} tidak ditemukan`);
-    if (jenis.length > 1) throw new Error(`Nomor ${i.noBukti} dipakai di lebih dari satu sumber (${jenis.join(', ')}); koreksi lewat jurnal`);
+    if (jenis.length === 0) throw new Error(`Bukti ${no} tidak ditemukan`);
+    if (jenis.length > 1) throw new Error(`Nomor ${no} dipakai di lebih dari satu sumber (${jenis.join(', ')}); koreksi lewat jurnal`);
+    return jenis[0];
+}
+
+/** Batalkan satu bukti: sumbernya dicari dari nomor bukti, lalu diproses dengan aturan sumber itu. */
+export async function batalBukti(db: Db, i: BatalInput): Promise<BatalHasil> {
     const proses = { simpanan: batalSimpanan, angsuran: batalAngsuran, pencairan: batalPencairan, kpr_angsuran: batalAngsuranKpr, kpr_pencairan: batalPencairanKpr };
-    return proses[jenis[0]](db, i);
+    return proses[await sumberBukti(db, i.noBukti)](db, i);
+}
+
+// ---------- jurnal susulan ----------
+
+export interface RancanganJurnal {
+    jenis: JenisKoreksi; noBukti: string; tanggal: string; deskripsi: string; sumberTipe: string; sumberId: string; noBuktiTransaksi?: string
+    baris: { kodePerkiraan: string; namaPerkiraan: string | null; debit: string; kredit: string }[]
+}
+
+const akunKas = async (db: Pick<Db, 'query'>, id: string | null, no: string) => {
+    const kode = id ? (await db.query<{ kode_perkiraan: string }>('SELECT kode_perkiraan FROM perkiraan WHERE id = $1', [id])).rows[0]?.kode_perkiraan : null;
+    if (!kode) throw new Error(`Bukti ${no} tidak mencatat akun kas, jadi jurnalnya harus dibuat manual di Jurnal Umum`);
+    return kode;
+};
+
+/** Baris jurnal yang seharusnya ada untuk bukti tanpa jurnal, dari data transaksinya, dengan rumus yang sama dengan posting aslinya. Tidak menulis apa pun. */
+export async function rancangJurnalSusulan(db: Pick<Db, 'query'>, no: string): Promise<RancanganJurnal> {
+    const jenis = await sumberBukti(db, no);
+    if ((await db.query('SELECT 1 FROM jurnal_umum WHERE nomor_bukti = $1 LIMIT 1', [no])).rowCount) throw new Error(`Bukti ${no} sudah punya jurnal`);
+    let r: Omit<RancanganJurnal, 'baris' | 'jenis' | 'noBukti'>, lines: JournalLine[];
+    if (jenis === 'simpanan') {
+        const s = (await db.query(`SELECT s.id, s.tgl_transaksi::text tanggal, s.rp_setoran, s.rp_pengambilan, s.kas_perkiraan_id, a.nama, a.nik, j.nama_simpanan, p.kode_perkiraan akun
+            FROM simpanan s JOIN anggota a ON a.id = s.anggota_id JOIN jenis_simpanan j ON j.id = s.jenis_simpanan_id JOIN perkiraan p ON p.id = j.coa_id WHERE s.no_bukti = $1`, [no])).rows[0];
+        if (!s) throw new Error(`Jenis simpanan bukti ${no} tidak dikenali`);
+        const kas = await akunKas(db, s.kas_perkiraan_id, no), setor = round2(toUnits(s.rp_setoran)), ambil = round2(toUnits(s.rp_pengambilan));
+        r = { tanggal: s.tanggal, deskripsi: `${setor > 0n ? 'Setoran' : 'Pengambilan'} ${s.nama_simpanan} a/n: ${s.nama}/${s.nik}`, sumberTipe: 'simpanan', sumberId: s.id };
+        lines = setor > 0n ? [{ kodePerkiraan: kas, debit: fromUnits(setor) }, { kodePerkiraan: s.akun, kredit: fromUnits(setor) }]
+            : [{ kodePerkiraan: s.akun, debit: fromUnits(ambil) }, { kodePerkiraan: kas, kredit: fromUnits(ambil) }];
+    } else if (jenis === 'angsuran') {
+        const b = (await db.query(`SELECT x.tanggal_angsuran::text tanggal, x.debit_pokok, x.debit_bunga, x.rp_adm, x.rp_provisi, x.kas_perkiraan_id, x.angsuran_ke, x.no_pinjaman nomor, p.id pinjaman_id, a.nama, a.nik, jk.nama_kredit,
+                p1.kode_perkiraan akun_kredit, p2.kode_perkiraan akun_jasa, p3.kode_perkiraan akun_adm, p4.kode_perkiraan akun_provisi
+            FROM pinjaman_tunai_rincian x JOIN pinjaman_tunai p ON p.id = x.pinjaman_tunai_id JOIN anggota a ON a.id = p.anggota_id JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
+            LEFT JOIN perkiraan p1 ON p1.id = jk.coa_kredit_id LEFT JOIN perkiraan p2 ON p2.id = jk.coa_jasa_id LEFT JOIN perkiraan p3 ON p3.id = jk.coa_adm_id LEFT JOIN perkiraan p4 ON p4.id = jk.coa_provisi_id
+            WHERE x.no_bukti = $1`, [no])).rows;
+        if (b.length !== 1 || b[0].angsuran_ke <= 0) throw new Error(`Bukti ${no} bukan satu baris angsuran`);
+        const x = b[0];
+        r = { tanggal: x.tanggal, deskripsi: `Setoran ${x.nama_kredit} a/n: ${x.nama}/${x.nik}`, sumberTipe: 'pinjaman_tunai_rincian', sumberId: x.pinjaman_id, noBuktiTransaksi: x.nomor };
+        lines = barisJurnalAngsuran({ pokok: toUnits(x.debit_pokok), jasa: toUnits(x.debit_bunga), adm: toUnits(x.rp_adm), provisi: toUnits(x.rp_provisi) },
+            { kas: await akunKas(db, x.kas_perkiraan_id, no), kredit: x.akun_kredit, jasa: x.akun_jasa, adm: x.akun_adm, provisi: x.akun_provisi });
+    } else if (jenis === 'pencairan') {
+        const p = (await db.query(`SELECT p.id, p.tgl_pinjaman::text tanggal, p.rp_pinjaman_pokok, p.kas_perkiraan_id, a.nama, a.nik, jk.nama_kredit, k.kode_perkiraan akun_kredit
+            FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id JOIN perkiraan k ON k.id = jk.coa_kredit_id WHERE p.no_pinjaman = $1`, [no])).rows[0];
+        if (!p) throw new Error(`Jenis kredit pinjaman ${no} tidak dikenali`);
+        const pokok = fromUnits(round2(toUnits(p.rp_pinjaman_pokok)));
+        r = { tanggal: p.tanggal, deskripsi: `Pencairan ${p.nama_kredit} a/n: ${p.nama}/${p.nik}`, sumberTipe: 'pinjaman_tunai', sumberId: p.id };
+        lines = [{ kodePerkiraan: p.akun_kredit, debit: pokok }, { kodePerkiraan: await akunKas(db, p.kas_perkiraan_id, no), kredit: pokok }];
+    } else if (jenis === 'kpr_angsuran') {
+        const b = (await db.query(`SELECT x.tanggal_angsuran::text tanggal, x.debit_pokok, x.kas_perkiraan_id, x.angsuran_ke, k.no_pinjaman nomor, k.id kpr_id, a.nama, jk.nama_kredit, p.kode_perkiraan akun_titipan
+            FROM kpr_rincian x JOIN kpr k ON k.id = x.kpr_id JOIN anggota a ON a.id = k.anggota_id JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id JOIN perkiraan p ON p.id = jk.coa_kredit_id WHERE x.no_bukti = $1`, [no])).rows;
+        if (b.length !== 1 || b[0].angsuran_ke <= 0) throw new Error(`Bukti ${no} bukan satu baris angsuran`);
+        const x = b[0], rp = fromUnits(round2(toUnits(x.debit_pokok)));
+        r = { tanggal: x.tanggal, deskripsi: `Setoran ${x.nama_kredit} a/n: ${x.nama}`, sumberTipe: 'kpr_rincian', sumberId: x.kpr_id, noBuktiTransaksi: x.nomor };
+        lines = [{ kodePerkiraan: await akunKas(db, x.kas_perkiraan_id, no), debit: rp }, { kodePerkiraan: x.akun_titipan, kredit: rp }];
+    } else throw new Error('Pencairan KPR memang tidak berjurnal');
+
+    const pakai = lines.filter((l) => toUnits(l.debit ?? 0) !== 0n || toUnits(l.kredit ?? 0) !== 0n);
+    const nama = (await db.query<{ kode_perkiraan: string; nama_perkiraan: string }>('SELECT kode_perkiraan, nama_perkiraan FROM perkiraan WHERE kode_perkiraan = ANY($1)', [pakai.map((l) => l.kodePerkiraan)])).rows;
+    return { ...r, jenis, noBukti: no, baris: pakai.map((l) => ({ kodePerkiraan: l.kodePerkiraan, namaPerkiraan: nama.find((n) => n.kode_perkiraan === l.kodePerkiraan)?.nama_perkiraan ?? null,
+        debit: String(l.debit ?? '0'), kredit: String(l.kredit ?? '0') })) };
+}
+
+/** Tulis jurnal yang hilang dengan nomor bukti dan tanggal transaksinya, lalu catat di log. Tahun yang sudah ditutup ditolak postJournal. Jalankan di dalam transaksi. */
+export async function buatJurnalSusulan(db: Db, i: Omit<BatalInput, 'tanggal'>): Promise<RancanganJurnal> {
+    const alasan = bersihkanAlasan(i.alasan);
+    const r = await rancangJurnalSusulan(db, i.noBukti);
+    await postJournal(db, { nomorBukti: r.noBukti, tanggal: r.tanggal, deskripsi: r.deskripsi.slice(0, 200), opr: i.opr, sumberTipe: r.sumberTipe, sumberId: r.sumberId,
+        noBuktiTransaksi: r.noBuktiTransaksi, lines: r.baris.map((b) => ({ kodePerkiraan: b.kodePerkiraan, debit: b.debit, kredit: b.kredit })) });
+    await db.query(
+        `INSERT INTO transaksi_koreksi (jenis, sumber_id, no_bukti, aksi, alasan, opr, operator_id, data_lama, data_baru)
+         VALUES ($1, $2, $3, 'jurnal_susulan', $4, $5, $6, '{}', $7)`,
+        [r.jenis, r.sumberId, r.noBukti, alasan, i.opr, i.operatorId ?? null, JSON.stringify({ tanggal: r.tanggal, baris: r.baris })]);
+    return r;
 }

@@ -37,6 +37,18 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Audit Data: tautan bukti angsuran (6 November)
+- Regex `CR-...` di `audit/page.tsx` ikut mencocokkan bagian `CR-` dari `ANGS-CR-1026-173936`, jadi tautan menuju pinjaman yang tidak ada. Kini nomor pinjaman harus di awal teks atau sesudah spasi. Angsuran tanpa jurnal 2026: 50 baris, Rp 67,9 juta; contoh CR-0723-15842 ke-39 dan CR-0526-22343 ke-5 punya baris buku dan kas, tetapi jurnalnya tidak ada, sedangkan angsuran bulan sebelumnya berjurnal. Penyebab belum diketahui, perlu dicocokkan dengan mutasi bank.
+
+### Audit Data: Buat Jurnal Susulan (6 November)
+- `koreksi.ts`: `rancangJurnalSusulan` (hanya baca, sumber dari `sumberBukti`) menyusun baris dengan rumus posting asli: simpanan, angsuran (`barisJurnalAngsuran`), pencairan, angsuran KPR. `buatJurnalSusulan` memakai nomor bukti dan tanggal asli, menolak bukti yang sudah berjurnal, tanpa akun kas, atau tahun tertutup (`postJournal`), lalu log `transaksi_koreksi` aksi `jurnal_susulan`. Semua query yang membaca status batal kini menyaring `aksi = 'batal'`.
+- UI `components/transaksi/JurnalSusulan.tsx`, ikon di rincian empat pemeriksaan tanpa jurnal; izin C Jurnal Umum. Satu per satu dengan sengaja: setiap baris perlu dicocokkan dengan mutasi bank.
+- Verifikasi: `koreksi.test.ts` lolos (baris susulan sama dengan jurnal asli); `npm test` 96/97 (`kirimNotifikasi` memang sudah gagal sebelumnya); typecheck bersih. Uji coba di data lokal dalam transaksi yang di-rollback: bisa dibuat 50 dari 1.630 angsuran dan 4 dari 1.256 pencairan; 0 dari 9.136 simpanan dan 0 dari 201 angsuran KPR (umumnya data lama tanpa akun kas atau tahun tertutup). Tampilan setelah login belum dicoba di browser.
+- Tersisa: tahun tertutup baru ditolak saat simpan, bukan saat pratinjau.
+
+### Audit Data: pemuatan lebih ringan (6 November)
+- Rincian satu pemeriksaan tidak lagi menghitung ringkasan, saldo, dan jurnal. Perbandingan saldo hanya dihitung lewat tautan (`?saldo=1`). Ringkasan 12 pemeriksaan tetap dihitung setiap halaman utama dibuka; bila masih lambat, pindahkan ke cache atau hitung per modul.
+
 ### Operator: ubah dan hapus (6 November)
 - `ubahOperatorAction` (nama lengkap, alamat, telepon; nama login tetap karena tersimpan sebagai teks di kolom `opr`). `hapusOperatorAction`: tolak diri sendiri, superadmin aktif terakhir, dan akun yang punya jejak di kolom `operator_id` atau kolom nama teks (`KOLOM_NAMA_OPERATOR`) di tabel mana pun, dicari lewat information_schema. Reset password jadi ikon. Khusus superadmin, sama dengan aksi operator lain.
 

@@ -7,7 +7,7 @@ export const jenisSimpanan = () =>
 
 /** 'batal' bila bukti ini dibatalkan, 'pembalik' bila bukti ini pembalik dari bukti lain, selain itu NULL. */
 export const statusKoreksi = (bukti: string) => `(SELECT CASE WHEN k.no_bukti = ${bukti} THEN 'batal' ELSE 'pembalik' END FROM transaksi_koreksi k
-    WHERE k.jenis = 'simpanan' AND (k.no_bukti = ${bukti} OR k.no_bukti_pembalik = ${bukti}) LIMIT 1)`
+    WHERE k.jenis = 'simpanan' AND k.aksi = 'batal' AND (k.no_bukti = ${bukti} OR k.no_bukti_pembalik = ${bukti}) LIMIT 1)`
 
 export async function bukuSimpanan(s: SearchParams) {
     const { values, p } = params()
@@ -61,7 +61,7 @@ export async function detailBuktiSimpanan(no: string) {
                FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan WHERE j.nomor_bukti = $1 ORDER BY j.urutan`, [no]),
         query<KoreksiBukti>(
             `SELECT waktu::text AS waktu, opr, alasan, no_bukti, no_bukti_pembalik FROM transaksi_koreksi
-              WHERE jenis = 'simpanan' AND (no_bukti = $1 OR no_bukti_pembalik = $1) LIMIT 1`, [no]),
+              WHERE jenis = 'simpanan' AND aksi = 'batal' AND (no_bukti = $1 OR no_bukti_pembalik = $1) LIMIT 1`, [no]),
     ])
     return bukti ? { bukti, jurnal, koreksi: koreksi ?? null } : null
 }
