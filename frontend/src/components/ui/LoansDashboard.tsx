@@ -236,7 +236,7 @@ export function LoansDashboard({ data, filter, jenisKredit, searchByOptions }: L
                 <div className="relative min-h-[16rem] max-h-[calc(100dvh-20rem)] overflow-auto w-full">
                     <MemuatData aktif={isLoading} pesan="Memuat data pinjaman..." />
                         <table className="w-full text-left font-body-md whitespace-nowrap">
-                            <thead className="sticky top-0 z-10 bg-surface-container-lowest border-b border-outline-variant text-on-surface-variant font-label-md text-xs">
+                            <thead className="sticky top-0 z-10 bg-muted border-b border-outline-variant text-on-surface-variant font-label-md text-xs">
                                 <tr>
                                     <th className="p-3 font-medium">No</th>
                                     {kolomTampil.map((k) => {
