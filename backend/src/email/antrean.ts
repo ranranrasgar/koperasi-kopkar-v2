@@ -16,6 +16,8 @@ interface Db { query: (sql: string, params?: unknown[]) => Promise<{ rows: any[]
 export interface EmailKeluar { jenis: string; ke: string; judul: string; teks: string; tautan?: string | null; lampiran?: { nama: string; isi: Buffer } | null }
 
 const MAKS_PERCOBAAN = 3;
+/** Penolakan karena batas kirim (mis. Gmail "550-5.4.5 Daily user sending limit exceeded"): bukan salah email, jadi bisa terkirim setelah batas pulih. */
+export const kenaLimitKirim = (pesan: string) => /5\.4\.5|sending limit|quota exceeded|too many (emails|messages)/i.test(pesan);
 /** Jenis yang isinya (mis. kode verifikasi) ikut ditulis ke log saat SMTP belum diatur, untuk pengujian di komputer pengembang. */
 const JENIS_LOG_PENUH = new Set(['verifikasi', 'sistem']);
 const JENIS_PRIORITAS = ['verifikasi', 'sistem'];
@@ -72,7 +74,7 @@ export async function antreEmailBanyak(db: Db, daftar: EmailKeluar[]) {
     return sah.length;
 }
 
-export interface HasilProses { terkirim: number; gagal: number; dicatat: number; sisa: number }
+export interface HasilProses { terkirim: number; gagal: number; dicatat: number; ditunda: number; sisa: number }
 
 const tidur = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
@@ -101,19 +103,27 @@ async function kopKoperasi(db: Db): Promise<KopEmail | null> {
     } catch { return null; }
 }
 
-export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: number } = {}): Promise<HasilProses> {
+/**
+ * Kirim email yang jatuh tempo. Email biasa yang kena batas kirim ditunda 1 jam tanpa mengurangi jatah percobaan, bersama semua email biasa lain yang
+ * menunggu, sampai berumur 3 hari. Email prioritas tetap 3 kali percobaan: isinya (kode 15 menit, reset password) tidak berguna bila terlambat berjam-jam.
+ * `transport` hanya untuk uji.
+ */
+export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: number; transport?: Pick<Transporter, 'sendMail'> } = {}): Promise<HasilProses> {
     const batas = opsi.batas ?? 20;
     const ambil = async (prioritas: boolean, limit: number) => limit <= 0 ? [] : (await db.query(
         `UPDATE email_antrean SET percobaan = percobaan + 1, coba_lagi_pada = now() + interval '5 minutes'
           WHERE id IN (SELECT id FROM email_antrean WHERE status = 'menunggu' AND coba_lagi_pada <= now()
                           AND (jenis = ANY($2::text[])) = $3 ORDER BY id LIMIT $1 FOR UPDATE SKIP LOCKED)
-          RETURNING id, jenis, ke, judul, teks, tautan, percobaan, lampiran_nama, lampiran`, [limit, JENIS_PRIORITAS, prioritas])).rows;
+          RETURNING id, jenis, ke, judul, teks, tautan, percobaan, lampiran_nama, lampiran, dibuat_pada < now() - interval '3 days' AS kedaluwarsa`, [limit, JENIS_PRIORITAS, prioritas])).rows;
     // Verifikasi/sistem didahulukan dan tidak kena kuota; email biasa hanya sebanyak sisa kuota.
     const penting = await ambil(true, batas);
     const biasa = await ambil(false, Math.min(batas - penting.length, await sisaKuota(db)));
     const diambil = [...penting, ...biasa];
-    const hasil: HasilProses = { terkirim: 0, gagal: 0, dicatat: 0, sisa: 0 };
-    const t = ambilTransport();
+    const hasil: HasilProses = { terkirim: 0, gagal: 0, dicatat: 0, ditunda: 0, sisa: 0 };
+    const t = opsi.transport ?? ambilTransport();
+    let tertahan = false;
+    const tunda = (id: unknown, galat?: string) => db.query(
+        `UPDATE email_antrean SET percobaan = percobaan - 1, coba_lagi_pada = now() + interval '1 hour', galat = COALESCE($2, galat) WHERE id = $1`, [id, galat ?? null]);
     const kop = diambil.length && t ? await kopKoperasi(db) : null;
 
     for (const r of diambil.sort((a, b) => Number(a.id) - Number(b.id))) {
@@ -123,6 +133,8 @@ export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: num
             hasil.dicatat++;
             continue;
         }
+        const biasaBoleh = !JENIS_PRIORITAS.includes(r.jenis) && !r.kedaluwarsa;
+        if (tertahan && biasaBoleh) { await tunda(r.id); hasil.ditunda++; continue; }
         try {
             await t.sendMail({
                 from: process.env.SMTP_FROM ?? 'Kopkar MJS <no-reply@localhost>', to: r.ke, subject: r.judul,
@@ -132,10 +144,20 @@ export async function prosesAntrean(db: Db, opsi: { batas?: number; jedaMs?: num
             await db.query(`UPDATE email_antrean SET status = 'terkirim', dikirim_pada = now(), galat = NULL, lampiran = NULL WHERE id = $1`, [r.id]);
             hasil.terkirim++;
         } catch (e) {
+            const pesan = String((e as Error).message ?? e).slice(0, 300);
+            if (biasaBoleh && kenaLimitKirim(pesan)) {
+                tertahan = true;
+                await tunda(r.id, pesan);
+                hasil.ditunda++;
+                // Yang belum diambil ikut ditahan, supaya akun SMTP tidak terus diketuk selama batasnya belum pulih.
+                await db.query(`UPDATE email_antrean SET coba_lagi_pada = now() + interval '1 hour'
+                    WHERE status = 'menunggu' AND coba_lagi_pada < now() + interval '1 hour' AND NOT (jenis = ANY($1::text[]))`, [JENIS_PRIORITAS]);
+                continue;
+            }
             const habis = Number(r.percobaan) >= MAKS_PERCOBAAN;
             await db.query(
                 `UPDATE email_antrean SET galat = $2, status = $3, coba_lagi_pada = now() + ($4::int * interval '5 minutes') WHERE id = $1`,
-                [r.id, String((e as Error).message ?? e).slice(0, 300), habis ? 'gagal' : 'menunggu', Number(r.percobaan)]);
+                [r.id, pesan, habis ? 'gagal' : 'menunggu', Number(r.percobaan)]);
             hasil.gagal++;
         }
         if (opsi.jedaMs) await tidur(opsi.jedaMs);

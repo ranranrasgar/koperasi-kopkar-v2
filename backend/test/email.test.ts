@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
-import { antreEmail, antreEmailBanyak, prosesAntrean, ringkasAntrean, smtpSiap } from '../src/email/antrean.ts';
+import { antreEmail, antreEmailBanyak, kenaLimitKirim, prosesAntrean, ringkasAntrean, smtpSiap } from '../src/email/antrean.ts';
 import { htmlEmail, teksEmail } from '../src/email/templat.ts';
 import {
     buatKodeVerifikasi, kirimKodeVerifikasi, MAKS_SALAH, penerimaEmailAnggota, periksaKodeVerifikasi, statusEmail,
@@ -229,6 +229,42 @@ test('kuota kirim per jam: email biasa dibatasi, verifikasi tidak', async () => 
     } finally {
         delete process.env.EMAIL_MAKS_PER_JAM;
     }
+});
+
+test('limit Gmail: email biasa ditunda tanpa kehilangan percobaan, kode verifikasi tidak, kedaluwarsa gagal', async () => {
+    assert.ok(kenaLimitKirim('Data command failed: 550-5.4.5 Daily user sending limit exceeded. For more'));
+    assert.ok(!kenaLimitKirim('Invalid login: 535-5.7.8 Username and Password not accepted'));
+    await inTx(async (db) => {
+        await bersihkan(db);
+        const email = (jenis: string, ke: string) => antreEmail(db, { jenis, ke, judul: 'Uji limit', teks: 'isi' });
+        await email('verifikasi', 'limit-kode@contoh.id');
+        await email('pendaftaran', 'limit-a@contoh.id');
+        await email('pendaftaran', 'limit-b@contoh.id');
+        await email('pendaftaran', 'limit-lama@contoh.id');
+        await db.query(`UPDATE email_antrean SET dibuat_pada = now() - interval '4 days', percobaan = 2 WHERE ke = 'limit-lama@contoh.id'`);
+        const baris = async (ke: string) => (await db.query(`SELECT status, percobaan, EXTRACT(EPOCH FROM coba_lagi_pada - now()) / 60 menit FROM email_antrean WHERE ke = $1`, [ke])).rows[0];
+
+        const dikirim: string[] = [];
+        const tolak = { sendMail: async (m: { to: string }) => { dikirim.push(m.to); throw new Error('Data command failed: 550-5.4.5 Daily user sending limit exceeded'); } };
+        const h = await prosesAntrean(db, { transport: tolak as never });
+        assert.equal(h.ditunda, 2, 'dua email biasa ditunda');
+        assert.equal(h.terkirim, 0);
+        assert.equal(dikirim.filter((k) => k === 'limit-b@contoh.id').length, 0, 'sesudah kena limit, email biasa berikutnya tidak diketuk');
+        for (const ke of ['limit-a@contoh.id', 'limit-b@contoh.id']) {
+            const r = await baris(ke);
+            assert.equal(r.status, 'menunggu');
+            assert.equal(r.percobaan, 0, 'jatah percobaan tidak berkurang');
+            assert.ok(Number(r.menit) > 55, 'ditunda sekitar 1 jam');
+        }
+        assert.equal((await baris('limit-kode@contoh.id')).percobaan, 1, 'kode verifikasi memakai percobaan biasa');
+        assert.equal((await baris('limit-lama@contoh.id')).status, 'gagal', 'umur lebih dari 3 hari berhenti dicoba');
+
+        // Limit pulih: yang ditunda terkirim.
+        await db.query(`UPDATE email_antrean SET coba_lagi_pada = now() WHERE ke LIKE 'limit-%' AND status = 'menunggu'`);
+        const h2 = await prosesAntrean(db, { transport: { sendMail: async () => ({}) } as never });
+        assert.equal(h2.terkirim, 3);
+        assert.equal((await baris('limit-a@contoh.id')).status, 'terkirim');
+    });
 });
 
 test('templat: kop koperasi, subjudul, poin, dan tabel rincian; teks polos tanpa penanda', () => {

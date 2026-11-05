@@ -37,6 +37,9 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Email kena limit Gmail ditunda, bukan dibuang (5 November)
+Temuan: email lokal gagal karena `ranran250880@gmail.com` kena `550-5.4.5 Daily user sending limit exceeded`; akun `testing` lewat Google sudah terverifikasi jadi tidak ada kode yang dikirim. Pengguna mengganti SMTP lokal ke `kopmjs2000@gmail.com` (login SMTP lokal berhasil; pengiriman sungguhan belum diuji; `transport` SMTP disimpan di memori, jadi server wajib dimulai ulang sesudah mengubah env). `prosesAntrean`: email biasa yang kena batas kirim ditunda 1 jam tanpa mengurangi `percobaan`, semua email biasa lain ikut ditahan, sampai berumur 3 hari; `verifikasi` dan `sistem` tetap 3 percobaan. `HasilProses.ditunda` baru; `opsi.transport` hanya untuk uji.
+
 ### Garis kolom di Trial Balance dan Neraca Lajur (5 November)
 Garis 1px antara Debit dan Kredit, garis 2px antar kelompok kolom, di kepala, isi, dan total kedua tabel. Dicek di port 3100 lewat gaya terhitung. Dokumen cetak dan Excel sudah berbingkai di semua sel.
 

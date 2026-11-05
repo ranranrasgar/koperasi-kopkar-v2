@@ -59,7 +59,7 @@ Port 465 dengan `SMTP_SECURE=1` juga bisa. Untuk uji di komputer sendiri, `ANGGO
 ## 2. Batas Gmail
 
 - Akun Gmail biasa: sekitar 500 penerima per hari. Google Workspace: sekitar 2.000 per hari.
-- Siaran ke seluruh anggota (1.000+) bisa melewati batas itu. Email yang ditolak diulang 3 kali lalu ditandai `gagal` di `email_antrean`. Untuk volume besar pakai layanan email transaksional (mis. Brevo, Mailgun, Amazon SES); pengaturannya sama, hanya mengganti `SMTP_HOST/PORT/USER/PASS`.
+- Siaran ke seluruh anggota (1.000+) bisa melewati batas itu. Email yang ditolak karena batas kirim (`550-5.4.5 Daily user sending limit exceeded`) ditunda 1 jam dan dicoba terus sampai berumur 3 hari, tanpa mengurangi jatah percobaan; kode verifikasi dan reset password tidak ditunda karena isinya cepat kedaluwarsa. Penolakan lain diulang 3 kali lalu ditandai `gagal` di `email_antrean`. Untuk volume besar pakai layanan email transaksional (mis. Brevo, Mailgun, Amazon SES); pengaturannya sama, hanya mengganti `SMTP_HOST/PORT/USER/PASS`.
 - Bila memakai domain sendiri (`@kopkarmjsmattel.com`), pasang SPF dan DKIM di DNS supaya email tidak masuk spam.
 
 ## 3. Menguji di komputer pengembang
