@@ -56,12 +56,12 @@ export async function matriksAkses() {
 }
 
 export interface OperatorBaris {
-    id: number; nama: string; nama_lengkap: string | null; grup_id: number; nama_grup: string | null
+    id: number; nama: string; nama_lengkap: string | null; alamat: string | null; telp: string | null; grup_id: number; nama_grup: string | null
     aktif: boolean; punya_password: boolean; wajib_ganti_password: boolean
 }
 
 export const daftarOperator = () =>
     query<OperatorBaris>(`
-        SELECT o.id, o.nama, o.nama_lengkap, o.grup_id, g.nama_grup, upper(trim(o.status_aktif)) <> 'NON AKTIF' AS aktif,
+        SELECT o.id, o.nama, o.nama_lengkap, o.alamat, o.telp, o.grup_id, g.nama_grup, upper(trim(o.status_aktif)) <> 'NON AKTIF' AS aktif,
                o.password_hash IS NOT NULL AS punya_password, o.wajib_ganti_password
           FROM opr o LEFT JOIN opr_grup g ON g.id = o.grup_id ORDER BY o.nama`)

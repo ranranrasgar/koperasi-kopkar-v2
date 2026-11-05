@@ -2,11 +2,11 @@
 
 import { Fragment, useActionState, useEffect, useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { AlertCircle, CheckCircle2, KeyRound, Loader2, Plus, Search } from "lucide-react"
+import { AlertCircle, CheckCircle2, KeyRound, Loader2, Pencil, Plus, Search, Trash2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
-import { TombolModal } from "@/components/ui/Modal"
+import { ModalForm, TombolModal } from "@/components/ui/Modal"
 import {
-    resetPasswordAction, setAksesAction, setAksiAction, tambahOperatorAction, ubahAktifOperatorAction, ubahGrupOperatorAction, type HasilKelola,
+    hapusOperatorAction, resetPasswordAction, setAksesAction, setAksiAction, tambahOperatorAction, ubahAktifOperatorAction, ubahGrupOperatorAction, ubahOperatorAction, type HasilKelola,
 } from "@/app/actions/akses"
 import { Field, FormCard, selectClass } from "@/components/transaksi/common"
 import type { IzinBaris, KelompokBaris } from "@/lib/queries/akses"
@@ -161,7 +161,7 @@ export function MatriksAkses({ grup, kelompok }: { grup: Grup[]; kelompok: Kelom
 // ---------- operator ----------
 
 interface OperatorBaris {
-    id: number; nama: string; nama_lengkap: string | null; grup_id: number; nama_grup: string | null
+    id: number; nama: string; nama_lengkap: string | null; alamat: string | null; telp: string | null; grup_id: number; nama_grup: string | null
     aktif: boolean; punya_password: boolean; wajib_ganti_password: boolean
 }
 
@@ -172,6 +172,8 @@ export function KelolaOperator({ operator, grup, sayaId }: { operator: OperatorB
     // Salinan terkontrol: berubah hanya bila aksi berhasil, dan ikut data baru dari server.
     const [daftar, setDaftar] = useState(operator)
     useEffect(() => setDaftar(operator), [operator])
+    const [ubah, setUbah] = useState<OperatorBaris | null>(null)
+    const router = useRouter()
 
     const jalankan = (id: number, fn: () => Promise<HasilKelola>, ubah?: Partial<OperatorBaris>) => {
         setSibuk(id)
@@ -230,16 +232,24 @@ export function KelolaOperator({ operator, grup, sayaId }: { operator: OperatorB
                                         <td className="px-3 py-2 text-xs">
                                             {!o.punya_password ? "Belum diset" : o.wajib_ganti_password ? "Sementara (wajib ganti)" : "Sudah diganti"}
                                         </td>
-                                        <td className="px-3 py-2 text-right">
-                                            {o.id !== sayaId && (
-                                                <button type="button" disabled={sibuk !== null}
+                                        <td className="px-3 py-2 text-right whitespace-nowrap">
+                                            <button type="button" title="Ubah data operator" aria-label={`Ubah ${o.nama}`} onClick={() => setUbah(o)} className="rounded p-1.5 hover:bg-muted"><Pencil className="h-4 w-4" /></button>
+                                            {o.id !== sayaId && <>
+                                                <button type="button" disabled={sibuk !== null} title="Reset password" aria-label={`Reset password ${o.nama}`}
                                                     onClick={() => confirm(`Buat password sementara baru untuk ${o.nama}? Password lama tidak berlaku lagi.`)
                                                         && jalankan(o.id, () => resetPasswordAction(o.id), { punya_password: true, wajib_ganti_password: true })}
-                                                    className="inline-flex items-center gap-1 text-xs text-primary hover:underline disabled:opacity-50">
-                                                    {sibuk === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <KeyRound className="h-3.5 w-3.5" />}
-                                                    Reset password
+                                                    className="rounded p-1.5 text-primary hover:bg-muted disabled:opacity-50">
+                                                    {sibuk === o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
                                                 </button>
-                                            )}
+                                                <button type="button" disabled={sibuk !== null} title="Hapus operator" aria-label={`Hapus ${o.nama}`}
+                                                    onClick={() => confirm(`Hapus operator ${o.nama}? Hanya bisa untuk akun yang belum pernah dipakai.`) && setSibuk(o.id) === undefined && startTransition(async () => {
+                                                        const r = await hapusOperatorAction(o.id)
+                                                        setHasil(r)
+                                                        if (r.ok) { setDaftar((d) => d.filter((x) => x.id !== o.id)); router.refresh() }
+                                                        setSibuk(null)
+                                                    })}
+                                                    className="rounded p-1.5 text-red-600 hover:bg-muted disabled:opacity-50"><Trash2 className="h-4 w-4" /></button>
+                                            </>}
                                         </td>
                                     </tr>
                                 ))}
@@ -249,7 +259,28 @@ export function KelolaOperator({ operator, grup, sayaId }: { operator: OperatorB
                 </div>
             </FormCard>
 
+            <ModalForm open={ubah !== null} onOpenChange={(b) => { if (!b) setUbah(null) }} kunci={false} judul={`Ubah Operator ${ubah?.nama ?? ""}`} keterangan="Nama login tidak bisa diubah karena tercatat di transaksi. Grup dan status diatur di tabel.">
+                {ubah && <FormUbahOperator o={ubah} selesai={(baru) => { setDaftar((d) => d.map((x) => (x.id === ubah.id ? { ...x, ...baru } : x))); setUbah(null); router.refresh() }} />}
+            </ModalForm>
         </div>
+    )
+}
+
+function FormUbahOperator({ o, selesai }: { o: OperatorBaris; selesai: (baru: Pick<OperatorBaris, "nama_lengkap" | "alamat" | "telp">) => void }) {
+    const [hasil, kirim, proses] = useActionState(ubahOperatorAction, null)
+    const [isi, setIsi] = useState({ nama_lengkap: o.nama_lengkap ?? "", alamat: o.alamat ?? "", telp: o.telp ?? "" })
+    useEffect(() => { if (hasil?.ok) selesai(isi) }, [hasil]) // eslint-disable-line react-hooks/exhaustive-deps
+    return (
+        <form action={kirim} className="space-y-4">
+            <input type="hidden" name="id" value={o.id} />
+            <Field label="Nama Lengkap" htmlFor="u-nama"><Input id="u-nama" name="namaLengkap" required maxLength={50} value={isi.nama_lengkap} onChange={(e) => setIsi({ ...isi, nama_lengkap: e.target.value })} /></Field>
+            <Field label="Alamat" htmlFor="u-alamat"><Input id="u-alamat" name="alamat" maxLength={100} value={isi.alamat} onChange={(e) => setIsi({ ...isi, alamat: e.target.value })} /></Field>
+            <Field label="Telepon" htmlFor="u-telp"><Input id="u-telp" name="telp" maxLength={17} value={isi.telp} onChange={(e) => setIsi({ ...isi, telp: e.target.value })} /></Field>
+            <Pesan hasil={hasil} />
+            <button type="submit" disabled={proses} className="inline-flex h-9 items-center justify-center gap-2 rounded-md bg-blue-600 px-4 text-sm font-semibold text-white hover:bg-blue-700 disabled:opacity-60">
+                {proses && <Loader2 className="h-4 w-4 animate-spin" />} Simpan
+            </button>
+        </form>
     )
 }
 

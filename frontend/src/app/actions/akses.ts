@@ -113,6 +113,55 @@ export async function tambahOperatorAction(_: HasilKelola | null, f: FormData): 
     })
 }
 
+/** Ubah data operator. Nama login tetap: namanya tersimpan sebagai teks di kolom opr pada transaksi, jadi mengubahnya memutus jejak. */
+export async function ubahOperatorAction(_: HasilKelola | null, f: FormData): Promise<HasilKelola> {
+    return jalankan(async () => {
+        await superadmin()
+        const namaLengkap = String(f.get("namaLengkap") ?? "").trim(), alamat = String(f.get("alamat") ?? "").trim(), telp = String(f.get("telp") ?? "").trim()
+        if (!namaLengkap || namaLengkap.length > 50) throw new Salah("Nama lengkap wajib diisi, maksimal 50 karakter")
+        if (alamat.length > 100) throw new Salah("Alamat maksimal 100 karakter")
+        if (telp.length > 17) throw new Salah("Telepon maksimal 17 karakter")
+        const r = await query<{ nama: string }>("UPDATE opr SET nama_lengkap = $1, alamat = $2, telp = $3 WHERE id = $4 RETURNING nama", [namaLengkap, alamat, telp, Number(f.get("id"))])
+        if (!r.length) throw new Salah("Operator tidak ada")
+        return { ok: true, pesan: `Data operator ${r[0].nama} diubah` }
+    })
+}
+
+/** Kolom yang menyimpan nama operator sebagai teks, di tabel mana pun. Jejak ini tidak punya foreign key. */
+const KOLOM_NAMA_OPERATOR = ["opr", "oleh", "dibuat_oleh", "diposting_oleh", "diubah_oleh", "dibatalkan_oleh"]
+
+/** Tabel pertama yang masih mencatat operator ini, atau null bila belum pernah dipakai. */
+async function jejakOperator(id: number, nama: string) {
+    const kolom = await query<{ table_name: string; column_name: string }>(
+        `SELECT c.table_name, c.column_name FROM information_schema.columns c JOIN information_schema.tables t USING (table_schema, table_name)
+          WHERE c.table_schema = 'public' AND t.table_type = 'BASE TABLE' AND c.table_name <> 'opr_tampilan'
+            AND (c.column_name = 'operator_id' OR c.column_name = ANY($1))`, [KOLOM_NAMA_OPERATOR])
+    for (const k of kolom) {
+        const [ada] = k.column_name === "operator_id"
+            ? await query(`SELECT 1 FROM "${k.table_name}" WHERE operator_id = $1 LIMIT 1`, [id])
+            : await query(`SELECT 1 FROM "${k.table_name}" WHERE lower("${k.column_name}") IN (lower($1), lower(left($1, 15))) LIMIT 1`, [nama])
+        if (ada) return k.table_name
+    }
+    return null
+}
+
+/** Hapus permanen hanya untuk akun yang belum pernah dipakai, mis. salah buat. Akun yang punya riwayat dinonaktifkan supaya jejak pencatatnya tetap ada. */
+export async function hapusOperatorAction(id: number): Promise<HasilKelola> {
+    return jalankan(async () => {
+        const saya = await superadmin()
+        if (id === saya.id) throw new Salah("Tidak bisa menghapus diri sendiri")
+        const [o] = await query<{ nama: string; nama_grup: string | null; aktif: boolean }>(
+            `SELECT o.nama, g.nama_grup, upper(trim(o.status_aktif)) <> 'NON AKTIF' AS aktif FROM opr o LEFT JOIN opr_grup g ON g.id = o.grup_id WHERE o.id = $1`, [id])
+        if (!o) throw new Salah("Operator tidak ada")
+        if (o.nama_grup === GRUP_SUPERADMIN && o.aktif && (await superadminLain(id)) === 0) throw new Salah("Minimal satu superadmin harus tetap aktif")
+        const jejak = await jejakOperator(id, o.nama)
+        if (jejak) throw new Salah(`Operator ${o.nama} sudah punya riwayat di ${jejak}, jadi tidak bisa dihapus. Nonaktifkan saja.`)
+        await query("DELETE FROM opr_tampilan WHERE operator_id = $1", [id])
+        await query("DELETE FROM opr WHERE id = $1", [id])
+        return { ok: true, pesan: `Operator ${o.nama} dihapus` }
+    })
+}
+
 export async function ubahGrupOperatorAction(id: number, grupId: number): Promise<HasilKelola> {
     return jalankan(async () => {
         const saya = await superadmin()

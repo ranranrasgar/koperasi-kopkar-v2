@@ -37,6 +37,9 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Operator: ubah dan hapus (6 November)
+- `ubahOperatorAction` (nama lengkap, alamat, telepon; nama login tetap karena tersimpan sebagai teks di kolom `opr`). `hapusOperatorAction`: tolak diri sendiri, superadmin aktif terakhir, dan akun yang punya jejak di kolom `operator_id` atau kolom nama teks (`KOLOM_NAMA_OPERATOR`) di tabel mana pun, dicari lewat information_schema. Reset password jadi ikon. Khusus superadmin, sama dengan aksi operator lain.
+
 ### Update VPS: disk penuh (6 November)
 - `update-vps.sh` gagal di langkah 4: PostgreSQL `could not write lock file "postmaster.pid": No space left on device`, karena cache build dan image memenuhi disk. Skrip kini memeriksa ruang di folder data Docker sebelum aplikasi dihentikan (minimal 3 GB, dibersihkan dulu bila kurang, berhenti bila tetap kurang) dan menjalankan `docker builder prune -af` + `docker image prune -f` setelah build. Volume tidak disentuh. Pesan gagal diperbaiki: setelah build, image yang menyala sudah versi baru sehingga langkah 4-5 tetap perlu.
 

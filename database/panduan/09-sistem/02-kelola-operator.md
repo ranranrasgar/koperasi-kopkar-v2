@@ -17,8 +17,10 @@ Aturan nama login: **3-30 karakter**, huruf kecil, angka, titik, garis bawah, at
 
 | Tindakan | Aturan |
 | --- | --- |
+| Ubah (ikon pensil) | Mengubah nama lengkap, alamat, dan telepon. Nama login tidak bisa diubah karena tercatat di transaksi |
 | Ganti grup | Tidak bisa mengeluarkan **diri sendiri** dari grup superadmin |
 | Aktif / nonaktif | Tidak bisa menonaktifkan diri sendiri. Operator nonaktif tidak bisa login, tetapi namanya tetap tercatat di transaksi lama |
+| Hapus (ikon sampah) | Hanya untuk akun yang belum pernah dipakai, misalnya salah buat. Akun yang punya riwayat ditolak; nonaktifkan saja. Tidak bisa menghapus diri sendiri |
 | Reset password | Membuat password sementara baru dan mewajibkan ganti password. Untuk akun sendiri, pakai menu **Ganti Password** |
 | Superadmin terakhir | **Minimal satu superadmin harus tetap aktif**, jadi superadmin terakhir tidak bisa dinonaktifkan atau dipindah grup |
 
