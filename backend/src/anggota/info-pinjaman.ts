@@ -30,7 +30,7 @@ const tgl = (t: string) => `${Number(t.slice(8, 10))} ${BULAN[Number(t.slice(5, 
  * KPR: angsuran tetap per bulan sampai pokok habis (angsuran terakhir sisanya), jatuh tempo mengikuti tanggal di jenis kredit.
  * Tidak ada jasa atau biaya; kolom jasa dan biaya di InfoPinjaman bernilai nol.
  */
-async function bacaInfoKpr(db: Db, noPinjaman: string): Promise<InfoPinjaman | null> {
+async function bacaInfoKpr(db: Pick<Db, 'query'>, noPinjaman: string): Promise<InfoPinjaman | null> {
     const h = (await db.query(
         `SELECT k.no_pinjaman, k.tgl_pinjaman::text AS tanggal, k.rp_pinjaman_pokok::text AS pokok, k.lama_angsuran, k.rp_angsuran_per_bulan::text AS angsuran, k.jatuh_tempo,
                 jk.nama_kredit, jk.kode_kredit, a.id AS anggota_id, a.nama, a.kode_agt, a.nik
@@ -56,7 +56,7 @@ async function bacaInfoKpr(db: Db, noPinjaman: string): Promise<InfoPinjaman | n
 }
 
 /** Baca pinjaman tunai atau KPR beserta jadwal angsurannya; null bila nomor pinjaman tidak ada. */
-export async function bacaInfoPinjaman(db: Db, noPinjaman: string): Promise<InfoPinjaman | null> {
+export async function bacaInfoPinjaman(db: Pick<Db, 'query'>, noPinjaman: string): Promise<InfoPinjaman | null> {
     const hkpr = await bacaInfoKpr(db, noPinjaman);
     if (hkpr) return hkpr;
     const h = (await db.query(

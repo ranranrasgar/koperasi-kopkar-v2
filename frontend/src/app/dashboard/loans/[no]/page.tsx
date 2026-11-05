@@ -1,5 +1,5 @@
 import Link from "next/link"
-import { notFound } from "next/navigation"
+import { notFound, redirect } from "next/navigation"
 import { ChevronLeft } from "lucide-react"
 import { TombolKirimInfo } from "@/components/transaksi/TombolKirimInfo"
 import { TombolKwitansi } from "@/components/transaksi/TombolKwitansi"
@@ -11,6 +11,7 @@ import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
 import { bolehAksi, MENU, MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
 import { AKSES_HALAMAN } from "@/config/akses"
 import { wajibIzin } from "@/lib/operator"
+import { adaKpr } from "@/lib/queries/kpr"
 import { detailPinjaman, type BarisBayar } from "@/lib/queries/pinjaman-detail"
 import { cn } from "@/lib/utils"
 
@@ -39,6 +40,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
     const no = decodeURIComponent(mentah)
     if (!/^[A-Za-z0-9._\-/ ]{3,25}$/.test(no)) notFound()
     const d = await detailPinjaman(no)
+    if (!d && await adaKpr(no)) redirect(`/dashboard/loans/kpr/${encodeURIComponent(no)}`) // tautan dari Kredit Macet dan Audit Data
     if (!d) notFound()
     const { ringkas: r, info, jadwal, bayar, penutupan, batalCair } = d
     const admin = o.superadmin || o.grup?.trim().toLowerCase() === "admin"

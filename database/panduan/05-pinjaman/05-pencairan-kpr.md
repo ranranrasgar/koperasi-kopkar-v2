@@ -27,7 +27,7 @@ Menu: **Pinjaman → Input Pinjaman KPR**. Membutuhkan izin pencairan KPR.
 | Rincian | Satu baris *PENCAIRAN PINJAMAN* berisi pokok |
 | Jurnal | **Tidak ada** |
 
-Angsurannya dicatat lewat **Setoran Angsuran**, tab KPR.
+Angsurannya dicatat lewat **Setoran Angsuran**, tab KPR. Datanya bisa dilihat di **Pinjaman → Daftar KPR**.
 
 ## Informasi untuk anggota
 

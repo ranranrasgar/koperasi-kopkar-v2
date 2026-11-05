@@ -4,9 +4,11 @@ import { Search } from "lucide-react"
 import { MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
 import { formatAngka, formatTanggal } from "@/lib/format"
 import { wajibIzin } from "@/lib/operator"
-import { cariPinjaman } from "@/lib/queries/pinjaman-detail"
+import { cariPinjaman, type HasilCari } from "@/lib/queries/pinjaman-detail"
 
 export const dynamic = "force-dynamic"
+
+const alamat = (h: HasilCari) => `/dashboard/loans/${h.jenis === "kpr" ? "kpr/" : ""}${encodeURIComponent(h.no_pinjaman)}`
 
 // Pintu masuk ke detail pinjaman tanpa melewati Daftar Pinjaman (yang punya izin sendiri): ketik nomor pinjaman lalu Enter.
 // Nomor yang cocok persis langsung dibuka; selain itu (potongan nomor, nama, KPK, kode anggota) tampil daftar pilihan.
@@ -16,7 +18,7 @@ export default async function CariPinjamanPage(props: { searchParams: Promise<{ 
     const grupBoleh = Object.entries(MENU_DETAIL_PINJAMAN_GRUP).filter(([, menu]) => menu.some((m) => o.izin.includes(m))).map(([g]) => g)
     const hasil = await cariPinjaman(kata, grupBoleh)
     const tepat = hasil.find((h) => h.no_pinjaman.toLowerCase() === kata.toLowerCase())
-    if (tepat) redirect(`/dashboard/loans/${encodeURIComponent(tepat.no_pinjaman)}`)
+    if (tepat) redirect(alamat(tepat))
 
     return (
         <div className="max-w-3xl space-y-4">
@@ -46,8 +48,8 @@ export default async function CariPinjamanPage(props: { searchParams: Promise<{ 
                         <p className="border-b bg-muted/40 px-3 py-2 text-xs text-muted-foreground">{hasil.length} hasil{hasil.length === 20 ? " (maksimal 20, persempit pencarian)" : ""}</p>
                         <ul className="divide-y">
                             {hasil.map((h) => (
-                                <li key={h.no_pinjaman}>
-                                    <Link href={`/dashboard/loans/${encodeURIComponent(h.no_pinjaman)}`} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 px-3 py-2.5 hover:bg-muted/50">
+                                <li key={`${h.jenis}-${h.no_pinjaman}`}>
+                                    <Link href={alamat(h)} className="flex flex-wrap items-center justify-between gap-x-6 gap-y-1 px-3 py-2.5 hover:bg-muted/50">
                                         <span className="min-w-0">
                                             <span className="block font-mono text-sm font-semibold text-primary">{h.no_pinjaman}</span>
                                             <span className="block truncate text-sm">{h.nama}{!h.aktif && <span className="ml-2 text-xs text-muted-foreground">(non-aktif)</span>}</span>

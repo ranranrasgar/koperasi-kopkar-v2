@@ -135,6 +135,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/loans"
             },
             {
+                label: "Daftar KPR",
+                icon: "home_work",
+                href: "/dashboard/loans/kpr"
+            },
+            {
                 label: "Cari Pinjaman",
                 icon: "manage_search",
                 href: "/dashboard/loans/cari"

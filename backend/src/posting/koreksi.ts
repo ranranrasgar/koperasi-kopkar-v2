@@ -279,6 +279,7 @@ const akunKas = async (db: Pick<Db, 'query'>, id: string | null, no: string) => 
 export async function rancangJurnalSusulan(db: Pick<Db, 'query'>, no: string): Promise<RancanganJurnal> {
     const jenis = await sumberBukti(db, no);
     if ((await db.query('SELECT 1 FROM jurnal_umum WHERE nomor_bukti = $1 LIMIT 1', [no])).rowCount) throw new Error(`Bukti ${no} sudah punya jurnal`);
+    if ((await db.query("SELECT 1 FROM transaksi_koreksi WHERE aksi = 'batal' AND $1 IN (no_bukti, no_bukti_pembalik) LIMIT 1", [no])).rowCount) throw new Error(`Bukti ${no} sudah dibatalkan, jadi tidak perlu jurnal`);
     let r: Omit<RancanganJurnal, 'baris' | 'jenis' | 'noBukti'>, lines: JournalLine[];
     if (jenis === 'simpanan') {
         const s = (await db.query(`SELECT s.id, s.tgl_transaksi::text tanggal, s.rp_setoran, s.rp_pengambilan, s.kas_perkiraan_id, a.nama, a.nik, j.nama_simpanan, p.kode_perkiraan akun

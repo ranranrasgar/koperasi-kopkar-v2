@@ -174,5 +174,10 @@ test('jurnal susulan: baris sama dengan jurnal asli, tercatat, tidak bisa diulan
         await uji(c.noPinjaman); await uji(x.noBukti); await uji(s.noBukti);
         assert.equal((await db.query("SELECT count(*)::int n FROM transaksi_koreksi WHERE aksi = 'jurnal_susulan' AND no_bukti = $1", [s.noBukti])).rows[0].n, 1);
         await batalBukti(db, { noBukti: s.noBukti, tanggal: TANGGAL, alasan, opr: 'uji' });
+        const t = await setorSimpanan(db, { kodeAgt: a, jenisSimpanan: '03', tanggal: TANGGAL, jumlah: 50000, kasPerkiraanId: kas, opr: 'uji' });
+        await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [t.noBukti]);
+        const b = await batalBukti(db, { noBukti: t.noBukti, tanggal: TANGGAL, alasan, opr: 'uji' });
+        await gagal(db, () => rancangJurnalSusulan(db, t.noBukti), /sudah dibatalkan/);
+        await gagal(db, () => rancangJurnalSusulan(db, b.noBukti), /sudah dibatalkan/);
     });
 });

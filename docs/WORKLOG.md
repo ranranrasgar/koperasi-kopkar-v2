@@ -40,6 +40,16 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 ### Audit Data: tautan bukti angsuran (6 November)
 - Regex `CR-...` di `audit/page.tsx` ikut mencocokkan bagian `CR-` dari `ANGS-CR-1026-173936`, jadi tautan menuju pinjaman yang tidak ada. Kini nomor pinjaman harus di awal teks atau sesudah spasi. Angsuran tanpa jurnal 2026: 50 baris, Rp 67,9 juta; contoh CR-0723-15842 ke-39 dan CR-0526-22343 ke-5 punya baris buku dan kas, tetapi jurnalnya tidak ada, sedangkan angsuran bulan sebelumnya berjurnal. Penyebab belum diketahui, perlu dicocokkan dengan mutasi bank.
 
+### Daftar KPR terpisah (6 November)
+- Menu baru **Daftar KPR** `/dashboard/loans/kpr` dan detail `/dashboard/loans/kpr/[no]`, membaca tabel `kpr` (`lib/queries/kpr.ts`, `kpr-sql.ts`). Sisa pokok dari `kpr_rincian`, bukan `rp_saldo_pokok`. Jadwal dari `bacaInfoPinjaman`, karena KPR baru tidak menulis `kpr_rincian_tagih`.
+- Izin `lapPinjamanKpr` keluar dari gabungan Daftar Pinjaman jadi baris sendiri; grup `KPR` ditambah ke `MENU_DETAIL_PINJAMAN_GRUP`. Pilihan grup KPR di Daftar Pinjaman dihapus. Cari Pinjaman ikut mencari KPR. `/dashboard/loans/[no]` mengalihkan nomor KPR ke detail KPR, jadi tautan Kredit Macet dan Audit Data tidak 404.
+- Data aneh yang belum diputuskan: `CR-1217-1045` ada di `kpr` dan `pinjaman_tunai`; satu KPR memakai jenis C21 grup Bank; 42 KPR bersisa minus; `nama_bank_debitur` kosong semua.
+
+### Audit Data: panduan memperbaiki temuan (6 November)
+- `09-sistem/06-audit-data.md`: langkah kerja, empat cara perbaikan, dan tabel per temuan. Keterangan lama "hanya membaca" diperbarui. Tutup Pinjaman sengaja tidak disarankan untuk "cicilan selesai masih bersaldo" karena `penutupan.ts` menolaknya.
+- Celah ditutup: jurnal susulan menolak bukti yang sudah dibatalkan (dan pembaliknya), dan empat pemeriksaan tanpa jurnal mengecualikan yang sudah dibatalkan (`BELUM_BATAL`), karena batal pada bukti tanpa jurnal tidak membuat jurnal.
+- Catatan data lokal: tahun tertutup sampai 2025, jadi temuan yang bisa jurnal susulan hanya 2026. Sisanya perlu keputusan akuntan. Jurnal koreksi `JU/` tidak menghilangkan temuan aslinya; belum ada penanda "sudah ditelusuri".
+
 ### Audit Data: Buat Jurnal Susulan (6 November)
 - `koreksi.ts`: `rancangJurnalSusulan` (hanya baca, sumber dari `sumberBukti`) menyusun baris dengan rumus posting asli: simpanan, angsuran (`barisJurnalAngsuran`), pencairan, angsuran KPR. `buatJurnalSusulan` memakai nomor bukti dan tanggal asli, menolak bukti yang sudah berjurnal, tanpa akun kas, atau tahun tertutup (`postJournal`), lalu log `transaksi_koreksi` aksi `jurnal_susulan`. Semua query yang membaca status batal kini menyaring `aksi = 'batal'`.
 - UI `components/transaksi/JurnalSusulan.tsx`, ikon di rincian empat pemeriksaan tanpa jurnal; izin C Jurnal Umum. Satu per satu dengan sengaja: setiap baris perlu dicocokkan dengan mutasi bank.

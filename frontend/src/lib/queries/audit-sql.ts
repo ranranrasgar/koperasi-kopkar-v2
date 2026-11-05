@@ -22,6 +22,9 @@ const SISA_POKOK = "(SELECT COALESCE(SUM(x.kredit_pokok - x.debit_pokok), 0) FRO
 const DIBAYAR_POKOK = "(SELECT COALESCE(SUM(x.debit_pokok), 0) FROM pinjaman_tunai_rincian x WHERE x.pinjaman_tunai_id = p.id)"
 const DIBAYAR_KPR = "(SELECT COALESCE(SUM(x.debit_pokok), 0) FROM kpr_rincian x WHERE x.kpr_id = k.id)"
 
+/** Transaksi tanpa jurnal yang sudah dibatalkan saling menghapus dengan pembaliknya, jadi bukan temuan lagi. */
+const BELUM_BATAL = (bukti: string) => `NOT EXISTS (SELECT 1 FROM transaksi_koreksi k WHERE k.aksi = 'batal' AND ${bukti} IN (k.no_bukti, k.no_bukti_pembalik))`
+
 export const CEK_AUDIT: CekAudit[] = [
     {
         id: "simpanan-tanpa-jurnal", modul: "Simpanan", judul: "Transaksi simpanan tanpa jurnal",
@@ -29,7 +32,7 @@ export const CEK_AUDIT: CekAudit[] = [
         sql: `SELECT ${SIMPANAN}, s.deskripsi AS keterangan, ${NILAI_SIMPANAN} AS nilai
                 FROM simpanan s JOIN anggota a ON a.id = s.anggota_id
                WHERE s.tgl_transaksi BETWEEN $1 AND $2 AND ${NILAI_SIMPANAN} <> 0
-                 AND NOT EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.nomor_bukti = s.no_bukti)`,
+                 AND NOT EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.nomor_bukti = s.no_bukti) AND ${BELUM_BATAL("s.no_bukti")}`,
     },
     {
         id: "simpanan-beda-jurnal", modul: "Simpanan", judul: "Nilai simpanan berbeda dengan jurnal",
@@ -55,7 +58,7 @@ export const CEK_AUDIT: CekAudit[] = [
         sql: `SELECT p.tgl_pinjaman AS tanggal, p.no_pinjaman AS bukti, a.nama AS anggota, a.kode_agt AS kode_agt, p.kode_kredit AS keterangan, p.rp_pinjaman_pokok AS nilai
                 FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id
                WHERE p.tgl_pinjaman BETWEEN $1 AND $2
-                 AND NOT EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.nomor_bukti = p.no_pinjaman)`,
+                 AND NOT EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.nomor_bukti = p.no_pinjaman) AND ${BELUM_BATAL("p.no_pinjaman")}`,
     },
     {
         id: "angsuran-tanpa-jurnal", modul: "Pinjaman Tunai", judul: "Angsuran tanpa jurnal",
@@ -63,7 +66,7 @@ export const CEK_AUDIT: CekAudit[] = [
         sql: `SELECT r.tanggal_angsuran AS tanggal, r.no_bukti AS bukti, a.nama AS anggota, a.kode_agt AS kode_agt, 'Pinjaman ' || p.no_pinjaman AS keterangan, ${NILAI_ANGSURAN} AS nilai
                 FROM pinjaman_tunai_rincian r JOIN pinjaman_tunai p ON p.id = r.pinjaman_tunai_id JOIN anggota a ON a.id = p.anggota_id
                WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND ${NILAI_ANGSURAN} <> 0 AND r.no_bukti NOT LIKE 'BTL%'
-                 AND NOT EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.nomor_bukti = r.no_bukti)`,
+                 AND NOT EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.nomor_bukti = r.no_bukti) AND ${BELUM_BATAL("r.no_bukti")}`,
     },
     {
         id: "angsuran-beda-jurnal", modul: "Pinjaman Tunai", judul: "Nilai angsuran berbeda dengan jurnal",
@@ -106,7 +109,7 @@ export const CEK_AUDIT: CekAudit[] = [
         sql: `SELECT r.tanggal_angsuran AS tanggal, r.no_bukti AS bukti, a.nama AS anggota, a.kode_agt AS kode_agt, 'KPR ' || k.no_pinjaman AS keterangan, r.debit_pokok AS nilai
                 FROM kpr_rincian r JOIN kpr k ON k.id = r.kpr_id JOIN anggota a ON a.id = k.anggota_id
                WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND r.debit_pokok <> 0 AND r.no_bukti NOT LIKE 'BTL%'
-                 AND NOT EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.nomor_bukti = r.no_bukti)`,
+                 AND NOT EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.nomor_bukti = r.no_bukti) AND ${BELUM_BATAL("r.no_bukti")}`,
     },
     {
         id: "kpr-beda-jurnal", modul: "KPR", judul: "Nilai angsuran KPR berbeda dengan jurnal",

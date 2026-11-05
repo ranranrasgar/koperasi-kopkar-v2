@@ -104,7 +104,6 @@ export const LABEL_IZIN: Record<string, string> = {
     [MENU.cairBank]: "Bank / pihak lain",
     [MENU.lapPinjamanKoperasi]: "Koperasi",
     [MENU.lapPinjamanBank]: "Bank / pihak lain",
-    [MENU.lapPinjamanKpr]: "KPR",
     [MENU.lapTunggakanKoperasi]: "Koperasi",
     [MENU.lapTunggakanBank]: "Bank / pihak lain",
     [MENU.lapTunggakanKpr]: "KPR",
@@ -136,6 +135,7 @@ export const MENU_ANGSUR_GRUP: Record<string, string> = { "KOPERASI": MENU.angsu
 export const MENU_DETAIL_PINJAMAN_GRUP: Record<string, string[]> = {
     "KOPERASI": [MENU.lapPinjamanKoperasi, MENU.cairKoperasi, MENU.angsurKoperasi, MENU.lapTunggakanKoperasi, MENU.pengajuan],
     "BANK / PIHAK LAIN": [MENU.lapPinjamanBank, MENU.cairBank, MENU.angsurBank, MENU.lapTunggakanBank],
+    "KPR": [MENU.lapPinjamanKpr, MENU.cairKpr, MENU.angsurKpr, MENU.lapTunggakanKpr],
 }
 
 /**
@@ -148,7 +148,9 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/savings/ledger": [MENU.lapBukuSimpanan],
     "/dashboard/savings/deposit": [MENU.setoranSimpanan],
     "/dashboard/savings/withdraw": [MENU.pencairanSimpanan],
-    "/dashboard/loans": [MENU.lapPinjamanKoperasi, MENU.lapPinjamanBank, MENU.lapPinjamanKpr],
+    "/dashboard/loans": [MENU.lapPinjamanKoperasi, MENU.lapPinjamanBank],
+    "/dashboard/loans/kpr": [MENU.lapPinjamanKpr],
+    "/dashboard/loans/kpr/[no]": MENU_DETAIL_PINJAMAN_GRUP["KPR"],
     "/dashboard/loans/cari": [MENU.cariPinjaman],
     // Detail pinjaman (bukan menu sidebar); izin per grup pinjaman diperiksa lagi di halamannya.
     "/dashboard/loans/[no]": [...new Set(Object.values(MENU_DETAIL_PINJAMAN_GRUP).flat())],
@@ -232,7 +234,7 @@ export const GABUNGAN_IZIN: Record<string, ReturnType<typeof gabung>> = {
     [MENU.user]: gabung(USER, [MENU.user], { ubah: USER, hapus: [MENU.user] }),
     [MENU.angsurKoperasi]: gabung(ANGSUR, ANGSUR, { tambah: ANGSUR }),
     [MENU.cairKoperasi]: gabung(CAIR, CAIR, { tambah: CAIR }),
-    [MENU.lapPinjamanKoperasi]: gabung([MENU.lapPinjamanKoperasi, MENU.lapPinjamanBank, MENU.lapPinjamanKpr]),
+    [MENU.lapPinjamanKoperasi]: gabung([MENU.lapPinjamanKoperasi, MENU.lapPinjamanBank]),
     [MENU.lapTunggakanKoperasi]: gabung([MENU.lapTunggakanKoperasi, MENU.lapTunggakanBank, MENU.lapTunggakanKpr, MENU.jenisMacet]),
     [MENU.potonganSemua]: gabung([MENU.potonganSemua, MENU.potonganKoperasi, MENU.potonganBank, MENU.potonganKpr, MENU.potonganSimpanan]),
     [MENU.bukuBesar]: gabung([MENU.bukuBesar, MENU.bukuBesarKas]),

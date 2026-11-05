@@ -9,7 +9,7 @@ Menu **Sistem & Pengaturan → Kelola Hak Akses** hanya untuk grup **superadmin*
 
 Baris adalah menu dengan nama, kelompok, dan urutan yang sama persis dengan **menu samping**; kolom adalah grup operator. **Centang = grup boleh membuka menu itu**, dan menunya langsung muncul di menu samping operator grup itu.
 
-Beberapa menu punya sub-baris karena izinnya memang terpisah, misalnya **Daftar Pinjaman** (Koperasi, Bank / pihak lain, KPR) dan **Daftar Anggota** (Kelola data, Tambah anggota baru, Lihat laporan). Menu tampil di menu samping bila minimal satu sub-barisnya dicentang, dan isinya mengikuti yang dicentang.
+Beberapa menu punya sub-baris karena izinnya memang terpisah, misalnya **Daftar Pinjaman** (Koperasi, Bank / pihak lain) dan **Daftar Anggota** (Kelola data, Tambah anggota baru, Lihat laporan). Menu tampil di menu samping bila minimal satu sub-barisnya dicentang, dan isinya mengikuti yang dicentang.
 
 1. Ketik di kotak **Cari menu** untuk menemukan menu.
 2. Centang atau hapus centang pada kotak di kolom grup yang dimaksud.

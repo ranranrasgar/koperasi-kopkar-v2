@@ -3,16 +3,20 @@ import { query } from "@/lib/db"
 import { sqlLaporanPinjaman } from "@/lib/queries/pinjaman-sql"
 import type { LaporanPinjamanRow } from "@/lib/queries/pinjaman"
 
-export interface HasilCari { no_pinjaman: string; tgl_pinjaman: string; nama: string; nik: string | null; kode_agt: string; rp_pinjaman_pokok: number; lama_angsuran: number; jml_cicilan: number; grup: string | null; aktif: boolean }
+export interface HasilCari { jenis: "tunai" | "kpr"; no_pinjaman: string; tgl_pinjaman: string; nama: string; nik: string | null; kode_agt: string; rp_pinjaman_pokok: number; lama_angsuran: number; jml_cicilan: number; grup: string | null; aktif: boolean }
 
-/** Cari pinjaman tunai menurut nomor pinjaman, nama, KPK, atau kode anggota, terbatas pada grup yang boleh dilihat operator. Maksimal 20, terbaru dulu. */
+/** Cari pinjaman tunai dan KPR menurut nomor pinjaman, nama, KPK, atau kode anggota, terbatas pada grup yang boleh dilihat operator. Maksimal 20, terbaru dulu. */
 export async function cariPinjaman(kata: string, grupBoleh: string[]) {
     if (kata.length < 2 || grupBoleh.length === 0) return []
     return query<HasilCari>(
-        `SELECT p.no_pinjaman, p.tgl_pinjaman, a.nama, a.nik, a.kode_agt, p.rp_pinjaman_pokok, p.lama_angsuran, p.jml_cicilan, jk.group_pinjaman AS grup, a.aktif
+        `SELECT 'tunai' AS jenis, p.no_pinjaman, p.tgl_pinjaman, a.nama, a.nik, a.kode_agt, p.rp_pinjaman_pokok, p.lama_angsuran, p.jml_cicilan, jk.group_pinjaman AS grup, a.aktif, p.no_pinjaman_urut
            FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
           WHERE jk.group_pinjaman = ANY($2::text[]) AND (p.no_pinjaman ILIKE $1 OR a.nama ILIKE $1 OR a.nik ILIKE $1 OR a.kode_agt ILIKE $1)
-          ORDER BY p.tgl_pinjaman DESC, p.no_pinjaman_urut DESC LIMIT 20`, [`%${kata}%`, grupBoleh])
+         UNION ALL
+         SELECT 'kpr', k.no_pinjaman, k.tgl_pinjaman, a.nama, a.nik, a.kode_agt, k.rp_pinjaman_pokok, k.lama_angsuran, k.jml_cicilan, 'KPR', a.aktif, k.no_pinjaman_urut
+           FROM kpr k JOIN anggota a ON a.id = k.anggota_id
+          WHERE 'KPR' = ANY($2::text[]) AND (k.no_pinjaman ILIKE $1 OR a.nama ILIKE $1 OR a.nik ILIKE $1 OR a.kode_agt ILIKE $1)
+          ORDER BY tgl_pinjaman DESC, no_pinjaman_urut DESC LIMIT 20`, [`%${kata}%`, grupBoleh])
 }
 
 export interface InfoPinjaman {

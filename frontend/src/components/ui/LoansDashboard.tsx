@@ -87,7 +87,7 @@ export function LoansDashboard({ data, filter, jenisKredit, daftarTahun }: Loans
 
     const { page, pageSize, totalPages, total: totalRecords } = data
     const rows = data.items
-    const jenisGrup = jenisKredit.filter((jk) => selectedGroupPinjaman === "All" || jk.group_pinjaman === selectedGroupPinjaman)
+    const jenisGrup = jenisKredit.filter((jk) => jk.group_pinjaman !== "KPR" && (selectedGroupPinjaman === "All" || jk.group_pinjaman === selectedGroupPinjaman)) // KPR punya menu sendiri
 
     const statusLunasOptions = ["Semua", "Tunggak", "Lunas", "Belum Lunas"]
 
@@ -198,7 +198,6 @@ export function LoansDashboard({ data, filter, jenisKredit, daftarTahun }: Loans
                             <option value="All">Semua Grup</option>
                             <option value="KOPERASI">KOPERASI</option>
                             <option value="BANK / PIHAK LAIN">BANK / PIHAK LAIN</option>
-                            <option value="KPR">KPR</option>
                         </select>
                         <select className="h-9 border border-outline-variant rounded-md px-3 py-0 text-sm bg-background text-on-surface focus:outline-none focus:ring-1 focus:ring-primary" value={selectedKredit} onChange={(e) => setSelectedKredit(e.target.value)} aria-label="Jenis kredit">
                             <option value="All">Semua Jenis</option>
