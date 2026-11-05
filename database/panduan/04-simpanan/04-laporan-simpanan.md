@@ -15,7 +15,14 @@ Kolom **Saldo** berlaku seperti rekening koran: saldo anggota untuk jenis simpan
 
 Karena saldonya berjalan, tabel ini hanya bisa diurutkan menurut **Tanggal** (terbaru atau terlama). Kolom lain sengaja tidak bisa diurutkan, supaya baris tetap kronologis dan saldo tetap terbaca.
 
-> **Tips:** Untuk membaca seperti rekening koran, cari satu anggota, pilih satu **Jenis**, lalu klik judul kolom **Tanggal** untuk mengurutkan dari yang terlama.
+Saat mencari anggota, muncul ringkasan di atas tabel:
+
+- **Satu anggota cocok**: nama, kode, KPK, kartu **Total Simpanan**, dan satu kartu per jenis simpanan (saldo, jumlah setor, jumlah ambil). Klik kartu jenis untuk menampilkan buku jenis itu di tabel; klik **Total Simpanan** untuk kembali ke semua jenis. Tombol **Kartu Simpanan** membuka kartu anggota tersebut.
+- **Beberapa anggota cocok**: daftar anggota beserta total simpanannya. Klik salah satu untuk memilihnya.
+
+Saldo di ringkasan dihitung dari seluruh riwayat sampai filter **Sampai Tanggal** (bila diisi), sama dengan kolom Saldo. Filter **Dari Tanggal** dan **Jenis** hanya menyaring tabel. Ringkasan tidak ikut tercetak.
+
+> **Tips:** Untuk membaca seperti rekening koran, cari satu anggota, klik kartu jenisnya, lalu klik judul kolom **Tanggal** untuk mengurutkan dari yang terlama.
 
 ## Kartu Simpanan
 

@@ -4,13 +4,16 @@ import { Plus, Minus } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { ModuleTable } from "@/components/ui/ModuleTable"
 import { savingsLedgerConfig } from "@/config/modules"
-import { bukuSimpanan, jenisSimpanan } from "@/lib/queries/simpanan"
+import { RingkasanBukuSimpanan } from "@/components/simpanan/RingkasanBukuSimpanan"
+import { bukuSimpanan, jenisSimpanan, ringkasanBukuSimpanan } from "@/lib/queries/simpanan"
+import { isTanggal, sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
 import { MENU } from "@/config/akses"
 
 export default async function SavingsLedgerPage(props: PageProps<"/dashboard/savings/ledger">) {
     const o = await wajibIzin("/dashboard/savings/ledger") // layout tidak dijalankan ulang pada navigasi antarhalaman
-    const [data, jenis] = await Promise.all([bukuSimpanan(await props.searchParams), jenisSimpanan()])
+    const s = await props.searchParams
+    const [data, jenis, ringkasan] = await Promise.all([bukuSimpanan(s), jenisSimpanan(), ringkasanBukuSimpanan(s)])
     const config = {
         ...savingsLedgerConfig,
         filters: savingsLedgerConfig.filters?.map((f) => f.key === "jenis"
@@ -18,7 +21,11 @@ export default async function SavingsLedgerPage(props: PageProps<"/dashboard/sav
             : f),
     }
     return (
-        <ModuleTable config={config} data={data} aksiBaris={AksiBuktiSimpanan} actions={
+        // key: kotak cari mengikuti alamat saat anggota dipilih dari ringkasan.
+        <ModuleTable key={sp(s, "search")} config={config} data={data} aksiBaris={AksiBuktiSimpanan} ringkasan={ringkasan && (
+            <RingkasanBukuSimpanan data={ringkasan} s={s} jenisAktif={sp(s, "jenis")} bolehKartu={o.izin.includes(MENU.kartuSimpanan)}
+                sampai={isTanggal(sp(s, "sampai")) ? sp(s, "sampai") : ""} />
+        )} actions={
             <>
                 {o.izin.includes(MENU.pencairanSimpanan) && (
                     <Button asChild size="sm" variant="outline" className="h-9">

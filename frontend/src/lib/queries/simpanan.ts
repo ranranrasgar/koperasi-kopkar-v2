@@ -38,6 +38,38 @@ export async function bukuSimpanan(s: SearchParams) {
     return paged({ base, values, searchParams: s, sortable, defaultSort: "tgl_transaksi DESC, urut DESC, id DESC", kolomHalaman: saldo })
 }
 
+export interface JenisSaldo { kode_simpanan: string; nama_simpanan: string; setoran: number; pengambilan: number; saldo: number; transaksi: number }
+export interface AnggotaSimpanan { kode_agt: string; nik: string | null; nama: string; aktif: boolean; total: number; transaksi: number; terakhir: string | null }
+const MAKS_PILIHAN = 20
+
+/**
+ * Ringkasan di atas Buku Simpanan, dari kata pencarian. Satu anggota cocok: saldonya per jenis. Beberapa cocok: daftar pilihan
+ * (maks. MAKS_PILIHAN). Saldo dari seluruh riwayat sampai filter Sampai Tanggal, sama dengan kolom Saldo; filter Dari dan Jenis tidak mengubahnya.
+ */
+export async function ringkasanBukuSimpanan(s: SearchParams) {
+    const cari = sp(s, "search").trim()
+    if (!cari) return null
+    const { values, p } = params()
+    const kw = p(`%${cari}%`)
+    const batas = isTanggal(sp(s, "sampai")) ? `AND x.tgl_transaksi <= ${p(sp(s, "sampai"))}` : ""
+    const cocok = await query<AnggotaSimpanan & { id: number }>(
+        `SELECT a.id, a.kode_agt, a.nik, a.nama, a.aktif, SUM(x.rp_setoran - x.rp_pengambilan) AS total, COUNT(*)::int AS transaksi, MAX(x.tgl_transaksi)::text AS terakhir
+           FROM anggota a JOIN simpanan x ON x.anggota_id = a.id ${batas}
+          WHERE a.kode_agt ILIKE ${kw} OR a.nik ILIKE ${kw} OR a.nama ILIKE ${kw}
+          GROUP BY a.id ORDER BY a.aktif DESC, a.nama LIMIT ${MAKS_PILIHAN + 1}`, values)
+    if (cocok.length === 0) return null
+    if (cocok.length > 1) return { pilihan: cocok.slice(0, MAKS_PILIHAN), lebih: cocok.length > MAKS_PILIHAN, anggota: null, jenis: [] as JenisSaldo[] }
+    const nilai: unknown[] = [cocok[0].id]
+    if (batas) nilai.push(sp(s, "sampai"))
+    const jenis = await query<JenisSaldo>(
+        `SELECT j.kode_simpanan, j.nama_simpanan, SUM(x.rp_setoran) AS setoran, SUM(x.rp_pengambilan) AS pengambilan,
+                SUM(x.rp_setoran - x.rp_pengambilan) AS saldo, COUNT(*)::int AS transaksi
+           FROM simpanan x JOIN jenis_simpanan j ON j.id = x.jenis_simpanan_id
+          WHERE x.anggota_id = $1 ${batas ? "AND x.tgl_transaksi <= $2" : ""}
+          GROUP BY j.id ORDER BY j.kode_simpanan`, nilai)
+    return { pilihan: [] as AnggotaSimpanan[], lebih: false, anggota: cocok[0], jenis }
+}
+
 // Simpanan per jenis: kode baru ('01'..'04') dan kode lama ('SP', 'SW', 'SS', 'SK').
 // Query sama dengan web lama (src/app/actions/savingsSummary.ts) yang sudah dicocokkan dengan MySQL produksi.
 const JENIS = [

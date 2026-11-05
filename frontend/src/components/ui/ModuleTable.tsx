@@ -40,6 +40,8 @@ interface ModuleTableProps {
     jumlah?: Record<string, number>
     /** Catatan tambahan di bawah deskripsi. */
     keterangan?: React.ReactNode
+    /** Blok di antara judul halaman dan tabel, mis. ringkasan anggota yang dicari. */
+    ringkasan?: React.ReactNode
 }
 
 const badgeColorMap: Record<string, string> = {
@@ -87,7 +89,7 @@ function BarisJumlah({ kolom, label, nilai }: { kolom: ColumnConfig[]; label: st
     )
 }
 
-export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumlah, keterangan }: ModuleTableProps) {
+export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumlah, keterangan, ringkasan }: ModuleTableProps) {
     const router = useRouter()
     const pathname = usePathname()
     const searchParams = useSearchParams()
@@ -219,6 +221,8 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                     <>{actions}</>
                 </div>
             </div>
+
+            {ringkasan}
 
             <Card className="bg-background border border-outline-variant shadow-sm rounded-lg overflow-clip py-0 gap-0">
                 <div className="p-3 border-b flex flex-wrap items-center gap-2 bg-background print:hidden">
