@@ -22,12 +22,12 @@ Menu **Keanggotaan → Daftar Anggota** menampilkan seluruh anggota koperasi, ak
 ## Mencari dan menyaring
 
 - Kotak cari menerima **kode anggota, KPK, atau nama**.
-- Filter **Status** (Aktif / Non-Aktif), **Anggota** (Anggota / Non Anggota), dan **Staff** (Staff / Non Staff) bisa digabung.
+- Filter **Status** (Aktif / Non-Aktif), **Pinjaman** (Meminjam / Tidak meminjam), **Staff** (Staff / Non Staff), dan **Anggota** (Anggota / Non Anggota) bisa digabung. *Meminjam* berarti masih punya pinjaman tunai atau KPR yang belum lunas.
 - Tombol mata di kolom **Aksi** membuka jendela **Detail** berisi semua kolom anggota itu, termasuk kolom yang sedang disembunyikan.
 
 ## Menambah anggota baru
 
-Tombol **Tambah Anggota** di kanan atas tampil untuk grup yang dicentang **Daftar Anggota → Tambah anggota baru** di Kelola Hak Akses.
+Tombol **Tambah Anggota** di kanan atas tampil untuk grup yang dicentang **C** di baris Daftar Anggota pada Kelola Hak Akses.
 
 1. Isi **KPK** dan **Nama lengkap** (wajib), lalu data lain yang tersedia.
 2. Periksa **Simpanan awal**. Nilainya mengikuti Pengaturan Perusahaan dan bisa diubah di form ini.

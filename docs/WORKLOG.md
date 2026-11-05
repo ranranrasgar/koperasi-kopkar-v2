@@ -37,6 +37,19 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Daftar Anggota: filter Pinjaman (6 November)
+- Filter `pinjaman` (Meminjam/Tidak meminjam) dengan `MEMINJAM` di `lib/queries/anggota.ts`: tunai atau KPR yang belum lunas. Filter Anggota pindah ke Filter Lainnya karena hanya tiga filter tampil langsung.
+
+### Potongan periode: kolom dan cetak sama dengan desktop (6 November)
+- `deductions/periode/[periode]/page.tsx` dan `rekapHtml` (`AlatPotongan.tsx`): KPK, Nama, CB (selalu P), Accrek, Namarek, Bank, Kota, Pokok, Wajib, Sukarela, Koperasi, Bank, Kpr, Adm Bank, Total, Keterangan (`Oktober 26`). Saklar Dipotong tetap di web, kode anggota tidak tampil lagi. Total tetap tanpa Pokok, sama dengan generate dan file ekspor. File ekspor Excel tidak diubah (format `EXPORT` untuk bank).
+
+### Matriks: semua menu multi-izin satu baris (6 November)
+- `GABUNGAN_IZIN` kini mencakup User Mobile, Setoran Angsuran, Input Pinjaman Tunai, Daftar Pinjaman, Kredit Macet, Transaksi Potongan, Buku Besar, SHU, dan Audit Data, dengan `lihat: string[]`. Satu centang menulis semua izin dalam daftarnya, jadi tidak bisa lagi membedakan grup pinjaman dari matriks; grup lama yang punya sebagian izin tampil tercentang dan baru berubah bila dicentang ulang. `bukaIzin` membuka izin tertutup tanpa aksi lain.
+- Ditambah penegakan: `U` di putuskan pendaftaran, ubah status akun, dan jadikan anggota; `D` Audit Data = `Batal Transaksi (web)` (`posting` aksi `hapus`, `bolehAksi` di modal, detail pinjaman, Audit Data).
+
+### Matriks: Daftar Anggota dan Karyawan Mattel satu baris (6 November)
+- `GABUNGAN_IZIN` (`config/akses.ts`): izin desktop tetap terpisah di `opr_hak_akses` dan server action tidak berubah; matriks membaca R = salah satu izin terbuka, C/U/D = salah satu izin aksinya boleh. Mematikan R menutup semua izin menu itu; R nyala membuka izin `lihat`. `setAksiAction` membuka izin tujuan hanya untuk aksi itu. User Mobile dan menu per grup pinjaman tetap beberapa baris.
+
 ### Izin tambah, ubah, hapus per menu (6 November)
 - Kolom web `opr_hak_akses.boleh_tambah/ubah/hapus` (`pengaturan-web.sql`, bawaan true; **wajib `pengaturan:pasang` sebelum image baru dipakai** karena `operatorSesi` membacanya). `akses='T'` tetap berarti boleh melihat; desktop tidak terpengaruh. Superadmin selalu lolos.
 - `config/akses.ts`: `AKSI_IZIN` (aksi per menu, hanya yang benar-benar ada di server action), `bolehAksi`. `lib/operator.ts`: `Operator.aksiTolak`, `wajibAksi`. Parameter aksi wajib di pembungkus `simpan` (master, master-aksi), `posting` (transaksi), `proses` (shu), `aksi` (potongan). Menambah server action tulis = tentukan aksinya.

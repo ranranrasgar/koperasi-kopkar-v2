@@ -3,6 +3,12 @@ import { query } from "@/lib/db"
 import { paged, params, sp, type SearchParams } from "@/lib/list"
 import { ukuranHalaman } from "@/lib/halaman"
 
+/** Punya pinjaman tunai atau KPR yang belum lunas, dengan aturan Daftar Pinjaman: cicilan belum selesai dan sisa buku di atas Rp 100 (tanpa rincian = pokok). */
+const MEMINJAM = `(EXISTS (SELECT 1 FROM pinjaman_tunai x WHERE x.anggota_id = a.id AND x.jml_cicilan < x.lama_angsuran
+        AND COALESCE((SELECT SUM(r.kredit_pokok - r.debit_pokok) FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = x.id), x.rp_pinjaman_pokok) > 100)
+    OR EXISTS (SELECT 1 FROM kpr x WHERE x.anggota_id = a.id
+        AND COALESCE((SELECT SUM(r.kredit_pokok - r.debit_pokok) FROM kpr_rincian r WHERE r.kpr_id = x.id), x.rp_pinjaman_pokok) > 100))`
+
 export async function daftarAnggota(s: SearchParams) {
     const { values, p } = params()
     const where: string[] = []
@@ -17,6 +23,8 @@ export async function daftarAnggota(s: SearchParams) {
     }
     if (sp(s, "status_staff")) where.push(`a.status_staff = ${p(sp(s, "status_staff"))}`)
     if (sp(s, "grade")) where.push(`a.grade ILIKE ${p(`%${sp(s, "grade")}%`)}`)
+    if (sp(s, "pinjaman") === "ya") where.push(MEMINJAM)
+    if (sp(s, "pinjaman") === "tidak") where.push(`NOT ${MEMINJAM}`)
 
     // Saldo simpanan (301 ribu baris) adalah bagian termahal. Saat urut per saldo atau halaman besar (>200 baris, mis.
     // "Semua"), dijumlah sekali untuk semua anggota (±0,2 dtk; per baris untuk 2.026 anggota ±1,7 dtk). Selain itu

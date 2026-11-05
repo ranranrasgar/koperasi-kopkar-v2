@@ -49,8 +49,9 @@ export const membersConfig: ModuleConfig = {
     searchPlaceholder: "Kode, KPK, atau nama",
     filters: [
         { key: "aktif", label: "Status", type: "select", options: [{ label: "Aktif", value: "true" }, { label: "Non-Aktif", value: "false" }] },
-        { key: "agt_non_agt", label: "Anggota", type: "select", options: [{ label: "Anggota", value: "true" }, { label: "Non Anggota", value: "false" }] },
+        { key: "pinjaman", label: "Pinjaman", type: "select", options: [{ label: "Meminjam", value: "ya" }, { label: "Tidak meminjam", value: "tidak" }] },
         { key: "status_staff", label: "Staff", type: "select", options: [{ label: "Staff", value: "Staff" }, { label: "No Staff", value: "No Staff" }] },
+        { key: "agt_non_agt", label: "Anggota", type: "select", options: [{ label: "Anggota", value: "true" }, { label: "Non Anggota", value: "false" }] },
         { key: "grade", label: "Grade", type: "text" },
     ],
     columns: [
