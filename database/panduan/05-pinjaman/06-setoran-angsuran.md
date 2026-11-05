@@ -22,7 +22,7 @@ Sistem membuat pembalik `BTL...` bertanggal hari ini beserta jurnal kebalikannya
 
 ## Angsuran pinjaman tunai
 
-1. Pilih **Anggota**. Daftar **Pinjaman** berisi pinjaman yang masih berjalan, dengan format *nomor | jenis | pokok | sudah dibayar/lama*.
+1. Pilih **Anggota** dengan mengetik kode, KPK, nama, atau **nomor rekening pinjaman** (nomor pinjaman seperti `CR-0726-22626`, atau kolom No. Rekening lama). Bila dipilih dari nomor pinjaman, pinjaman itu langsung terpilih, termasuk pindah ke tab KPR untuk KPR. Hanya pinjaman yang masih berjalan yang ikut dicari. Daftar **Pinjaman** berisi pinjaman yang masih berjalan, dengan format *nomor | jenis | pokok | sudah dibayar/lama*.
 2. Pilih pinjaman. Sistem menampilkan **Angsuran ke-n dari lama** beserta pokok, jasa, adm, provisi, dan total.
 3. Isi **Tanggal Bayar** dan **Diterima di Kas/Bank**, lalu **Simpan**.
 

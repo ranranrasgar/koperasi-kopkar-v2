@@ -14,9 +14,9 @@ import { AnggotaPicker, Field, FormCard, HasilTransaksi, KasSelect, SubmitButton
 
 type Berikutnya = Awaited<ReturnType<typeof angsuranBerikutnyaAction>>
 
-function AngsuranTunai({ info, akunKas, hariIni, onSelesai }: { info: InfoAnggota; akunKas: Akun[]; hariIni: string; onSelesai: () => void }) {
+function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: InfoAnggota; akunKas: Akun[]; hariIni: string; onSelesai: () => void; pilih?: string }) {
     const { hasil, onSubmit, pending } = useAksiForm(bayarAngsuranAction)
-    const [noPinjaman, setNoPinjaman] = useState(info.pinjaman[0]?.no_pinjaman ?? "")
+    const [noPinjaman, setNoPinjaman] = useState(pilih ?? info.pinjaman[0]?.no_pinjaman ?? "")
     const [berikut, setBerikut] = useState<Berikutnya>(null)
     const [ubah, setUbah] = useState(false)
 
@@ -83,9 +83,9 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai }: { info: InfoAnggot
     )
 }
 
-function AngsuranKpr({ info, akunKas, hariIni, onSelesai }: { info: InfoAnggota; akunKas: Akun[]; hariIni: string; onSelesai: () => void }) {
+function AngsuranKpr({ info, akunKas, hariIni, onSelesai, pilih }: { info: InfoAnggota; akunKas: Akun[]; hariIni: string; onSelesai: () => void; pilih?: string }) {
     const { hasil, onSubmit, pending } = useAksiForm(bayarAngsuranKprAction)
-    const [noPinjaman, setNoPinjaman] = useState(info.kpr[0]?.no_pinjaman ?? "")
+    const [noPinjaman, setNoPinjaman] = useState(pilih ?? info.kpr[0]?.no_pinjaman ?? "")
     useEffect(() => {
         if (!info.kpr.some((k) => k.no_pinjaman === noPinjaman)) setNoPinjaman(info.kpr[0]?.no_pinjaman ?? "")
     }, [info, noPinjaman])
@@ -157,7 +157,12 @@ export function AngsuranForm({ akunKas, hariIni, izin }: { akunKas: Akun[]; hari
             <FormCard title="Setoran Angsuran" description="Angsuran pinjaman tunai (pokok, jasa, adm, provisi) atau KPR (titipan). Nomor bukti dari mesin posting.">
                 <div className="space-y-4">
                     <Field label="Anggota" htmlFor="anggota">
-                        <AnggotaPicker value={anggota} onChange={(a) => { setAnggota(a); setVersi(0) }} />
+                        <AnggotaPicker cariPinjaman value={anggota} onChange={(a) => {
+                            // info dikosongkan supaya form pinjaman dibuat ulang dengan pinjaman yang dipilih dari pencarian.
+                            setInfo(null); setAnggota(a); setVersi(0)
+                            if (a?.jenis_pinjaman === "tunai" && izin.tunai) setTab("tunai")
+                            if (a?.jenis_pinjaman === "kpr" && izin.kpr) setTab("kpr")
+                        }} />
                     </Field>
                     {info && (
                         <Tabs value={tab} onValueChange={setTab}>
@@ -166,10 +171,10 @@ export function AngsuranForm({ akunKas, hariIni, izin }: { akunKas: Akun[]; hari
                                 <TabsTrigger value="kpr" disabled={!izin.kpr}>KPR ({info.kpr.length})</TabsTrigger>
                             </TabsList>
                             <TabsContent value="tunai" className="pt-4">
-                                <AngsuranTunai info={info} akunKas={akunKas} hariIni={hariIni} onSelesai={selesai} />
+                                <AngsuranTunai info={info} akunKas={akunKas} hariIni={hariIni} onSelesai={selesai} pilih={anggota?.jenis_pinjaman === "tunai" ? anggota.no_pinjaman : undefined} />
                             </TabsContent>
                             <TabsContent value="kpr" className="pt-4">
-                                <AngsuranKpr info={info} akunKas={akunKas} hariIni={hariIni} onSelesai={selesai} />
+                                <AngsuranKpr info={info} akunKas={akunKas} hariIni={hariIni} onSelesai={selesai} pilih={anggota?.jenis_pinjaman === "kpr" ? anggota.no_pinjaman : undefined} />
                             </TabsContent>
                         </Tabs>
                     )}

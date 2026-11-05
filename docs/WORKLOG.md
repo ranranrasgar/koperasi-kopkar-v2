@@ -37,6 +37,9 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Setoran Angsuran: cari no. rekening pinjaman (6 November)
+- `AnggotaPicker` prop `cariPinjaman` (hanya `AngsuranForm`): `cariAnggotaAction(kata, true)` menggabung `cariPinjamanBerjalan` (no_pinjaman dan no_rek tunai, no_pinjaman KPR; hanya yang berjalan) dengan pencarian anggota biasa. Pilihan membawa `no_pinjaman`, jadi pinjaman dan tabnya langsung terpilih. `pinjaman_tunai.no_rek` hanya terisi 939 dari 22.957 pinjaman (44 berjalan), jadi nomor pinjamanlah yang praktis dipakai. Typecheck bersih; belum dicek setelah login.
+
 ### Batal angsuran, pencairan, dan KPR, tahap 3 koreksi (6 November)
 - `backend/src/posting/koreksi.ts`: `batalBukti` mencari sumber dari nomor bukti lalu memakai aturan sumbernya. Awalan pembalik berbeda per sumber (`BTL`, `BTLA`, `BTLC`, `BTLKA`, `BTLKC`) karena sequence terpisah dan `postJournal` mengganti jurnal bernomor sama.
 - Angsuran tunai/KPR: hanya angsuran terakhir. Baris asal dan pembalik (nilai minus) diberi `angsuran_ke = 0`, jadi saling menghapus di SUM buku dan tidak muncul di daftar per angsuran (PWA, kwitansi, detail). Ini satu-satunya perubahan pada baris asal, selain deskripsi `DIBATALKAN:`; nilai aslinya ada di `data_lama`. Jadwal tagih dan `jml_cicilan` kembali.

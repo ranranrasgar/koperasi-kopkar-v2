@@ -111,8 +111,11 @@ export function JadwalTable({ jadwal }: { jadwal: { ke: number; tanggal: string;
     )
 }
 
-/** Pencarian anggota (kode, KPK, atau nama); nilai terpilih dikirim lewat input tersembunyi `kodeAgt`. */
-export function AnggotaPicker({ value, onChange }: { value: AnggotaRingkas | null; onChange: (a: AnggotaRingkas | null) => void }) {
+/**
+ * Pencarian anggota (kode, KPK, atau nama); nilai terpilih dikirim lewat input tersembunyi `kodeAgt`.
+ * `cariPinjaman`: bisa juga dicari dari nomor pinjaman atau nomor rekening; pinjaman yang dipilih ikut dalam nilai `no_pinjaman`.
+ */
+export function AnggotaPicker({ value, onChange, cariPinjaman = false }: { value: AnggotaRingkas | null; onChange: (a: AnggotaRingkas | null) => void; cariPinjaman?: boolean }) {
     const [kata, setKata] = useState("")
     const [hasil, setHasil] = useState<AnggotaRingkas[]>([])
     const [buka, setBuka] = useState(false)
@@ -123,11 +126,11 @@ export function AnggotaPicker({ value, onChange }: { value: AnggotaRingkas | nul
         if (kata.trim().length < 2) return
         const n = ++urut.current
         const t = setTimeout(() => startTransition(async () => {
-            const r = await cariAnggotaAction(kata)
+            const r = await cariAnggotaAction(kata, cariPinjaman)
             if (n === urut.current) { setHasil(r); setBuka(true) }
         }), 250)
         return () => clearTimeout(t)
-    }, [kata])
+    }, [kata, cariPinjaman])
 
     if (value) {
         return (
@@ -148,20 +151,21 @@ export function AnggotaPicker({ value, onChange }: { value: AnggotaRingkas | nul
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
                 id="anggota" autoComplete="off" value={kata} onChange={(e) => setKata(e.target.value)} onFocus={() => hasil.length && setBuka(true)}
-                placeholder="Ketik kode anggota, KPK, atau nama (min. 2 huruf)"
+                placeholder={cariPinjaman ? "Ketik kode, KPK, nama, atau no. rekening pinjaman (min. 2 huruf)" : "Ketik kode anggota, KPK, atau nama (min. 2 huruf)"}
                 className="flex h-9 w-full rounded-md border border-input bg-background pl-8 pr-8 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
             />
             {memuat && <Loader2 className="absolute right-2.5 top-2.5 h-4 w-4 animate-spin text-muted-foreground" />}
             {buka && kata.trim().length >= 2 && (
                 <ul className="absolute z-20 mt-1 max-h-64 w-full overflow-auto rounded-md border bg-popover shadow-lg">
                     {hasil.length === 0 ? (
-                        <li className="px-3 py-2 text-sm text-muted-foreground">Anggota aktif tidak ditemukan</li>
+                        <li className="px-3 py-2 text-sm text-muted-foreground">{cariPinjaman ? "Anggota aktif atau pinjaman berjalan tidak ditemukan" : "Anggota aktif tidak ditemukan"}</li>
                     ) : hasil.map((a) => (
-                        <li key={a.kode_agt}>
+                        <li key={a.no_pinjaman ?? a.kode_agt}>
                             <button type="button" className="w-full text-left px-3 py-2 hover:bg-muted text-sm"
                                 onClick={() => { onChange(a); setBuka(false) }}>
                                 <span className="font-semibold">{a.nama}</span>
                                 <span className="ml-2 text-xs text-muted-foreground font-mono">{a.kode_agt} | {a.nik ?? "-"}</span>
+                                {a.no_pinjaman && <span className="block text-xs font-mono text-primary">{a.no_pinjaman}{a.jenis_pinjaman === "kpr" ? " (KPR)" : ""}</span>}
                             </button>
                         </li>
                     ))}

@@ -16,7 +16,7 @@ import { formatRupiah, hariIni } from "@/lib/format"
 import { modeUji, pool, query, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
 import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_DETAIL_PINJAMAN_GRUP, MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
-import { cariAnggota, type AnggotaRingkas } from "@/lib/queries/anggota"
+import { cariAnggota, cariPinjamanBerjalan, type AnggotaRingkas } from "@/lib/queries/anggota"
 import { transaksiBankBook, type TransaksiBankBook } from "@/lib/queries/laporan"
 import { riwayatAnggota, type RiwayatAnggota } from "@/lib/queries/pinjaman-riwayat"
 import { kprBerjalan, pinjamanBerjalan, type KprBerjalan, type PinjamanBerjalan } from "@/lib/queries/pinjaman"
@@ -81,11 +81,14 @@ async function posting(menu: readonly string[], fn: (o: Operator) => Promise<Exc
 
 // ---------- pencarian dan info anggota ----------
 
-export async function cariAnggotaAction(kata: string): Promise<AnggotaRingkas[]> {
+/** `pinjaman`: hasil juga memuat pinjaman berjalan yang cocok dengan nomor pinjaman atau nomor rekening. */
+export async function cariAnggotaAction(kata: string, pinjaman = false): Promise<AnggotaRingkas[]> {
     const o = await wajibLogin() // sesi habis: alihkan ke login
     if (!punyaIzin(o.izin, [...MENU_TRANSAKSI, MENU.kirimNotifikasi])) return []
     if (kata.trim().length < 2) return []
-    return cariAnggota(kata)
+    if (!pinjaman) return cariAnggota(kata)
+    const [lewatPinjaman, lewatAnggota] = await Promise.all([cariPinjamanBerjalan(kata), cariAnggota(kata)])
+    return [...lewatPinjaman, ...lewatAnggota]
 }
 
 export interface InfoAnggota {

@@ -63,6 +63,9 @@ export interface AnggotaRingkas {
     kode_agt: string
     nik: string | null
     nama: string
+    /** Terisi bila ditemukan lewat pinjaman (cariPinjamanBerjalan). */
+    no_pinjaman?: string
+    jenis_pinjaman?: "tunai" | "kpr"
     aktif: boolean
 }
 
@@ -73,4 +76,21 @@ export async function cariAnggota(kata: string, hanyaAktif = true) {
         `SELECT kode_agt, nik, nama, aktif FROM anggota
           WHERE (kode_agt ILIKE $1 OR nik ILIKE $1 OR nama ILIKE $1) ${hanyaAktif ? "AND aktif" : ""}
           ORDER BY nama LIMIT 20`, [kw])
+}
+
+/**
+ * Pinjaman berjalan yang cocok dengan nomor pinjaman atau nomor rekening, untuk Setoran Angsuran (maks. 20 baris).
+ * Syarat berjalan sama dengan pinjamanBerjalan dan kprBerjalan. KPR tidak punya kolom nomor rekening.
+ */
+export async function cariPinjamanBerjalan(kata: string) {
+    return query<AnggotaRingkas>(
+        `SELECT a.kode_agt, a.nik, a.nama, a.aktif, p.no_pinjaman, 'tunai' AS jenis_pinjaman
+           FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id
+          WHERE (p.no_pinjaman ILIKE $1 OR p.no_rek ILIKE $1) AND p.jml_cicilan < p.lama_angsuran
+         UNION ALL
+         SELECT a.kode_agt, a.nik, a.nama, a.aktif, k.no_pinjaman, 'kpr'
+           FROM kpr k JOIN anggota a ON a.id = k.anggota_id
+           JOIN LATERAL (SELECT COALESCE(SUM(r.kredit_pokok - r.debit_pokok), 0) AS sisa FROM kpr_rincian r WHERE r.kpr_id = k.id) r ON r.sisa > 0
+          WHERE k.no_pinjaman ILIKE $1
+          ORDER BY no_pinjaman LIMIT 20`, [`%${kata.trim()}%`])
 }
