@@ -1,6 +1,6 @@
 "use server"
 
-import { AKSES_HALAMAN } from "@/config/akses"
+import { AKSES_HALAMAN, grupPinjamanBoleh } from "@/config/akses"
 import type { PageData } from "@/config/modules"
 import { query } from "@/lib/db"
 import { identitasKoperasi } from "@/lib/koperasi"
@@ -9,6 +9,7 @@ import { daftarAnggota } from "@/lib/queries/anggota"
 import { daftarCoa, daftarJurnal } from "@/lib/queries/akuntansi"
 import { daftarKaryawanMattel, daftarPengajuan, daftarUserMobile } from "@/lib/queries/keanggotaan"
 import { laporanPinjaman } from "@/lib/queries/pinjaman"
+import { bukuPinjaman } from "@/lib/queries/pinjaman-buku"
 import { daftarPotongan } from "@/lib/queries/pinjaman-lap"
 import { bukuSimpanan, rekapSimpanan } from "@/lib/queries/simpanan"
 import { anggotaShu } from "@/lib/queries/shu"
@@ -61,6 +62,7 @@ const DAFTAR: Record<string, Ambil> = {
     "/dashboard/loans/apply": (s) => daftarPengajuan(s) as unknown as Promise<PageData>,
     "/dashboard/savings/ledger": (s) => bukuSimpanan(s) as Promise<PageData>,
     "/dashboard/loans": (s) => laporanPinjaman(s) as unknown as Promise<PageData>,
+    "/dashboard/loans/ledger": async (s) => bukuPinjaman(s, grupPinjamanBoleh((await operatorAktif()).izin)) as Promise<PageData>,
     "/dashboard/deductions": (s) => daftarPotongan(s) as unknown as Promise<PageData>,
     "/dashboard/shu": (s) => anggotaShu(Number(s.tahun), s) as unknown as Promise<PageData>,
     "/dashboard/savings": async (s) => {

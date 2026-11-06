@@ -47,7 +47,7 @@ export function SimpananForm({ tipe, jenis, akunKas, hariIni, jenisAwal }: Props
                     : "Pengambilan dicatat ke buku simpanan dan dijurnal: debit simpanan, kredit kas. Ditolak bila saldo kurang."}>
                     <form ref={form} onSubmit={onSubmit} className="space-y-4">
                         <Field label="Anggota" htmlFor="anggota">
-                            <AnggotaPicker pindai={tipe === "setor"} value={anggota} onChange={(a) => {
+                            <AnggotaPicker pindai value={anggota} onChange={(a) => {
                                 setAnggota(a)
                                 // QR simpanan dari HP anggota ikut memilih jenisnya.
                                 const pilihan = form.current?.elements.namedItem("jenisSimpanan") as HTMLSelectElement | null

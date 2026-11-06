@@ -1,13 +1,13 @@
 ---
 judul: Membayar dengan QR di kasir
-ringkasan: Menampilkan QR simpanan atau pinjaman di HP supaya kasir cepat menemukan data Anda saat menyetor atau membayar angsuran.
+ringkasan: Menampilkan QR simpanan atau pinjaman di HP supaya kasir cepat menemukan data Anda saat menyetor, mengambil simpanan, atau membayar angsuran.
 ---
 QR membantu kasir menemukan data Anda tanpa mengetik. QR bukan alat pembayaran: uang tetap Anda serahkan ke kasir, dan transaksi baru tercatat setelah kasir menyimpannya.
 
-## Saat menyetor simpanan
+## Saat menyetor atau mengambil simpanan
 
 1. Buka menu **Simpanan**.
-2. Tekan ikon QR di baris jenis simpanan yang ingin disetor.
+2. Tekan ikon QR di baris jenis simpanan yang dimaksud.
 3. Tunjukkan QR ke kasir.
 
 ## Saat membayar angsuran

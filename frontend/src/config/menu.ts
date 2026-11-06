@@ -145,6 +145,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/loans/payment"
             },
             {
+                label: "Buku Pinjaman",
+                icon: "auto_stories",
+                href: "/dashboard/loans/ledger"
+            },
+            {
                 label: "Setoran Titipan (Escrow)",
                 icon: "layers",
                 href: "/dashboard/loans/escrow"

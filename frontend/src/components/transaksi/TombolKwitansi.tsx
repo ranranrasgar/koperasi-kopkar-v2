@@ -24,6 +24,13 @@ export function TombolKwitansi({ jenis, no, label = "Cetak Kwitansi", ikon = fal
     )
 }
 
+/** Aksi baris di Buku Pinjaman: cetak ulang kwitansi. Angsuran yang dibatalkan dan pembaliknya tidak punya kwitansi. */
+export function AksiBuktiPinjaman({ item }: { item: Record<string, unknown> }) {
+    const no = String(item.no_bukti ?? "")
+    if (!no || !(Number(item.angsuran_ke) > 0)) return null
+    return <TombolKwitansi jenis={item.sumber === "kpr" ? "kpr" : "angsuran"} no={no} label="Cetak ulang kwitansi" ikon ulang />
+}
+
 /** Aksi baris di Buku Simpanan dan Kartu Simpanan: lihat bukti dan jurnalnya, cetak ulang kwitansi. */
 export function AksiBuktiSimpanan({ item }: { item: Record<string, unknown> }) {
     const no = String(item.no_bukti ?? "")

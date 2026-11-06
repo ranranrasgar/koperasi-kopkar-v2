@@ -8,7 +8,7 @@ import { dataBuku, dataKwitansi } from "@/lib/queries/kwitansi"
 import { detailBuktiSimpanan } from "@/lib/queries/simpanan"
 
 const MENU_SIMPANAN = [MENU.setoranSimpanan, MENU.pencairanSimpanan, MENU.lapBukuSimpanan, MENU.kartuSimpanan]
-const MENU_PINJAMAN = [...AKSES_HALAMAN["/dashboard/loans/[no]"], MENU.angsurKpr, MENU.cairKpr, MENU.lapPinjamanKpr, MENU.titipan]
+const MENU_PINJAMAN = [...AKSES_HALAMAN["/dashboard/loans/[no]"], MENU.angsurKpr, MENU.cairKpr, MENU.lapPinjamanKpr, MENU.titipan, MENU.bukuPinjaman]
 
 export type HasilBukti = { kop: KopCetak | null; kwitansi: DataKwitansi } | { kop: KopCetak | null; buku: DataBuku } | { error: string }
 

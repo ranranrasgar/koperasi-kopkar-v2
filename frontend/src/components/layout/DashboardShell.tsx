@@ -49,6 +49,7 @@ const HALAMAN_LEBAR = [
     "/dashboard/savings",          // Rekap Simpanan: 17+ kolom
     "/dashboard/loans",            // Daftar Pinjaman: 24 kolom
     "/dashboard/loans/kpr",        // Daftar KPR: 16 kolom
+    "/dashboard/loans/ledger",     // Buku Pinjaman: 13+ kolom
     "/dashboard/loans/bad-debts",  // Kredit Macet: 10 kolom
     "/dashboard/deductions",       // Transaksi Potongan: 11 kolom
     "/dashboard/deductions/",      // Generate & Posting dan rinciannya

@@ -14,6 +14,8 @@ export const MENU = {
     lapPinjamanKoperasi: "Lap. Pinjaman Koperasi",
     lapPinjamanBank: "Lap. Pinjaman Bank / Pihak Lain",
     lapPinjamanKpr: "Lap. Pinjaman KPR",
+    // Khusus web; baris yang tampil dibatasi grup pinjaman yang boleh dilihat operator.
+    bukuPinjaman: "Buku Pinjaman (web)",
     cairKoperasi: "Pencairan Pinjaman Koperasi",
     cairBank: "Pencairan Pinjaman Bank",
     cairKpr: "Pencairan Pinjaman KPR",
@@ -139,6 +141,9 @@ export const MENU_DETAIL_PINJAMAN_GRUP: Record<string, string[]> = {
     "BANK / PIHAK LAIN": [MENU.lapPinjamanBank, MENU.cairBank, MENU.angsurBank, MENU.lapTunggakanBank],
     "KPR": [MENU.lapPinjamanKpr, MENU.cairKpr, MENU.angsurKpr, MENU.lapTunggakanKpr],
 }
+/** Grup pinjaman yang boleh dilihat operator, untuk daftar lintas grup (Cari Pinjaman, Buku Pinjaman). */
+export const grupPinjamanBoleh = (izin: readonly string[]) =>
+    Object.entries(MENU_DETAIL_PINJAMAN_GRUP).filter(([, menu]) => menu.some((m) => izin.includes(m))).map(([g]) => g)
 
 /**
  * Halaman web -> izin yang membukanya. Halaman tanpa entri tidak dibatasi (dashboard).
@@ -152,6 +157,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/savings/withdraw": [MENU.pencairanSimpanan],
     "/dashboard/loans": [MENU.lapPinjamanKoperasi, MENU.lapPinjamanBank],
     "/dashboard/loans/kpr": [MENU.lapPinjamanKpr],
+    "/dashboard/loans/ledger": [MENU.bukuPinjaman],
     "/dashboard/loans/kpr/[no]": MENU_DETAIL_PINJAMAN_GRUP["KPR"],
     "/dashboard/loans/cari": [MENU.cariPinjaman],
     // Detail pinjaman (bukan menu sidebar); izin per grup pinjaman diperiksa lagi di halamannya.

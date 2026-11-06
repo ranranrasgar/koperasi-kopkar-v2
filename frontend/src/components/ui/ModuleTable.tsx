@@ -188,8 +188,8 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                 </select>
             )
         }
-        return (
-            <input key={filter.key} type={filter.type === "date" ? "date" : "text"} className={cls} title={filter.label}
+        const isian = (
+            <input key={filter.key} type={filter.type === "date" ? "date" : "text"} className={cls} title={filter.label} aria-label={filter.label}
                 placeholder={filter.label} defaultValue={value}
                 onClick={(e) => e.stopPropagation()}
                 onChange={filter.type === "date" ? (e) => updateParams({ [filter.key]: e.target.value, page: 1 }) : undefined}
@@ -198,10 +198,12 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                 } : undefined}
             />
         )
+        // Dua isian tanggal berdampingan tidak terbedakan tanpa judul.
+        return filter.type === "date" && !compact ? <label key={filter.key} className="flex items-center gap-1.5 text-xs text-muted-foreground">{filter.label.replace(/ Tanggal$/, "")}{isian}</label> : isian
     }
 
-    const inline = config.filters?.slice(0, 3) ?? []
-    const extra = config.filters?.slice(3) ?? []
+    const inline = config.filters?.slice(0, config.filterBaris ?? 3) ?? []
+    const extra = config.filters?.slice(config.filterBaris ?? 3) ?? []
 
     return (
         <div className="space-y-4 relative">

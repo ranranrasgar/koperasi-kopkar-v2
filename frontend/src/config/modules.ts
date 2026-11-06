@@ -29,6 +29,8 @@ export interface ModuleConfig {
     rowKey: string
     columns: ColumnConfig[]
     filters?: FilterConfig[]
+    // Jumlah filter yang tampil di baris filter; sisanya masuk Filter Lainnya. Bawaan 3.
+    filterBaris?: number
     searchPlaceholder?: string
 }
 
@@ -112,6 +114,42 @@ export const savingsLedgerConfig: ModuleConfig = {
         { key: "status_koreksi", label: "Status", type: "badge", badgeMap: { batal: { label: "Dibatalkan", color: "red" }, pembalik: { label: "Pembalik", color: "orange" } } },
         { key: "deskripsi", label: "Keterangan", type: "string", hidden: true },
         { key: "opr", label: "Operator", type: "string", hidden: true },
+    ],
+}
+
+export const loanLedgerConfig: ModuleConfig = {
+    title: "Buku Pinjaman",
+    description: "Bukti pembayaran angsuran pinjaman tunai dan KPR anggota.",
+    rowKey: "id_baris",
+    searchPlaceholder: "No. bukti, no. pinjaman, kode, KPK, atau nama",
+    filterBaris: 4,
+    filters: [
+        { key: "grup", label: "Grup", type: "select", options: [] }, // diisi dari grup yang boleh dilihat operator
+        { key: "kredit", label: "Jenis", type: "select", options: [] }, // diisi dari jenis_kredit
+        { key: "dari", label: "Dari Tanggal", type: "date" },
+        { key: "sampai", label: "Sampai Tanggal", type: "date" },
+    ],
+    // Hanya Tanggal yang bisa diurutkan: Sisa Pokok berjalan seperti rekening koran, jadi baris harus tetap kronologis.
+    columns: [
+        { key: "tanggal_angsuran", label: "Tanggal", type: "date", sortable: true },
+        { key: "no_bukti", label: "No. Bukti", type: "string", mono: true },
+        { key: "no_pinjaman", label: "No. Pinjaman", type: "string", mono: true, tautan: "/dashboard/loans/{no_pinjaman}" },
+        { key: "kode_agt", label: "Kode Agt", type: "string", mono: true, hidden: true },
+        { key: "nik", label: "KPK", type: "string", hidden: true },
+        { key: "nama", label: "Nama", type: "string" },
+        { key: "nama_kredit", label: "Jenis", type: "string" },
+        { key: "grup", label: "Grup", type: "string", hidden: true },
+        { key: "angsuran_ke", label: "Ke", type: "number" },
+        { key: "pokok", label: "Pokok", type: "currency" },
+        { key: "jasa", label: "Jasa", type: "currency" },
+        { key: "adm", label: "Adm", type: "currency", hidden: true },
+        { key: "provisi", label: "Provisi", type: "currency", hidden: true },
+        { key: "total", label: "Total Bayar", type: "currency" },
+        { key: "sisa_pokok", label: "Sisa Pokok", type: "currency" },
+        { key: "kas", label: "Kas/Bank", type: "string", hidden: true },
+        { key: "jurnal", label: "Jurnal", type: "badge", badgeMap: { ada: { label: "Ada", color: "green" }, belum: { label: "Belum", color: "orange" } } },
+        { key: "status_koreksi", label: "Status", type: "badge", badgeMap: { batal: { label: "Dibatalkan", color: "red" }, pembalik: { label: "Pembalik", color: "orange" } } },
+        { key: "deskripsi", label: "Keterangan", type: "string", hidden: true },
     ],
 }
 

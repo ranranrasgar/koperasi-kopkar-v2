@@ -1,7 +1,7 @@
 import Link from "next/link"
 import { redirect } from "next/navigation"
 import { Search } from "lucide-react"
-import { MENU_DETAIL_PINJAMAN_GRUP } from "@/config/akses"
+import { grupPinjamanBoleh } from "@/config/akses"
 import { formatAngka, formatTanggal } from "@/lib/format"
 import { wajibIzin } from "@/lib/operator"
 import { cariPinjaman, type HasilCari } from "@/lib/queries/pinjaman-detail"
@@ -15,7 +15,7 @@ const alamat = (h: HasilCari) => `/dashboard/loans/${h.jenis === "kpr" ? "kpr/" 
 export default async function CariPinjamanPage(props: { searchParams: Promise<{ q?: string }> }) {
     const o = await wajibIzin("/dashboard/loans/cari")
     const kata = ((await props.searchParams).q ?? "").trim().slice(0, 40)
-    const grupBoleh = Object.entries(MENU_DETAIL_PINJAMAN_GRUP).filter(([, menu]) => menu.some((m) => o.izin.includes(m))).map(([g]) => g)
+    const grupBoleh = grupPinjamanBoleh(o.izin)
     const hasil = await cariPinjaman(kata, grupBoleh)
     const tepat = hasil.find((h) => h.no_pinjaman.toLowerCase() === kata.toLowerCase())
     if (tepat) redirect(alamat(tepat))
