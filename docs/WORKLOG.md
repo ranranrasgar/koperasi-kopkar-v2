@@ -40,11 +40,23 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 ### Audit Data: tautan bukti angsuran (6 November)
 - Regex `CR-...` di `audit/page.tsx` ikut mencocokkan bagian `CR-` dari `ANGS-CR-1026-173936`, jadi tautan menuju pinjaman yang tidak ada. Kini nomor pinjaman harus di awal teks atau sesudah spasi. Angsuran tanpa jurnal 2026: 50 baris, Rp 67,9 juta; contoh CR-0723-15842 ke-39 dan CR-0526-22343 ke-5 punya baris buku dan kas, tetapi jurnalnya tidak ada, sedangkan angsuran bulan sebelumnya berjurnal. Penyebab belum diketahui, perlu dicocokkan dengan mutasi bank.
 
+### Angsuran bank mengikuti pembagian operator (7 November)
+- Jurnal BRI desktop memisahkan jasa pengelolaan (mis. piutang 3.301.200, jasa 661.656), tetapi nilainya tidak tersimpan di data pinjaman. Sejak Oktober 2026 Potongan Gaji web memakai jadwal dan jasa BRI turun. `sqlPembagianBank`/`pembagianBank` mengambil angsuran terakhir yang berbeda dari jadwal dengan total sama, khusus grup bank; dipakai `bayarAngsuran`, form, dan `SQL_ANGSURAN_POTONGAN`. Angsuran Oktober yang terlanjur belum dikoreksi (keputusan akuntan). Periode draf perlu generate ulang.
+- Kolom "Sisa Pokok" di Riwayat Pembayaran dan Buku Pinjaman menjadi "Saldo Buku".
+- Kwitansi angsuran kini mencetak Sisa pokok menurut jadwal, sama dengan Daftar Pinjaman.
+
+### Sisa pokok mengikuti desktop (7 November)
+- Kasus `CR-0123-15004`: buku pinjaman membagi 3.962.856 menjadi pokok 3.301.200 + jasa 661.656, jadwal 3.951.200 + 11.656. Daftar Pinjaman, detail, riwayat anggota, dan PWA kini memakai rumus desktop (`backend/src/pinjaman-sisa.ts`); `getPinjaman` Android sudah memakai rumus itu. Status lunas, batas pokok manual, Tutup Pinjaman, dan Potongan tetap melihat saldo buku.
+- Belum diselesaikan: jurnal dan buku tidak diubah, jadi Sisa Pokok berbeda dengan Buku Besar (perlu keputusan akuntan). Angsuran lewat web memakai jadwal, sedangkan pola desktop BRI memasukkan Rp 650.000 ke jasa. `getSaldoJenisPinjaman` Android masih saldo buku. Data 2017 yang `jml_cicilan`-nya tidak cocok dengan buku belum dicocokkan dengan layar desktop.
+
+### Audit Data: optimasi (6 November)
+- Tiga indeks baru (`pinjaman_tunai_rincian.tanggal_angsuran`, `kpr_rincian.tanggal_angsuran`, `jurnal_umum (sumber_tipe, tanggal)`), dipasang `indeks:pasang`. Ringkasan 12 pemeriksaan dijalankan tiga-tiga, bukan sekaligus, dan disimpan 5 menit di memori (`simpanSebentar`, `?segar=1` untuk hitung ulang, `hapusCacheAudit` setelah koreksi).
+
 ### Setoran Angsuran: pokok bisa diubah (6 November)
 - `bayarAngsuran` opsi `pokokManual`: 0 sampai sisa pokok, deskripsi ditandai `(pokok diubah)`. Form menampilkan sisa pokok, total mengikuti isian, dan memperingatkan angsuran terakhir yang tidak menghabiskan sisa. Jadwal tidak disusun ulang; Potongan Gaji tetap memakai jadwal.
 
 ### Jebakan: next typegen saat server dev hidup (6 November)
-- Halaman dashboard membalas 404 dan muncul `Failed to find Server Action`, bermula tepat saat `next typegen` dijalankan selagi port 3100 hidup; hanya `_not-found` yang terkompilasi. Penyebab pasti belum terbukti. Pulihkan dengan memulai ulang server dev; jangan typegen selagi server hidup.
+- Halaman dashboard membalas 404 dan muncul `Failed to find Server Action`, bermula tepat saat `next typegen` dijalankan selagi port 3100 hidup; hanya `_not-found` yang terkompilasi. Terulang 7 November tanpa typegen, jadi penyebab belum diketahui dan `.next/dev` memuat artefak lama. Pulihkan dengan memulai ulang server dev; bila masih 404, hentikan server dan hapus `frontend/.next/dev`.
 
 ### Daftar Pinjaman: KPK, No. Rek, Atas Nama (6 November)
 - Tiga kolom baru di `LoansDashboard`, ikut Cetak, Ekspor, urut, dan tombol Kolom. Rekening dari `anggota.bank_no_rek`/`bank_atas_nama`, karena `pinjaman_tunai.no_rek` pada data lama hanya berisi nomor pinjaman dan `atas_nama` kosong. Pencarian juga mencari `bank_no_rek`.

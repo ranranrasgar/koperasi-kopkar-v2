@@ -33,7 +33,8 @@ Sistem membuat pembalik `BTL...` bertanggal hari ini beserta jurnal kebalikannya
 - **Pokok yang diubah** tidak boleh melebihi **Sisa pokok**, dan keterangan baris angsurannya ditandai *pokok diubah*.
 - Mengubah pokok **tidak menyusun ulang jadwal**. Satu kali simpan tetap dihitung satu cicilan, dan angsuran berikutnya tetap memakai nilai jadwal. Pelunasan beberapa angsuran sekaligus belum tersedia.
 - Bila pokok pernah diubah, periksa angsuran terakhir: isikan pokok sama dengan **Sisa pokok** supaya pinjaman pas lunas. Form memberi peringatan bila nilainya berbeda.
-- Potongan Gaji tetap memakai nilai jadwal, jadi pinjaman yang pokoknya diubah bisa perlu penyesuaian saat lunas.
+- **Pinjaman bank seperti BRI** mengikuti pembagian pokok dan jasa terakhir pinjaman itu, bila totalnya sama dengan jadwal. Pembagian ini berlaku di Setoran Angsuran dan Potongan Gaji, dan bisa diubah lewat kotak Ubah.
+- Potongan Gaji memakai jadwal untuk pinjaman lain, jadi pinjaman yang pokoknya diubah bisa perlu penyesuaian saat lunas.
 - Setelah angsuran terakhir, pinjaman berstatus lunas dan tidak muncul lagi di daftar. Mencoba membayar lagi menghasilkan *Pinjaman ... sudah lunas*.
 
 ### Yang dibuat sistem

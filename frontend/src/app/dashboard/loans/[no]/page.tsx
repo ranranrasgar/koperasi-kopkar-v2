@@ -97,7 +97,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                     b.length ? b[b.length - 1].tanggal_angsuran : "", b.length ? String(b.reduce((t, x) => t + x.debit_pokok + x.debit_bunga, 0)) : "", b.map((x) => x.no_bukti).join(", ")]
             }),
             ["", "Total", String(jadwal.reduce((t, j) => t + j.debit_pokok, 0)), String(jadwal.reduce((t, j) => t + j.debit_bunga, 0)), String(jadwal.reduce((t, j) => t + j.debit_pokok + j.debit_bunga, 0)), "", "", String(totBayar.p + totBayar.b), ""]] },
-        { judul: "Riwayat Pembayaran", baris: [["Ke", "Tanggal", "No. Bukti", "Keterangan", "Bayar Pokok", "Bayar Jasa", "Cair Pokok", "Jasa Dibebankan", "Sisa Pokok"],
+        { judul: "Riwayat Pembayaran", baris: [["Ke", "Tanggal", "No. Bukti", "Keterangan", "Bayar Pokok", "Bayar Jasa", "Cair Pokok", "Jasa Dibebankan", "Saldo Buku"],
             ...baris.map((b) => [String(b.angsuran_ke), b.tanggal_angsuran, b.no_bukti, b.deskripsi ?? "", String(b.debit_pokok), String(b.debit_bunga), String(b.kredit_pokok), String(b.kredit_bunga), String(b.saldo)]),
             ["", "", "", "Total", String(totBayar.p), String(totBayar.b), String(bayar.reduce((t, b) => t + b.kredit_pokok, 0)), String(bayar.reduce((t, b) => t + b.kredit_bunga, 0)), String(saldo)]] },
     ]
@@ -155,6 +155,11 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                     <Isi label="Sisa Pokok" tebal>Rp {formatAngka(r.sisa_pokok)}{r.lunas && Number(r.sisa_buku) > 100 ? " *" : ""}</Isi>
                     <Isi label="Jatuh Tempo Berikut">{r.jatuh_tempo ? formatTanggal(r.jatuh_tempo, "long") : "-"}</Isi>
                 </dl>
+                {!r.lunas && Math.abs(Number(r.sisa_buku) - Number(r.sisa_pokok)) > 100 && (
+                    <p className="mt-3 text-xs text-muted-foreground">
+                        Sisa Pokok mengikuti jadwal cicilan seperti aplikasi desktop. Buku pinjaman membagi pembayaran berbeda, dengan saldo buku Rp {formatAngka(r.sisa_buku)}; rinciannya ada di Riwayat Pembayaran.
+                    </p>
+                )}
                 {r.lunas && Number(r.sisa_buku) > 100 && (
                     <p className="mt-3 text-xs text-muted-foreground">
                         * Lunas menurut cicilan, tetapi saldo buku pinjaman masih Rp {formatAngka(r.sisa_buku)} (diselesaikan di luar angsuran koperasi: top-up atau pelunasan langsung ke bank, dibereskan lewat jurnal balik).
@@ -236,7 +241,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                                     <th className={`${th} text-right`}>Bayar Jasa</th>
                                     <th className={`${th} text-right`}>Cair Pokok</th>
                                     <th className={`${th} text-right`}>Jasa Dibebankan</th>
-                                    <th className={`${th} text-right`}>Sisa Pokok</th>
+                                    <th className={`${th} text-right`}>Saldo Buku</th>
                                     <th className={`${th} print:hidden`}></th>
                                 </tr>
                             </thead>

@@ -5,6 +5,8 @@ import { revalidatePath } from "next/cache"
 import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpanan.ts"
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
 import { bacaQr } from "@kopkar/backend/src/anggota/qr.ts"
+import { pembagianBank } from "@kopkar/backend/src/posting/pinjaman.ts"
+import { hapusCacheAudit } from "@/lib/queries/audit"
 import { batalBukti, buatJurnalSusulan, rancangJurnalSusulan, type RancanganJurnal } from "@kopkar/backend/src/posting/koreksi.ts"
 import { hapusTitipan, postingTitipan, tambahTitipan } from "@kopkar/backend/src/posting/titipan.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
@@ -243,6 +245,8 @@ async function angsuranBerikutnya(noPinjaman: string) {
     const t: Terms = { pokok: toUnits(p.rp_pinjaman_pokok), persenBunga: persenToMicro(p.persen_bunga), perAngsuran: p.bunga_per === 1,
         lama: p.lama_angsuran, persenAdm: persenToMicro(p.persen_adm), persenProvisi: persenToMicro(p.persen_provisi) }
     const c = cicilan(t, p.jml_cicilan + 1)
+    const bagian = await pembagianBank(pool, noPinjaman, c.pokok, c.jasa)
+    if (bagian) { c.pokok = bagian.pokok; c.jasa = bagian.jasa }
     const [s] = await query<{ sisa: string }>(
         `SELECT COALESCE(SUM(r.kredit_pokok - r.debit_pokok), 0)::text AS sisa FROM pinjaman_tunai_rincian r JOIN pinjaman_tunai p ON p.id = r.pinjaman_tunai_id WHERE p.no_pinjaman = $1`, [noPinjaman])
     return { ke: c.ke, lama: p.lama_angsuran, pokok: rp(c.pokok), jasa: rp(c.jasa), adm: rp(c.adm), provisi: rp(c.provisi), sisa: rp(toUnits(s.sisa)) }
@@ -437,6 +441,7 @@ export async function riwayatAnggotaAction(kodeAgt: string): Promise<RiwayatAngg
 export async function batalBuktiAction(noBukti: string, alasan: string): Promise<Hasil> {
     return posting([MENU.batalTransaksi], "hapus", async (o) => {
         const r = await tx((db) => batalBukti(db, { noBukti, tanggal: hariIni(), alasan, opr: o.nama, operatorId: o.id }))
+        hapusCacheAudit()
         return { ok: true, pesan: `Bukti ${noBukti} dibatalkan dengan pembalik ${r.noBukti}` }
     })
 }
@@ -455,6 +460,7 @@ export async function pratinjauSusulanAction(noBukti: string): Promise<Rancangan
 export async function jurnalSusulanAction(noBukti: string, alasan: string): Promise<Hasil> {
     return posting([MENU.jurnalUmum], "tambah", async (o) => {
         const r = await tx((db) => buatJurnalSusulan(db, { noBukti, alasan, opr: o.nama, operatorId: o.id }))
+        hapusCacheAudit()
         return { ok: true, pesan: `Jurnal susulan ${r.noBukti} tanggal ${r.tanggal} tersimpan` }
     })
 }

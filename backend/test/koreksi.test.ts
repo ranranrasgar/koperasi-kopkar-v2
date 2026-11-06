@@ -201,3 +201,22 @@ test('pokok manual: ditandai, dibatasi sisa pokok, jurnal mengikuti, batal tetap
         await batalBukti(db, { noBukti: r.noBukti, tanggal: TANGGAL, alasan, opr: 'uji' });
     });
 });
+
+test('pinjaman bank: angsuran mengikuti pembagian terakhir yang berbeda dari jadwal, koperasi tetap jadwal', async () => {
+    const a = (await pool.query('SELECT kode_agt FROM anggota WHERE rp_grade >= 1000000 ORDER BY id LIMIT 1')).rows[0].kode_agt;
+    await inTx(async (db) => {
+        const kas = (await db.query("SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'")).rows[0].id;
+        const uji = async (kodeKredit: string) => {
+            const c = await cairkanPinjaman(db, { kodeAgt: a, kodeKredit, tglPinjaman: TANGGAL, pokok: 1000000, lama: 5, kasPerkiraanId: kas, opr: 'uji' });
+            const dasar = { noPinjaman: c.noPinjaman, tanggal: TANGGAL, kasPerkiraanId: kas, opr: 'uji' };
+            const baku = (await db.query('SELECT debit_pokok::float p, debit_bunga::float j FROM pinjaman_tunai_rincian_tagih t JOIN pinjaman_tunai x ON x.id = t.pinjaman_tunai_id WHERE x.no_pinjaman = $1 AND t.angsuran_ke = 1', [c.noPinjaman])).rows[0];
+            await bayarAngsuran(db, { ...dasar, override: { pokok: baku.p - 50000, jasa: baku.j + 50000 } });
+            return { r: await bayarAngsuran(db, dasar), baku };
+        };
+        const bank = await uji('C16');
+        assert.equal(Number(bank.r.pokok), bank.baku.p - 50000);
+        assert.equal(Number(bank.r.jasa), bank.baku.j + 50000);
+        const kop = await uji('C01');
+        assert.equal(Number(kop.r.pokok), kop.baku.p);
+    });
+});

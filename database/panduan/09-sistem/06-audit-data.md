@@ -9,7 +9,8 @@ Menu: **Sistem → Audit Data**. Halaman ini mencari data yang tidak cocok antar
 
 1. Isi periode **Dari** dan **Sampai**, lalu **Tampilkan**. Bawaannya tahun berjalan. Tautan **Sejak 2018** memeriksa seluruh riwayat setelah pindah data; hasilnya lebih lama muncul.
 2. Setiap pemeriksaan menampilkan jumlah temuan dan nilainya, atau **Bersih** bila tidak ada temuan.
-3. Klik judul pemeriksaan untuk melihat rinciannya. Layar menampilkan 500 baris terbaru; **Ekspor** memuat sampai 5.000 baris. Klik nomor bukti untuk membuka asalnya.
+3. Ringkasan disimpan sebentar supaya halaman cepat terbuka: hasil yang sama dipakai selama 5 menit, dan jam hitungnya tertulis di atas tabel. Tekan **Hitung ulang** untuk angka terbaru. Jurnal susulan dan pembatalan langsung memperbarui hasilnya.
+4. Klik judul pemeriksaan untuk melihat rinciannya. Layar menampilkan 500 baris terbaru; **Ekspor** memuat sampai 5.000 baris. Klik nomor bukti untuk membuka asalnya.
 
 ## Memperbaiki hasil temuan
 

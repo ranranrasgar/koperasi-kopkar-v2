@@ -27,7 +27,8 @@ Tekan **Terapkan** setelah mengubah filter.
 | Provisi | Biaya provisi |
 | Angs Per Bulan | Angsuran pokok + jasa per bulan |
 | Lama / Cicilan / Sisa | Lama angsuran, angsuran yang sudah dibayar, dan sisanya |
-| Bayar Pokok / Bayar Bunga | Pembayaran yang sudah masuk |
+| Bayar Pokok / Bayar Bunga | Dihitung dari jadwal seperti aplikasi desktop: pokok atau jasa dibagi lama, dikali jumlah cicilan |
+| Sisa Pokok | Plafond dikurangi Bayar Pokok. Bisa berbeda dengan saldo buku di Riwayat Pembayaran dan Buku Besar bila pembayaran pernah dibagi berbeda dari jadwal, misalnya pinjaman BRI |
 | Tunggakan | Angsuran yang sudah lewat jatuh tempo tetapi belum dibayar |
 
 Untuk melihat tunggakan secara rinci per pinjaman, buka **Angsuran & Pemantauan → Kredit Macet**.

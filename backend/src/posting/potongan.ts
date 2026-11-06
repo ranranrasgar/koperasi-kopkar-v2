@@ -1,7 +1,7 @@
 import type { Db } from '../db.ts';
 import { fromUnits, toUnits } from './money.ts';
 import { setorSimpanan } from './simpanan.ts';
-import { bayarAngsuran } from './pinjaman.ts';
+import { bayarAngsuran, sqlPembagianBank } from './pinjaman.ts';
 import { bayarAngsuranKpr } from './kpr.ts';
 
 /**
@@ -15,12 +15,13 @@ import { bayarAngsuranKpr } from './kpr.ts';
  */
 export const SQL_ANGSURAN_POTONGAN = `
     SELECT p.anggota_id, 'tunai' AS jenis, p.id AS pinjaman_id, p.no_pinjaman, jk.group_pinjaman AS grup, t.angsuran_ke,
-           t.debit_pokok AS pokok, t.debit_bunga AS jasa,
+           COALESCE(b.pokok, t.debit_pokok) AS pokok, COALESCE(b.jasa, t.debit_bunga) AS jasa,
            CASE WHEN p.jml_cicilan = 0 THEN p.rp_adm ELSE 0 END AS adm, CASE WHEN p.jml_cicilan = 0 THEN p.rp_provisi ELSE 0 END AS provisi
       FROM pinjaman_tunai p JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
       JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.angsuran_ke = p.jml_cicilan + 1
       -- LATERAL: saldo hanya dihitung untuk pinjaman yang punya angsuran berikutnya (subquery di WHERE 4x lebih lambat).
       LEFT JOIN LATERAL (SELECT SUM(r.kredit_pokok - r.debit_pokok) AS sisa FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = p.id) s ON true
+      LEFT JOIN LATERAL (${sqlPembagianBank('p.id', 't.debit_pokok', 't.debit_bunga')}) b ON jk.group_pinjaman = 'BANK / PIHAK LAIN'
      WHERE p.jml_cicilan < p.lama_angsuran AND jk.group_pinjaman IN ('KOPERASI', 'BANK / PIHAK LAIN')
        AND COALESCE(s.sisa, 1000000) > 100
     UNION ALL

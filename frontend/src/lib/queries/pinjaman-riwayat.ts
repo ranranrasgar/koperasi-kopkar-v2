@@ -1,3 +1,4 @@
+import { sqlSisaPokokJadwal } from "@kopkar/backend/src/pinjaman-sisa.ts"
 import "server-only"
 import { SQL_ANGSURAN_POTONGAN } from "@kopkar/backend/src/posting/potongan.ts"
 import { query } from "@/lib/db"
@@ -44,7 +45,7 @@ export async function riwayatAnggota(kodeAgt: string): Promise<RiwayatAnggota | 
         query<Omit<RiwayatPinjaman, "jenis" | "status">>(`
             WITH hari AS (SELECT (now() AT TIME ZONE 'Asia/Jakarta')::date AS ini)
             SELECT p.no_pinjaman, p.tgl_pinjaman::text AS tgl_pinjaman, jk.kode_kredit, jk.nama_kredit, p.rp_pinjaman_pokok AS pokok, p.lama_angsuran AS lama,
-                   p.jml_cicilan AS dibayar, COALESCE(b.sisa, 0) AS sisa_pokok,
+                   p.jml_cicilan AS dibayar, CASE WHEN COALESCE(b.sisa, 0) <= $2 THEN 0 ELSE ${sqlSisaPokokJadwal("p")} END AS sisa_pokok,
                    COALESCE((SELECT t.debit_pokok + t.debit_bunga FROM pinjaman_tunai_rincian_tagih t WHERE t.pinjaman_tunai_id = p.id AND t.angsuran_ke = p.jml_cicilan + 1), 0) AS angsuran_bulan,
                    CASE WHEN COALESCE(b.sisa, 1000000) > $2 THEN COALESCE(g.tunggak, 0) ELSE 0 END AS tunggak,
                    CASE WHEN COALESCE(b.sisa, 1000000) > $2 THEN COALESCE(g.rp_tunggak, 0) ELSE 0 END AS rp_tunggak,

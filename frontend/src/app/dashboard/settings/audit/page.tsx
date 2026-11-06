@@ -30,10 +30,12 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
     const cek = CEK_AUDIT.find((c) => c.id === sp(s, "cek"))
     // Rincian satu pemeriksaan tidak memerlukan ringkasan; perbandingan saldo menghitung semua pinjaman, jadi hanya saat diminta.
     const tampilSaldo = !cek && sp(s, "saldo") === "1"
-    const [ringkas, saldo, jurnal, koreksi, baris] = await Promise.all([
-        cek ? [] : ringkasanAudit(dari, sampai), tampilSaldo ? saldoBukuVsBesar(hari) : [], cek ? null : ringkasJurnalBermasalah(sampai), cek ? [] : riwayatKoreksi(100),
+    const segar = sp(s, "segar") === "1"
+    const [hasilRingkas, saldo, jurnal, koreksi, baris] = await Promise.all([
+        cek ? null : ringkasanAudit(dari, sampai, segar), tampilSaldo ? saldoBukuVsBesar(hari) : [], cek ? null : ringkasJurnalBermasalah(sampai, segar), cek ? [] : riwayatKoreksi(100),
         cek ? barisAudit(cek.id, dari, sampai, BATAS_EKSPOR) : Promise.resolve([] as BarisAudit[]),
     ])
+    const ringkas = hasilRingkas?.nilai ?? []
     const alamat = (ubah: Record<string, string>) => `?${new URLSearchParams({ dari, sampai, ...ubah }).toString()}`
     const bolehBuku = o.izin.includes(MENU.lapBukuSimpanan), bolehPinjaman = punyaIzin(o.izin, AKSES_HALAMAN["/dashboard/loans/[no]"]), bolehJurnal = o.izin.includes(MENU.jurnalUmum)
     // Tautan bukti ke halaman asalnya, hanya bila operator boleh membukanya.
@@ -101,6 +103,10 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
                 ) : (
                     <>
                         <section className="space-y-4" aria-label="Pemeriksaan per modul">
+                            {hasilRingkas && <p className="text-xs text-muted-foreground print:hidden">
+                                Dihitung pukul {new Date(hasilRingkas.pada).toLocaleTimeString("id-ID", { timeZone: "Asia/Jakarta", hour: "2-digit", minute: "2-digit" })}.{" "}
+                                <Link href={alamat({ segar: "1" })} prefetch={false} className="text-primary hover:underline">Hitung ulang</Link>
+                            </p>}
                             {MODUL.map((m) => (
                                 <div key={m} className="overflow-x-auto rounded-md border">
                                     <table className="w-full text-sm">

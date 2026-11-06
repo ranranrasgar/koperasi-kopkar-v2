@@ -25,8 +25,8 @@ async function angsuran(no: string): Promise<DataKwitansi | null> {
     const [r] = await query<{ tanggal: string; ke: number; lama: number; no_pinjaman: string; nama: string; nik: string | null; kode_agt: string; jenis: string | null; grup: string | null; pokok: number; jasa: number; adm: number; provisi: number; sisa: number; kas: string | null }>(
         `SELECT r.tanggal_angsuran::text AS tanggal, r.angsuran_ke AS ke, x.lama_angsuran AS lama, x.no_pinjaman, a.nama, a.nik, a.kode_agt, jk.nama_kredit AS jenis, jk.group_pinjaman AS grup,
                 r.debit_pokok AS pokok, r.debit_bunga AS jasa, r.rp_adm AS adm, r.rp_provisi AS provisi, p.nama_perkiraan AS kas,
-                GREATEST(x.rp_pinjaman_pokok - x.rp_uang_muka - (SELECT COALESCE(SUM(z.debit_pokok), 0) FROM pinjaman_tunai_rincian z
-                    WHERE z.pinjaman_tunai_id = r.pinjaman_tunai_id AND (z.angsuran_ke, z.urut) <= (r.angsuran_ke, r.urut)), 0) AS sisa
+                -- Sisa kewajiban anggota setelah angsuran ini, rumus desktop seperti Sisa Pokok di Daftar Pinjaman (backend/src/pinjaman-sisa.ts).
+                GREATEST(ROUND(x.rp_pinjaman_pokok - x.rp_uang_muka) - ROUND((x.rp_pinjaman_pokok - x.rp_uang_muka) * LEAST(r.angsuran_ke, x.lama_angsuran)::numeric / NULLIF(x.lama_angsuran, 0)), 0) AS sisa
            FROM pinjaman_tunai_rincian r JOIN pinjaman_tunai x ON x.id = r.pinjaman_tunai_id JOIN anggota a ON a.id = x.anggota_id
            LEFT JOIN jenis_kredit jk ON jk.id = x.jenis_kredit_id LEFT JOIN perkiraan p ON p.id = r.kas_perkiraan_id
           WHERE r.no_bukti = $1 AND r.angsuran_ke > 0 ORDER BY r.urut LIMIT 1`, [no])

@@ -3,11 +3,9 @@
 // Sumber data tiap kolom:
 //  - kontrak (tgl, no, anggota, plafond, provisi, jasa, angsuran/bulan, lama): tabel pinjaman_tunai (+ anggota, jenis_kredit).
 //    Jasa = plafond x bunga% x (lama / bunga_per); angsuran per bulan = (plafond + jasa) / lama (rumus desktop).
-//  - Bayar Pokok dan Bayar Bunga: jumlah yang BENAR-BENAR diterima, yaitu SUM(debit_pokok) dan SUM(debit_bunga) di buku pinjaman
-//    (pinjaman_tunai_rincian). Rumus lama (pokok / lama x jml_cicilan) hanya perkiraan dan meleset untuk pinjaman yang dibayar
-//    tidak rata, dilunasi sekaligus, atau diselesaikan dengan potongan (±350 pinjaman, sebagian besar sebelum 2024).
-//  - Sisa Pokok: saldo buku = SUM(kredit_pokok - debit_pokok), sama dengan saldo di aplikasi anggota. Kolom saldo_pokok di
-//    rincian TIDAK dipakai: pada baris angsuran nilainya 0 (bukan saldo berjalan).
+//  - Bayar Pokok, Bayar Bunga, dan Sisa Pokok: rumus desktop, plafond atau jasa / lama x jml_cicilan (backend/src/pinjaman-sisa.ts). Buku pinjaman bisa
+//    membagi uang yang sama berbeda dari jadwal (mis. BRI pokok 3.301.200 + jasa 661.656, jadwal 3.951.200 + 11.656), jadi SUM(debit_pokok) membuat
+//    sisa terlalu besar. Riwayat pembayaran dan jurnal tetap memakai angka buku; `sisa_buku` menyimpannya. Kolom saldo_pokok di rincian TIDAK dipakai.
 //  - Lunas = sisa buku <= SISA_LUNAS ATAU semua cicilan sudah terbayar (jml_cicilan >= lama), aturan yang sama dengan aplikasi
 //    anggota dan API aplikasi lama (pelunasan lewat potongan tidak tercatat di rincian). Pinjaman lunas ditampilkan dengan
 //    sisa pokok 0, sisa cicilan 0, dan tunggakan 0. `sisa_buku` menyimpan saldo buku apa adanya: ±180 pinjaman yang cicilannya selesai
@@ -91,23 +89,23 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
 
     // Nilai dari buku pinjaman dan jadwal tagih, hanya dihitung untuk baris yang dibutuhkan (satu halaman, atau semua bila ada filter status).
     const lengkap = (sumber: string) => `
-        SELECT y.*, CASE WHEN y.lunas THEN 0 ELSE y.sisa_buku END AS sisa_pokok,
+        SELECT y.*, CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.temp_total_plafond - y.bayar_pokok, 0) END AS sisa_pokok,
                CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.lama_angsuran - y.jml_cicilan, 0) END AS sisa_cicilan,
                CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.jatuh_tempo_n - y.jml_cicilan, 0) END AS jml_tunggakan
           FROM (
             SELECT h.id, h.tgl_pinjaman, h.no_pinjaman, h.no_pinjaman_urut, h.kode_agt, h.nik, h.nama, h.bank_no_rek, h.bank_atas_nama, h.rp_pinjaman_pokok, h.uang_muka, h.rp_provisi, h.rp_adm,
                    h.temp_total_plafond, h.temp_total_jasa, h.lama_angsuran, h.jml_cicilan, h.opr, h.kode_kredit,
                    h.angs_pokok, h.angs_jasa, h.temp_angs_per_bulan,
-                   s.sisa_pokok AS sisa_buku, LEAST(h.temp_total_plafond, s.dibayar_pokok) AS bayar_pokok, s.bayar_bunga,
-                   LEAST(h.temp_total_plafond, s.dibayar_pokok) + s.bayar_bunga AS total_bayar,
+                   s.sisa_pokok AS sisa_buku, ROUND(h.temp_total_plafond * c.porsi) AS bayar_pokok, ROUND(h.temp_total_jasa * c.porsi) AS bayar_bunga,
+                   ROUND(h.temp_total_plafond * c.porsi) + ROUND(h.temp_total_jasa * c.porsi) AS total_bayar,
                    (s.sisa_pokok <= ${SISA_LUNAS} OR h.jml_cicilan >= h.lama_angsuran) AS lunas,
                    COALESCE(j.jatuh_tempo_n, 0) AS jatuh_tempo_n, j.jatuh_tempo AS jatuh_tempo
               FROM ${sumber} h
+              CROSS JOIN LATERAL (SELECT COALESCE(LEAST(h.jml_cicilan, h.lama_angsuran)::numeric / NULLIF(h.lama_angsuran, 0), 0) AS porsi) c
               LEFT JOIN LATERAL (
                     SELECT CASE WHEN count(*) = 0 THEN h.temp_total_plafond
                                 ELSE LEAST(h.temp_total_plafond, GREATEST(COALESCE(SUM(r.kredit_pokok - r.debit_pokok), 0), 0)) END AS sisa_pokok,
-                           COALESCE(SUM(r.debit_pokok), 0) AS dibayar_pokok,
-                           COALESCE(SUM(r.debit_bunga), 0) AS bayar_bunga
+                           COALESCE(SUM(r.debit_pokok), 0) AS dibayar_pokok
                       FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = h.id) s ON true
               LEFT JOIN LATERAL (
                     -- Jadwal tagih: jumlah angsuran yang sudah terlambat (bulan jatuh temponya berakhir, untuk tunggakan) dan tanggal angsuran berikutnya yang belum dibayar.

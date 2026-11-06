@@ -140,6 +140,25 @@ export function barisJurnalAngsuran(c: { pokok: bigint; jasa: bigint; adm: bigin
         ...k.map((l) => ({ kodePerkiraan: l.kodePerkiraan, kredit: fromUnits(l.kredit) }))];
 }
 
+/**
+ * Pinjaman bank (mis. BRI): operator desktop membagi angsuran berbeda dari jadwal, sebagian masuk jasa pengelolaan koperasi, totalnya tetap sama.
+ * Pembagian itu tidak tersimpan di mana pun selain buku pinjaman, jadi diambil dari angsuran terakhir yang berbeda dengan jadwal dan totalnya sama.
+ * Kondisi `rincian` dipakai juga SQL_ANGSURAN_POTONGAN supaya Potongan Gaji dan Setoran Angsuran selalu sama.
+ */
+export const sqlPembagianBank = (pinjamanId: string, pokok: string, jasa: string) => `
+    SELECT r.debit_pokok AS pokok, r.debit_bunga AS jasa FROM pinjaman_tunai_rincian r
+     WHERE r.pinjaman_tunai_id = ${pinjamanId} AND r.angsuran_ke > 0 AND ABS(r.debit_pokok - ${pokok}) > 1
+       AND ABS(r.debit_pokok + r.debit_bunga - ${pokok} - ${jasa}) <= 1
+     ORDER BY r.tanggal_angsuran DESC, r.urut DESC LIMIT 1`;
+
+export async function pembagianBank(db: Pick<Db, 'query'>, noPinjaman: string, pokok: bigint, jasa: bigint) {
+    const r = (await db.query<{ pokok: string; jasa: string }>(
+        `SELECT b.pokok, b.jasa FROM pinjaman_tunai p JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id AND jk.group_pinjaman = 'BANK / PIHAK LAIN'
+           CROSS JOIN LATERAL (${sqlPembagianBank('p.id', '$2::numeric', '$3::numeric')}) b WHERE p.no_pinjaman = $1`,
+        [noPinjaman, fromUnits(pokok), fromUnits(jasa)])).rows[0];
+    return r ? { pokok: toUnits(r.pokok), jasa: toUnits(r.jasa) } : null;
+}
+
 /** Satu angsuran: rincian, penanda jadwal, kenaikan jml_cicilan, dan jurnal dalam satu transaksi. */
 export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranResult> {
     const p = (await db.query(`SELECT p.*, a.nama, a.nik FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id
@@ -156,6 +175,10 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
     if (i.angsuranKe !== undefined && i.angsuranKe !== ke)
         throw new Error(`Pinjaman ${i.noPinjaman}: angsuran berikutnya ke-${ke}, bukan ke-${i.angsuranKe}`);
     const c = cicilan(t, ke);
+    if (i.override?.pokok === undefined) {
+        const bagian = await pembagianBank(db, i.noPinjaman, c.pokok, c.jasa);
+        if (bagian) { c.pokok = bagian.pokok; c.jasa = bagian.jasa; }
+    }
     const pokokJadwal = c.pokok;
     if (i.override?.pokok !== undefined) c.pokok = toUnits(i.override.pokok);
     if (i.override?.jasa !== undefined) c.jasa = toUnits(i.override.jasa);

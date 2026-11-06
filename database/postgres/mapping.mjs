@@ -168,14 +168,17 @@ export const EXTRA_INDEXES = [
     ['pinjaman_tunai', ['tgl_pinjaman']],
     ['pinjaman_tunai_rincian', ['pinjaman_tunai_id', 'tanggal_angsuran']],
     ['pinjaman_tunai_rincian', ['no_bukti']],
+    ['pinjaman_tunai_rincian', ['tanggal_angsuran']], // Audit Data dan Buku Pinjaman per periode
     ['pinjaman_tunai_rincian_tagih', ['pinjaman_tunai_id', 'angsuran_ke']],
     ['kpr_rincian', ['kpr_id', 'tanggal_angsuran']],
     ['kpr_rincian', ['no_bukti']],
+    ['kpr_rincian', ['tanggal_angsuran']],
     ['kpr_rincian_tagih', ['kpr_id', 'angsuran_ke']],
     ['jurnal_umum', ['nomor_bukti']],
     ['jurnal_umum', ['tanggal_jurnalumum']],
     ['jurnal_umum', ['perkiraan_id', 'tanggal_jurnalumum']],
     ['jurnal_umum', ['sumber_tipe', 'sumber_id']],
+    ['jurnal_umum', ['sumber_tipe', 'tanggal_jurnalumum']], // Audit Data: jurnal simpanan per periode
     // Jurnal pembuka tahun (TBT/...): dicari setiap laporan saldo; LIKE 'TBT/%' tidak bisa memakai indeks biasa.
     ['jurnal_umum', ['tanggal_jurnalumum'], { nama: 'tbt', where: "nomor_bukti LIKE 'TBT/%'" }],
     ['kas', ['tgl_kas']],

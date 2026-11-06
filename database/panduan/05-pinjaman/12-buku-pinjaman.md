@@ -19,7 +19,7 @@ Bawaannya terbaru dulu. **Cetak** dan **Ekspor** memuat seluruh hasil saringan. 
 | --- | --- |
 | Ke | Angsuran ke berapa. Nilai 0 berarti baris pembatalan |
 | Total Bayar | Pokok + jasa + adm + provisi |
-| Sisa Pokok | Sisa pinjaman setelah pembayaran ini, dihitung dari seluruh riwayat pinjaman |
+| Saldo Buku | Saldo buku pinjaman setelah pembayaran ini. Bisa berbeda dengan Sisa Pokok di Daftar Pinjaman, yang mengikuti jadwal |
 | Jurnal | **Belum** berarti bukti ini tidak punya jurnal. Perbaikannya ada di panduan **Audit Data** |
 | Status | **Dibatalkan** untuk angsuran yang dibatalkan, **Pembalik** untuk bukti pembatalannya |
 

@@ -1025,6 +1025,9 @@ CREATE INDEX ix_simpanan_kode_agt_tgl_transaksi ON simpanan (kode_agt, tgl_trans
 CREATE INDEX ix_pinjaman_tunai_tgl_pinjaman ON pinjaman_tunai (tgl_pinjaman);
 CREATE INDEX ix_pinjaman_tunai_rincian_pinjaman_tunai_id_tanggal_angsuran ON pinjaman_tunai_rincian (pinjaman_tunai_id, tanggal_angsuran);
 CREATE INDEX ix_pinjaman_tunai_rincian_no_bukti ON pinjaman_tunai_rincian (no_bukti);
+CREATE INDEX ix_pinjaman_tunai_rincian_tanggal_angsuran ON pinjaman_tunai_rincian (tanggal_angsuran);
+CREATE INDEX ix_kpr_rincian_tanggal_angsuran ON kpr_rincian (tanggal_angsuran);
+CREATE INDEX ix_jurnal_umum_sumber_tipe_tanggal_jurnalumum ON jurnal_umum (sumber_tipe, tanggal_jurnalumum);
 CREATE INDEX ix_pinjaman_tunai_rincian_tagih_pinjaman_tunai_id_angsuran_ke ON pinjaman_tunai_rincian_tagih (pinjaman_tunai_id, angsuran_ke);
 CREATE INDEX ix_kpr_rincian_kpr_id_tanggal_angsuran ON kpr_rincian (kpr_id, tanggal_angsuran);
 CREATE INDEX ix_kpr_rincian_no_bukti ON kpr_rincian (no_bukti);

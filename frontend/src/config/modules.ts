@@ -145,7 +145,7 @@ export const loanLedgerConfig: ModuleConfig = {
         { key: "adm", label: "Adm", type: "currency", hidden: true },
         { key: "provisi", label: "Provisi", type: "currency", hidden: true },
         { key: "total", label: "Total Bayar", type: "currency" },
-        { key: "sisa_pokok", label: "Sisa Pokok", type: "currency" },
+        { key: "sisa_pokok", label: "Saldo Buku", type: "currency" },
         { key: "kas", label: "Kas/Bank", type: "string", hidden: true },
         { key: "jurnal", label: "Jurnal", type: "badge", badgeMap: { ada: { label: "Ada", color: "green" }, belum: { label: "Belum", color: "orange" } } },
         { key: "status_koreksi", label: "Status", type: "badge", badgeMap: { batal: { label: "Dibatalkan", color: "red" }, pembalik: { label: "Pembalik", color: "orange" } } },

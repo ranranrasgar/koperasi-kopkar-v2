@@ -1,3 +1,4 @@
+import { sqlSisaPokokJadwal } from "@kopkar/backend/src/pinjaman-sisa.ts"
 import "server-only"
 import { tokenGambar } from "@kopkar/backend/src/anggota/gambar.ts"
 import * as bersama from "@kopkar/backend/src/anggota/queries.ts"
@@ -6,7 +7,7 @@ import { pool, poolAngka, query } from "@/lib/db"
 // Data untuk halaman PWA. Setiap fungsi menerima anggotaId dari sesi (lib/anggota.ts), tidak pernah dari URL,
 // dan rincian pinjaman selalu dicek pemiliknya (id pinjaman + anggota_id). Relasi lewat id/FK.
 //
-// Keputusan PRD: sisa pinjaman dari rincian (buku pinjaman) seperti admin, KPR ditampilkan terpisah (K3);
+// Sisa pinjaman tunai memakai rumus desktop (backend/src/pinjaman-sisa.ts) seperti admin; status lunas tetap melihat rincian. Keputusan PRD: KPR ditampilkan terpisah (K3);
 // potongan bulan ini diproyeksikan langsung dengan rumus halaman Potongan Gaji admin (K2).
 
 /** Sisa pokok di bawah ini dianggap lunas (receh pembulatan), sama dengan status lunas laporan pinjaman admin. */
@@ -83,7 +84,7 @@ export interface PinjamanAktif {
 export async function pinjamanAktif(anggotaId: number) {
     return query<PinjamanAktif>(
         `SELECT 'tunai' jenis, p.id, p.no_pinjaman, p.tgl_pinjaman, jk.nama_kredit, COALESCE(jk.group_pinjaman, 'KOPERASI') grup,
-                p.rp_pinjaman_pokok pokok, p.lama_angsuran, p.jml_cicilan, r.sisa,
+                p.rp_pinjaman_pokok pokok, p.lama_angsuran, p.jml_cicilan, ${sqlSisaPokokJadwal("p")} sisa,
                 t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi angsuran, t.tanggal_angsuran jatuh_tempo,
                 jk.bunga_kredit persen_bunga, (SELECT max(x.tanggal_angsuran) FROM pinjaman_tunai_rincian_tagih x WHERE x.pinjaman_tunai_id = p.id) selesai
            FROM pinjaman_tunai p
@@ -158,7 +159,9 @@ async function pinjamanAktifAtauLunas(anggotaId: number, jenis: "tunai" | "kpr",
         `SELECT $3::text jenis, p.id, p.no_pinjaman, p.tgl_pinjaman, jk.nama_kredit,
                 ${jenis === "tunai" ? "COALESCE(jk.group_pinjaman, 'KOPERASI')" : "'KPR'"} grup,
                 p.rp_pinjaman_pokok pokok, p.lama_angsuran, p.jml_cicilan, jk.bunga_kredit persen_bunga,
-                CASE WHEN p.jml_cicilan >= p.lama_angsuran THEN 0 ELSE GREATEST(COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM ${rinci} WHERE ${fk} = p.id), 0), 0) END sisa
+                CASE WHEN p.jml_cicilan >= p.lama_angsuran THEN 0
+                     WHEN COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM ${rinci} WHERE ${fk} = p.id), 0) <= ${SISA_LUNAS} THEN 0
+                     ELSE ${jenis === "tunai" ? sqlSisaPokokJadwal("p") : `(SELECT SUM(kredit_pokok - debit_pokok) FROM ${rinci} WHERE ${fk} = p.id)`} END sisa
            FROM ${tabel} p LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
           WHERE p.id = $1 AND p.anggota_id = $2`, [id, anggotaId, jenis])
 }
