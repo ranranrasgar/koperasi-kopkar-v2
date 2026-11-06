@@ -52,7 +52,7 @@ Pokok **Rp 10.000.000**, lama **24 kali**, bunga 2% per angsuran, adm 1%, provis
 
 - **Jadwal tagih** (yang dilihat anggota dan dipakai potongan gaji) dibulatkan ke **rupiah penuh**.
 - Saat angsuran **diposting**, pokok dan jasa dihitung sampai 4 angka desimal (contoh 2: pokok Rp 416.666,6667), lalu dibulatkan 2 desimal di jurnal.
-- **Angsuran terakhir mengambil sisa persis**, sehingga saldo pokok dan jasa pinjaman pasti tepat nol saat lunas.
+- **Angsuran terakhir mengambil sisa persis**, sehingga saldo pokok dan jasa pinjaman tepat nol saat lunas, kecuali pokok pernah diubah kasir di Setoran Angsuran.
 
 ## Tanggal jatuh tempo
 

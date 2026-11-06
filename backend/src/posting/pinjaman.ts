@@ -112,6 +112,8 @@ export interface AngsuranInput {
     opr: string;
     /** Penyesuaian manual kasir (mis. adm dibebaskan), atau nominal jadwal tagih untuk potongan gaji. Bawaan: dihitung dari ketentuan pinjaman. */
     override?: { pokok?: string | number; jasa?: string | number; adm?: string | number; provisi?: string | number };
+    /** Pokok diisi kasir: harus 0 sampai sisa pokok, dan barisnya diberi tanda. Tidak dipakai potongan gaji, yang mengikuti jadwal tagih. */
+    pokokManual?: boolean;
     /** Bila diisi, galat bila angsuran berikutnya bukan angsuran ke ini (mis. sudah dibayar setelah potongan digenerate). */
     angsuranKe?: number;
 }
@@ -154,6 +156,7 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
     if (i.angsuranKe !== undefined && i.angsuranKe !== ke)
         throw new Error(`Pinjaman ${i.noPinjaman}: angsuran berikutnya ke-${ke}, bukan ke-${i.angsuranKe}`);
     const c = cicilan(t, ke);
+    const pokokJadwal = c.pokok;
     if (i.override?.pokok !== undefined) c.pokok = toUnits(i.override.pokok);
     if (i.override?.jasa !== undefined) c.jasa = toUnits(i.override.jasa);
     if (i.override?.adm !== undefined) c.adm = toUnits(i.override.adm);
@@ -162,6 +165,11 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
     const sisa = (await db.query<{ p: string; b: string }>(
         `SELECT COALESCE(SUM(kredit_pokok - debit_pokok),0) p, COALESCE(SUM(kredit_bunga - debit_bunga),0) b
            FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = $1`, [p.id])).rows[0];
+    if (i.pokokManual) {
+        if (c.pokok < 0n) throw new Error('Pokok tidak boleh negatif');
+        if (c.pokok > toUnits(sisa.p)) throw new Error(`Pokok ${fromUnits(c.pokok)} melebihi sisa pokok ${fromUnits(toUnits(sisa.p))}`);
+        if (c.pokok + c.jasa + c.adm + c.provisi <= 0n) throw new Error('Jumlah angsuran harus lebih dari nol');
+    }
     const sisaPokok = toUnits(sisa.p) - c.pokok, sisaBunga = toUnits(sisa.b) - c.jasa;
 
     const urut = Number((await db.query("SELECT nextval('seq_pinjaman_rincian_urut') v")).rows[0].v);
@@ -170,7 +178,7 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
         `INSERT INTO pinjaman_tunai_rincian (no_bukti, urut, no_pinjaman, deskripsi, debit_pokok, saldo_pokok, debit_bunga, saldo_bunga,
             rp_adm, rp_provisi, angsuran_ke, tanggal_angsuran, kas_perkiraan_id, pinjaman_tunai_id)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-        [noBukti, urut, i.noPinjaman, `Setoran ke ${ke}`, fromUnits(c.pokok), fromUnits(sisaPokok), fromUnits(c.jasa), fromUnits(sisaBunga),
+        [noBukti, urut, i.noPinjaman, `Setoran ke ${ke}${i.pokokManual && c.pokok !== pokokJadwal ? ' (pokok diubah)' : ''}`, fromUnits(c.pokok), fromUnits(sisaPokok), fromUnits(c.jasa), fromUnits(sisaBunga),
          fromUnits(c.adm), fromUnits(c.provisi), ke, i.tanggal, i.kasPerkiraanId, p.id]);
 
     // Tandai baris jadwal angsuran ini sebagai terbayar.

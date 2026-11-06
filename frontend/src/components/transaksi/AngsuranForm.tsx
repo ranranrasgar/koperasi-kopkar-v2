@@ -3,7 +3,7 @@
 import { TombolKirimInfo } from "./TombolKirimInfo"
 import { useCallback, useEffect, useState } from "react"
 import { Input } from "@/components/ui/input"
-import { InputUangBebas } from "@/components/ui/InputUang"
+import { InputUang, InputUangBebas } from "@/components/ui/InputUang"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
     angsuranBerikutnyaAction, bayarAngsuranAction, bayarAngsuranKprAction, infoAnggotaAction, type InfoAnggota,
@@ -13,12 +13,14 @@ import { formatAngka, formatRupiah, formatTanggal } from "@/lib/format"
 import { AnggotaPicker, Field, FormCard, HasilTransaksi, KasSelect, SubmitButton, selectClass, useAksiForm, type Akun } from "./common"
 
 type Berikutnya = Awaited<ReturnType<typeof angsuranBerikutnyaAction>>
+type KomponenAngsuran = "pokok" | "jasa" | "adm" | "provisi"
 
 function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: InfoAnggota; akunKas: Akun[]; hariIni: string; onSelesai: () => void; pilih?: string }) {
     const { hasil, onSubmit, pending } = useAksiForm(bayarAngsuranAction)
     const [noPinjaman, setNoPinjaman] = useState(pilih ?? info.pinjaman[0]?.no_pinjaman ?? "")
     const [berikut, setBerikut] = useState<Berikutnya>(null)
     const [ubah, setUbah] = useState(false)
+    const [isian, setIsian] = useState<Record<KomponenAngsuran, string>>({ pokok: "", jasa: "", adm: "", provisi: "" })
 
     useEffect(() => {
         if (!info.pinjaman.some((p) => p.no_pinjaman === noPinjaman)) setNoPinjaman(info.pinjaman[0]?.no_pinjaman ?? "")
@@ -30,9 +32,19 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: Inf
         return () => { batal = true }
     }, [noPinjaman, hasil])
     useEffect(() => { if (hasil?.ok) { setUbah(false); onSelesai() } }, [hasil, onSelesai])
+    useEffect(() => {
+        if (!berikut) return
+        // Angsuran terakhir: bawaan isian pokok adalah sisanya, supaya pinjaman yang pokoknya pernah diubah bisa pas lunas.
+        const akhir = berikut.ke === berikut.lama
+        setIsian({ pokok: String(akhir ? berikut.sisa : berikut.pokok), jasa: String(berikut.jasa), adm: String(berikut.adm), provisi: String(berikut.provisi) })
+    }, [berikut])
 
     if (info.pinjaman.length === 0) return <><p className="text-sm text-muted-foreground">Tidak ada pinjaman tunai yang berjalan.</p><HasilTransaksi hasil={hasil} /></>
-    const total = berikut ? berikut.pokok + berikut.jasa + berikut.adm + berikut.provisi : 0
+    const nilai = (k: KomponenAngsuran) => !berikut ? 0 : ubah ? Number(isian[k] || 0) : berikut[k]
+    const total = nilai("pokok") + nilai("jasa") + nilai("adm") + nilai("provisi")
+    // Kirim pokok hanya bila benar-benar diubah: nilai jadwal punya 4 desimal, sedangkan isian dibulatkan.
+    const pokokDiubah = !!berikut && ubah && Number(isian.pokok || 0) !== berikut.pokok
+    const sisaBeda = !!berikut && berikut.ke === berikut.lama && Math.abs(berikut.sisa - berikut.pokok) > 1
     return (
         <form onSubmit={onSubmit} className="space-y-4">
             <Field label="Pinjaman" htmlFor="noPinjaman">
@@ -46,13 +58,16 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: Inf
             </Field>
             {berikut && (
                 <div className="rounded-md border bg-muted/30 p-3 text-sm">
-                    <div className="font-semibold mb-2">Angsuran ke-{berikut.ke} dari {berikut.lama}</div>
+                    <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
+                        <span className="font-semibold">Angsuran ke-{berikut.ke} dari {berikut.lama}</span>
+                        <span className="text-xs text-muted-foreground">Sisa pokok <b className="tabular-nums text-foreground">{formatRupiah(berikut.sisa)}</b></span>
+                    </div>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                         {(["pokok", "jasa", "adm", "provisi"] as const).map((k) => (
                             <div key={k}>
                                 <div className="text-[11px] uppercase text-muted-foreground">{k}</div>
-                                {ubah && k !== "pokok" ? (
-                                    <InputUangBebas key={`${noPinjaman}-${berikut.ke}`} name={k} defaultValue={berikut[k]} className="h-8" />
+                                {ubah ? (
+                                    <InputUang name={k === "pokok" ? "isianPokok" : k} value={isian[k]} onChange={(v) => setIsian((x) => ({ ...x, [k]: v }))} className="h-8" />
                                 ) : <div className="tabular-nums font-semibold">{formatRupiah(berikut[k])}</div>}
                             </div>
                         ))}
@@ -63,8 +78,11 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: Inf
                     </div>
                     <label className="mt-2 flex items-center gap-2 text-xs text-muted-foreground cursor-pointer">
                         <input type="checkbox" checked={ubah} onChange={(e) => setUbah(e.target.checked)} />
-                        Ubah jasa/adm/provisi (mis. adm dibebaskan); pokok selalu sesuai jadwal
+                        Ubah pokok/jasa/adm/provisi (mis. adm dibebaskan)
                     </label>
+                    {pokokDiubah && <input type="hidden" name="pokok" value={isian.pokok} />}
+                    {pokokDiubah && <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">Pokok berbeda dengan jadwal. Jadwal angsuran berikutnya tidak berubah, dan angsuran ini tetap dihitung satu cicilan.</p>}
+                    {sisaBeda && <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">Ini angsuran terakhir dan sisa pokok berbeda dengan jadwal. Centang ubah supaya pokoknya sama dengan sisa, kalau tidak pinjaman selesai dengan saldo tersisa.</p>}
                 </div>
             )}
             <div className="grid gap-4 sm:grid-cols-2">

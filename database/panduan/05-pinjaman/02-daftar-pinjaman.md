@@ -20,6 +20,8 @@ Tekan **Terapkan** setelah mengubah filter.
 | Kolom | Arti |
 | --- | --- |
 | Tgl Pinjaman, No Pinjaman | Tanggal dan nomor pencairan (`CR-mmyy-urut`) |
+| KPK | Nomor KPK anggota |
+| No. Rek, Atas Nama | Rekening bank anggota dari data anggota, bukan rekening per pinjaman |
 | Plafond Pokok | Pokok pinjaman |
 | Total Jasa | Jasa seluruh masa pinjaman |
 | Provisi | Biaya provisi |

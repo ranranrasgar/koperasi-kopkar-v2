@@ -16,7 +16,7 @@ import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 import { unduhExcel } from "@/lib/ekspor-excel"
 
 interface Row {
-    tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string; kode_kredit: string | null; opr: string | null
+    tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string; bank_no_rek: string | null; bank_atas_nama: string | null; kode_kredit: string | null; opr: string | null
     rp_pinjaman_pokok: number; uang_muka: number; rp_provisi: number; rp_adm: number; temp_total_plafond: number; temp_total_jasa: number
     temp_angs_per_bulan: number; angs_pokok: number; angs_jasa: number; lama_angsuran: number; jml_cicilan: number; sisa_cicilan: number
     jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; total_bayar: number; sisa_pokok: number
@@ -30,7 +30,10 @@ const angka = (v: number | null | undefined) => formatAngka(Number(v ?? 0))
 const KOLOM: Kolom[] = [
     { judul: "Realisasi", urut: "tgl_pinjaman", teks: (r) => formatTanggal(r.tgl_pinjaman) },
     { judul: "No.Pinjaman", urut: "no_pinjaman", mono: true, tebal: true, teks: (r) => r.no_pinjaman },
-    { judul: "Nama Anggota", urut: "nama", tebal: true, teks: (r) => `${r.nama} (${r.nik ?? "-"} | ${r.kode_agt})` },
+    { judul: "Nama Anggota", urut: "nama", tebal: true, teks: (r) => `${r.nama} (${r.kode_agt})` },
+    { judul: "KPK", urut: "nik", mono: true, teks: (r) => r.nik ?? "" },
+    { judul: "No. Rek", urut: "bank_no_rek", mono: true, teks: (r) => r.bank_no_rek ?? "" },
+    { judul: "Atas Nama", urut: "bank_atas_nama", teks: (r) => r.bank_atas_nama ?? "" },
     { judul: "#Jns", urut: "kode_kredit", tengah: true, teks: (r) => r.kode_kredit ?? "" },
     { judul: "Pinjaman", urut: "rp_pinjaman_pokok", kanan: true, mono: true, teks: (r) => angka(r.rp_pinjaman_pokok), jumlah: (r) => r.rp_pinjaman_pokok },
     { judul: "Uang Muka", urut: "uang_muka", kanan: true, mono: true, teks: (r) => angka(r.uang_muka), jumlah: (r) => r.uang_muka },
@@ -279,7 +282,7 @@ export function LoansDashboard({ data, filter, jenisKredit, daftarTahun }: Loans
                                                             ? <Link href={`/dashboard/loans/${encodeURIComponent(row.no_pinjaman)}`} title="Lihat jadwal angsuran dan riwayat pembayaran"
                                                                 className="text-primary underline-offset-2 hover:underline">{row.no_pinjaman}</Link>
                                                             : k.judul === "Nama Anggota"
-                                                            ? <>{row.nama}<div className="text-[11px] font-normal text-on-surface-variant mt-0.5 font-mono">{row.nik ?? "-"} | {row.kode_agt}</div></>
+                                                            ? <>{row.nama}<div className="text-[11px] font-normal text-on-surface-variant mt-0.5 font-mono">{row.kode_agt}</div></>
                                                             : k.teks(row)}
                                                     </td>
                                                 ))}

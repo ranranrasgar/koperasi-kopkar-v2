@@ -243,7 +243,9 @@ async function angsuranBerikutnya(noPinjaman: string) {
     const t: Terms = { pokok: toUnits(p.rp_pinjaman_pokok), persenBunga: persenToMicro(p.persen_bunga), perAngsuran: p.bunga_per === 1,
         lama: p.lama_angsuran, persenAdm: persenToMicro(p.persen_adm), persenProvisi: persenToMicro(p.persen_provisi) }
     const c = cicilan(t, p.jml_cicilan + 1)
-    return { ke: c.ke, lama: p.lama_angsuran, pokok: rp(c.pokok), jasa: rp(c.jasa), adm: rp(c.adm), provisi: rp(c.provisi) }
+    const [s] = await query<{ sisa: string }>(
+        `SELECT COALESCE(SUM(r.kredit_pokok - r.debit_pokok), 0)::text AS sisa FROM pinjaman_tunai_rincian r JOIN pinjaman_tunai p ON p.id = r.pinjaman_tunai_id WHERE p.no_pinjaman = $1`, [noPinjaman])
+    return { ke: c.ke, lama: p.lama_angsuran, pokok: rp(c.pokok), jasa: rp(c.jasa), adm: rp(c.adm), provisi: rp(c.provisi), sisa: rp(toUnits(s.sisa)) }
 }
 
 export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil> {
@@ -253,14 +255,14 @@ export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil>
             "SELECT jk.group_pinjaman FROM pinjaman_tunai p JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id WHERE p.no_pinjaman = $1", [teks(f, "noPinjaman")])
         if (jk) wajibAksi(o, [MENU_ANGSUR_GRUP[jk.group_pinjaman] ?? MENU.angsurKoperasi], "tambah")
         const override = {
-            jasa: uangOpsional(f, "jasa", "Jasa"), adm: uangOpsional(f, "adm", "Adm"), provisi: uangOpsional(f, "provisi", "Provisi"),
+            pokok: uangOpsional(f, "pokok", "Pokok"), jasa: uangOpsional(f, "jasa", "Jasa"), adm: uangOpsional(f, "adm", "Adm"), provisi: uangOpsional(f, "provisi", "Provisi"),
         }
         // Dari form Titipan Angsuran: titipan yang belum diposting ditandai POSTING di transaksi yang sama dengan angsuran ini.
         const dariTitipan = teks(f, "titipan", false) === "1"
         const { r, titip } = await tx(async (db) => {
             const r = await bayarAngsuran(db, {
                 noPinjaman: teks(f, "noPinjaman"), tanggal: tanggal(f), kasPerkiraanId: teks(f, "kas"), opr,
-                override: Object.values(override).some((v) => v !== undefined) ? override : undefined,
+                override: Object.values(override).some((v) => v !== undefined) ? override : undefined, pokokManual: override.pokok !== undefined,
             })
             return { r, titip: dariTitipan ? await postingTitipan(db, teks(f, "noPinjaman")) : null }
         })

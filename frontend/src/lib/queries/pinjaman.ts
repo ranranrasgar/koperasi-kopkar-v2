@@ -19,7 +19,7 @@ export const jenisKredit = (grup?: string) =>
           ORDER BY COALESCE(hide, false), kode_kredit`, [grup && grup !== "All" ? grup : null])
 
 export interface LaporanPinjamanRow {
-    tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string
+    tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string; bank_no_rek: string | null; bank_atas_nama: string | null
     rp_pinjaman_pokok: number; rp_provisi: number; temp_total_plafond: number; temp_total_jasa: number
     temp_angs_per_bulan: number; lama_angsuran: number; jml_cicilan: number; sisa_cicilan: number
     jml_tunggakan: number | null; bayar_pokok: number; bayar_bunga: number; sisa_pokok: number; sisa_buku: number; lunas: boolean; kode_kredit: string | null

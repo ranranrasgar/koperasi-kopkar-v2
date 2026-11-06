@@ -18,6 +18,7 @@
 //  - Tunggak: dihitung langsung dari jadwal tagih (pinjaman_tunai_rincian_tagih): angsuran yang bulan jatuh temponya sudah berakhir dikurangi
 //    jml_cicilan, sama dengan laporan Kredit Macet (potongan gaji dibukukan akhir bulan, jadi angsuran bulan berjalan belum dianggap terlambat). Kolom jml_tunggakan di pinjaman_tunai (hasil tombol "Cek Tunggakan" desktop) tidak
 //    dipakai karena usang (hanya 14 pinjaman terisi, padahal ±225 menunggak). Jatuh Tempo = tanggal angsuran berikutnya yang belum dibayar.
+//  - No. Rek dan Atas Nama: rekening anggota (anggota.bank_no_rek, bank_atas_nama). pinjaman_tunai.no_rek hanya berisi nomor pinjaman pada data lama, dan atas_nama kosong.
 //  - Jml Cicilan: penghitung di pinjaman_tunai (dikelola aplikasi desktop).
 //  - Pinjaman tanpa baris rincian sama sekali (belum diposting ke buku) tetap tampil, dengan bayar 0 dan sisa = plafond.
 
@@ -38,7 +39,7 @@ export interface FilterPinjaman {
 
 export const SISA_LUNAS = 100
 /** Kolom yang dicari dari kotak pencarian Daftar Pinjaman. */
-const KOLOM_CARI = ["p.no_pinjaman", "p.no_rek", "a.kode_agt", "a.nik", "a.nama"]
+const KOLOM_CARI = ["p.no_pinjaman", "p.no_rek", "a.bank_no_rek", "a.kode_agt", "a.nik", "a.nama"]
 /** Kolom hasil yang dijumlahkan di baris "Total seluruh data" Daftar Pinjaman. */
 export const KOLOM_JUMLAH = ["rp_pinjaman_pokok", "uang_muka", "temp_total_plafond", "temp_total_jasa", "rp_adm", "rp_provisi",
     "bayar_pokok", "bayar_bunga", "total_bayar", "sisa_pokok"] as const
@@ -68,7 +69,7 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
 
     // Kolom yang boleh dipakai mengurutkan (nama kolom hasil, bukan teks bebas dari pengguna).
     // Kolom kontrak ada di baris dasar sehingga halaman bisa dipilih lebih dulu; kolom hitungan butuh buku pinjaman/jadwal untuk semua baris.
-    const URUT_KONTRAK = new Set(["tgl_pinjaman", "no_pinjaman", "nama", "kode_kredit", "rp_pinjaman_pokok", "uang_muka", "temp_total_plafond", "lama_angsuran",
+    const URUT_KONTRAK = new Set(["tgl_pinjaman", "no_pinjaman", "nama", "nik", "bank_no_rek", "bank_atas_nama", "kode_kredit", "rp_pinjaman_pokok", "uang_muka", "temp_total_plafond", "lama_angsuran",
         "jml_cicilan", "temp_total_jasa", "rp_adm", "rp_provisi", "angs_pokok", "angs_jasa", "temp_angs_per_bulan", "opr"])
     const URUT_HITUNG = new Set(["sisa_cicilan", "bayar_pokok", "bayar_bunga", "total_bayar", "sisa_pokok", "jml_tunggakan", "jatuh_tempo"])
     const kolomUrut = f.urutKolom && (URUT_KONTRAK.has(f.urutKolom) || URUT_HITUNG.has(f.urutKolom)) ? f.urutKolom : null
@@ -78,7 +79,7 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
         SELECT k.*, k.temp_total_plafond / NULLIF(k.lama_angsuran, 0) AS angs_pokok, k.temp_total_jasa / NULLIF(k.lama_angsuran, 0) AS angs_jasa,
                (k.temp_total_plafond + k.temp_total_jasa) / NULLIF(k.lama_angsuran, 0) AS temp_angs_per_bulan
           FROM (
-        SELECT p.id, p.tgl_pinjaman, p.no_pinjaman, p.no_pinjaman_urut, a.kode_agt, a.nik, a.nama,
+        SELECT p.id, p.tgl_pinjaman, p.no_pinjaman, p.no_pinjaman_urut, a.kode_agt, a.nik, a.nama, a.bank_no_rek, a.bank_atas_nama,
                p.rp_pinjaman_pokok, p.rp_uang_muka AS uang_muka, p.rp_provisi, p.lama_angsuran, p.jml_cicilan, p.opr, jk.kode_kredit,
                ROUND(p.rp_pinjaman_pokok - p.rp_uang_muka) AS temp_total_plafond,
                ROUND((p.rp_pinjaman_pokok - p.rp_uang_muka) * p.persen_adm / 100) AS rp_adm,
@@ -94,7 +95,7 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
                CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.lama_angsuran - y.jml_cicilan, 0) END AS sisa_cicilan,
                CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.jatuh_tempo_n - y.jml_cicilan, 0) END AS jml_tunggakan
           FROM (
-            SELECT h.id, h.tgl_pinjaman, h.no_pinjaman, h.no_pinjaman_urut, h.kode_agt, h.nik, h.nama, h.rp_pinjaman_pokok, h.uang_muka, h.rp_provisi, h.rp_adm,
+            SELECT h.id, h.tgl_pinjaman, h.no_pinjaman, h.no_pinjaman_urut, h.kode_agt, h.nik, h.nama, h.bank_no_rek, h.bank_atas_nama, h.rp_pinjaman_pokok, h.uang_muka, h.rp_provisi, h.rp_adm,
                    h.temp_total_plafond, h.temp_total_jasa, h.lama_angsuran, h.jml_cicilan, h.opr, h.kode_kredit,
                    h.angs_pokok, h.angs_jasa, h.temp_angs_per_bulan,
                    s.sisa_pokok AS sisa_buku, LEAST(h.temp_total_plafond, s.dibayar_pokok) AS bayar_pokok, s.bayar_bunga,

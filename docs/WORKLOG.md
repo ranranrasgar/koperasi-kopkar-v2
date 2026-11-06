@@ -40,6 +40,15 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 ### Audit Data: tautan bukti angsuran (6 November)
 - Regex `CR-...` di `audit/page.tsx` ikut mencocokkan bagian `CR-` dari `ANGS-CR-1026-173936`, jadi tautan menuju pinjaman yang tidak ada. Kini nomor pinjaman harus di awal teks atau sesudah spasi. Angsuran tanpa jurnal 2026: 50 baris, Rp 67,9 juta; contoh CR-0723-15842 ke-39 dan CR-0526-22343 ke-5 punya baris buku dan kas, tetapi jurnalnya tidak ada, sedangkan angsuran bulan sebelumnya berjurnal. Penyebab belum diketahui, perlu dicocokkan dengan mutasi bank.
 
+### Setoran Angsuran: pokok bisa diubah (6 November)
+- `bayarAngsuran` opsi `pokokManual`: 0 sampai sisa pokok, deskripsi ditandai `(pokok diubah)`. Form menampilkan sisa pokok, total mengikuti isian, dan memperingatkan angsuran terakhir yang tidak menghabiskan sisa. Jadwal tidak disusun ulang; Potongan Gaji tetap memakai jadwal.
+
+### Jebakan: next typegen saat server dev hidup (6 November)
+- Halaman dashboard membalas 404 dan muncul `Failed to find Server Action`, bermula tepat saat `next typegen` dijalankan selagi port 3100 hidup; hanya `_not-found` yang terkompilasi. Penyebab pasti belum terbukti. Pulihkan dengan memulai ulang server dev; jangan typegen selagi server hidup.
+
+### Daftar Pinjaman: KPK, No. Rek, Atas Nama (6 November)
+- Tiga kolom baru di `LoansDashboard`, ikut Cetak, Ekspor, urut, dan tombol Kolom. Rekening dari `anggota.bank_no_rek`/`bank_atas_nama`, karena `pinjaman_tunai.no_rek` pada data lama hanya berisi nomor pinjaman dan `atas_nama` kosong. Pencarian juga mencari `bank_no_rek`.
+
 ### Buku Pinjaman (6 November)
 - Menu **Buku Pinjaman** `/dashboard/loans/ledger` di grup Angsuran & Pemantauan, seperti Buku Simpanan: bukti angsuran tunai dan KPR (`pinjaman-buku-sql.ts`), sisa pokok berjalan, status jurnal dan koreksi, cetak ulang kwitansi. Izin `Buku Pinjaman (web)` diisi dari izin laporan pinjaman oleh `pengaturan:pasang`; baris dibatasi `grupPinjamanBoleh`.
 

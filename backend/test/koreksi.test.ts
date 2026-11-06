@@ -181,3 +181,23 @@ test('jurnal susulan: baris sama dengan jurnal asli, tercatat, tidak bisa diulan
         await gagal(db, () => rancangJurnalSusulan(db, b.noBukti), /sudah dibatalkan/);
     });
 });
+
+test('pokok manual: ditandai, dibatasi sisa pokok, jurnal mengikuti, batal tetap jalan', async () => {
+    const a = (await pool.query('SELECT kode_agt FROM anggota WHERE rp_grade >= 1000000 ORDER BY id LIMIT 1')).rows[0].kode_agt;
+    await inTx(async (db) => {
+        const kas = (await db.query("SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'")).rows[0].id;
+        const c = await cairkanPinjaman(db, { kodeAgt: a, kodeKredit: 'C01', tglPinjaman: TANGGAL, pokok: 1000000, lama: 6, kasPerkiraanId: kas, opr: 'uji' });
+        const dasar = { noPinjaman: c.noPinjaman, tanggal: TANGGAL, kasPerkiraanId: kas, opr: 'uji', pokokManual: true };
+        await gagal(db, () => bayarAngsuran(db, { ...dasar, override: { pokok: '1000001' } }), /melebihi sisa pokok/);
+        await gagal(db, () => bayarAngsuran(db, { ...dasar, override: { pokok: 0, jasa: 0, adm: 0, provisi: 0 } }), /lebih dari nol/);
+        const r = await bayarAngsuran(db, { ...dasar, override: { pokok: '400000' } });
+        assert.equal(Number(r.pokok), 400000);
+        assert.equal(Number(r.sisaPokok), 600000);
+        const b = (await db.query('SELECT deskripsi, debit_pokok::float d FROM pinjaman_tunai_rincian WHERE no_bukti = $1', [r.noBukti])).rows[0];
+        assert.deepEqual(b, { deskripsi: 'Setoran ke 1 (pokok diubah)', d: 400000 });
+        const j = await jurnalBukti(db, r.noBukti);
+        assert.equal(j.reduce((t, x) => t + x.d, 0), j.reduce((t, x) => t + x.c, 0));
+        assert.ok(j.some((x) => x.c === 400000));
+        await batalBukti(db, { noBukti: r.noBukti, tanggal: TANGGAL, alasan, opr: 'uji' });
+    });
+});
