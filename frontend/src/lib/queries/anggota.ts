@@ -74,6 +74,8 @@ export interface AnggotaRingkas {
     /** Terisi bila ditemukan lewat pinjaman (cariPinjamanBerjalan). */
     no_pinjaman?: string
     jenis_pinjaman?: "tunai" | "kpr"
+    /** Terisi bila dipilih lewat QR simpanan anggota. */
+    jenis_simpanan?: string
     aktif: boolean
 }
 

@@ -1,0 +1,77 @@
+"use client"
+
+import { useEffect, useState, useTransition } from "react"
+import { Loader2, QrCode, RefreshCw, X } from "lucide-react"
+import qrcode from "qrcode-generator"
+import { buatQrAction } from "@/app/actions/qr"
+import type { JenisQr } from "@kopkar/backend/src/anggota/qr.ts"
+
+function gambarQr(teks: string) {
+    const q = qrcode(0, "M")
+    q.addData(teks)
+    q.make()
+    return q.createSvgTag({ cellSize: 6, margin: 0, scalable: true })
+}
+
+/** Tombol yang membuka QR untuk ditunjukkan ke kasir: saat setor simpanan atau membayar angsuran. Berlaku 5 menit. */
+export function TombolQr({ jenis, kode, judul, sub, penuh = false }: { jenis: JenisQr; kode: string; judul: string; sub: string; penuh?: boolean }) {
+    const [buka, setBuka] = useState(false)
+    const [svg, setSvg] = useState("")
+    const [sisa, setSisa] = useState(0)
+    const [galat, setGalat] = useState("")
+    const [sibuk, mulai] = useTransition()
+
+    const muat = () => mulai(async () => {
+        setGalat("")
+        const r = await buatQrAction(jenis, kode)
+        if (!r.ok) { setSvg(""); setGalat(r.error); return }
+        setSvg(gambarQr(r.teks))
+        setSisa(r.detik)
+    })
+    useEffect(() => {
+        if (!buka || sisa <= 0) return
+        const t = setTimeout(() => setSisa(sisa - 1), 1000)
+        return () => clearTimeout(t)
+    }, [buka, sisa])
+
+    const bukaQr = () => { setBuka(true); muat() }
+    const habis = !sibuk && !galat && svg !== "" && sisa <= 0
+    return (
+        <>
+            {penuh ? (
+                <button type="button" onClick={bukaQr} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-garis bg-permukaan py-2.5 text-sm font-semibold text-utama active:bg-garis/40">
+                    <QrCode size={17} /> Tampilkan QR pembayaran
+                </button>
+            ) : (
+                <button type="button" onClick={bukaQr} aria-label={`Tampilkan QR ${judul}`} className="mr-3 grid size-10 shrink-0 place-items-center rounded-full text-utama active:bg-garis/40">
+                    <QrCode size={20} />
+                </button>
+            )}
+            {buka && (
+                <div role="dialog" aria-modal="true" aria-label={`QR ${judul}`} className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-5">
+                    <div className="w-full max-w-sm rounded-[var(--radius-kartu)] bg-permukaan p-5 text-center">
+                        <div className="flex items-start justify-between gap-3 text-left">
+                            <div className="min-w-0">
+                                <p className="font-bold leading-snug">{judul}</p>
+                                <p className="truncate text-xs text-redup">{sub}</p>
+                            </div>
+                            <button type="button" onClick={() => setBuka(false)} aria-label="Tutup" className="-mr-1 -mt-1 grid size-9 shrink-0 place-items-center rounded-full active:bg-garis/40"><X size={19} /></button>
+                        </div>
+                        <div className="relative mx-auto mt-4 aspect-square w-full max-w-64 rounded-2xl bg-white p-4">
+                            {svg && <div className={habis ? "opacity-10" : ""} dangerouslySetInnerHTML={{ __html: svg }} />}
+                            {sibuk && <Loader2 className="absolute inset-0 m-auto animate-spin text-black" />}
+                        </div>
+                        {galat && <p role="alert" className="mt-3 text-sm text-keluar">{galat}</p>}
+                        {habis ? (
+                            <button type="button" onClick={muat} className="mt-4 inline-flex items-center gap-2 rounded-full bg-utama px-5 py-2.5 text-sm font-semibold text-white">
+                                <RefreshCw size={16} /> Buat QR baru
+                            </button>
+                        ) : !galat && (
+                            <p className="mt-3 text-sm text-redup">Tunjukkan ke kasir. Berlaku <span className="angka font-semibold">{Math.floor(sisa / 60)}:{String(sisa % 60).padStart(2, "0")}</span></p>
+                        )}
+                    </div>
+                </div>
+            )}
+        </>
+    )
+}

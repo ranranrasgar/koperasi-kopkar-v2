@@ -40,6 +40,16 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 ### Audit Data: tautan bukti angsuran (6 November)
 - Regex `CR-...` di `audit/page.tsx` ikut mencocokkan bagian `CR-` dari `ANGS-CR-1026-173936`, jadi tautan menuju pinjaman yang tidak ada. Kini nomor pinjaman harus di awal teks atau sesudah spasi. Angsuran tanpa jurnal 2026: 50 baris, Rp 67,9 juta; contoh CR-0723-15842 ke-39 dan CR-0526-22343 ke-5 punya baris buku dan kas, tetapi jurnalnya tidak ada, sedangkan angsuran bulan sebelumnya berjurnal. Penyebab belum diketahui, perlu dicocokkan dengan mutasi bank.
 
+### QR transaksi dari HP anggota (6 November)
+- PWA: `TombolQr` di tiap jenis simpanan dan tiap pinjaman berjalan. Admin: `pindai` di `AnggotaPicker`, dipakai Setoran Simpanan dan Setoran Angsuran (`PindaiQr`, kamera dengan `jsqr`, atau alat pemindai USB).
+- `backend/src/anggota/qr.ts`, tabel `qr_anggota` (`anggota:pasang`). QR berisi token acak berlaku 5 menit, disimpan di database supaya tidak perlu rahasia bersama admin dan PWA. QR hanya memilih data; kasir tetap menyimpan. Belum ada di aplikasi Android.
+
+### Aktivitas Pengguna (6 November)
+- Menu **Sistem → Aktivitas Pengguna** (`/dashboard/settings/aktivitas`, izin `Aktivitas Pengguna (web)`, grup admin lewat `pengaturan:pasang`). Tab Sedang Online dan Riwayat Aktivitas.
+- `backend/src/aktivitas.ts`, tabel `pengguna_aktif` dan `log_aktivitas` di `pengaturan-web.sql`. Sinyal `POST /api/sinyal` dari `SinyalAktif` (route handler, bukan server action, supaya tidak mengantre dengan navigasi). Android: `pemakai()` paling sering sekali semenit per akun. Pemangkasan 90 hari berpeluang kecil di `catatAktivitas`, tanpa penjadwal.
+- Bersihkan Riwayat (`bersihkanRiwayatAction`): khusus superadmin, konfirmasi ketik HAPUS, lewat `tx()` jadi ikut mode uji, dan selalu meninggalkan satu baris jejak.
+- Simpan admin dicatat di pembungkus `posting`, `simpan`, `aksi`, `proses`, `jalankan`, `jaga`, serta pengajuan, pendaftaran, dan mode. Belum tercatat: kirim notifikasi, pengumuman, dan panduan. Tahap berikut yang disepakati: peringatan login gagal berulang dan tab Per Pengguna.
+
 ### Menu pinjaman dipisah per jenis (6 November)
 - `menu.ts`: grup Pinjaman dipecah menjadi **Pinjaman Tunai**, **KPR**, dan **Angsuran & Pemantauan** (Setoran Angsuran, Setoran Titipan, Cari Pinjaman, Kredit Macet dipakai kedua jenis). Matriks Kelola Hak Akses mengikuti `allGroups`, jadi ikut terpisah. Izin di `opr_hak_akses` tidak berubah karena terikat nama izin, bukan grup menu.
 - Jalur menu di panduan diperbarui dari `Pinjaman → X`.

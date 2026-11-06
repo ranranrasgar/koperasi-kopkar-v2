@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
 import { dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, ubahStatusAkun, type DataLengkapi, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
 import { antreEmail } from "@kopkar/backend/src/email/antrean.ts"
@@ -24,6 +25,7 @@ export async function putuskanPendaftaranAction(id: number, setuju: boolean, len
         wajibAksi(o, MENU_USER, "ubah")
         const r = await tx((db) => putuskanPendaftaran(db as never, id, setuju, { id: o.id, nama: o.nama }, lengkap))
         if (!r.ok) return r
+        await catatAksi("User Mobile", r.pesan)
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
         revalidatePath("/dashboard/members", "layout")
         if (r.email) {
@@ -72,6 +74,7 @@ export async function ubahStatusAkunAction(id: number, aktif: boolean): Promise<
         wajibAksi(await operatorAktif(MENU_USER), MENU_USER, "ubah")
         const r = await tx((db) => ubahStatusAkun(db as never, id, aktif))
         if (!r.ok) return r
+        await catatAksi("User Mobile", r.pesan)
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
         revalidatePath("/dashboard/members", "layout")
         if (r.email) {
@@ -126,6 +129,7 @@ export async function jadikanAnggotaAction(id: number, lengkap?: LengkapAnggota)
         const r = await tx((db) => jadikanAnggota(db as never, id, { id: o.id, nama: o.nama }, lengkap))
         if (!r.ok) return r
         const pesan = r.dibuat ? `Akun dijadikan anggota, kode anggota ${r.kode}` : `Akun ditautkan ke anggota ${r.kode}`
+        await catatAksi("User Mobile", pesan)
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
         revalidatePath("/dashboard/members", "layout")
         return { ok: true, pesan }
@@ -158,6 +162,7 @@ export async function hapusUserMobileAction(id: number, kodeHapusAnggota?: strin
             return { ...h, pesan: `${h.pesan}; ${k.pesan}` }
         })
         if (!r.ok) return r
+        await catatAksi("User Mobile", r.pesan)
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
         revalidatePath("/dashboard/members", "layout")
         return { ok: true, pesan: r.pesan }

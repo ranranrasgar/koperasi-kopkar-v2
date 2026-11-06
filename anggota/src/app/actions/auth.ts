@@ -2,7 +2,9 @@
 
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
+import { catatAktivitas, catatLoginGagal, hapusAktif } from "@kopkar/backend/src/aktivitas.ts"
 import { masukAnggota } from "@kopkar/backend/src/anggota/akun.ts"
+import { anggotaSesi } from "@/lib/anggota"
 import { pool } from "@/lib/db"
 import { buatSesi, buatTokenVerifikasi, COOKIE_SESI, LAMA_SESI_DETIK, sidikPassword } from "@/lib/sesi"
 import { statusEmail } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
@@ -30,6 +32,7 @@ export async function masukAction(_: HasilAuth, f: FormData): Promise<HasilAuth>
         // Pesan disamarkan (keputusan K7), kecuali akun yang memang dinonaktifkan.
         if (hasil.alasan === "salah") {
             gagal.set(k, { n: (g && g.sampai > Date.now() ? g.n : 0) + 1, sampai: Date.now() + KUNCI_MS })
+            await catatLoginGagal(pool, "pwa", hasil.userId, hasil.nama)
             return { error: "Username atau password salah", username }
         }
         // Akun pendaftaran yang emailnya belum diverifikasi: arahkan ke halaman kode (password sudah benar di titik ini).
@@ -44,6 +47,7 @@ export async function masukAction(_: HasilAuth, f: FormData): Promise<HasilAuth>
     gagal.delete(k)
 
     const { akun } = hasil
+    await catatAktivitas(pool, { kanal: "pwa", penggunaId: Number(akun.user_id), nama: akun.nama?.trim() || akun.username, aksi: "login" })
     ;(await cookies()).set(COOKIE_SESI, buatSesi({ u: Number(akun.user_id), pv: sidikPassword(akun.password_hash!) }), {
         httpOnly: true, sameSite: "lax", secure: process.env.NODE_ENV === "production", path: "/", maxAge: LAMA_SESI_DETIK,
     })
@@ -52,6 +56,11 @@ export async function masukAction(_: HasilAuth, f: FormData): Promise<HasilAuth>
 }
 
 export async function keluarAction() {
-    (await cookies()).delete(COOKIE_SESI)
+    const a = await anggotaSesi()
+    if (a) {
+        await hapusAktif(pool, "pwa", a.userId)
+        await catatAktivitas(pool, { kanal: "pwa", penggunaId: a.userId, nama: a.nama, aksi: "logout" })
+    }
+    ;(await cookies()).delete(COOKIE_SESI)
     redirect("/masuk")
 }

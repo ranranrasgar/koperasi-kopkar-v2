@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAktivitas } from "@kopkar/backend/src/aktivitas.ts"
 import { revalidatePath } from "next/cache"
 import { beritahuAdmin, MENU_PENGAJUAN } from "@kopkar/backend/src/anggota/notif-admin.ts"
 import { ajukanPinjaman } from "@kopkar/backend/src/anggota/pengajuan.ts"
@@ -34,6 +35,7 @@ export async function ajukanAction(_: HasilAjukan, f: FormData): Promise<HasilAj
         if (!hasil.ok) return hasil
         revalidatePath("/ajukan")
         const uji = await modeUji()
+        await catatAktivitas(pool, { kanal: "pwa", penggunaId: a.userId, nama: a.nama, aksi: "simpan", modul: "Pengajuan Pinjaman", ket: `${uji ? "[Mode uji] " : ""}Mengajukan pinjaman` })
         if (!uji) {
             // Kabari pengurus: lonceng navbar admin + Web Push ke browser operator berizin. Gagal kirim tidak membatalkan pengajuan.
             try {

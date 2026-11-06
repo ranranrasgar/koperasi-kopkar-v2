@@ -1,3 +1,4 @@
+import { catatAktivitas } from "@kopkar/backend/src/aktivitas.ts"
 import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import type { NextRequest } from "next/server"
@@ -33,6 +34,7 @@ export async function GET(req: NextRequest) {
         if (a?.menunggu_admin && !a.akun_aktif) redirect("/daftar/diterima")
         if (!a || !a.akun_aktif || !a.password_hash || (a.anggota_id && !a.anggota_aktif)) redirect("/masuk?galat=nonaktif")
         jar.set(COOKIE_SESI, buatSesi({ u: userId, pv: sidikPassword(a.password_hash) }), kue(LAMA_SESI_DETIK))
+        await catatAktivitas(pool, { kanal: "pwa", penggunaId: userId, nama: a.nama?.trim() || a.username, aksi: "login", ket: "Lewat Google" })
         redirect("/beranda")
     }
     jar.set(COOKIE_GOOGLE_DAFTAR, buatToken("google-daftar", { sub: profil.sub, email: profil.email, nama: profil.nama, foto: profil.foto }, 30 * 60), kue(30 * 60))

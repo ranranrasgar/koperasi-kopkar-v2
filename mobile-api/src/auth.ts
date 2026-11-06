@@ -1,3 +1,4 @@
+import { tandaiAktifAndroid } from '@kopkar/backend/src/aktivitas.ts';
 import type http from 'node:http';
 import { cariAkun } from '@kopkar/backend/src/anggota/akun.ts';
 import { bacaToken, buatToken, LAMA_SESI_DETIK, sidikPassword } from '@kopkar/backend/src/anggota/token.ts';
@@ -32,6 +33,7 @@ export async function pemakai(db: Pool, req: http.IncomingMessage): Promise<Pema
     if (!a || !a.akun_aktif || !a.password_hash || sidikPassword(a.password_hash) !== isi.pv || !a.anggota_id || !a.anggota_aktif) {
         throw new Ditolak(401, SESI_HABIS);
     }
+    tandaiAktifAndroid(db, { penggunaId: Number(a.user_id), nama: a.nama?.trim() || a.username, kode: a.kode_agt });
     return {
         userId: Number(a.user_id), username: a.username, anggotaId: Number(a.anggota_id), kodeAgt: a.kode_agt,
         nama: a.nama?.trim() || a.username, email: a.email, passwordHash: a.password_hash,

@@ -4,6 +4,7 @@ import type { TombolCetakBukti } from "@/lib/kwitansi-tipe"
 import { revalidatePath } from "next/cache"
 import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpanan.ts"
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
+import { bacaQr } from "@kopkar/backend/src/anggota/qr.ts"
 import { batalBukti, buatJurnalSusulan, rancangJurnalSusulan, type RancanganJurnal } from "@kopkar/backend/src/posting/koreksi.ts"
 import { hapusTitipan, postingTitipan, tambahTitipan } from "@kopkar/backend/src/posting/titipan.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
@@ -14,6 +15,7 @@ import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
 import { formatRupiah, hariIni } from "@/lib/format"
 import { modeUji, pool, query, tx } from "@/lib/db"
+import { catatAksi } from "@/lib/aktivitas"
 import { GalatSesi, operatorAktif, wajibAksi, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
 import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_DETAIL_PINJAMAN_GRUP, MENU_TRANSAKSI, punyaIzin, type AksiIzin } from "@/config/akses"
 import { cariAnggota, cariPinjamanBerjalan, type AnggotaRingkas } from "@/lib/queries/anggota"
@@ -71,6 +73,7 @@ async function posting(menu: readonly string[], aksi: AksiIzin | null, fn: (o: O
         const o = await operatorAktif(menu)
         if (aksi) wajibAksi(o, menu, aksi)
         const res = await fn(o)
+        if (res.ok) await catatAksi(menu[0], res.pesan, o)
         if (res.ok && await modeUji()) return { ...res, cetak: undefined, pesan: `MODE UJI, tidak tersimpan: ${res.pesan}` } // tidak tersimpan, jadi tidak ada bukti untuk dicetak
         revalidatePath("/dashboard", "layout")
         return res
@@ -90,6 +93,19 @@ export async function cariAnggotaAction(kata: string, pinjaman = false): Promise
     if (!pinjaman) return cariAnggota(kata)
     const [lewatPinjaman, lewatAnggota] = await Promise.all([cariPinjamanBerjalan(kata), cariAnggota(kata)])
     return [...lewatPinjaman, ...lewatAnggota]
+}
+
+/** Hasil pindai QR dari HP anggota: anggota beserta jenis simpanan atau pinjaman yang dipilihnya. Token QR kedaluwarsa sendiri. */
+export async function bacaQrAction(teks: string): Promise<{ ok: true; anggota: AnggotaRingkas } | { ok: false; error: string }> {
+    const o = await wajibLogin() // sesi habis: alihkan ke login
+    if (!punyaIzin(o.izin, MENU_TRANSAKSI)) return { ok: false, error: "Anda tidak punya akses transaksi" }
+    const q = await bacaQr(pool, teks)
+    if (!q) return { ok: false, error: "QR tidak dikenal atau sudah kedaluwarsa. Minta anggota membuat QR baru." }
+    if (!q.aktif) return { ok: false, error: `Anggota ${q.nama} tidak aktif` }
+    const anggota: AnggotaRingkas = { kode_agt: q.kode_agt, nik: q.nik, nama: q.nama, aktif: q.aktif }
+    if (q.jenis === "simpanan") anggota.jenis_simpanan = q.ref
+    else { anggota.no_pinjaman = q.ref; anggota.jenis_pinjaman = q.jenis }
+    return { ok: true, anggota }
 }
 
 export interface InfoAnggota {

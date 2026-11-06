@@ -300,6 +300,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/settings/audit"
             },
             {
+                label: "Aktivitas Pengguna",
+                icon: "person_search",
+                href: "/dashboard/settings/aktivitas"
+            },
+            {
                 label: "Backup & Restore",
                 icon: "backup",
                 href: "/dashboard/settings/backup"

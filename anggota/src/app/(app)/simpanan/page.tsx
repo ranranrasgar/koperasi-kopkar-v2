@@ -3,6 +3,7 @@ import Link from "next/link"
 import { ArrowDownLeft, ArrowUpRight, CalendarCheck, ChevronRight, Lock, Sprout, Wallet, type LucideIcon } from "lucide-react"
 import { GrafikTren } from "@/components/GrafikTren"
 import { HeroSimpanan } from "@/components/HeroSimpanan"
+import { TombolQr } from "@/components/TombolQr"
 import { Arus, JudulBagian, Kartu, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { mutasiSimpananTerakhir, saldoSimpanan, shu, tahunShu, trenSimpanan } from "@/lib/data"
@@ -43,7 +44,8 @@ export default async function SimpananPage(props: PageProps<"/simpanan">) {
                         {daftar.map((s) => {
                             const Ikon = ikonJenis(s.nama)
                             return (
-                                <Link key={s.kode} href={`/simpanan/${s.kode}`} className="flex items-center gap-3 px-5 py-3.5 transition-colors active:bg-garis/40">
+                                <div key={s.kode} className="flex items-center">
+                                <Link href={`/simpanan/${s.kode}`} className="flex min-w-0 flex-1 items-center gap-3 py-3.5 pl-5 pr-2 transition-colors active:bg-garis/40">
                                     <span className="grid size-10 shrink-0 place-items-center rounded-full bg-utama-lembut text-utama"><Ikon size={19} strokeWidth={1.75} /></span>
                                     <div className="min-w-0 flex-1">
                                         <p className="truncate text-[0.9375rem] font-medium">{s.nama}</p>
@@ -52,6 +54,8 @@ export default async function SimpananPage(props: PageProps<"/simpanan">) {
                                     <p className="angka shrink-0 text-[0.9375rem] font-semibold">{rupiah(s.saldo)}</p>
                                     <ChevronRight size={18} className="shrink-0 text-redup" />
                                 </Link>
+                                <TombolQr jenis="simpanan" kode={s.kode} judul={s.nama} sub={a.nama} />
+                                </div>
                             )
                         })}
                     </Kartu>

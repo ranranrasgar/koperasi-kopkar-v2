@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
 import { MENU } from "@/config/akses"
 import { buatCadangan, hapusCadangan, namaDatabaseServer, periksaCadangan, pulihkanCadangan } from "@/lib/cadangan"
@@ -11,8 +12,10 @@ export type HasilCadangan = { ok: true; pesan: string; keluaran?: string } | { o
 
 async function jaga(fn: () => Promise<HasilCadangan>): Promise<HasilCadangan> {
     try {
-        await operatorAktif([MENU.backupRestore])
-        return await fn()
+        const o = await operatorAktif([MENU.backupRestore])
+        const r = await fn()
+        if (r.ok) await catatAksi("Backup & Restore", r.pesan, o)
+        return r
     } catch (e) {
         if (!(e instanceof GalatSesi)) console.error("backup/restore gagal:", e)
         return { ok: false, error: e instanceof Error ? e.message : "Gagal" }

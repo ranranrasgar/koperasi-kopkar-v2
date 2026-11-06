@@ -608,7 +608,7 @@ export async function akunUntukResetEmail(db: pg.Pool | pg.PoolClient, username:
 
 export type HasilMasuk =
     | { ok: true; akun: AkunAnggota }
-    | { ok: false; alasan: 'salah' | 'akun_nonaktif' | 'anggota_nonaktif'; userId?: number; menungguAdmin?: boolean };
+    | { ok: false; alasan: 'salah' | 'akun_nonaktif' | 'anggota_nonaktif'; userId?: number; nama?: string; menungguAdmin?: boolean };
 
 /**
  * Login anggota. Urutan sama dengan server lama: akun ada, akun aktif, password cocok, anggota aktif.
@@ -618,7 +618,8 @@ export type HasilMasuk =
 export async function masukAnggota(db: pg.Pool, username: string, password: string): Promise<HasilMasuk> {
     const akun = await cariAkun(db, { username });
     const { cocok, md5 } = await cocokPasswordAnggota(password, akun?.password_hash ?? HASH_SEMU);
-    if (!akun || !cocok) return { ok: false, alasan: 'salah' };
+    if (!akun) return { ok: false, alasan: 'salah' };
+    if (!cocok) return { ok: false, alasan: 'salah', userId: Number(akun.user_id), nama: akun.username };
     if (!akun.akun_aktif) return { ok: false, alasan: 'akun_nonaktif', userId: Number(akun.user_id), menungguAdmin: !!akun.menunggu_admin };
     if (akun.anggota_id && !akun.anggota_aktif) return { ok: false, alasan: 'anggota_nonaktif' };
     if (md5) {

@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
 import { modeUji, tx } from "@/lib/db"
 import type { Db } from "@kopkar/backend/src/db.ts"
@@ -18,8 +19,10 @@ class Salah extends Error {}
  */
 async function simpan(menu: string, path: string, aksi: AksiIzin, fn: (db: Db) => Promise<string>, jenis?: "layout"): Promise<HasilSimpan> {
     try {
-        wajibAksi(await operatorAktif([menu]), [menu], aksi)
+        const o = await operatorAktif([menu])
+        wajibAksi(o, [menu], aksi)
         const pesan = await tx(fn)
+        await catatAksi(menu, pesan, o)
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
         revalidatePath(path, jenis)
         return { ok: true, pesan }

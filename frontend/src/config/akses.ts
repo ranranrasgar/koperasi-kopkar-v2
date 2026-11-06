@@ -75,6 +75,8 @@ export const MENU = {
     jurnalPenyesuaian: "Jurnal Penyesuaian (web)",
     jurnalBermasalah: "Jurnal Bermasalah (web)",
     auditData: "Audit Data (web)",
+    // Khusus web; superadmin dan grup admin. Hanya melihat, jadi tidak punya aksi C, U, D.
+    aktivitasPengguna: "Aktivitas Pengguna (web)",
     // Khusus web; membatalkan transaksi yang sudah diposting. Awalnya hanya superadmin.
     batalTransaksi: "Batal Transaksi (web)",
     bukuBesarKas: "Buku Besar Kas (web)",
@@ -192,6 +194,7 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/panduan/kelola": [MENU.kelolaPanduan],
     "/dashboard/settings/mode": [MENU.modeAplikasi],
     "/dashboard/settings/audit": [MENU.auditData, MENU.batalTransaksi],
+    "/dashboard/settings/aktivitas": [MENU.aktivitasPengguna],
     "/dashboard/settings/backup": [MENU.backupRestore],
     "/dashboard/notifikasi": [MENU.kirimNotifikasi],
     "/dashboard/himbauan": [MENU.kelolaPengumuman],

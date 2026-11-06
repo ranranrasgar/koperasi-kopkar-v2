@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
 import { BAGIAN, generatePotongan, postingPotongan, setDipotong, ubahPotongan, type Bagian } from "@kopkar/backend/src/posting/potongan.ts"
 import { NAMA_BAGIAN, detailAnggotaPeriode, satuPeriode } from "@/lib/queries/potongan-gaji"
@@ -28,6 +29,7 @@ async function aksi(jenis: AksiIzin, fn: (opr: string) => Promise<Exclude<Hasil,
         const o = await operatorAktif(MENU_POTONGAN)
         wajibAksi(o, MENU_POTONGAN, jenis)
         const res = await fn(o.nama)
+        if (res.ok) await catatAksi(MENU_POTONGAN[0], res.pesan, o)
         if (res.ok && await modeUji()) return { ...res, pesan: `MODE UJI, tidak tersimpan: ${res.pesan}` }
         revalidatePath("/dashboard", "layout")
         return res

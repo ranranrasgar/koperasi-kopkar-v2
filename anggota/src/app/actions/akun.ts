@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAktivitas } from "@kopkar/backend/src/aktivitas.ts"
 import { cookies, headers } from "next/headers"
 import { redirect } from "next/navigation"
 import {
@@ -149,6 +150,7 @@ export async function gantiPasswordAction(_: Hasil, f: FormData): Promise<Hasil>
     const r = await gantiPassword(pool, a.userId, teks(f, "lama"), teks(f, "password"), teks(f, "ulangi"))
     if (!r.ok) return r
     await pasangSesi(a.userId, r.hash) // perangkat ini tetap masuk; sesi di perangkat lain berakhir
+    await catatAktivitas(pool, { kanal: "pwa", penggunaId: a.userId, nama: a.nama, aksi: "simpan", modul: "Akun", ket: "Mengganti password" })
     return { ok: true, pesan: "Password berhasil diganti." }
 }
 

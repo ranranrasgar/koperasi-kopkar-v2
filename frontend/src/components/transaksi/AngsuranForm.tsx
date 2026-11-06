@@ -157,7 +157,7 @@ export function AngsuranForm({ akunKas, hariIni, izin }: { akunKas: Akun[]; hari
             <FormCard title="Setoran Angsuran" description="Angsuran pinjaman tunai (pokok, jasa, adm, provisi) atau KPR (titipan). Nomor bukti dari mesin posting.">
                 <div className="space-y-4">
                     <Field label="Anggota" htmlFor="anggota">
-                        <AnggotaPicker cariPinjaman value={anggota} onChange={(a) => {
+                        <AnggotaPicker cariPinjaman pindai value={anggota} onChange={(a) => {
                             // info dikosongkan supaya form pinjaman dibuat ulang dengan pinjaman yang dipilih dari pencarian.
                             setInfo(null); setAnggota(a); setVersi(0)
                             if (a?.jenis_pinjaman === "tunai" && izin.tunai) setTab("tunai")

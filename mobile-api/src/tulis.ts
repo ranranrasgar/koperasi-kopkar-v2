@@ -4,6 +4,7 @@ import {
 } from '@kopkar/backend/src/anggota/akun.ts';
 import { jenisFoto, MAKS_FOTO, simpanFoto, tabelBelumAda } from '@kopkar/backend/src/anggota/foto.ts';
 import { beritahuAdmin, MENU_PENGAJUAN } from '@kopkar/backend/src/anggota/notif-admin.ts';
+import { catatAktivitas, catatLoginGagal } from '@kopkar/backend/src/aktivitas.ts';
 import { ajukanPinjaman } from '@kopkar/backend/src/anggota/pengajuan.ts';
 import { bacaTokenReset, buatTokenReset, sidikPassword } from '@kopkar/backend/src/anggota/token.ts';
 import { kirimKodeVerifikasi, statusEmail } from '@kopkar/backend/src/anggota/verifikasi-email.ts';
@@ -77,6 +78,7 @@ export async function login({ db, p }: Konteks): Promise<Result> {
     if (!hasil.ok) {
         if (hasil.alasan === 'salah') {
             gagalMasuk.set(k, { n: (g && g.sampai > Date.now() ? g.n : 0) + 1, sampai: Date.now() + KUNCI_MS });
+            await catatLoginGagal(db, 'android', hasil.userId, hasil.nama);
             return { success: false, message: 'Username atau password salah' };
         }
         if (hasil.alasan === 'akun_nonaktif' && hasil.userId && (await statusEmail(db as never, hasil.userId)).menungguAktivasi) {
@@ -95,6 +97,7 @@ export async function login({ db, p }: Konteks): Promise<Result> {
     }
     const anggota = await dataLogin(db, Number(akun.user_id), Number(akun.anggota_id));
     if (!anggota) return { success: false, message: 'Akun Anda tidak aktif. Hubungi pengurus koperasi.' };
+    await catatAktivitas(db, { kanal: 'android', penggunaId: Number(akun.user_id), nama: akun.nama?.trim() || akun.username, aksi: 'login' });
     return { success: true, message: 'Login berhasil.', anggota, api_token: buatTokenApi(Number(akun.user_id), akun.password_hash!) };
 }
 
@@ -164,6 +167,7 @@ export async function updateUserPassword(k: Konteks): Promise<Result> {
     if (tunggu) return gagal(pesanTunggu(tunggu));
     const r = await gantiPassword(db, a.userId, teks(p, 'password_lama'), baru, baru);
     if (!r.ok) return gagal(r.error);
+    await catatAktivitas(db, { kanal: 'android', penggunaId: a.userId, nama: a.nama, aksi: 'simpan', modul: 'Akun', ket: 'Mengganti password' });
     return ok('Password berhasil diupdate.', { api_token: buatTokenApi(a.userId, r.hash) });
 }
 
@@ -248,5 +252,6 @@ export async function createPinjaman(k: Konteks): Promise<Result> {
             console.error('kabari admin pengajuan gagal:', e);
         }
     }
+    await catatAktivitas(k.db, { kanal: 'android', penggunaId: a.userId, nama: a.nama, aksi: 'simpan', modul: 'Pengajuan Pinjaman', ket: `${uji ? '[Mode uji] ' : ''}Mengajukan pinjaman` });
     return ok(uji ? 'Mode uji: pengajuan diperiksa tetapi tidak disimpan.' : 'Pinjaman berhasil diajukan');
 }

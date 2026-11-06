@@ -170,3 +170,12 @@ ALTER TABLE app_user ADD COLUMN IF NOT EXISTS keputusan_daftar varchar(10);
 -- Pengajuan kredit yang disetujui di web dan belum dicairkan: true saat disetujui, false lagi saat pinjaman tunai jenis yang sama
 -- dicairkan untuk anggota itu atau persetujuannya dibatalkan. Dipakai aturan "Kunci jika belum lunas". Baris lama otomatis false.
 ALTER TABLE pengajuan_pinjaman ADD COLUMN IF NOT EXISTS menunggu_cair boolean NOT NULL DEFAULT false;
+
+-- QR transaksi: token acak yang ditunjukkan anggota ke kasir untuk memilih dirinya dan satu jenis simpanan atau pinjaman (berlaku 5 menit).
+CREATE TABLE IF NOT EXISTS qr_anggota (
+    token varchar(32) PRIMARY KEY,
+    anggota_id bigint NOT NULL REFERENCES anggota(id) ON DELETE CASCADE,
+    jenis varchar(10) NOT NULL,
+    ref varchar(40) NOT NULL,
+    berlaku_sampai timestamptz NOT NULL
+);

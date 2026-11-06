@@ -27,6 +27,7 @@ export default async function KebijakanPrivasiPage() {
                     <li><strong>Pesan</strong> yang Anda kirim ke pengurus lewat fitur pesan di aplikasi.</li>
                     <li><strong>Data perangkat untuk notifikasi:</strong> langganan notifikasi push dari browser atau perangkat Anda, bila Anda mengizinkannya.</li>
                     <li><strong>Data teknis keamanan:</strong> cookie sesi masuk dan catatan percobaan masuk untuk mencegah penyalahgunaan.</li>
+                    <li><strong>Catatan aktivitas:</strong> waktu masuk dan keluar, menu yang sedang dibuka, jenis perangkat dan browser, serta tindakan seperti mengajukan pinjaman. Catatan ini hanya dilihat pengurus berwenang untuk keamanan dan layanan, dan dihapus otomatis setelah 90 hari.</li>
                 </ul>
             </section>
 

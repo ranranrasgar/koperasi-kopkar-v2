@@ -114,3 +114,28 @@ CREATE TABLE IF NOT EXISTS pinjaman_penutupan (
 );
 CREATE UNIQUE INDEX IF NOT EXISTS uq_pinjaman_penutupan_aktif ON pinjaman_penutupan (pinjaman_tunai_id) WHERE dibatalkan_pada IS NULL;
 CREATE INDEX IF NOT EXISTS ix_pinjaman_penutupan_no ON pinjaman_penutupan (no_pinjaman);
+
+-- Aktivitas Pengguna: status online admin, PWA, dan Android (satu baris per akun per kanal), dan riwayat login serta aksi simpan.
+-- Tanpa FK supaya riwayat tetap ada setelah akun dihapus; dipangkas otomatis setelah 90 hari (backend/src/aktivitas.ts).
+CREATE TABLE IF NOT EXISTS pengguna_aktif (
+    kanal varchar(10) NOT NULL,
+    pengguna_id bigint NOT NULL,
+    nama varchar(120) NOT NULL,
+    kode varchar(40),
+    halaman varchar(120),
+    perangkat varchar(60),
+    terakhir timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (kanal, pengguna_id)
+);
+CREATE INDEX IF NOT EXISTS ix_pengguna_aktif_terakhir ON pengguna_aktif (terakhir DESC);
+CREATE TABLE IF NOT EXISTS log_aktivitas (
+    id bigserial PRIMARY KEY,
+    waktu timestamptz NOT NULL DEFAULT now(),
+    kanal varchar(10) NOT NULL,
+    pengguna_id bigint,
+    nama varchar(120) NOT NULL,
+    aksi varchar(20) NOT NULL,
+    modul varchar(80),
+    ket varchar(255)
+);
+CREATE INDEX IF NOT EXISTS ix_log_aktivitas_waktu ON log_aktivitas (waktu DESC);

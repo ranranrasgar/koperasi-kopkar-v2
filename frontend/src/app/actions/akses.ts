@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
 import { query } from "@/lib/db"
 import { GalatSesi, operatorAktif } from "@/lib/operator"
@@ -19,6 +20,7 @@ async function jalankan(fn: () => Promise<HasilKelola>): Promise<HasilKelola> {
     try {
         const r = await fn()
         revalidatePath("/dashboard", "layout")
+        if (r?.ok) await catatAksi("Kelola Hak Akses", r.pesan) // pesan tidak pernah memuat password sementara
         return r
     } catch (e) {
         if (!(e instanceof GalatSesi) && !(e instanceof Salah)) console.error("kelola akses gagal:", e)

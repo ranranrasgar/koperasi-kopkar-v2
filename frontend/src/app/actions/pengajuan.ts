@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
 import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
 import { modeUji, pool, tx } from "@/lib/db"
@@ -17,12 +18,14 @@ export type HasilPengajuan = { ok: true; pesan: string } | { ok: false; error: s
  */
 export async function putuskanPengajuanAction(id: number, setuju: boolean): Promise<HasilPengajuan> {
     try {
-        wajibAksi(await operatorAktif([MENU.pengajuan]), [MENU.pengajuan], "ubah")
+        const o = await operatorAktif([MENU.pengajuan])
+        wajibAksi(o, [MENU.pengajuan], "ubah")
         const r = await tx(async (db) => (await db.query<{ kd_anggota: string; anggota_id: number | null; rp_pinjaman_pokok: string; lama_angsuran: number; jenis_kredit_id: string | null }>(
             // Tolak juga membatalkan persetujuan yang belum dicairkan, supaya kunci "belum lunas" anggota terbuka lagi.
             "UPDATE pengajuan_pinjaman SET status = $1, menunggu_cair = $3 WHERE id = $2 AND (status = 'P' OR (status = 'Y' AND menunggu_cair AND NOT $3)) RETURNING kd_anggota, anggota_id, rp_pinjaman_pokok, lama_angsuran, jenis_kredit_id", [setuju ? "Y" : "N", id, setuju])).rows)
         if (r.length === 0) return { ok: false, error: "Pengajuan tidak ada atau sudah diputuskan" }
         const pesan = `Pengajuan ${r[0].kd_anggota} ${setuju ? "disetujui" : "ditolak"}`
+        await catatAksi(MENU.pengajuan, pesan, o)
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
         revalidatePath("/dashboard/loans/apply")
         // Kabari anggota di PWA (riwayat + Web Push). Gagal kirim tidak membatalkan keputusan yang sudah tersimpan.

@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
 import { batalkanPencairan, cairkanShu, hitungShu, postingKeSukarela, postingShu, tutupBuku } from "@kopkar/backend/src/posting/shu.ts"
 import { modeUji, tx } from "@/lib/db"
@@ -21,6 +22,7 @@ async function proses(menu: readonly string[], jenis: AksiIzin, admin: boolean, 
         wajibAksi(o, menu, jenis)
         if (admin) wajibAdmin(o)
         const r = await fn(o)
+        await catatAksi(menu[0], r.pesan, o)
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}`, rincian: r.rincian }
         revalidatePath("/dashboard", "layout")
         return { ok: true, pesan: r.pesan, rincian: r.rincian }

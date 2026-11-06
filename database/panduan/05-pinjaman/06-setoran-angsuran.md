@@ -52,6 +52,12 @@ Contoh angsuran ke-1 pinjaman C01 Rp 6.000.000:
 | Pendapatan jasa | | 90.000 |
 | Pendapatan adm | | 60.000 |
 
+## Memindai QR dari HP anggota
+
+Anggota bisa menunjukkan QR pinjaman dari aplikasi web anggota. Tekan ikon **QR** di sebelah isian **Anggota**, lalu arahkan QR ke kamera. Bila memakai alat pemindai USB, pindai saat kursor ada di kotak bawah. Anggota dan pinjamannya terisi otomatis, termasuk tab KPR.
+
+QR berlaku 5 menit dan hanya memilih data. Periksa nama dan jumlah sebelum menyimpan. Kamera hanya bisa dipakai lewat alamat `https` atau `localhost`.
+
 ## Angsuran KPR
 
 1. Pilih **Anggota**, lalu **KPR** yang masih berjalan.

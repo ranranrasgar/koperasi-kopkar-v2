@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
 import { bahanAnggotaBaru, tambahAnggota, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
 import { batalTutupPinjaman, tutupPinjaman } from "@kopkar/backend/src/posting/penutupan.ts"
@@ -21,6 +22,7 @@ async function simpan(menu: readonly string[], path: string, aksi: AksiIzin | nu
             await catatRiwayat(db, operator, hasil)
             return hasil
         })
+        await catatAksi(menu[0], pesan, operator)
         if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${pesan}` }
         revalidatePath(path)
         return { ok: true, pesan }

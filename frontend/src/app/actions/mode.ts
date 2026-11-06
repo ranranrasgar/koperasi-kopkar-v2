@@ -1,5 +1,6 @@
 "use server"
 
+import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
 import { modeUjiTerkunci, query } from "@/lib/db"
 import { GalatSesi, operatorAktif } from "@/lib/operator"
@@ -19,6 +20,7 @@ export async function aturModeAction(uji: boolean): Promise<HasilMode> {
         await query(`INSERT INTO pengaturan_web (kunci, nilai, diubah_oleh, diubah_pada) VALUES ('mode_uji', $1, $2, now())
             ON CONFLICT (kunci) DO UPDATE SET nilai = EXCLUDED.nilai, diubah_oleh = EXCLUDED.diubah_oleh, diubah_pada = now()`, [uji ? "1" : "0", o.nama])
         revalidatePath("/", "layout")
+        await catatAksi("Mode Uji / Live", `Mode diubah ke ${uji ? "UJI" : "LIVE"}`, o)
         return { ok: true, pesan: uji ? "Mode UJI aktif: transaksi berikutnya dibatalkan dan tidak tersimpan" : "Mode LIVE aktif: transaksi berikutnya tersimpan permanen" }
     } catch (e) {
         if ((e as { code?: string }).code === "42P01") return { ok: false, error: "Tabel pengaturan belum dipasang; jalankan npm run pengaturan:pasang" }

@@ -42,7 +42,7 @@ test('login anggota: MD5 cocok diganti bcrypt, salah dan nonaktif ditolak', asyn
         await db.query('UPDATE app_user SET password_hash = $1 WHERE id = $2', [md5('uji-lama-1'), u.id]);
         const p = sebagaiPool(db);
 
-        assert.deepEqual(await masukAnggota(p, u.username, 'keliru'), { ok: false, alasan: 'salah' });
+        assert.deepEqual(await masukAnggota(p, u.username, 'keliru'), { ok: false, alasan: 'salah', userId: Number(u.id), nama: u.username });
         assert.deepEqual(await masukAnggota(p, 'tidak-ada-' + u.username, 'uji-lama-1'), { ok: false, alasan: 'salah' });
 
         const r = await masukAnggota(p, u.username, 'uji-lama-1');

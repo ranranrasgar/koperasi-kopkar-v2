@@ -7,7 +7,7 @@ Menu: **Simpanan → Setoran Simpanan**. Membutuhkan izin menu setoran simpanan.
 
 ## Langkah
 
-1. Di isian **Anggota**, ketik minimal 2 huruf kode anggota, KPK, atau nama, lalu pilih anggota dari daftar.
+1. Di isian **Anggota**, ketik minimal 2 huruf kode anggota, KPK, atau nama, lalu pilih anggota dari daftar. Bisa juga tekan ikon **QR** dan pindai QR dari HP anggota; anggota dan jenis simpanannya terisi otomatis.
 2. Periksa panel informasi anggota: saldo setiap jenis simpanan tampil otomatis.
 3. Pilih **Jenis Simpanan**. Bawaannya *Simpanan Sukarela*.
 4. Isi **Tanggal** (bawaan: hari ini) dan **Jumlah (Rp)**.

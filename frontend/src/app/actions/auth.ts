@@ -2,7 +2,8 @@
 
 import { cookies } from "next/headers"
 import { redirect } from "next/navigation"
-import { query } from "@/lib/db"
+import { catatAktivitas, catatLoginGagal, hapusAktif } from "@kopkar/backend/src/aktivitas.ts"
+import { pool, query } from "@/lib/db"
 import { cariOpr, oprAktif, operatorSesi } from "@/lib/operator"
 import { cekPasswordBaru, cocokPassword, hashPassword } from "@/lib/password"
 import { buatSesi, COOKIE_SESI, LAMA_SESI_DETIK, sidikPassword } from "@/lib/sesi"
@@ -43,15 +44,22 @@ export async function loginAction(_: HasilAuth, f: FormData): Promise<HasilAuth>
     if (!o || !o.password_hash || !cocok || !oprAktif(o)) {
         const n = (g && g.sampai > Date.now() ? g.n : 0) + 1
         gagal.set(k, { n, sampai: Date.now() + KUNCI_MS })
+        await catatLoginGagal(pool, "admin", o?.id, o?.nama)
         return { error: "Nama operator atau password salah, atau akun tidak aktif" }
     }
     gagal.delete(k)
     await pasangSesi({ id: o.id, nama: o.nama, password_hash: o.password_hash })
+    await catatAktivitas(pool, { kanal: "admin", penggunaId: o.id, nama: o.nama, aksi: "login" })
     redirect(o.wajib_ganti_password ? "/ganti-password" : tujuanAman(f.get("next")))
 }
 
 export async function logoutAction() {
-    (await cookies()).delete(COOKIE_SESI)
+    const o = await operatorSesi()
+    if (o) {
+        await hapusAktif(pool, "admin", o.id)
+        await catatAktivitas(pool, { kanal: "admin", penggunaId: o.id, nama: o.nama, aksi: "logout" })
+    }
+    ;(await cookies()).delete(COOKIE_SESI)
     redirect("/login")
 }
 

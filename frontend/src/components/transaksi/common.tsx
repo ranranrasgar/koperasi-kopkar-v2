@@ -1,8 +1,9 @@
 "use client"
 
+import { PindaiQr } from "@/components/transaksi/PindaiQr"
 import { TombolKwitansi } from "@/components/transaksi/TombolKwitansi"
 import React, { useActionState, useEffect, useRef, useState, useTransition } from "react"
-import { CheckCircle2, AlertCircle, Loader2, Search, X } from "lucide-react"
+import { CheckCircle2, AlertCircle, Loader2, QrCode, Search, X } from "lucide-react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Label } from "@/components/ui/label"
 import { cariAnggotaAction, type Hasil } from "@/app/actions/transaksi"
@@ -114,12 +115,14 @@ export function JadwalTable({ jadwal }: { jadwal: { ke: number; tanggal: string;
 /**
  * Pencarian anggota (kode, KPK, atau nama); nilai terpilih dikirim lewat input tersembunyi `kodeAgt`.
  * `cariPinjaman`: bisa juga dicari dari nomor pinjaman atau nomor rekening; pinjaman yang dipilih ikut dalam nilai `no_pinjaman`.
+ * `pindai`: tombol pindai QR dari HP anggota; jenis simpanan atau pinjaman dari QR ikut dalam nilai yang dipilih.
  */
-export function AnggotaPicker({ value, onChange, cariPinjaman = false }: { value: AnggotaRingkas | null; onChange: (a: AnggotaRingkas | null) => void; cariPinjaman?: boolean }) {
+export function AnggotaPicker({ value, onChange, cariPinjaman = false, pindai = false }: { value: AnggotaRingkas | null; onChange: (a: AnggotaRingkas | null) => void; cariPinjaman?: boolean; pindai?: boolean }) {
     const [kata, setKata] = useState("")
     const [hasil, setHasil] = useState<AnggotaRingkas[]>([])
     const [buka, setBuka] = useState(false)
     const [memuat, startTransition] = useTransition()
+    const [pindaiBuka, setPindaiBuka] = useState(false)
     const urut = useRef(0)
 
     useEffect(() => {
@@ -147,7 +150,8 @@ export function AnggotaPicker({ value, onChange, cariPinjaman = false }: { value
         )
     }
     return (
-        <div className="relative">
+        <div className="flex gap-2">
+        <div className="relative min-w-0 flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <input
                 id="anggota" autoComplete="off" value={kata} onChange={(e) => setKata(e.target.value)} onFocus={() => hasil.length && setBuka(true)}
@@ -171,6 +175,12 @@ export function AnggotaPicker({ value, onChange, cariPinjaman = false }: { value
                     ))}
                 </ul>
             )}
+        </div>
+        {pindai && <>
+            <button type="button" onClick={() => setPindaiBuka(true)} title="Pindai QR dari HP anggota" aria-label="Pindai QR dari HP anggota"
+                className="grid size-9 shrink-0 place-items-center rounded-md border border-input bg-background text-primary shadow-sm hover:bg-muted"><QrCode className="h-4 w-4" /></button>
+            <PindaiQr buka={pindaiBuka} onTutup={() => setPindaiBuka(false)} onHasil={onChange} />
+        </>}
         </div>
     )
 }

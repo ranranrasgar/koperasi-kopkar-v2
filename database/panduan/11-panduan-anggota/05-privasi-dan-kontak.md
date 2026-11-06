@@ -13,6 +13,8 @@ Keduanya bisa dibuka tanpa login dan ditautkan di halaman masuk dan daftar.
 
 NIK, username, email, password (disimpan terenkripsi, tidak bisa dibaca siapa pun), dan bila Anda memilih Google: nama, email, foto, dan pengenal akun Google. Aplikasi **tidak** membaca Gmail, kontak, atau berkas Google Anda. Data simpanan dan pinjaman berasal dari pembukuan koperasi.
 
+Aplikasi juga mencatat waktu masuk dan keluar, menu yang sedang dibuka, jenis perangkat, serta tindakan seperti mengajukan pinjaman. Catatan ini dihapus otomatis setelah 90 hari.
+
 Data tidak dijual atau disewakan. Hanya pengurus berwenang yang bisa melihatnya.
 
 ## Hak Anda
