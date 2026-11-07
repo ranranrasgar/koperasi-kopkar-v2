@@ -27,6 +27,18 @@ test('catatAktivitas: nilai rupiah dibuang, modul dirapikan, data lewat 90 hari 
     assert.deepEqual(r, [{ nama: 'Uji', modul: 'Audit Data', ket: 'Bayar Rp ... tercatat' }]);
 }));
 
+test('akun dev (admin): tidak masuk riwayat maupun daftar online; pengguna lain dan kanal lain tetap dicatat', () => inTx(async (db) => {
+    await catatAktivitas(db, { kanal: 'admin', penggunaId: ID, nama: 'dev', aksi: 'simpan', modul: 'Uji' });
+    await catatAktivitas(db, { kanal: 'admin', penggunaId: ID, nama: 'Dev ', aksi: 'login' });
+    await catatLoginGagal(db, 'admin', ID, 'DEV');
+    await tandaiAktif(db, { kanal: 'admin', penggunaId: ID, nama: 'dev' });
+    assert.equal((await db.query('SELECT 1 FROM log_aktivitas WHERE pengguna_id = $1', [ID])).rowCount, 0);
+    assert.equal((await db.query('SELECT 1 FROM pengguna_aktif WHERE pengguna_id = $1', [ID])).rowCount, 0);
+    await catatAktivitas(db, { kanal: 'admin', penggunaId: ID, nama: 'kasir1', aksi: 'login' });
+    await catatAktivitas(db, { kanal: 'pwa', penggunaId: ID, nama: 'dev', aksi: 'login' });
+    assert.equal((await db.query('SELECT 1 FROM log_aktivitas WHERE pengguna_id = $1', [ID])).rowCount, 2);
+}));
+
 test('login gagal: tanpa akun, teks ketikan tidak disimpan', () => inTx(async (db) => {
     await catatLoginGagal(db, 'pwa', null, null);
     const r = (await db.query("SELECT nama FROM log_aktivitas WHERE aksi = 'login_gagal' ORDER BY id DESC LIMIT 1")).rows[0];

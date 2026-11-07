@@ -14,6 +14,9 @@ export interface IsiLog { kanal: Kanal; penggunaId?: number | null; nama: string
 /** Dianggap online bila sinyal terakhirnya kurang dari sekian menit. */
 export const MENIT_ONLINE = 5;
 export const HARI_SIMPAN = 90;
+/** Akun pengembang (operator admin bernama dev): tidak dicatat di riwayat maupun daftar online, supaya kerja uji tidak mengotori audit pengguna. */
+export const AKUN_PENGEMBANG = 'dev';
+const akunPengembang = (kanal: Kanal, nama: string | null | undefined) => kanal === 'admin' && nama?.trim().toLowerCase() === AKUN_PENGEMBANG;
 const JEDA_ANDROID_MS = 60_000;
 
 /** Nama singkat dari User-Agent; teks aslinya tidak disimpan. */
@@ -26,6 +29,7 @@ export function namaPerangkat(ua: string | null | undefined) {
 }
 
 export async function tandaiAktif(db: Pemanggil, p: PenggunaAktif) {
+    if (akunPengembang(p.kanal, p.nama)) return;
     try {
         await db.query(
             `INSERT INTO pengguna_aktif (kanal, pengguna_id, nama, kode, halaman, perangkat, terakhir) VALUES ($1, $2, $3, $4, $5, $6, now())
@@ -61,6 +65,7 @@ async function pangkas(db: Pemanggil) {
 }
 
 export async function catatAktivitas(db: Pemanggil, l: IsiLog, peluangPangkas = 0.002) {
+    if (akunPengembang(l.kanal, l.nama)) return;
     try {
         const ket = l.ket?.replace(/Rp\s?[\d.,]+/g, 'Rp ...').slice(0, 255) ?? null; // nilai rupiah tidak ikut disalin ke riwayat
         await db.query('INSERT INTO log_aktivitas (kanal, pengguna_id, nama, aksi, modul, ket) VALUES ($1, $2, $3, $4, $5, $6)',
