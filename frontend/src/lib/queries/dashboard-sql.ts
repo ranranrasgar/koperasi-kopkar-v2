@@ -46,13 +46,13 @@ export const SQL_JATUH_TEMPO = `
        AND t.angsuran_ke > p.jml_cicilan AND p.jml_cicilan < p.lama_angsuran
      GROUP BY 1 ORDER BY 1 LIMIT 5`
 
-/** Transaksi terbaru gabungan. Tanggal setelah hari ini diabaikan (salah ketik di data lama). $1 = grup pinjaman, $2 = boleh melihat KPR. */
+/** Transaksi terbaru gabungan. Tanggal setelah hari ini diabaikan (salah ketik di data lama). $1 = grup pinjaman, $2 = boleh melihat KPR, $3 = boleh melihat simpanan. */
 export const SQL_AKTIVITAS = `
     SELECT * FROM (
       (SELECT s.tgl_transaksi::text AS tanggal, s.no_bukti, a.nama, COALESCE(j.nama_simpanan, 'Simpanan') AS jenis,
               CASE WHEN s.rp_setoran > 0 THEN 'Setoran' ELSE 'Pengambilan' END AS aksi, s.rp_setoran - s.rp_pengambilan AS jumlah
          FROM simpanan s JOIN anggota a ON a.id = s.anggota_id LEFT JOIN jenis_simpanan j ON j.id = s.jenis_simpanan_id
-        WHERE s.tgl_transaksi <= ${HARI} ORDER BY s.tgl_transaksi DESC, s.urut DESC LIMIT 8)
+        WHERE $3 AND s.tgl_transaksi <= ${HARI} ORDER BY s.tgl_transaksi DESC, s.urut DESC LIMIT 8)
       UNION ALL
       (SELECT r.tanggal_angsuran::text, r.no_bukti, a.nama, jk.nama_kredit,
               CASE WHEN r.kredit_pokok > 0 THEN 'Pencairan' ELSE 'Angsuran' END,

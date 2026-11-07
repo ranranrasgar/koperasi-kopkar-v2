@@ -43,7 +43,7 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 ### Dashboard baru (7 November)
 - `app/dashboard/page.tsx` dirombak: kartu angka, Perlu Tindakan, Arus 12 Bulan, Komposisi Pinjaman, Jatuh Tempo Terdekat, Aktivitas Terakhir. SQL di `lib/queries/dashboard-sql.ts` (bisa diuji dari skrip), data di `dashboard.ts`, grafik SVG tanpa pustaka di `components/dashboard/Grafik.tsx`.
 - Sisa pokok memakai `sqlLaporanPinjaman`/`sqlDaftarKpr`, jadi sama dengan Daftar Pinjaman (anggota aktif). Di database lokal: Koperasi Rp 8,01 M, Bank Rp 1,28 M, KPR Rp 745 jt. Sisa pokok dan kas di-cache 5 menit di memori proses. Tunggakan hanya koperasi dan bank, KPR belum.
-- Data per bagian mengikuti izin: kartu Kas perlu izin Bank Book, pinjaman mengikuti `grupPinjamanBoleh`.
+- Tiap bagian mengikuti izin menu asalnya. Izin menu Dashboard hanya membuka ringkasan keuangan (kartu, arus, komposisi); Perlu Tindakan, Jatuh Tempo, dan Aktivitas tampil tanpa izin itu.
 
 ### Form Ubah Anggota: tab Status (7 November)
 - Tab baru **Status** di `AksiAnggota`: aktif/keluar, status staff (pindah dari Pekerjaan & Gaji), jenis keanggotaan, tanggal dan alasan keluar. `simpanAnggotaAction` memakai aturan yang sama dengan `ubahStatusAnggotaAction`: keluar wajib tanggal dan alasan, aktif mengosongkannya. Tombol ikon Catat Keluar tetap ada.

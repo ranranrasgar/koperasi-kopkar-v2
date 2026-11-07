@@ -32,7 +32,7 @@ export const jumlahPengajuanMenunggu = () => hitung(SQL_PENGAJUAN_MENUNGGU)
 export const jumlahDaftarMenunggu = () => hitung(SQL_DAFTAR_MENUNGGU)
 export const jumlahStaffBelumAbsen = () => hitung(SQL_STAFF_BELUM_ABSEN)
 export const jatuhTempoDekat = (grup: string[]) => query<JatuhTempo>(SQL_JATUH_TEMPO, [grup])
-export const aktivitasTerakhir = (grup: string[]) => query<AktivitasDashboard>(SQL_AKTIVITAS, [grup, grup.includes("KPR")])
+export const aktivitasTerakhir = (grup: string[], simpanan: boolean) => query<AktivitasDashboard>(SQL_AKTIVITAS, [grup, grup.includes("KPR"), simpanan])
 
 /** Sisa pokok, kontrak berjalan, dan tunggakan satu grup, nilainya sama dengan Daftar Pinjaman dan Daftar KPR. */
 export const ringkasPinjaman = (grup: string) => tersimpan<RingkasPinjaman>(`pinjaman:${grup}`, async () => {

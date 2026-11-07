@@ -40,18 +40,19 @@ function KartuAngka({ judul, nilai, ket, icon: Icon, tren, href, title }: { judu
 export default async function DashboardPage(props: PageProps<"/dashboard">) {
     const o = await wajibLogin() // layout tidak dijalankan ulang pada navigasi antarhalaman
     const ditolak = sp(await props.searchParams, "akses") === "ditolak"
-    // Halaman awal untuk semua operator; ringkasan angka hanya untuk grup dengan menu desktop "Dashboard".
-    const lihat = o.izin.includes(MENU.dashboard)
+    // Tiap bagian mengikuti izin menu asalnya. Izin menu "Dashboard" menambah ringkasan keuangan; tanpa izin itu operator tetap melihat pekerjaannya.
+    const ringkasan = o.izin.includes(MENU.dashboard)
     const boleh = (href: string) => bolehHalaman(href, o.izin)
-    const grup = lihat ? grupPinjamanBoleh(o.izin) : []
+    const grup = grupPinjamanBoleh(o.izin)
+    const bolehSimpanan = boleh("/dashboard/savings")
     const [anggota, saldo, arus, kas, pinjaman, tempo, aktivitas, pengajuan, daftar, belumAbsen, pesan] = await Promise.all([
-        lihat ? ringkasAnggota() : null,
-        lihat ? saldoSimpanan() : 0,
-        lihat ? arusBulanan() : [],
-        lihat && boleh("/dashboard/accounting/bank-book") ? saldoKas() : null,
+        ringkasan && boleh("/dashboard/members") ? ringkasAnggota() : null,
+        ringkasan && bolehSimpanan ? saldoSimpanan() : null,
+        ringkasan && bolehSimpanan ? arusBulanan() : [],
+        ringkasan && boleh("/dashboard/accounting/bank-book") ? saldoKas() : null,
         Promise.all(grup.map(ringkasPinjaman)),
         grup.length ? jatuhTempoDekat(grup) : [],
-        lihat ? aktivitasTerakhir(grup) : [],
+        bolehSimpanan || grup.length ? aktivitasTerakhir(grup, bolehSimpanan) : [],
         boleh("/dashboard/loans/apply") ? jumlahPengajuanMenunggu() : 0,
         boleh("/dashboard/members/mobile-users") ? jumlahDaftarMenunggu() : 0,
         boleh("/dashboard/attendance") ? jumlahStaffBelumAbsen() : 0,
@@ -60,7 +61,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
 
     const netBulanIni = arus.length ? arus[arus.length - 1].setor - arus[arus.length - 1].ambil : 0
     // Saldo akhir tiap bulan dihitung mundur dari saldo sekarang.
-    const trenSaldo = arus.reduceRight<number[]>((hasil, b) => [hasil[0] - (b.setor - b.ambil), ...hasil], [saldo]).slice(1)
+    const trenSaldo = arus.reduceRight<number[]>((hasil, b) => [hasil[0] - (b.setor - b.ambil), ...hasil], [saldo ?? 0]).slice(1)
     const sisaTotal = pinjaman.reduce((n, p) => n + p.sisa, 0), kontrakTotal = pinjaman.reduce((n, p) => n + p.kontrak, 0)
     const tunggak = pinjaman.reduce((n, p) => n + p.tunggak, 0)
     const tugas = [
@@ -71,6 +72,25 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
         { n: belumAbsen, label: "staff belum absen hari ini", href: "/dashboard/attendance", icon: Fingerprint, warna: "text-violet-600 bg-violet-500/10" },
     ].filter((t) => t.n > 0)
     const menuCepat = MENU_CEPAT.filter((m) => boleh(m.href))
+    const kartuPinjaman = ringkasan && pinjaman.length > 0
+    const kartuTugas = (
+        <Card className="border shadow-sm">
+            <CardHeader className="pb-3">
+                <CardTitle className="text-base font-bold">Perlu Tindakan</CardTitle>
+                <CardDescription>Pekerjaan yang menunggu Anda.</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+                {tugas.length === 0 && <p className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Tidak ada yang menunggu.</p>}
+                {tugas.map((t) => (
+                    <Link key={t.href} href={t.href} className="group flex items-center gap-3 rounded-lg border p-2.5 text-sm transition-colors hover:border-primary/40">
+                        <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg", t.warna)}><t.icon className="h-4 w-4" /></span>
+                        <span className="min-w-0 flex-1"><b className="tabular-nums">{formatAngka(t.n)}</b> {t.label}</span>
+                        <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+                    </Link>
+                ))}
+            </CardContent>
+        </Card>
+    )
 
     return (
         <div className="space-y-5">
@@ -96,18 +116,18 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                 </div>
             )}
 
-            {anggota && (
+            {(saldo !== null || kartuPinjaman || kas || anggota) && (
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <KartuAngka judul="Saldo Simpanan" nilai={rupiahRingkas(saldo)} title={formatRupiah(saldo)} icon={PiggyBank} tren={trenSaldo} href={boleh("/dashboard/savings") ? "/dashboard/savings" : undefined}
-                        ket={<span className={netBulanIni < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>{netBulanIni < 0 ? "" : "+"}{rupiahRingkas(netBulanIni)} bulan ini</span>} />
-                    {pinjaman.length > 0 && <KartuAngka judul="Sisa Pokok Pinjaman" nilai={rupiahRingkas(sisaTotal)} title={formatRupiah(sisaTotal)} icon={Landmark} ket={`${formatAngka(kontrakTotal)} kontrak berjalan`} />}
+                    {saldo !== null && <KartuAngka judul="Saldo Simpanan" nilai={rupiahRingkas(saldo)} title={formatRupiah(saldo)} icon={PiggyBank} tren={trenSaldo} href="/dashboard/savings"
+                        ket={<span className={netBulanIni < 0 ? "text-rose-600 dark:text-rose-400" : "text-emerald-600 dark:text-emerald-400"}>{netBulanIni < 0 ? "" : "+"}{rupiahRingkas(netBulanIni)} bulan ini</span>} />}
+                    {kartuPinjaman && <KartuAngka judul="Sisa Pokok Pinjaman" nilai={rupiahRingkas(sisaTotal)} title={formatRupiah(sisaTotal)} icon={Landmark} ket={`${formatAngka(kontrakTotal)} kontrak berjalan`} />}
                     {kas && <KartuAngka judul="Kas & Bank" nilai={rupiahRingkas(kas.saldo)} title={formatRupiah(kas.saldo)} icon={Banknote} ket={`${kas.akun} akun, menurut jurnal`} href="/dashboard/accounting/bank-book" />}
-                    <KartuAngka judul="Anggota Aktif" nilai={formatAngka(anggota.aktif)} icon={Users} ket={`+${anggota.masuk} masuk, -${anggota.keluar} keluar bulan ini`} href={boleh("/dashboard/members") ? "/dashboard/members" : undefined} />
+                    {anggota && <KartuAngka judul="Anggota Aktif" nilai={formatAngka(anggota.aktif)} icon={Users} ket={`+${anggota.masuk} masuk, -${anggota.keluar} keluar bulan ini`} href="/dashboard/members" />}
                 </div>
             )}
 
-            <div className="grid gap-5 lg:grid-cols-3">
-                {lihat && (
+            {arus.length > 0 && (
+                <div className="grid gap-5 lg:grid-cols-3">
                     <Card className="border shadow-sm lg:col-span-2">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base font-bold">Arus 12 Bulan</CardTitle>
@@ -115,28 +135,13 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                         </CardHeader>
                         <CardContent><GrafikArus data={arus} /></CardContent>
                     </Card>
-                )}
-                <Card className={cn("border shadow-sm", !lihat && "lg:col-span-2")}>
-                    <CardHeader className="pb-3">
-                        <CardTitle className="text-base font-bold">Perlu Tindakan</CardTitle>
-                        <CardDescription>Pekerjaan yang menunggu Anda.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                        {tugas.length === 0 && <p className="flex items-center gap-2 py-6 text-sm text-muted-foreground"><CheckCircle2 className="h-4 w-4 text-emerald-600" /> Tidak ada yang menunggu.</p>}
-                        {tugas.map((t) => (
-                            <Link key={t.href} href={t.href} className="group flex items-center gap-3 rounded-lg border p-2.5 text-sm transition-colors hover:border-primary/40">
-                                <span className={cn("grid h-9 w-9 shrink-0 place-items-center rounded-lg", t.warna)}><t.icon className="h-4 w-4" /></span>
-                                <span className="min-w-0 flex-1"><b className="tabular-nums">{formatAngka(t.n)}</b> {t.label}</span>
-                                <ChevronRight className="h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
-                            </Link>
-                        ))}
-                    </CardContent>
-                </Card>
-            </div>
+                    {kartuTugas}
+                </div>
+            )}
 
-            {lihat && (
-                <div className="grid gap-5 lg:grid-cols-3">
-                    {pinjaman.length > 0 && (
+            <div className="grid gap-5 lg:grid-cols-3">
+                    {arus.length === 0 && kartuTugas}
+                    {kartuPinjaman && (
                         <Card className="border shadow-sm">
                             <CardHeader className="pb-3">
                                 <CardTitle className="text-base font-bold">Komposisi Pinjaman</CardTitle>
@@ -148,7 +153,7 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                             </CardContent>
                         </Card>
                     )}
-                    <Card className="border shadow-sm">
+                    {grup.length > 0 && <Card className="border shadow-sm">
                         <CardHeader className="pb-3">
                             <CardTitle className="flex items-center gap-1.5 text-base font-bold"><CalendarClock className="h-4 w-4 text-primary" /> Jatuh Tempo Terdekat</CardTitle>
                             <CardDescription>Angsuran koperasi dan bank anggota aktif, perkiraan dari jadwal.</CardDescription>
@@ -162,8 +167,8 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                                 </div>
                             ))}
                         </CardContent>
-                    </Card>
-                    <Card className={cn("border shadow-sm", pinjaman.length === 0 && "lg:col-span-2")}>
+                    </Card>}
+                    {(bolehSimpanan || grup.length > 0) && <Card className="border shadow-sm">
                         <CardHeader className="pb-3">
                             <CardTitle className="text-base font-bold">Aktivitas Terakhir</CardTitle>
                             <CardDescription>Transaksi menurut tanggal buku.</CardDescription>
@@ -183,9 +188,8 @@ export default async function DashboardPage(props: PageProps<"/dashboard">) {
                                 </div>
                             ))}
                         </CardContent>
-                    </Card>
-                </div>
-            )}
+                    </Card>}
+            </div>
         </div>
     )
 }

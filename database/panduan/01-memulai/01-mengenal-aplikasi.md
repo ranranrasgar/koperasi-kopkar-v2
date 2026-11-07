@@ -61,7 +61,8 @@ Perhatikan bahwa simpanan memakai **tahun lalu bulan** (`yymm`), sedangkan pinja
 
 ## Dashboard
 
-Halaman awal setelah login menampilkan keadaan koperasi sesuai hak akses Anda:
+Halaman awal setelah login menyesuaikan hak akses grup Anda. **Perlu Tindakan**, **Jatuh Tempo Terdekat**, **Aktivitas Terakhir**, dan menu cepat tampil untuk semua operator, mengikuti menu yang boleh dibuka. Angka utama, Arus 12 Bulan, dan Komposisi Pinjaman hanya tampil bila grup diberi izin menu **Dashboard** di Kelola Hak Akses dan juga izin menu asalnya: Kas & Bank perlu Bank Book, Saldo Simpanan perlu Rekap Simpanan, Anggota Aktif perlu Daftar Anggota, dan pinjaman mengikuti jenis pinjaman yang boleh dilihat.
+
 
 - **Angka utama**: saldo simpanan, sisa pokok pinjaman, kas dan bank, serta anggota aktif. Arahkan kursor ke angka untuk melihat nilai lengkapnya.
 - **Perlu Tindakan**: pengajuan, pendaftaran, pesan, tunggakan, dan staff yang belum absen. Tekan barisnya untuk membuka halaman terkait.
