@@ -63,21 +63,32 @@ self.addEventListener('fetch', (event) => {
 });
 
 // Web Push: tampilkan notifikasi dari server; ketuk membuka halaman tujuan (hanya alamat di situs ini).
+// Tombol utama menurut halaman tujuan (seperti tombol "Interested" pada notifikasi aplikasi lain); tombol kedua selalu menutup.
+const TOMBOL = [['/ajukan', 'Lihat pengajuan'], ['/pesan', 'Balas'], ['/potongan', 'Lihat potongan'], ['/pinjaman', 'Lihat pinjaman'], ['/simpanan', 'Lihat simpanan'], ['/beranda', 'Lihat']];
+const tombolUtama = (url) => (TOMBOL.find(([awal]) => url === awal || url.startsWith(awal + '/')) ?? [null, 'Baca'])[1];
+
 self.addEventListener('push', (event) => {
     let d = {};
     try { d = event.data ? event.data.json() : {}; } catch { d = { isi: event.data ? event.data.text() : '' }; }
+    const url = typeof d.url === 'string' && d.url.startsWith('/') ? d.url : '/notifikasi';
     event.waitUntil(self.registration.showNotification(d.judul || 'Kopkar MJS', {
         body: d.isi || '',
+        // Ikon besar di kanan notifikasi; badge = ikon kecil di bilah status (harus siluet putih, warna dibuang Android).
         icon: '/ikon/ikon-192.png',
-        badge: '/ikon/favicon-32.png',
+        badge: '/ikon/badge-96.png',
         // Gambar besar (Android/Windows); alamat relatif dilengkapi alamat situs ini, hanya jalur /gambar/ yang dipakai.
         image: typeof d.gambar === 'string' && d.gambar.startsWith('/gambar/') ? new URL(d.gambar, self.location.origin).href : undefined,
-        data: { url: typeof d.url === 'string' && d.url.startsWith('/') ? d.url : '/notifikasi' },
+        actions: [{ action: 'buka', title: tombolUtama(url) }, { action: 'tutup', title: 'Tutup' }],
+        vibrate: [200, 100, 200],
+        timestamp: Date.now(),
+        lang: 'id',
+        data: { url },
     }));
 });
 
 self.addEventListener('notificationclick', (event) => {
     event.notification.close();
+    if (event.action === 'tutup') return;
     const tujuan = new URL(event.notification.data?.url || '/notifikasi', self.location.origin).href;
     event.waitUntil((async () => {
         const jendela = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });

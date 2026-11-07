@@ -35,3 +35,21 @@ await buat('ikon-maskable-512.png', 512, 0.66, PUTIH);
 await buat('ikon-maskable-192.png', 192, 0.66, PUTIH);
 await buat('apple-touch-icon.png', 180, 0.84, PUTIH);
 await buat('favicon-32.png', 32, 1, BENING);
+
+/**
+ * Ikon kecil notifikasi (badge) di bilah status Android: hanya bentuknya yang dipakai (putih di atas transparan), warna dibuang oleh Android,
+ * jadi logo berwarna di atas latar putih diubah menjadi siluet: makin jauh dari putih, makin pekat.
+ */
+async function buatBadge(nama, ukuran) {
+    const { data, info } = await sharp(sumber).resize(ukuran, ukuran, { fit: 'contain', background: BENING, kernel: 'lanczos3' })
+        .ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+    const out = Buffer.alloc(info.width * info.height * 4, 255);
+    for (let i = 0; i < info.width * info.height; i++) {
+        const [r, g, b, a] = [data[i * 4], data[i * 4 + 1], data[i * 4 + 2], data[i * 4 + 3]];
+        const jauh = Math.max(255 - r, 255 - g, 255 - b); // jarak dari putih
+        out[i * 4 + 3] = Math.round((a / 255) * Math.min(255, Math.max(0, (jauh - 40) * 3)));
+    }
+    await sharp(out, { raw: { width: info.width, height: info.height, channels: 4 } }).png({ compressionLevel: 9 }).toFile(path.join(tujuan, nama));
+    console.log(`${nama} ${ukuran}x${ukuran} (monokrom)`);
+}
+await buatBadge('badge-96.png', 96);
