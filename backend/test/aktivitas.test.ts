@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
-import { catatAktivitas, catatLoginGagal, hapusAktif, hapusRiwayat, namaPerangkat, tandaiAktif } from '../src/aktivitas.ts';
+import { catatAktivitas, catatBukaHalaman, catatLoginGagal, hapusAktif, hapusRiwayat, namaPerangkat, tandaiAktif } from '../src/aktivitas.ts';
 import { createPool, withTx, type Db } from '../src/db.ts';
 
 const pool = createPool();
@@ -37,6 +37,21 @@ test('akun dev (admin): tidak masuk riwayat maupun daftar online; pengguna lain 
     await catatAktivitas(db, { kanal: 'admin', penggunaId: ID, nama: 'kasir1', aksi: 'login' });
     await catatAktivitas(db, { kanal: 'pwa', penggunaId: ID, nama: 'dev', aksi: 'login' });
     assert.equal((await db.query('SELECT 1 FROM log_aktivitas WHERE pengguna_id = $1', [ID])).rowCount, 2);
+}));
+
+test('catatBukaHalaman: nama halaman PWA, halaman sama dalam 20 detik satu kali, alamat tak dikenal sebatas bagian menu', () => inTx(async (db) => {
+    const p = { penggunaId: ID, nama: 'Anggota Uji' };
+    await catatBukaHalaman(db, { ...p, bagian: '/simpanan' });
+    await catatBukaHalaman(db, { ...p, bagian: '/simpanan', lengkap: null }); // muat ulang: tidak dihitung lagi
+    await catatBukaHalaman(db, { ...p, bagian: '/akun', lengkap: '/akun/email' });
+    await catatBukaHalaman(db, { ...p, bagian: '/simpanan', lengkap: '/simpanan/abc' }); // detail tak dikenal: tetap Simpanan (dalam jeda)
+    await catatBukaHalaman(db, { ...p, bagian: '/luring' });
+    const r = (await db.query("SELECT kanal, aksi, modul, ket FROM log_aktivitas WHERE pengguna_id = $1 ORDER BY id", [ID])).rows;
+    assert.deepEqual(r, [
+        { kanal: 'pwa', aksi: 'buka', modul: 'Simpanan', ket: '/simpanan' },
+        { kanal: 'pwa', aksi: 'buka', modul: 'Akun: Email', ket: '/akun/email' },
+        { kanal: 'pwa', aksi: 'buka', modul: '/luring', ket: '/luring' },
+    ]);
 }));
 
 test('login gagal: tanpa akun, teks ketikan tidak disimpan', () => inTx(async (db) => {

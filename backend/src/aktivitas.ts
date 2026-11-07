@@ -6,7 +6,7 @@ import type { Db } from './db.ts';
 
 type Pemanggil = Pick<Db, 'query'>;
 export type Kanal = 'admin' | 'pwa' | 'android';
-export type AksiLog = 'login' | 'login_gagal' | 'logout' | 'simpan';
+export type AksiLog = 'login' | 'login_gagal' | 'logout' | 'simpan' | 'buka';
 
 export interface PenggunaAktif { kanal: Kanal; penggunaId: number; nama: string; kode?: string | null; halaman?: string | null; perangkat?: string | null }
 export interface IsiLog { kanal: Kanal; penggunaId?: number | null; nama: string; aksi: AksiLog; modul?: string | null; ket?: string | null }
@@ -18,6 +18,15 @@ export const HARI_SIMPAN = 90;
 export const AKUN_PENGEMBANG = 'dev';
 const akunPengembang = (kanal: Kanal, nama: string | null | undefined) => kanal === 'admin' && nama?.trim().toLowerCase() === AKUN_PENGEMBANG;
 const JEDA_ANDROID_MS = 60_000;
+/** Pindah halaman yang sama dalam jeda ini (muat ulang, tombol kembali) dihitung satu kali. */
+const JEDA_BUKA_DETIK = 20;
+
+/** Nama halaman PWA anggota untuk riwayat "Buka halaman". Alamat yang tidak ada di sini (mis. detail dengan kode anggota) dicatat sebatas bagian menunya. */
+export const HALAMAN_PWA: Record<string, string> = {
+    '/beranda': 'Beranda', '/simpanan': 'Simpanan', '/pinjaman': 'Pinjaman', '/ajukan': 'Ajukan Pinjaman', '/potongan': 'Potongan Gaji',
+    '/riwayat': 'Riwayat', '/shu': 'SHU', '/notifikasi': 'Notifikasi', '/pesan': 'Pesan', '/pesan/baru': 'Pesan Baru',
+    '/akun': 'Akun', '/akun/email': 'Akun: Email', '/akun/password': 'Akun: Password',
+};
 
 /** Nama singkat dari User-Agent; teks aslinya tidak disimpan. */
 export function namaPerangkat(ua: string | null | undefined) {
@@ -73,6 +82,24 @@ export async function catatAktivitas(db: Pemanggil, l: IsiLog, peluangPangkas = 
         if (Math.random() < peluangPangkas) await pangkas(db);
     } catch (e) {
         console.error('catat aktivitas gagal:', e);
+    }
+}
+
+/**
+ * Anggota PWA membuka halaman. `bagian` = bagian menu alamat (mis. /simpanan), `lengkap` = dua segmen pertama bila ada (mis. /akun/email).
+ * Hanya alamat yang dikenal HALAMAN_PWA yang dipakai untuk nama; kode anggota atau nomor pinjaman di alamat tidak pernah disimpan.
+ */
+export async function catatBukaHalaman(db: Pemanggil, p: { penggunaId: number; nama: string; bagian: string; lengkap?: string | null }) {
+    try {
+        const alamat = p.lengkap && HALAMAN_PWA[p.lengkap] ? p.lengkap : p.bagian;
+        const modul = HALAMAN_PWA[alamat] ?? alamat;
+        const baru = await db.query(
+            `SELECT 1 FROM log_aktivitas WHERE kanal = 'pwa' AND pengguna_id = $1 AND aksi = 'buka' AND modul = $2 AND waktu > now() - make_interval(secs => $3) LIMIT 1`,
+            [p.penggunaId, modul, JEDA_BUKA_DETIK]);
+        if (baru.rows.length) return;
+        await catatAktivitas(db, { kanal: 'pwa', penggunaId: p.penggunaId, nama: p.nama, aksi: 'buka', modul, ket: alamat });
+    } catch (e) {
+        console.error('catat buka halaman gagal:', e);
     }
 }
 

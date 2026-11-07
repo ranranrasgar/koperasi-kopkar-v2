@@ -22,7 +22,7 @@ const MENU_PWA: Record<string, string> = {
     "/shu": "SHU", "/notifikasi": "Notifikasi", "/pesan": "Pesan", "/akun": "Akun",
 }
 const JENIS: Record<string, string> = { admin: "Admin", pwa: "Anggota (PWA)", android: "Anggota (Android)" }
-const AKSI: Record<string, string> = { simpan: "Simpan", login: "Login", login_gagal: "Login gagal", logout: "Logout" }
+const AKSI: Record<string, string> = { simpan: "Simpan", login: "Login", login_gagal: "Login gagal", logout: "Logout", buka: "Buka halaman" }
 
 function labelHalaman(kanal: string, h: string | null) {
     if (kanal === "android") return "Aplikasi Android"
@@ -117,7 +117,7 @@ export default async function AktivitasPenggunaPage(props: PageProps<"/dashboard
                                 <option value="">Semua Pengguna</option><option value="admin">Admin</option><option value="anggota">Anggota</option>
                             </select>
                             <select name="aksi" aria-label="Aksi" defaultValue={filter.aksi} className={`${selectClass} h-9 w-auto`}>
-                                <option value="">Semua Aksi</option>
+                                <option value="">Semua Aksi (tanpa buka halaman)</option>
                                 {Object.entries(AKSI).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
                             </select>
                             <Input name="cari" aria-label="Cari" defaultValue={filter.cari} placeholder="Nama, modul, keterangan" className="h-9 w-56" />

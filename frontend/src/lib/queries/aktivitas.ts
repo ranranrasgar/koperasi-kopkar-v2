@@ -22,7 +22,8 @@ export function riwayatAktivitas(f: FilterLog) {
     let where = `(waktu ${JKT})::date BETWEEN $1 AND $2`
     if (f.kanal === "admin") where += " AND kanal = 'admin'"
     if (f.kanal === "anggota") where += " AND kanal <> 'admin'"
-    if (f.aksi) { v.push(f.aksi); where += ` AND aksi = $${v.length}` }
+    // "Buka halaman" jauh lebih banyak daripada aksi lain, jadi hanya tampil bila dipilih (supaya login dan simpan tidak tenggelam).
+    if (f.aksi) { v.push(f.aksi); where += ` AND aksi = $${v.length}` } else where += " AND aksi <> 'buka'"
     if (f.cari) { v.push(`%${f.cari}%`); where += ` AND (nama ILIKE $${v.length} OR modul ILIKE $${v.length} OR ket ILIKE $${v.length})` }
     return query<BarisLog>(
         `SELECT id, to_char(waktu ${JKT}, 'YYYY-MM-DD HH24:MI:SS') AS waktu, kanal, nama, aksi, modul, ket

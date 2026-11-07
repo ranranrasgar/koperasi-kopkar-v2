@@ -29,6 +29,9 @@ Saring dengan tanggal, jenis pengguna, aksi, atau kata kunci, lalu tekan **Terap
 | Login, Logout | Admin, PWA, dan Android. Logout Android tidak tercatat |
 | Login gagal | Baris diberi warna merah. Nama yang diketik tidak disimpan bila akunnya tidak ada |
 | Simpan | Transaksi, data master, potongan, SHU, hak akses, operator, backup, pengajuan, dan pendaftaran |
+| Buka halaman | Halaman yang dibuka anggota di **PWA** (Beranda, Simpanan, Pinjaman, Potongan Gaji, SHU, Pesan, Akun, dan seterusnya), dicatat saat anggota pindah halaman |
+
+**Buka halaman** jauh lebih banyak daripada aksi lain, jadi **tidak tampil** di *Semua Aksi*. Pilih aksi **Buka halaman** untuk melihatnya, dan isi kolom pencarian dengan nama anggota atau nama halaman untuk mempersempit. Halaman yang sama dibuka berulang dalam 20 detik (muat ulang) dihitung sekali. Yang disimpan hanya nama halaman; kode anggota atau nomor pinjaman pada alamat tidak ikut tercatat. Hanya anggota PWA; admin dan aplikasi Android tidak dicatat halamannya.
 
 Aksi yang dilakukan saat **Mode Uji** diberi tanda *[Mode uji]* karena datanya tidak tersimpan. Simpan yang gagal validasi tidak dicatat.
 
