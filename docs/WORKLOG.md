@@ -40,6 +40,19 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 ### Audit Data: tautan bukti angsuran (6 November)
 - Regex `CR-...` di `audit/page.tsx` ikut mencocokkan bagian `CR-` dari `ANGS-CR-1026-173936`, jadi tautan menuju pinjaman yang tidak ada. Kini nomor pinjaman harus di awal teks atau sesudah spasi. Angsuran tanpa jurnal 2026: 50 baris, Rp 67,9 juta; contoh CR-0723-15842 ke-39 dan CR-0526-22343 ke-5 punya baris buku dan kas, tetapi jurnalnya tidak ada, sedangkan angsuran bulan sebelumnya berjurnal. Penyebab belum diketahui, perlu dicocokkan dengan mutasi bank.
 
+### Pilihan COA hanya akun detail (7 November)
+- Jurnal Umum dan Jurnal Penyesuaian kini selebar layar (`HALAMAN_LEBAR`), karena kolom aksi terpotong.
+- `akunDetail()` untuk form Jurnal Umum, Penyesuaian, dan Bank Book; `semuaAkun()` tetap untuk Buku Besar. `cekAkunDetail` menolak akun induk di server (hanya jurnal manual, bukan mesin posting); akun yang sudah ada di bukti lama tetap boleh saat diubah.
+
+### Jurnal Bermasalah: hapus baris kosong (7 November)
+- Aksi per baris dan tombol sekaligus (`hapusSemuaBarisKosong`) hanya untuk baris nol tanpa akun COA di bukti JU/, JP/, BB/. Tombol sekaligus butuh izin hapus Jurnal Umum dan Bank Book; bukti terkunci dilewati.
+
+### Jurnal Umum: hapus per baris (7 November)
+- `hapusBarisJurnal`: ikon hapus kini satu baris (kunci `urutan`), bukti harus seimbang setelahnya. Baris bernilai yang membuat tidak seimbang ditolak dan form menawarkan hapus seluruh bukti. Untuk membersihkan baris kosong kode `0` di Jurnal Bermasalah.
+
+### Daftar Pinjaman hanya yang berbuku (7 November)
+- `hanyaBerbuku` di `sqlLaporanPinjaman`: Daftar Pinjaman memakai EXISTS rincian seperti desktop dan Android, koperasi aktif 15.213 menjadi 15.205. Delapan pinjaman tanpa rincian, jadwal, dan jurnal (total Rp 51.869.000, mis. `CR-0626-22530`) tetap terbaca di detail, Cari Pinjaman, dan Audit Data. Jangan buat jurnal susulan untuknya sebelum dicek ke mutasi bank.
+
 ### Angsuran bank mengikuti pembagian operator (7 November)
 - Jurnal BRI desktop memisahkan jasa pengelolaan (mis. piutang 3.301.200, jasa 661.656), tetapi nilainya tidak tersimpan di data pinjaman. Sejak Oktober 2026 Potongan Gaji web memakai jadwal dan jasa BRI turun. `sqlPembagianBank`/`pembagianBank` mengambil angsuran terakhir yang berbeda dari jadwal dengan total sama, khusus grup bank; dipakai `bayarAngsuran`, form, dan `SQL_ANGSURAN_POTONGAN`. Angsuran Oktober yang terlanjur belum dikoreksi (keputusan akuntan). Periode draf perlu generate ulang.
 - Kolom "Sisa Pokok" di Riwayat Pembayaran dan Buku Pinjaman menjadi "Saldo Buku".

@@ -5,7 +5,7 @@ import { MENU } from "@/config/akses"
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Printer, Scale, Trash2 } from "lucide-react"
-import { hapusJurnalAction, tandaiPenyesuaianAction } from "@/app/actions/transaksi"
+import { hapusBarisJurnalAction, hapusJurnalAction, tandaiPenyesuaianAction } from "@/app/actions/transaksi"
 import { TombolJurnalUbah } from "@/components/transaksi/JurnalForm"
 import { cetakVoucher } from "@/lib/cetak-voucher"
 import { hariIni } from "@/lib/format"
@@ -47,10 +47,16 @@ export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
         })
     }
     const hapus = () => {
-        if (!confirm(`Hapus bukti ${nomor}? Semua barisnya ikut terhapus dan tidak bisa dibatalkan.`)) return
+        if (!confirm(`Hapus baris ini dari bukti ${nomor}? Tidak bisa dibatalkan.`)) return
         mulai(async () => {
-            const h = await hapusJurnalAction(nomor)
-            if (h) alert(h.ok ? h.pesan : h.error)
+            const h = await hapusBarisJurnalAction(nomor, Number(item.urutan))
+            if (h && !h.ok && h.error.includes("tidak seimbang")) {
+                // Baris bernilai tidak bisa dihapus sendiri; tawarkan menghapus seluruh bukti seperti sebelumnya.
+                if (confirm(`${h.error}. Hapus seluruh bukti ${nomor}? Semua barisnya ikut terhapus dan tidak bisa dibatalkan.`)) {
+                    const r = await hapusJurnalAction(nomor)
+                    if (r) alert(r.ok ? r.pesan : r.error)
+                }
+            } else if (h) alert(h.ok ? h.pesan : h.error)
             router.refresh()
         })
     }
@@ -63,7 +69,7 @@ export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
                     className={`${tombol} ${penyesuaian ? "text-indigo-600" : "text-gray-500"}`}><Scale className="h-4 w-4" /></button>
             )}
             {(ju || bb) && boleh(bb ? [MENU.bankBook] : [MENU.jurnalUmum, MENU.jurnalPenyesuaian], "hapus") && (
-                <button type="button" title="Hapus bukti" onClick={hapus} disabled={sibuk} className={`${tombol} text-red-600`}>
+                <button type="button" title="Hapus baris ini" onClick={hapus} disabled={sibuk} className={`${tombol} text-red-600`}>
                     {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 </button>
             )}

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
-import { alasanTerkunci, bacaJurnalUmum, hapusJurnalUmum, postJurnalUmum, STATUS_PENYESUAIAN, tandaiPenyesuaian, ubahJurnalUmum } from '../src/posting/jurnal-umum.ts';
+import { alasanTerkunci, bacaJurnalUmum, hapusBarisJurnal, hapusJurnalUmum, hapusSemuaBarisKosong, postJurnalUmum, STATUS_PENYESUAIAN, tandaiPenyesuaian, ubahJurnalUmum } from '../src/posting/jurnal-umum.ts';
 
 const pool = createPool();
 const ROLLBACK = new Error('rollback-uji');
@@ -112,4 +112,53 @@ test('jurnal penyesuaian: nomor JP, status Penyesuaian, ubah mempertahankan pena
 
 test('alasanTerkunci: JP/ boleh diubah seperti JU/', () => {
     assert.equal(alasanTerkunci('JP/261031/1'), null);
+});
+
+test('hapus satu baris: baris nol terhapus, baris bernilai yang membuat tidak seimbang ditolak, baris penyebab selisih bisa dihapus', async () => {
+    await inTx(async (db) => {
+        const a = await postJurnalUmum(db, { tanggal: '2031-04-01', deskripsi: 'Uji baris', opr: 'uji', lines: [
+            { kodePerkiraan: '5.1.00.95', debit: 600 }, { kodePerkiraan: '5.1.00.95', debit: 400 }, { kodePerkiraan: '1.1.01.21', kredit: 1000 }] });
+        const baris = async () => (await db.query('SELECT urutan, debit_jurnalumum::float d, kredit_jurnalumum::float k FROM jurnal_umum WHERE nomor_bukti = $1 ORDER BY urutan', [a.nomorBukti])).rows;
+        const [b1, b2, b3] = await baris();
+        await db.query('UPDATE jurnal_umum SET debit_jurnalumum = 0 WHERE urutan = $1', [b2.urutan]);
+        await db.query('UPDATE jurnal_umum SET kredit_jurnalumum = 600 WHERE urutan = $1', [b3.urutan]);
+        assert.equal(await hapusBarisJurnal(db, Number(b2.urutan)), a.nomorBukti);
+        assert.equal((await baris()).length, 2);
+        await db.query('SAVEPOINT a');
+        await assert.rejects(hapusBarisJurnal(db, Number(b1.urutan)), /tidak seimbang/);
+        await db.query('ROLLBACK TO a');
+        await db.query('UPDATE jurnal_umum SET kredit_jurnalumum = 0, debit_jurnalumum = 50 WHERE urutan = $1', [b3.urutan]);
+        await db.query('UPDATE jurnal_umum SET debit_jurnalumum = 0 WHERE urutan = $1', [b1.urutan]);
+        await hapusBarisJurnal(db, Number(b3.urutan));
+        assert.equal((await baris()).length, 1);
+        await assert.rejects(hapusBarisJurnal(db, 0), /tidak ditemukan/);
+    });
+});
+
+test('hapus semua baris kosong: hanya baris nol tanpa akun COA, baris berisi utuh', async () => {
+    await inTx(async (db) => {
+        const a = await postJurnalUmum(db, { tanggal: '2031-04-01', deskripsi: 'Uji kosong', opr: 'uji', lines: [
+            { kodePerkiraan: '5.1.00.95', debit: 600 }, { kodePerkiraan: '5.1.00.95', debit: 400 }, { kodePerkiraan: '1.1.01.21', kredit: 600 }] .concat([{ kodePerkiraan: '1.1.01.21', kredit: 400 }] as never[]) });
+        const b = (await db.query('SELECT urutan FROM jurnal_umum WHERE nomor_bukti = $1 ORDER BY urutan', [a.nomorBukti])).rows;
+        await db.query("UPDATE jurnal_umum SET debit_jurnalumum = 0, kode_perkiraan = '0' WHERE urutan = $1", [b[1].urutan]);
+        await db.query("UPDATE jurnal_umum SET kredit_jurnalumum = 0, kode_perkiraan = '0' WHERE urutan = $1", [b[3].urutan]);
+        await db.query("UPDATE jurnal_umum SET debit_jurnalumum = 0 WHERE urutan = $1", [b[0].urutan]);
+        assert.deepEqual(await hapusSemuaBarisKosong(db, '2031-04-01', '2031-04-01'), { dihapus: 2, dilewati: 0 });
+        assert.equal((await db.query('SELECT 1 FROM jurnal_umum WHERE nomor_bukti = $1', [a.nomorBukti])).rowCount, 2);
+    });
+});
+
+test('jurnal manual menolak akun induk, tetapi jurnal lama yang memakainya tetap bisa diubah', async () => {
+    await inTx(async (db) => {
+        const lawan = { kodePerkiraan: '1.1.01.21', kredit: 1000 };
+        await db.query('SAVEPOINT a');
+        await assert.rejects(postJurnalUmum(db, { tanggal: '2031-04-01', deskripsi: 'Uji', opr: 'uji', lines: [{ kodePerkiraan: '5.1.00.00', debit: 1000 }, lawan] }), /akun induk/);
+        await db.query('ROLLBACK TO a');
+        const a = await postJurnalUmum(db, { tanggal: '2031-04-01', deskripsi: 'Uji', opr: 'uji', lines: [{ kodePerkiraan: '5.1.00.95', debit: 1000 }, lawan] });
+        await db.query("UPDATE jurnal_umum SET kode_perkiraan = '5.1.00.00' WHERE nomor_bukti = $1 AND debit_jurnalumum > 0", [a.nomorBukti]);
+        await ubahJurnalUmum(db, a.nomorBukti, { tanggal: '2031-04-01', deskripsi: 'Ubah', opr: 'uji', lines: [{ kodePerkiraan: '5.1.00.00', debit: 1000 }, lawan] });
+        await db.query('SAVEPOINT b');
+        await assert.rejects(ubahJurnalUmum(db, a.nomorBukti, { tanggal: '2031-04-01', deskripsi: 'Ubah', opr: 'uji', lines: [{ kodePerkiraan: '5.0.00.00', debit: 1000 }, lawan] }), /akun induk/);
+        await db.query('ROLLBACK TO b');
+    });
 });

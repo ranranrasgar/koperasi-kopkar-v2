@@ -291,7 +291,7 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                                         </th>
                                     )
                                 })}
-                                <th className="px-4 py-3.5 text-right print:hidden">Aksi</th>
+                                <th className="sticky right-0 z-[1] bg-muted px-4 py-3.5 text-right print:hidden">Aksi</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -337,7 +337,7 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
                                                     </td>
                                                 )
                                             })}
-                                            <td className="px-4 py-3 text-right print:hidden whitespace-nowrap">
+                                            <td className="sticky right-0 z-[1] bg-background px-4 py-3 text-right print:hidden whitespace-nowrap">
                                                 <div className="flex items-center justify-end gap-1">
                                                     {AksiBaris && <AksiBaris item={item} />}
                                                     <Button variant="ghost" size="icon" className="h-8 w-8 hover:bg-muted/50" title="Detail" onClick={() => setSelectedItem(item)}>

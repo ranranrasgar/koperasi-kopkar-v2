@@ -1,5 +1,5 @@
 import { TombolJurnalBaru } from "@/components/transaksi/JurnalForm"
-import { semuaAkun } from "@/lib/queries/akuntansi"
+import { akunDetail } from "@/lib/queries/akuntansi"
 import { AksiJurnal } from "@/components/akuntansi/AksiJurnal"
 import { hariIni } from "@/lib/format"
 import { ModuleTable } from "@/components/ui/ModuleTable"
@@ -11,6 +11,6 @@ export default async function JournalPage(props: PageProps<"/dashboard/accountin
     await wajibIzin("/dashboard/accounting/journal") // layout tidak dijalankan ulang pada navigasi antarhalaman
     const data = await daftarJurnal(await props.searchParams)
     return (
-        <ModuleTable config={journalConfig} data={data} actions={<TombolJurnalBaru akun={await semuaAkun()} hariIni={hariIni()} />} aksiBaris={AksiJurnal} />
+        <ModuleTable config={journalConfig} data={data} actions={<TombolJurnalBaru akun={await akunDetail()} hariIni={hariIni()} />} aksiBaris={AksiJurnal} />
     )
 }

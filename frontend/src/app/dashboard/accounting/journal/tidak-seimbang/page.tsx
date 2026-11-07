@@ -1,11 +1,12 @@
 import Link from "next/link"
 import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
+import { TombolHapusKosong, TombolHapusSemuaKosong } from "@/components/akuntansi/HapusBarisKosong"
 import { KopLaporan } from "@/components/laporan/Periode"
 import { jurnalBermasalah } from "@/lib/queries/laporan"
 import { formatAngka, formatTanggal, hariIni } from "@/lib/format"
 import { isTanggal, sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
-import { MENU } from "@/config/akses"
+import { bolehAksi, MENU } from "@/config/akses"
 
 export const dynamic = "force-dynamic"
 
@@ -22,6 +23,12 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
     const sampai = isTanggal(sp(s, "sampai")) ? sp(s, "sampai") : hariIni()
     const { tidakSeimbang, tanpaAkun, sejak } = await jurnalBermasalah(sampai)
     const totSelisih = tidakSeimbang.reduce((t, b) => t + b.selisih, 0)
+    // Aksi hapus hanya untuk baris kosong; izinnya mengikuti jenis bukti, sama dengan Jurnal Umum dan Bank Book.
+    const hapusJurnal = bolehAksi(o.izin, o.aksiTolak, [MENU.jurnalUmum, MENU.jurnalPenyesuaian], "hapus")
+    const hapusBank = bolehAksi(o.izin, o.aksiTolak, [MENU.bankBook], "hapus")
+    const kosong = (b: { debit: number; kredit: number; nomor_bukti: string }) => b.debit === 0 && b.kredit === 0 && /^(JU|JP|BB)\//.test(b.nomor_bukti)
+    const bolehHapus = (no: string) => no.startsWith("BB/") ? hapusBank : hapusJurnal
+    const jumlahKosong = tanpaAkun.filter(kosong).length
     return (
         <HalamanLaporan title="Jurnal Bermasalah" description="Jurnal yang membuat neraca dan neraca saldo berselisih: bukti yang debit dan kreditnya tidak sama, dan baris ke akun yang tidak ada di COA."
             filter={
@@ -65,13 +72,16 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
                 </section>
 
                 <section>
-                    <h2 className="mb-2 font-semibold">Baris ke akun yang tidak ada di COA ({tanpaAkun.length})</h2>
+                    <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
+                        <h2 className="font-semibold">Baris ke akun yang tidak ada di COA ({tanpaAkun.length})</h2>
+                        {hapusJurnal && hapusBank && jumlahKosong > 0 && <span className="print:hidden"><TombolHapusSemuaKosong sampai={sampai} jumlah={jumlahKosong} /></span>}
+                    </div>
                     {tanpaAkun.length === 0 ? <p className="text-sm text-muted-foreground">Tidak ada.</p> : (
                         <div className="overflow-x-auto rounded-md border">
                             <table className="w-full text-sm">
                                 <thead className="bg-muted text-xs text-muted-foreground">
                                     <tr><th className="px-3 py-2 text-left">Bukti</th><th className="px-3 py-2 text-left">Tanggal</th><th className="px-3 py-2 text-left">Kode akun</th>
-                                        <th className="px-3 py-2 text-left">Keterangan</th><th className="px-3 py-2 text-right">Debit</th><th className="px-3 py-2 text-right">Kredit</th></tr>
+                                        <th className="px-3 py-2 text-left">Keterangan</th><th className="px-3 py-2 text-right">Debit</th><th className="px-3 py-2 text-right">Kredit</th><th className="w-12 px-3 py-2 print:hidden" /></tr>
                                 </thead>
                                 <tbody>
                                     {tanpaAkun.map((b) => (
@@ -82,6 +92,7 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
                                             <td className="px-3 py-1.5 max-w-[22rem] truncate">{b.deskripsi ?? "-"}</td>
                                             <td className="px-3 py-1.5 text-right tabular-nums">{formatAngka(b.debit)}</td>
                                             <td className="px-3 py-1.5 text-right tabular-nums">{formatAngka(b.kredit)}</td>
+                                            <td className="px-2 py-1 text-right print:hidden">{kosong(b) && bolehHapus(b.nomor_bukti) && <TombolHapusKosong nomor={b.nomor_bukti} urutan={b.urutan} />}</td>
                                         </tr>
                                     ))}
                                 </tbody>

@@ -61,9 +61,15 @@ export const pohonCoa = () =>
 
 export interface Akun { id: number; kode_perkiraan: string; nama_perkiraan: string }
 
-/** Semua akun untuk pilihan di form jurnal. */
+/** Semua akun, termasuk akun induk; untuk laporan seperti Buku Besar. */
 export const semuaAkun = () =>
     query<Akun>("SELECT id, kode_perkiraan, nama_perkiraan FROM perkiraan ORDER BY kode_perkiraan")
+
+/** Akun detail (tanpa anak di COA) untuk pilihan di form jurnal dan Bank Book; `tetap`: kode yang sudah ada di bukti yang sedang diubah. */
+export const akunDetail = (tetap: string[] = []) => query<Akun>(
+    `SELECT p.id, p.kode_perkiraan, p.nama_perkiraan FROM perkiraan p
+      WHERE p.kode_perkiraan = ANY($1) OR NOT EXISTS (SELECT 1 FROM perkiraan x WHERE x.parent_id = p.id AND x.id <> p.id)
+      ORDER BY p.kode_perkiraan`, [tetap])
 
 /**
  * Akun kas/bank untuk transaksi kasir: akun Kas dan Bank di bawah Aktiva Lancar (1.1.01.10 s.d. 1.1.01.60),

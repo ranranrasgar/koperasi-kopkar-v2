@@ -1,5 +1,5 @@
 import type { Db } from '../db.ts';
-import { cekBuktiTerbuka, postJournal, type JournalLine } from './journal.ts';
+import { cekAkunDetail, cekBuktiTerbuka, postJournal, type JournalLine } from './journal.ts';
 import { fromUnits, toUnits } from './money.ts';
 
 /**
@@ -70,6 +70,8 @@ async function cekBisaDiubah(db: Db, nomorBukti: string) {
 export async function simpanBankBook(db: Db, i: BankBookInput & { nomorBukti?: string }): Promise<{ nomorBukti: string; total: string }> {
     await cekAkunBank(db, i.akunBank);
     const lines = susunBaris(i);
+    const lama = i.nomorBukti ? (await db.query<{ kode_perkiraan: string }>('SELECT kode_perkiraan FROM jurnal_umum WHERE nomor_bukti = $1', [i.nomorBukti])).rows.map((r) => r.kode_perkiraan) : [];
+    await cekAkunDetail(db, i.lawan.map((l) => l.kodePerkiraan).filter(Boolean), lama);
     let nomorBukti = i.nomorBukti;
     if (nomorBukti) {
         const tgl = await cekBisaDiubah(db, nomorBukti);

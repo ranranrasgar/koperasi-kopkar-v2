@@ -54,6 +54,8 @@ const HALAMAN_LEBAR = [
     "/dashboard/deductions",       // Transaksi Potongan: 11 kolom
     "/dashboard/deductions/",      // Generate & Posting dan rinciannya
     "/dashboard/accounting/worksheet", // Neraca Lajur: 12 kolom angka
+    "/dashboard/accounting/journal",   // Jurnal Umum: 8 kolom ditambah Jenis dan aksi
+    "/dashboard/accounting/adjusting", // Jurnal Penyesuaian: sama dengan Jurnal Umum
 ]
 const lebarPenuh = (path: string) => HALAMAN_LEBAR.some((p) => (p.endsWith("/") ? path.startsWith(p) : path === p))
 

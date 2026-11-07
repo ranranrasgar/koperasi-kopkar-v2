@@ -1,5 +1,5 @@
 import type { Db } from '../db.ts';
-import { cekBuktiTerbuka, postJournal, type JournalLine } from './journal.ts';
+import { cekAkunDetail, cekBuktiTerbuka, postJournal, type JournalLine } from './journal.ts';
 
 /** Nilai kolom status jurnal_umum untuk jurnal penyesuaian (dipakai neraca lajur untuk memisahkan kolom penyesuaian). */
 export const STATUS_PENYESUAIAN = 'Penyesuaian';
@@ -38,6 +38,7 @@ const cekReff = (r?: string) => {
 export async function postJurnalUmum(db: Db, i: JurnalUmumInput): Promise<{ nomorBukti: string; baris: number }> {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(i.tanggal)) throw new Error('Tanggal jurnal tidak valid');
     if (!i.deskripsi.trim()) throw new Error('Keterangan jurnal wajib diisi');
+    await cekAkunDetail(db, i.lines.map((l) => l.kodePerkiraan));
     const awalan = i.penyesuaian ? 'JP' : 'JU';
     const n = Number((await db.query(`SELECT nextval('${i.penyesuaian ? 'seq_jurnal_penyesuaian_no' : 'seq_jurnal_umum_no'}') v`)).rows[0].v);
     const nomorBukti = `${awalan}/${yymmdd(i.tanggal)}/${n}`;
@@ -97,6 +98,7 @@ export async function ubahJurnalUmum(db: Db, nomorBukti: string, i: JurnalUmumIn
     if (b.terkunci) throw new Error(`Bukti ${nomorBukti}: ${b.terkunci}`);
     if (b.tanggal !== i.tanggal) throw new Error('Tanggal jurnal tidak bisa diubah; hapus lalu buat jurnal baru di tanggal lain');
     if (!i.deskripsi.trim()) throw new Error('Keterangan jurnal wajib diisi');
+    await cekAkunDetail(db, i.lines.map((l) => l.kodePerkiraan), b.baris.map((x) => x.kodePerkiraan));
     const awalan = nomorBukti.slice(0, 2);
     const baris = await postJournal(db, { nomorBukti, tanggal: i.tanggal, deskripsi: i.deskripsi.trim(), opr: i.opr,
         sumberTipe: awalan === 'JP' ? 'penyesuaian' : 'jurnal', sumberId: null, tahunPrefix: awalan, lines: i.lines,
@@ -113,6 +115,46 @@ export async function tandaiPenyesuaian(db: Db, nomorBukti: string, penyesuaian:
     const b = await bacaJurnalUmum(db, nomorBukti);
     if (!b) throw new Error(`Bukti ${nomorBukti} tidak ditemukan`);
     await db.query(`UPDATE jurnal_umum SET status = $2 WHERE nomor_bukti = $1 AND status IN ('', $3)`, [nomorBukti, penyesuaian ? STATUS_PENYESUAIAN : '', STATUS_PENYESUAIAN]);
+}
+
+/**
+ * Hapus satu baris bukti JU/, JP/, atau BB/, mis. baris kosong tanpa akun. Bukti harus seimbang setelah baris dihapus,
+ * jadi yang bisa dihapus hanya baris bernilai nol atau baris yang memang membuat bukti itu tidak seimbang.
+ */
+export async function hapusBarisJurnal(db: Db, urutan: number) {
+    const r = (await db.query<{ nomor_bukti: string; bernilai: boolean }>(
+        'SELECT nomor_bukti, (debit_jurnalumum <> 0 OR kredit_jurnalumum <> 0) AS bernilai FROM jurnal_umum WHERE urutan = $1', [urutan])).rows[0];
+    if (!r) throw new Error('Baris jurnal tidak ditemukan');
+    const b = await bacaJurnalUmum(db, r.nomor_bukti);
+    if (!b) throw new Error(`Bukti ${r.nomor_bukti} tidak ditemukan`);
+    if (b.terkunci) throw new Error(`Bukti ${r.nomor_bukti}: ${b.terkunci}`);
+    await cekBuktiTerbuka(db, r.nomor_bukti);
+    if (r.bernilai) {
+        const s = (await db.query<{ selisih: string }>(
+            'SELECT COALESCE(SUM(debit_jurnalumum - kredit_jurnalumum), 0) AS selisih FROM jurnal_umum WHERE nomor_bukti = $1 AND urutan <> $2', [r.nomor_bukti, urutan])).rows[0];
+        if (Math.abs(Number(s.selisih)) >= 0.01) throw new Error(`Menghapus baris ini membuat bukti ${r.nomor_bukti} tidak seimbang`);
+    }
+    await db.query('DELETE FROM jurnal_umum WHERE urutan = $1', [urutan]);
+    return r.nomor_bukti;
+}
+
+/**
+ * Hapus semua baris kosong (debit dan kredit nol) ke akun yang tidak ada di COA pada bukti JU/, JP/, dan BB/ dalam rentang tanggal.
+ * Baris berisi tidak disentuh. Bukti yang terkunci, mis. sudah direkonsiliasi, dilewati.
+ */
+export async function hapusSemuaBarisKosong(db: Db, dari: string, sampai: string) {
+    const baris = (await db.query<{ urutan: string; nomor_bukti: string }>(
+        `SELECT j.urutan, j.nomor_bukti FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan
+          WHERE p.id IS NULL AND j.debit_jurnalumum = 0 AND j.kredit_jurnalumum = 0 AND j.tanggal_jurnalumum BETWEEN $1 AND $2
+            AND (j.nomor_bukti LIKE 'JU/%' OR j.nomor_bukti LIKE 'JP/%' OR j.nomor_bukti LIKE 'BB/%')`, [dari, sampai])).rows;
+    let dihapus = 0, dilewati = 0;
+    for (const no of new Set(baris.map((b) => b.nomor_bukti))) {
+        const urutan = baris.filter((b) => b.nomor_bukti === no).map((b) => b.urutan);
+        if ((await bacaJurnalUmum(db, no))?.terkunci) { dilewati += urutan.length; continue; }
+        await cekBuktiTerbuka(db, no);
+        dihapus += (await db.query('DELETE FROM jurnal_umum WHERE urutan = ANY($1::bigint[])', [urutan])).rowCount ?? 0;
+    }
+    return { dihapus, dilewati };
 }
 
 /** Hapus bukti JU/, JP/, atau BB/. */

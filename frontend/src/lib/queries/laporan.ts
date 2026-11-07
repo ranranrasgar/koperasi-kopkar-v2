@@ -168,7 +168,7 @@ export const riwayatTutupBuku = () =>
          GROUP BY 1, 2, 3 ORDER BY 2 DESC, 3`)
 
 export interface JurnalTidakSeimbang { nomor_bukti: string; tanggal: string; baris: number; debit: number; kredit: number; selisih: number; deskripsi: string | null; tanpa_akun: number }
-export interface BarisTanpaAkun { id: number; nomor_bukti: string; tanggal: string; kode_perkiraan: string; debit: number; kredit: number; deskripsi: string | null }
+export interface BarisTanpaAkun { id: number; urutan: number; nomor_bukti: string; tanggal: string; kode_perkiraan: string; debit: number; kredit: number; deskripsi: string | null }
 
 /**
  * Jurnal yang membuat neraca tidak seimbang, dengan cakupan yang sama dengan saldo per akun pada tanggal `sampai`: saldo pembuka TBT terakhir
@@ -193,7 +193,7 @@ export async function jurnalBermasalah(sampai: string) {
                    (SELECT MIN(x.deskripsi) FROM jurnal_umum x WHERE x.nomor_bukti = g.nomor_bukti) AS deskripsi
               FROM g ORDER BY g.tanggal DESC, g.nomor_bukti`, args),
         query<BarisTanpaAkun>(`
-            SELECT j.id, j.nomor_bukti, j.tanggal_jurnalumum::text AS tanggal, j.kode_perkiraan, j.debit_jurnalumum AS debit, j.kredit_jurnalumum AS kredit, j.deskripsi
+            SELECT j.id, j.urutan, j.nomor_bukti, j.tanggal_jurnalumum::text AS tanggal, j.kode_perkiraan, j.debit_jurnalumum AS debit, j.kredit_jurnalumum AS kredit, j.deskripsi
               FROM jurnal_umum j LEFT JOIN perkiraan p ON p.kode_perkiraan = j.kode_perkiraan
              WHERE ${cakupan} AND p.id IS NULL ORDER BY j.tanggal_jurnalumum DESC, j.nomor_bukti, j.urutan`, args),
     ])

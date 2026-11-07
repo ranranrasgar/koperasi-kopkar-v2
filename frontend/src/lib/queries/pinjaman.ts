@@ -41,6 +41,7 @@ export async function laporanPinjaman(s: SearchParams): Promise<PageData<Laporan
     const pageSize = ukuranHalaman(sp(s, "pageSize"), 25)
     const q = sqlLaporanPinjaman({
         grup: sp(s, "grup") || "KOPERASI",
+        hanyaBerbuku: true,
         keyword: sp(s, "keyword"),
         kolomCari: null,
         bulan: parseInt(sp(s, "bulan"), 10) || undefined,

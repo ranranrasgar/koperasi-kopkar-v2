@@ -18,7 +18,8 @@
 //    dipakai karena usang (hanya 14 pinjaman terisi, padahal ±225 menunggak). Jatuh Tempo = tanggal angsuran berikutnya yang belum dibayar.
 //  - No. Rek dan Atas Nama: rekening anggota (anggota.bank_no_rek, bank_atas_nama). pinjaman_tunai.no_rek hanya berisi nomor pinjaman pada data lama, dan atas_nama kosong.
 //  - Jml Cicilan: penghitung di pinjaman_tunai (dikelola aplikasi desktop).
-//  - Pinjaman tanpa baris rincian sama sekali (belum diposting ke buku) tetap tampil, dengan bayar 0 dan sisa = plafond.
+//  - Daftar Pinjaman seperti desktop dan API Android hanya memuat pinjaman yang punya baris rincian (`hanyaBerbuku`): pinjaman tanpa rincian pencairannya
+//    tidak pernah diposting. Pakai EXISTS, bukan JOIN, supaya baris tidak berlipat. Detail pinjaman tetap menemukannya untuk ditelusuri.
 
 export interface FilterPinjaman {
     grup: string                 // "All" = semua grup
@@ -28,6 +29,7 @@ export interface FilterPinjaman {
     tahun?: number               // tahun realisasi
     aktif: boolean | null        // status anggota; null = semua anggota
     kredit: string               // kode_kredit atau "All"
+    hanyaBerbuku?: boolean       // hanya pinjaman yang punya baris rincian
     status: number               // 0 semua, 1 menunggak, 2 lunas, 3 belum lunas
     urutKolom: string | null     // kunci kolom hasil (daftar putih URUT_*), null = terbaru dulu
     urutArah: "ASC" | "DESC"
@@ -55,6 +57,7 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
     const p = (v: unknown) => { values.push(v); return `$${values.length}` }
 
     let where = "WHERE 1=1"
+    if (f.hanyaBerbuku) where += " AND EXISTS (SELECT 1 FROM pinjaman_tunai_rincian b WHERE b.pinjaman_tunai_id = p.id)"
     if (f.aktif !== null) where += ` AND a.aktif = ${p(f.aktif)}`
     if (f.grup !== "All") where += ` AND jk.group_pinjaman = ${p(f.grup)}`
     if (f.kredit && f.kredit !== "All") where += ` AND jk.kode_kredit = ${p(f.kredit)}`

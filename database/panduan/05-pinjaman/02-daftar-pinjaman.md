@@ -15,6 +15,8 @@ menu: /dashboard/loans
 
 Tekan **Terapkan** setelah mengubah filter.
 
+Daftar ini hanya memuat pinjaman yang punya catatan di buku pinjaman, sama dengan aplikasi desktop. Pinjaman yang pencairannya tidak pernah diposting tidak tampil di sini, tetapi masih bisa ditemukan lewat **Cari Pinjaman** dan **Audit Data**.
+
 ## Kolom
 
 | Kolom | Arti |

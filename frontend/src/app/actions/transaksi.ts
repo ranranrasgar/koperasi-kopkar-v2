@@ -6,12 +6,13 @@ import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpan
 import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
 import { bacaQr } from "@kopkar/backend/src/anggota/qr.ts"
 import { pembagianBank } from "@kopkar/backend/src/posting/pinjaman.ts"
+import { akunDetail } from "@/lib/queries/akuntansi"
 import { hapusCacheAudit } from "@/lib/queries/audit"
 import { batalBukti, buatJurnalSusulan, rancangJurnalSusulan, type RancanganJurnal } from "@kopkar/backend/src/posting/koreksi.ts"
 import { hapusTitipan, postingTitipan, tambahTitipan } from "@kopkar/backend/src/posting/titipan.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
 import { kirimInfoPencairan } from "@kopkar/backend/src/anggota/info-pinjaman.ts"
-import { bacaJurnalUmum, hapusJurnalUmum, nomorJurnalBerikut, postJurnalUmum, tandaiPenyesuaian, ubahJurnalUmum, type BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
+import { bacaJurnalUmum, hapusBarisJurnal, hapusJurnalUmum, hapusSemuaBarisKosong, nomorJurnalBerikut, postJurnalUmum, tandaiPenyesuaian, ubahJurnalUmum, type BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { bacaBankBook, hapusBankBook, simpanBankBook, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
 import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
@@ -21,7 +22,7 @@ import { catatAksi } from "@/lib/aktivitas"
 import { GalatSesi, operatorAktif, wajibAksi, wajibLogin, wajibMenu, type Operator } from "@/lib/operator"
 import { MENU, MENU_ANGSUR_GRUP, MENU_CAIR_GRUP, MENU_DETAIL_PINJAMAN_GRUP, MENU_TRANSAKSI, punyaIzin, type AksiIzin } from "@/config/akses"
 import { cariAnggota, cariPinjamanBerjalan, type AnggotaRingkas } from "@/lib/queries/anggota"
-import { transaksiBankBook, type TransaksiBankBook } from "@/lib/queries/laporan"
+import { jurnalBermasalah, transaksiBankBook, type TransaksiBankBook } from "@/lib/queries/laporan"
 import { riwayatAnggota, type RiwayatAnggota } from "@/lib/queries/pinjaman-riwayat"
 import { kprBerjalan, pinjamanBerjalan, type KprBerjalan, type PinjamanBerjalan } from "@/lib/queries/pinjaman"
 
@@ -403,7 +404,7 @@ export async function bacaJurnalAction(nomorBukti: string): Promise<{ bukti: Buk
         await operatorAktif(MENU_JURNAL)
         const bukti = await bacaJurnalUmum(pool, nomorBukti)
         if (!bukti) return { error: `Bukti ${nomorBukti} tidak ditemukan` }
-        return { bukti, akun: await query("SELECT id, kode_perkiraan, nama_perkiraan FROM perkiraan ORDER BY kode_perkiraan") }
+        return { bukti, akun: await akunDetail(bukti.baris.map((b) => b.kodePerkiraan)) }
     } catch (e) {
         return { error: e instanceof Error ? e.message : "Gagal membaca bukti" }
     }
@@ -414,6 +415,25 @@ export async function hapusJurnalAction(nomorBukti: string): Promise<Hasil> {
     return posting(nomorBukti.startsWith("BB/") ? [MENU.bankBook] : MENU_JURNAL, "hapus", async () => {
         await tx((db) => hapusJurnalUmum(db, nomorBukti))
         return { ok: true, pesan: `Bukti ${nomorBukti} dihapus` }
+    })
+}
+
+/** Hapus satu baris jurnal. Izinnya mengikuti jenis bukti, sama dengan hapus seluruh bukti. */
+export async function hapusBarisJurnalAction(nomorBukti: string, urutan: number): Promise<Hasil> {
+    return posting(nomorBukti.startsWith("BB/") ? [MENU.bankBook] : MENU_JURNAL, "hapus", async () => {
+        const no = await tx((db) => hapusBarisJurnal(db, urutan))
+        return { ok: true, pesan: `Satu baris bukti ${no} dihapus` }
+    })
+}
+
+/** Hapus semua baris kosong tanpa akun COA sejak saldo pembuka terakhir sampai `sampai`. Menyentuh bukti jurnal dan Bank Book, jadi perlu kedua izin hapus. */
+export async function hapusSemuaBarisKosongAction(sampai: string): Promise<Hasil> {
+    return posting(MENU_JURNAL, "hapus", async (o) => {
+        wajibAksi(o, [MENU.bankBook], "hapus")
+        if (!TANGGAL.test(sampai)) throw new InputSalah("Tanggal tidak valid")
+        const { sejak } = await jurnalBermasalah(sampai)
+        const r = await tx((db) => hapusSemuaBarisKosong(db, sejak ?? "1900-01-01", sampai))
+        return { ok: true, pesan: `${r.dihapus} baris kosong dihapus${r.dilewati ? `; ${r.dilewati} baris dilewati karena buktinya terkunci` : ""}` }
     })
 }
 

@@ -5,7 +5,7 @@ import { HarianBankBook } from "@/components/bankbook/HarianBankBook"
 import { TombolCetak } from "@/components/ui/TombolCetak"
 import { TombolEkspor } from "@/components/laporan/TombolEkspor"
 import { akunBankBook, harianBankBook } from "@/lib/queries/laporan"
-import { semuaAkun } from "@/lib/queries/akuntansi"
+import { akunDetail } from "@/lib/queries/akuntansi"
 import { formatAngka, hariIni } from "@/lib/format"
 import { sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
@@ -27,7 +27,7 @@ export default async function BankBookPage(props: PageProps<"/dashboard/accounti
 
     const { awal, rows } = await harianBankBook(kode, dari, sampai)
     const masuk = rows.reduce((t, r) => t + Number(r.debit), 0), keluar = rows.reduce((t, r) => t + Number(r.kredit), 0)
-    const formProps = { akunBank: { id: akun.id, kode_perkiraan: akun.kode_perkiraan, nama_perkiraan: akun.nama_perkiraan }, semuaAkun: await semuaAkun(), hariIni: hari }
+    const formProps = { akunBank: { id: akun.id, kode_perkiraan: akun.kode_perkiraan, nama_perkiraan: akun.nama_perkiraan }, semuaAkun: await akunDetail(), hariIni: hari }
     const ke = (o: { akun?: string }) => `?akun=${o.akun ?? kode}&bulan=${bulan}&tahun=${tahun}`
     // Cetak dan Ekspor berisi seluruh bulan, bukan hanya halaman tabel yang sedang tampil.
     const judulLaporan = "Bank Book"

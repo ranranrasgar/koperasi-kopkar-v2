@@ -13,7 +13,7 @@ test.after(() => pool.end());
 const ambilAkun = async (db: Db) => {
     const a = (await db.query<{ kode_perkiraan: string }>(SQL_AKUN_BANKBOOK)).rows.map((r) => r.kode_perkiraan);
     const lain = (await db.query<{ kode_perkiraan: string }>(
-        "SELECT kode_perkiraan FROM perkiraan WHERE keterangan NOT IN ('GC', 'BANK') OR keterangan IS NULL ORDER BY kode_perkiraan LIMIT 2")).rows.map((r) => r.kode_perkiraan);
+        "SELECT p.kode_perkiraan FROM perkiraan p WHERE (p.keterangan NOT IN ('GC', 'BANK') OR p.keterangan IS NULL) AND NOT EXISTS (SELECT 1 FROM perkiraan x WHERE x.parent_id = p.id AND x.id <> p.id) ORDER BY p.kode_perkiraan LIMIT 2")).rows.map((r) => r.kode_perkiraan);
     assert.ok(a.length > 0 && lain.length === 2, 'butuh akun kas/bank dan dua akun lain di database uji');
     return { bank: a[0], x: lain[0], y: lain[1] };
 };

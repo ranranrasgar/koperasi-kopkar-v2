@@ -19,7 +19,7 @@ Di sisi kanan tiap baris ada ikon:
 | --- | --- | --- |
 | Printer | **Cetak voucher** | Semua bukti |
 | Pensil | **Ubah** | Hanya jurnal umum `JU/` |
-| Tempat sampah | **Hapus** | Jurnal umum `JU/` dan bukti Bank Book `BB/` |
+| Tempat sampah | **Hapus baris ini** | Jurnal umum `JU/` dan bukti Bank Book `BB/` |
 | Mata | Detail baris | Semua |
 
 **Voucher** adalah dokumen cetak satu bukti: kop koperasi, nomor bukti, tanggal, keterangan, rincian akun (kode, nama, keterangan, debit, kredit), total, dan tiga kolom tanda tangan (Dibuat, Diperiksa, Disetujui). Ukurannya otomatis muat di kertas A4.
@@ -46,6 +46,14 @@ Kolom **Jenis** memberi lencana *Penyesuaian* pada jurnal penyesuaian, dan filte
 
 Tekan ikon pensil pada baris jurnal `JU/`. Isinya dimuat ke form yang sama; ubah akun, nominal, atau keterangan lalu **Simpan Perubahan**. **Nomor bukti dan tanggal tidak bisa diubah** (tanggal bagian dari nomor): untuk pindah tanggal, hapus jurnal lalu buat yang baru.
 
+## Menghapus baris jurnal
+
+Ikon tempat sampah menghapus **satu baris**, misalnya baris kosong bernilai nol dengan kode akun `0`. Bukti harus tetap seimbang, jadi baris bernilai yang membuat bukti tidak seimbang tidak bisa dihapus sendiri. Dalam kasus itu sistem menawarkan menghapus **seluruh bukti**. Bukti di tahun yang sudah ditutup atau bukti Bank Book yang sudah direkonsiliasi ditolak.
+
+Baris kosong juga bisa dihapus dari **Akuntansi → Jurnal Bermasalah**: ikon di baris bernilai nol, atau tombol **Hapus ... baris kosong** untuk semuanya sekaligus. Tombol sekaligus butuh izin hapus di Jurnal Umum dan Bank Book. Baris berisi di bukti yang sama tidak berubah, dan bukti yang terkunci dilewati.
+
+Pilihan **Akun** di Jurnal Umum, Jurnal Penyesuaian, dan Bank Book hanya memuat akun detail. Akun induk seperti *AKTIVA LANCAR* atau *BEBAN USAHA* tidak tampil supaya tidak salah pilih. Jurnal lama yang terlanjur memakai akun induk tetap bisa dibuka dan diubah.
+
 ## Aturan jurnal
 
 | Aturan | Pesan bila dilanggar |
@@ -56,6 +64,7 @@ Tekan ikon pensil pada baris jurnal `JU/`. Isinya dimuat ke form yang sama; ubah
 | Total debit = total kredit | *Jurnal ... tidak seimbang: debit ... kredit ...* |
 | Keterangan jurnal wajib | *Keterangan jurnal wajib diisi* |
 | Akun harus ada di COA | *Akun ... tidak ada di perkiraan* |
+| Akun harus akun detail, bukan akun induk | *Akun ... adalah akun induk; pilih akun detail di bawahnya* |
 
 Nomor jurnal dibuat otomatis: `JU/yymmdd/n`, contoh `JU/261022/1205`.
 

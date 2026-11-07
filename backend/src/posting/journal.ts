@@ -44,6 +44,19 @@ async function cekPeriodeTerbuka(db: Pick<Db, 'query'>, tanggal: string) {
 }
 
 /** Pemeriksaan yang sama untuk bukti yang akan dihapus. */
+/**
+ * Jurnal manual hanya boleh ke akun detail (tanpa anak di COA). Hanya dipanggil dari form jurnal dan Bank Book, bukan mesin posting transaksi.
+ * `tetap`: akun yang sudah ada di bukti saat diubah, supaya jurnal lama yang terlanjur memakai akun induk tetap bisa disimpan.
+ */
+export async function cekAkunDetail(db: Pick<Db, 'query'>, kode: string[], tetap: string[] = []) {
+    const r = await db.query<{ kode_perkiraan: string; nama_perkiraan: string }>(
+        `SELECT p.kode_perkiraan, p.nama_perkiraan FROM perkiraan p
+          WHERE p.kode_perkiraan = ANY($1) AND NOT p.kode_perkiraan = ANY($2) AND EXISTS (SELECT 1 FROM perkiraan x WHERE x.parent_id = p.id AND x.id <> p.id)
+          ORDER BY p.kode_perkiraan LIMIT 1`, [kode, tetap]);
+    const a = r.rows[0];
+    if (a) throw new Error(`Akun ${a.kode_perkiraan} ${a.nama_perkiraan} adalah akun induk; pilih akun detail di bawahnya`);
+}
+
 export async function cekBuktiTerbuka(db: Pick<Db, 'query'>, nomorBukti: string) {
     const t = (await db.query<{ t: string | null }>('SELECT MIN(tanggal_jurnalumum)::text t FROM jurnal_umum WHERE nomor_bukti = $1', [nomorBukti])).rows[0].t;
     if (t) await cekPeriodeTerbuka(db, t);
