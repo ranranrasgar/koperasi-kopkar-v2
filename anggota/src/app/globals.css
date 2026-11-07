@@ -38,7 +38,9 @@
     box-shadow: 0 10px 28px -14px oklch(0.25 0.06 160 / 0.55);
 }
 
-/* Lingkaran hiasan di kartu saldo utama. */
+/* Lingkaran hiasan di kartu saldo utama. Kartu harus relative + overflow-hidden: tanpa itu lingkaran (right: -3rem) keluar dari kartu dan
+   melebarkan halaman 48 px, sehingga di Chrome Android lebar layout membesar dan menu bawah ikut melebar (item ke-5 terpotong). */
+section.hero { position: relative; overflow: hidden; }
 section.hero::after {
     content: ""; position: absolute; right: -3rem; top: -4rem; width: 11rem; height: 11rem;
     border-radius: 9999px; background: oklch(1 0 0 / 0.07); pointer-events: none;
