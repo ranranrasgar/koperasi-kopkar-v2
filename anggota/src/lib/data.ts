@@ -267,6 +267,9 @@ export async function slidePengumuman(statusStaff: string): Promise<Slide[]> {
     return [...buat("himbauan", h, gh), ...buat("promo", p, gp)]
 }
 
+/** Token gambar untuk banyak notifikasi sekaligus (daftar notifikasi); yang tanpa gambar tidak ada di hasil. */
+export const gambarDaftarNotifikasi = (ids: number[]) => tokenGambar(pool, "notifikasi", ids)
+
 /** Token gambar satu notifikasi, atau null. */
 export async function gambarNotifikasi(id: number) {
     return (await tokenGambar(pool, "notifikasi", [id])).get(id) ?? null

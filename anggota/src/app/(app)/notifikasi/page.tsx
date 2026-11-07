@@ -4,7 +4,7 @@ import Link from "next/link"
 import { batasBaris, Kartu, Kepala, Kosong, MuatLagi } from "@/components/ui"
 import { kunciPublikPush } from "@kopkar/backend/src/anggota/push.ts"
 import { wajibAnggota } from "@/lib/anggota"
-import { daftarNotifikasi } from "@/lib/data"
+import { daftarNotifikasi, gambarDaftarNotifikasi } from "@/lib/data"
 import { tanggal } from "@/lib/format"
 
 export const metadata: Metadata = { title: "Notifikasi" }
@@ -16,6 +16,7 @@ export default async function NotifikasiPage(props: PageProps<"/notifikasi">) {
     const batas = batasBaris((await props.searchParams).n, LANGKAH)
     const semua = await daftarNotifikasi(a.anggotaId, batas + 1)
     const baris = semua.slice(0, batas)
+    const gambar = await gambarDaftarNotifikasi(baris.map((n) => n.id)) // pesan bergambar diberi thumbnail di kanan
 
     return (
         <main>
@@ -25,12 +26,18 @@ export default async function NotifikasiPage(props: PageProps<"/notifikasi">) {
                 {baris.length === 0 ? <Kartu><Kosong judul="Belum ada notifikasi" isi="Pemberitahuan dari koperasi akan tampil di sini." /></Kartu> : (
                     <Kartu className="divide-y divide-garis">
                         {baris.map((n) => (
-                            <Link key={n.id} href={`/notifikasi/${n.id}`} className="block px-5 py-3.5 transition-colors active:bg-garis/40">
-                                <div className="flex items-baseline justify-between gap-3">
-                                    <h2 className="text-[0.9375rem] font-semibold">{n.title || "Pemberitahuan"}</h2>
-                                    <time dateTime={n.datetimes} className="shrink-0 text-xs text-redup">{tanggal(n.datetimes)}</time>
+                            <Link key={n.id} href={`/notifikasi/${n.id}`} className="flex items-start gap-3 px-5 py-3.5 transition-colors active:bg-garis/40">
+                                <div className="min-w-0 flex-1">
+                                    <div className="flex items-baseline justify-between gap-3">
+                                        <h2 className="text-[0.9375rem] font-semibold">{n.title || "Pemberitahuan"}</h2>
+                                        <time dateTime={n.datetimes} className="shrink-0 text-xs text-redup">{tanggal(n.datetimes)}</time>
+                                    </div>
+                                    {n.pesan && <p className="mt-1 line-clamp-2 whitespace-pre-line text-sm leading-relaxed text-redup">{n.pesan}</p>}
                                 </div>
-                                {n.pesan && <p className="mt-1 line-clamp-2 whitespace-pre-line text-sm leading-relaxed text-redup">{n.pesan}</p>}
+                                {gambar.get(n.id) && (
+                                    // eslint-disable-next-line @next/next/no-img-element
+                                    <img src={`/gambar/${gambar.get(n.id)}`} alt="Berisi gambar" loading="lazy" decoding="async" className="h-16 w-16 shrink-0 rounded-lg border border-garis object-cover" />
+                                )}
                             </Link>
                         ))}
                     </Kartu>
