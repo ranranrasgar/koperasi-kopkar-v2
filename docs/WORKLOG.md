@@ -40,6 +40,11 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 ### Audit Data: tautan bukti angsuran (6 November)
 - Regex `CR-...` di `audit/page.tsx` ikut mencocokkan bagian `CR-` dari `ANGS-CR-1026-173936`, jadi tautan menuju pinjaman yang tidak ada. Kini nomor pinjaman harus di awal teks atau sesudah spasi. Angsuran tanpa jurnal 2026: 50 baris, Rp 67,9 juta; contoh CR-0723-15842 ke-39 dan CR-0526-22343 ke-5 punya baris buku dan kas, tetapi jurnalnya tidak ada, sedangkan angsuran bulan sebelumnya berjurnal. Penyebab belum diketahui, perlu dicocokkan dengan mutasi bank.
 
+### Dashboard baru (7 November)
+- `app/dashboard/page.tsx` dirombak: kartu angka, Perlu Tindakan, Arus 12 Bulan, Komposisi Pinjaman, Jatuh Tempo Terdekat, Aktivitas Terakhir. SQL di `lib/queries/dashboard-sql.ts` (bisa diuji dari skrip), data di `dashboard.ts`, grafik SVG tanpa pustaka di `components/dashboard/Grafik.tsx`.
+- Sisa pokok memakai `sqlLaporanPinjaman`/`sqlDaftarKpr`, jadi sama dengan Daftar Pinjaman (anggota aktif). Di database lokal: Koperasi Rp 8,01 M, Bank Rp 1,28 M, KPR Rp 745 jt. Sisa pokok dan kas di-cache 5 menit di memori proses. Tunggakan hanya koperasi dan bank, KPR belum.
+- Data per bagian mengikuti izin: kartu Kas perlu izin Bank Book, pinjaman mengikuti `grupPinjamanBoleh`.
+
 ### Form Ubah Anggota: tab Status (7 November)
 - Tab baru **Status** di `AksiAnggota`: aktif/keluar, status staff (pindah dari Pekerjaan & Gaji), jenis keanggotaan, tanggal dan alasan keluar. `simpanAnggotaAction` memakai aturan yang sama dengan `ubahStatusAnggotaAction`: keluar wajib tanggal dan alasan, aktif mengosongkannya. Tombol ikon Catat Keluar tetap ada.
 - Fingerprint: driver U.are.U 4500 terpasang dari Microsoft Update Catalog (4.0.0.143). FlexCode lama gagal didaftarkan (0x80004005, tanpa installer). Jalur sekarang HID Lite Client + `@digitalpersona/devices`; pencocokan butuh mesin sendiri. Installer masih diunduh pengguna per 7 November sore; belum ada kode fingerprint. Folder `C:\flexcode-uji` berisi kode aktivasi, belum dihapus.

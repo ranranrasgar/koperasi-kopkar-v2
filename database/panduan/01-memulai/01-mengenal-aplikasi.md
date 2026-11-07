@@ -58,3 +58,14 @@ Menu samping disusun dari yang paling sering dipakai sehari-hari ke yang jarang,
 | Tutup buku tahunan | `TBT/yymmdd/NNN` | `TBT/251231/001` |
 
 Perhatikan bahwa simpanan memakai **tahun lalu bulan** (`yymm`), sedangkan pinjaman memakai **bulan lalu tahun** (`mmyy`). Ini mengikuti format aplikasi desktop supaya nomor lama dan baru tetap konsisten. Nomor urut diambil dari penghitung database sehingga tidak pernah dobel walaupun beberapa kasir menyimpan bersamaan.
+
+## Dashboard
+
+Halaman awal setelah login menampilkan keadaan koperasi sesuai hak akses Anda:
+
+- **Angka utama**: saldo simpanan, sisa pokok pinjaman, kas dan bank, serta anggota aktif. Arahkan kursor ke angka untuk melihat nilai lengkapnya.
+- **Perlu Tindakan**: pengajuan, pendaftaran, pesan, tunggakan, dan staff yang belum absen. Tekan barisnya untuk membuka halaman terkait.
+- **Arus 12 Bulan**: setoran, pengambilan, dan angsuran masuk per bulan.
+- **Komposisi Pinjaman**, **Jatuh Tempo Terdekat**, dan **Aktivitas Terakhir**.
+
+Sisa pokok, tunggakan, serta kas dan bank diperbarui paling lama setiap 5 menit, jadi transaksi yang baru disimpan bisa belum langsung terlihat. Kartu Kas & Bank dihitung dari jurnal.
