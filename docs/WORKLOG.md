@@ -40,6 +40,22 @@ Terakhir diperbarui 4 November 2026. **Entri terbaru `### Hak akses mengikuti si
 ### Audit Data: tautan bukti angsuran (6 November)
 - Regex `CR-...` di `audit/page.tsx` ikut mencocokkan bagian `CR-` dari `ANGS-CR-1026-173936`, jadi tautan menuju pinjaman yang tidak ada. Kini nomor pinjaman harus di awal teks atau sesudah spasi. Angsuran tanpa jurnal 2026: 50 baris, Rp 67,9 juta; contoh CR-0723-15842 ke-39 dan CR-0526-22343 ke-5 punya baris buku dan kas, tetapi jurnalnya tidak ada, sedangkan angsuran bulan sebelumnya berjurnal. Penyebab belum diketahui, perlu dicocokkan dengan mutasi bank.
 
+### Form Ubah Anggota: tab Status (7 November)
+- Tab baru **Status** di `AksiAnggota`: aktif/keluar, status staff (pindah dari Pekerjaan & Gaji), jenis keanggotaan, tanggal dan alasan keluar. `simpanAnggotaAction` memakai aturan yang sama dengan `ubahStatusAnggotaAction`: keluar wajib tanggal dan alasan, aktif mengosongkannya. Tombol ikon Catat Keluar tetap ada.
+- Fingerprint: driver U.are.U 4500 terpasang dari Microsoft Update Catalog (4.0.0.143). FlexCode lama gagal didaftarkan (0x80004005, tanpa installer). Jalur sekarang HID Lite Client + `@digitalpersona/devices`; pencocokan butuh mesin sendiri. Installer masih diunduh pengguna per 7 November sore; belum ada kode fingerprint. Folder `C:\flexcode-uji` berisi kode aktivasi, belum dihapus.
+
+### Absensi staff dari QR saya (7 November)
+- Halaman `/dashboard/attendance` kini berfungsi: tombol Scan Absen (`ScanAbsen`, `PindaiQr` prop `baca`), daftar per rentang tanggal. Aturan di `backend/src/absensi.ts`: hanya anggota aktif `status_staff` Staff, pindai pertama masuk, berikutnya pulang, jeda 5 menit, setelah pulang pindai hanya memberi tahu. Baris bisa diubah/dihapus (`AksiAbsen`, `ubahAbsen`, `hapusAbsen`). Tabel `absensi_staff` di `anggota-web.sql` (`anggota:pasang`).
+- Tersisa: fingerprint belum dikerjakan, menunggu merek dan model alat dari pengguna. UI belum dicoba di browser. Hanya 3 staff aktif di data.
+
+### QR saya dan Scan QR di admin (7 November)
+- PWA: satu tombol QR di kartu saldo (`TombolQr`, jenis `anggota`), QR per simpanan dan pinjaman dihapus. Admin: `ScanQrAnggota` di navbar memindai lalu menampilkan pilihan transaksi sesuai izin; form menerima `?kode=&pinjaman=&jenis=` (`anggotaDariAlamat`). Ikon pindai di form tetap ada. `bacaQr` masih menerima jenis lama.
+
+### PWA: bawaan tema terang dan saldo tersembunyi (7 November)
+- Beranda: grafik garis saldo 6 bulan di `KartuSaldo`, ikut tersembunyi bersama nominal.
+- Beranda: `KartuSaldo` tetap satu kartu, Sisa pinjaman dan Plafon jadi tautan. `KarosselPengumuman` diperbarui: slide berikut terlihat, lencana jenis, bergeser sendiri tiap 6 detik sampai disentuh. Slide landscape 2:1, diketuk membuka lembar detail dengan tombol bagikan (Web Share, gambar disiapkan saat detail dibuka; cadangan salin teks).
+- Tanpa pilihan tersimpan, tema terang (`SKRIP_TEMA`), dan Otomatis kini disimpan sebagai nilai `otomatis`. `useSembunyiSaldo` bawaan tersembunyi sampai dibuka; kunci `0` berarti tampil.
+
 ### Pilihan COA hanya akun detail (7 November)
 - Jurnal Umum dan Jurnal Penyesuaian kini selebar layar (`HALAMAN_LEBAR`), karena kolom aksi terpotong.
 - `akunDetail()` untuk form Jurnal Umum, Penyesuaian, dan Bank Book; `semuaAkun()` tetap untuk Buku Besar. `cekAkunDetail` menolak akun induk di server (hanya jurnal manual, bukan mesin posting); akun yang sudah ada di bukti lama tetap boleh saat diubah.

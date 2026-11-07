@@ -17,7 +17,7 @@ const staffOptions = [
     { value: "No Staff", label: "No Staff" },
 ]
 
-const TAB = { pribadi: "Data Pribadi", kontak: "Alamat & Kontak", kerja: "Pekerjaan & Gaji", bank: "Bank & Simpanan" }
+const TAB = { pribadi: "Data Pribadi", kontak: "Alamat & Kontak", kerja: "Pekerjaan & Gaji", bank: "Bank & Simpanan", status: "Status" }
 const editFields: FieldSpec[] = [
     { name: "id", label: "", hidden: true },
     { name: "nama", label: "Nama lengkap", required: true, tab: TAB.pribadi },
@@ -34,7 +34,6 @@ const editFields: FieldSpec[] = [
     { name: "kodepos", label: "Kode pos", tab: TAB.kontak },
     { name: "hp", label: "No. HP", tab: TAB.kontak },
     { name: "telp_rmh", label: "Telepon rumah", tab: TAB.kontak },
-    { name: "status_staff", label: "Status staff", type: "select", options: staffOptions, tab: TAB.kerja },
     { name: "grade", label: "Grade", type: "select", hint: "Dari Data Master → Grade.", tab: TAB.kerja },
     { name: "rp_gaji_pokok", label: "Gaji per bulan", type: "uang", hint: "Dipakai menghitung take home pay saat meninjau pengajuan.", tab: TAB.kerja },
     { name: "jabatan", label: "Jabatan", tab: TAB.kerja },
@@ -51,6 +50,11 @@ const editFields: FieldSpec[] = [
     { name: "simpanan_pokok", label: "Simpanan pokok / bulan", type: "uang", tab: TAB.bank },
     { name: "simpanan_wajib", label: "Simpanan wajib / bulan", type: "uang", tab: TAB.bank },
     { name: "simpanan_sukarela", label: "Simpanan sukarela / bulan", type: "uang", tab: TAB.bank },
+    { name: "aktif", label: "Status anggota", type: "select", required: true, tab: TAB.status, options: [{ value: "true", label: "Aktif" }, { value: "false", label: "Keluar (non-aktif)" }] },
+    { name: "status_staff", label: "Status staff", type: "select", options: staffOptions, tab: TAB.status },
+    { name: "agt_non_agt", label: "Jenis keanggotaan", type: "select", required: true, tab: TAB.status, options: [{ value: "true", label: "Anggota" }, { value: "false", label: "Non Anggota" }] },
+    { name: "tgl_keluar", label: "Tanggal keluar", type: "date", hint: "Wajib bila status Keluar.", tab: TAB.status },
+    { name: "alasan_keluar", label: "Alasan keluar", type: "textarea", wide: true, hint: "Wajib bila status Keluar. Tanggal dan alasan dihapus bila status Aktif.", tab: TAB.status },
 ]
 
 /** Isi form ubah: baris tabel ditambah data rinci yang dibaca saat modal dibuka (tidak ikut di daftar karena memuat gaji). */

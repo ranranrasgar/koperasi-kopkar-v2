@@ -138,20 +138,25 @@ export async function simpanAnggotaAction(_: HasilSimpan, f: FormData): Promise<
         if (grade && !g) throw new Salah(`Grade ${grade} tidak ada di Data Master`)
         const staff = teks(f, "status_staff", "Status staff", 15)
         if (staff && !["Staff", "No Staff"].includes(staff)) throw new Salah("Status staff tidak valid")
+        const aktif = f.get("aktif") === "true"
+        const tglKeluar = aktif ? null : teks(f, "tgl_keluar", "Tanggal keluar", 10, true)
+        if (tglKeluar && !isTanggal(tglKeluar)) throw new Salah("Tanggal keluar tidak valid")
+        const alasanKeluar = aktif ? "" : teks(f, "alasan_keluar", "Alasan keluar", 100, true)
         const kodepos = teks(f, "kodepos", "Kode pos", 9)
         if (kodepos && !/^\d+$/.test(kodepos)) throw new Salah("Kode pos harus angka")
         await db.query(
             `UPDATE anggota SET nama=$1, nik=$2, jns_kelamin=$3, alamat=$4, kota=$5, hp=$6, status_staff=$7,
                  grade=$8, grade_id=$9, rp_grade=$10, bank_nama=$11, bank_no_rek=$12, bank_atas_nama=$13,
                  simpanan_pokok=$14, simpanan_wajib=$15, simpanan_sukarela=$16, opr=$17,
-                 status=$19, kodepos=$20, telp_rmh=$21
+                 status=$19, kodepos=$20, telp_rmh=$21, aktif=$22, agt_non_agt=$23, tgl_keluar=$24, alasan_keluar=$25
              WHERE id=$18`,
             [nama, nik, jk, teks(f, "alamat", "Alamat", 100), teks(f, "kota", "Kota", 50), teks(f, "hp", "No. HP", 20),
              staff, grade, g?.id ?? null, g?.nominal ?? 0, teks(f, "bank_nama", "Nama bank", 15),
              teks(f, "bank_no_rek", "No. rekening", 15), teks(f, "bank_atas_nama", "Nama pemilik rekening", 50),
              angka(f, "simpanan_pokok", "Simpanan pokok"), angka(f, "simpanan_wajib", "Simpanan wajib"),
              angka(f, "simpanan_sukarela", "Simpanan sukarela"), operator.nama.slice(0, 15), id,
-             teks(f, "status", "Status perkawinan", 15), Number(kodepos || 0), teks(f, "telp_rmh", "Telepon rumah", 20)])
+             teks(f, "status", "Status perkawinan", 15), Number(kodepos || 0), teks(f, "telp_rmh", "Telepon rumah", 20),
+             aktif, f.get("agt_non_agt") === "true", tglKeluar, alasanKeluar])
         // Satu baris per anggota; anggota lama yang belum punya dibuatkan, sama dengan anggota baru (akun.ts).
         const kolom = Object.keys(DETAIL_ANGGOTA) as (keyof typeof DETAIL_ANGGOTA)[]
         const isi = kolom.map((k) => teks(f, k, DETAIL_ANGGOTA[k][0], DETAIL_ANGGOTA[k][1]))
