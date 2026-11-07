@@ -9,7 +9,11 @@ import type { AnggotaRingkas } from "@/lib/queries/anggota"
 const JEDA_MS = 250
 
 /** Pindai QR dari HP anggota lewat kamera (webcam), atau alat pemindai USB yang mengetik ke kotak isian lalu Enter. */
-export function PindaiQr({ buka, onTutup, onHasil }: { buka: boolean; onTutup: () => void; onHasil: (a: AnggotaRingkas) => void }) {
+export function PindaiQr({ buka, onTutup, onHasil, baca = bacaQrAction }: {
+    buka: boolean; onTutup: () => void; onHasil: (a: AnggotaRingkas) => void
+    /** Pengolah hasil pindai; bawaan untuk form transaksi. */
+    baca?: (teks: string) => Promise<{ ok: true; anggota: AnggotaRingkas } | { ok: false; error: string }>
+}) {
     const video = useRef<HTMLVideoElement>(null)
     const [galat, setGalat] = useState("")
     const [kamera, setKamera] = useState("")
@@ -19,7 +23,7 @@ export function PindaiQr({ buka, onTutup, onHasil }: { buka: boolean; onTutup: (
     const proses = async (isi: string) => {
         if (sibuk.current) return
         sibuk.current = true
-        const r = await bacaQrAction(isi)
+        const r = await baca(isi)
         if (r.ok) { onHasil(r.anggota); onTutup() } else setGalat(r.error)
         setTeks("")
         setTimeout(() => { sibuk.current = false }, r.ok ? 0 : 2000) // QR yang sama tetap terlihat kamera; jangan dibaca berulang

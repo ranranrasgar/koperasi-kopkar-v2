@@ -38,6 +38,6 @@ Koperasi Kopkar MJS 2000, v2: npm workspaces monorepo di atas PostgreSQL (hasil 
 ## Database
 - Tabel memakai nama lama huruf kecil; tiap tabel punya `id bigint` dan FK `<induk>_id`, kunci bisnis lama (`kode_agt`, `no_pinjaman`) tetap `UNIQUE`. Uang `numeric(20,4)`, enum Y/N menjadi boolean, MySQL `user` menjadi `app_user`.
 - Tidak ada ORM. SQL PostgreSQL: `$1`, `ILIKE`, `int / int` memotong (cast ke `numeric`), alias SELECT tidak bisa difilter.
-- 16 tabel tidak dimigrasi (`SKIP_TABLES` di `database/postgres/mapping.mjs`: `absen`, `bukubesar`, `neraca_saldo`, ...); laporan diganti query langsung ke `jurnal_umum`. Halaman absensi hanya placeholder.
+- 16 tabel tidak dimigrasi (`SKIP_TABLES` di `database/postgres/mapping.mjs`: `absen`, `bukubesar`, `neraca_saldo`, ...); laporan diganti query langsung ke `jurnal_umum`. Absensi memakai tabel web `absensi_staff` (`anggota-web.sql`, `backend/src/absensi.ts`), khusus `status_staff` Staff.
 - Perubahan skema: ubah `mapping.mjs`, jalankan `generate-schema.mjs`, lalu `migrate.mjs`. Jangan edit `schema.sql` manual.
 - Password anggota di `app_user`: sebagian besar masih MD5 tanpa salt dari aplikasi lama; diganti bcrypt `$2y$` saat anggota login di PWA. Hanya PWA (akun milik anggota sendiri) yang boleh menulisnya, jangan dari form admin. `opr.password_hash` format `scrypt$salt$hash`.

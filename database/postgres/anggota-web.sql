@@ -179,3 +179,14 @@ CREATE TABLE IF NOT EXISTS qr_anggota (
     ref varchar(40) NOT NULL,
     berlaku_sampai timestamptz NOT NULL
 );
+
+-- Absensi staff dari QR saya: satu baris per anggota per hari (tanggal zona Asia/Jakarta).
+CREATE TABLE IF NOT EXISTS absensi_staff (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    anggota_id bigint NOT NULL REFERENCES anggota(id) ON DELETE CASCADE,
+    tanggal date NOT NULL,
+    masuk timestamptz NOT NULL,
+    pulang timestamptz,
+    UNIQUE (anggota_id, tanggal)
+);
+CREATE INDEX IF NOT EXISTS ix_absensi_staff_tanggal ON absensi_staff (tanggal DESC);
