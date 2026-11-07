@@ -14,11 +14,12 @@ interface Props {
     akunKas: Akun[]
     hariIni: string
     jenisAwal?: string
+    anggotaAwal?: AnggotaRingkas | null
 }
 
-export function SimpananForm({ tipe, jenis, akunKas, hariIni, jenisAwal }: Props) {
+export function SimpananForm({ tipe, jenis, akunKas, hariIni, jenisAwal, anggotaAwal = null }: Props) {
     const { hasil, onSubmit, pending } = useAksiForm(tipe === "setor" ? setorSimpananAction : ambilSimpananAction)
-    const [anggota, setAnggota] = useState<AnggotaRingkas | null>(null)
+    const [anggota, setAnggota] = useState<AnggotaRingkas | null>(anggotaAwal)
     const [info, setInfo] = useState<InfoAnggota | null>(null)
     const form = useRef<HTMLFormElement>(null)
     const [jumlah, setJumlah] = useState("")

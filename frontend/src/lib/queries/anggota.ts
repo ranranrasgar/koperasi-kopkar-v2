@@ -79,6 +79,15 @@ export interface AnggotaRingkas {
     aktif: boolean
 }
 
+/** Anggota aktif dari alamat halaman (`?kode=`, dari Scan QR), beserta pinjaman yang dipilih bila ada, untuk mengisi form transaksi. */
+export async function anggotaDariAlamat(s: { kode?: unknown; pinjaman?: unknown; jenis?: unknown }): Promise<AnggotaRingkas | null> {
+    if (typeof s.kode !== "string" || !s.kode) return null
+    const [a] = await query<AnggotaRingkas>("SELECT kode_agt, nik, nama, aktif FROM anggota WHERE kode_agt = $1 AND aktif", [s.kode])
+    if (!a) return null
+    if (typeof s.pinjaman === "string" && s.pinjaman && (s.jenis === "tunai" || s.jenis === "kpr")) { a.no_pinjaman = s.pinjaman; a.jenis_pinjaman = s.jenis }
+    return a
+}
+
 /** Pencarian anggota untuk form transaksi (maks. 20 baris). */
 export async function cariAnggota(kata: string, hanyaAktif = true) {
     const kw = `%${kata.trim()}%`

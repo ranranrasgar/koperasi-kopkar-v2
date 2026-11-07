@@ -33,3 +33,13 @@ test('QR simpanan: jenis harus ada; teks asing tidak dikenali', () => inTx(async
     assert.equal(await bacaQr(db, 'https://contoh.id'), null);
     assert.equal(await bacaQr(db, "KOPKAR1:' OR 1=1 --"), null);
 }));
+
+test('QR saya: menunjuk anggota tanpa tujuan', () => inTx(async (db) => {
+    const a = (await db.query('SELECT id, kode_agt FROM anggota LIMIT 1')).rows[0];
+    const qr = await buatQr(db, Number(a.id), 'anggota');
+    assert.ok(qr);
+    const isi = await bacaQr(db, qr.teks);
+    assert.equal(isi?.jenis, 'anggota');
+    assert.equal(isi?.ref, '');
+    assert.equal(isi?.kode_agt, a.kode_agt);
+}));

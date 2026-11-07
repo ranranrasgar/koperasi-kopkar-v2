@@ -16,8 +16,8 @@ import { AnggotaPicker, Field, FormCard, HasilTransaksi, KasSelect, SubmitButton
  * Titipan angsuran pinjaman tunai (pengganti form desktop "Setoran Titipan Angsuran"): anggota menitipkan uang sedikit demi sedikit,
  * dicatat tanpa jurnal; "Simpan ke Angsuran" memposting angsuran berikutnya dan menandai titipan POSTING dalam satu transaksi.
  */
-export function TitipanForm({ akunKas, hariIni, bolehAngsur }: { akunKas: Akun[]; hariIni: string; bolehAngsur: boolean }) {
-    const [anggota, setAnggota] = useState<AnggotaRingkas | null>(null)
+export function TitipanForm({ akunKas, hariIni, bolehAngsur, anggotaAwal = null }: { akunKas: Akun[]; hariIni: string; bolehAngsur: boolean; anggotaAwal?: AnggotaRingkas | null }) {
+    const [anggota, setAnggota] = useState<AnggotaRingkas | null>(anggotaAwal)
     const [info, setInfo] = useState<InfoAnggota | null>(null)
     const [noPinjaman, setNoPinjaman] = useState("")
     const [semua, setSemua] = useState(false)

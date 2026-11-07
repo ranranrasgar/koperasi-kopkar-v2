@@ -151,11 +151,11 @@ function AngsuranKpr({ info, akunKas, hariIni, onSelesai, pilih }: { info: InfoA
     )
 }
 
-export function AngsuranForm({ akunKas, hariIni, izin }: { akunKas: Akun[]; hariIni: string; izin: { tunai: boolean; kpr: boolean } }) {
-    const [anggota, setAnggota] = useState<AnggotaRingkas | null>(null)
+export function AngsuranForm({ akunKas, hariIni, izin, anggotaAwal = null }: { akunKas: Akun[]; hariIni: string; izin: { tunai: boolean; kpr: boolean }; anggotaAwal?: AnggotaRingkas | null }) {
+    const [anggota, setAnggota] = useState<AnggotaRingkas | null>(anggotaAwal)
     const [info, setInfo] = useState<InfoAnggota | null>(null)
     const [versi, setVersi] = useState(0)
-    const [tab, setTab] = useState(izin.tunai ? "tunai" : "kpr")
+    const [tab, setTab] = useState(anggotaAwal?.jenis_pinjaman === "kpr" && izin.kpr ? "kpr" : izin.tunai ? "tunai" : "kpr")
     // Muat ulang daftar pinjaman setelah angsuran tersimpan (referensi stabil supaya efek anak tidak berulang).
     const selesai = useCallback(() => setVersi((v) => v + 1), [])
 

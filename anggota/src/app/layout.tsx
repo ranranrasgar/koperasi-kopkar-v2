@@ -47,7 +47,7 @@ if(!W[t]){if(m)m.remove();return}
 if(!m){m=document.createElement("meta");m.id="warna-tema";m.name="theme-color"}
 m.setAttribute("content",W[t]);document.head.insertBefore(m,document.head.firstChild)}
 window.kopkarTema=pasang;
-function awal(){try{pasang(localStorage.getItem("kopkar-tema")||"")}catch(e){}}
+function awal(){var t="terang";try{t=localStorage.getItem("kopkar-tema")||"terang"}catch(e){}pasang(t)}
 awal();document.addEventListener("DOMContentLoaded",awal);
 try{if(sessionStorage.getItem("kopkar-splash"))document.documentElement.dataset.splash="selesai";else sessionStorage.setItem("kopkar-splash","1")}catch(e){}})();`
 

@@ -8,7 +8,7 @@ import { KartuSaldo } from "@/components/KartuSaldo"
 import { KarosselPengumuman } from "@/components/KarosselPengumuman"
 import { BarisTautan, Blok, JudulBagian, Kartu, Kemajuan } from "@/components/ui"
 import { wajibMasuk } from "@/lib/anggota"
-import { pinjamanAktif, potonganBulanIni, profil, riwayat, saldoSimpanan, shu, slidePengumuman, tahunShu } from "@/lib/data"
+import { pinjamanAktif, potonganBulanIni, profil, riwayat, saldoSimpanan, shu, slidePengumuman, tahunShu, trenSimpanan } from "@/lib/data"
 import { bulanIni, rupiah, tanggal } from "@/lib/format"
 import { sudahLihatIntro } from "@/lib/intro"
 import { namaKoperasi } from "@/lib/koperasi"
@@ -62,9 +62,9 @@ export default async function BerandaPage() {
 
     const id = a.anggotaId
     const dataAnggota = profil(id)
-    const [simpanan, pinjaman, potongan, data, tahun, slide, aktivitas] = await Promise.all([
+    const [simpanan, pinjaman, potongan, data, tahun, slide, aktivitas, tren] = await Promise.all([
         saldoSimpanan(id), pinjamanAktif(id), potonganBulanIni(id), dataAnggota, tahunShu(), dataAnggota.then((d) => slidePengumuman(d?.status_staff ?? "")),
-        riwayat(id, 4),
+        riwayat(id, 4), trenSimpanan(id, 6),
     ])
     const shuTerakhir = tahun[0] ? await shu(id, tahun[0]) : null
     const totalSimpanan = simpanan.filter((s) => s.kode !== "01").reduce((t, s) => t + s.saldo, 0)
@@ -75,7 +75,7 @@ export default async function BerandaPage() {
         <main className="px-5 pt-1">
             {sapaan}
 
-            <KartuSaldo simpanan={rupiah(totalSimpanan)} pinjaman={rupiah(sisaTunai)} plafon={rupiah(data?.rp_grade ?? 0)} />
+            <KartuSaldo simpanan={rupiah(totalSimpanan)} pinjaman={rupiah(sisaTunai)} plafon={rupiah(data?.rp_grade ?? 0)} tren={tren} nama={a.nama} />
 
             <nav aria-label="Pintasan" className="mt-3 grid grid-cols-4 gap-1">
                 {PINTASAN.map(({ href, label, ikon: Ikon }) => (

@@ -98,7 +98,7 @@ export async function cariAnggotaAction(kata: string, pinjaman = false): Promise
     return [...lewatPinjaman, ...lewatAnggota]
 }
 
-/** Hasil pindai QR dari HP anggota: anggota beserta jenis simpanan atau pinjaman yang dipilihnya. Token QR kedaluwarsa sendiri. */
+/** Hasil pindai QR dari HP anggota. Token QR kedaluwarsa sendiri. */
 export async function bacaQrAction(teks: string): Promise<{ ok: true; anggota: AnggotaRingkas } | { ok: false; error: string }> {
     const o = await wajibLogin() // sesi habis: alihkan ke login
     if (!punyaIzin(o.izin, MENU_TRANSAKSI)) return { ok: false, error: "Anda tidak punya akses transaksi" }
@@ -107,7 +107,7 @@ export async function bacaQrAction(teks: string): Promise<{ ok: true; anggota: A
     if (!q.aktif) return { ok: false, error: `Anggota ${q.nama} tidak aktif` }
     const anggota: AnggotaRingkas = { kode_agt: q.kode_agt, nik: q.nik, nama: q.nama, aktif: q.aktif }
     if (q.jenis === "simpanan") anggota.jenis_simpanan = q.ref
-    else { anggota.no_pinjaman = q.ref; anggota.jenis_pinjaman = q.jenis }
+    else if (q.jenis !== "anggota") { anggota.no_pinjaman = q.ref; anggota.jenis_pinjaman = q.jenis }
     return { ok: true, anggota }
 }
 

@@ -57,7 +57,7 @@ Contoh angsuran ke-1 pinjaman C01 Rp 6.000.000:
 
 ## Memindai QR dari HP anggota
 
-Anggota bisa menunjukkan QR pinjaman dari aplikasi web anggota. Tekan ikon **QR** di sebelah isian **Anggota**, lalu arahkan QR ke kamera. Bila memakai alat pemindai USB, pindai saat kursor ada di kotak bawah. Anggota dan pinjamannya terisi otomatis, termasuk tab KPR.
+Anggota menunjukkan **QR saya** dari Beranda aplikasi web anggota. Tekan ikon **QR** di navbar, arahkan QR ke kamera, lalu pilih transaksi di jendela yang muncul. Form terbuka dengan anggota dan pinjamannya sudah terisi, termasuk tab KPR. Pilihan yang tampil mengikuti hak akses Anda. Ikon **QR** di sebelah isian **Anggota** juga bisa dipakai, dan bila ada lebih dari satu pinjaman, pilih pinjamannya di form. Bila memakai alat pemindai USB, pindai saat kursor ada di kotak bawah.
 
 QR berlaku 5 menit dan hanya memilih data. Periksa nama dan jumlah sebelum menyimpan. Kamera hanya bisa dipakai lewat alamat `https` atau `localhost`.
 

@@ -2,7 +2,6 @@ import type { Metadata } from "next"
 import Link from "next/link"
 import { Archive, CalendarClock, ChevronDown, Landmark } from "lucide-react"
 import { HeroKewajiban } from "@/components/HeroKewajiban"
-import { TombolQr } from "@/components/TombolQr"
 import { JudulBagian, Kartu, Kemajuan, Kosong } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { pinjamanAktif, pinjamanLunas, profil, type PinjamanAktif } from "@/lib/data"
@@ -86,12 +85,7 @@ export default async function PinjamanPage() {
                 {daftar.length === 0 ? (
                     <Kartu><Kosong judul="Tidak ada pinjaman berjalan" isi={lunas.length ? "Pinjaman yang sudah lunas ada di riwayat di bawah." : undefined} /></Kartu>
                 ) : (
-                    <div className="space-y-4">{daftar.map((p) => (
-                        <div key={`${p.jenis}-${p.id}`} className="space-y-2">
-                            <KontrakBerjalan p={p} hari={hari} />
-                            <TombolQr penuh jenis={p.jenis} kode={p.no_pinjaman} judul={p.nama_kredit ?? "Pinjaman"} sub={`${p.no_pinjaman} · ${a.nama}`} />
-                        </div>
-                    ))}</div>
+                    <div className="space-y-3">{daftar.map((p) => <KontrakBerjalan key={`${p.jenis}-${p.id}`} p={p} hari={hari} />)}</div>
                 )}
 
                 {lunas.length > 0 && (

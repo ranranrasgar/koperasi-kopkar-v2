@@ -1,12 +1,13 @@
 import crypto from 'node:crypto';
 import type { Db } from '../db.ts';
 
-// QR transaksi: anggota membuka QR di PWA untuk satu jenis simpanan atau satu pinjaman, kasir memindainya di form admin. QR hanya berisi
+// QR saya: anggota membuka satu QR di Beranda PWA, kasir memindainya di admin lalu memilih transaksi. Jenis `anggota` hanya menunjuk orangnya;
+// jenis lain menunjuk satu simpanan atau pinjaman. QR hanya berisi
 // token acak; datanya tetap di server, jadi QR tidak membocorkan apa pun dan tangkapan layar lama tidak berlaku setelah kedaluwarsa.
 // QR hanya memilih anggota dan tujuannya di form; kasir tetap memeriksa dan menekan simpan.
 
 type Pemanggil = Pick<Db, 'query'>;
-export type JenisQr = 'simpanan' | 'tunai' | 'kpr';
+export type JenisQr = 'anggota' | 'simpanan' | 'tunai' | 'kpr';
 
 const AWALAN = 'KOPKAR1:';
 export const DETIK_QR = 300;
@@ -14,8 +15,8 @@ export const DETIK_QR = 300;
 export interface IsiQr { jenis: JenisQr; ref: string; kode_agt: string; nik: string | null; nama: string; aktif: boolean }
 
 /** Buat QR untuk jenis simpanan atau pinjaman milik anggota ini; null bila tujuannya tidak ada atau bukan miliknya. */
-export async function buatQr(db: Pemanggil, anggotaId: number, jenis: JenisQr, ref: string) {
-    const ada = jenis === 'simpanan' ? await db.query('SELECT 1 FROM jenis_simpanan WHERE kode_simpanan = $1', [ref])
+export async function buatQr(db: Pemanggil, anggotaId: number, jenis: JenisQr, ref = '') {
+    const ada = jenis === 'anggota' ? { rowCount: 1 } : jenis === 'simpanan' ? await db.query('SELECT 1 FROM jenis_simpanan WHERE kode_simpanan = $1', [ref])
         : await db.query(`SELECT 1 FROM ${jenis === 'kpr' ? 'kpr' : 'pinjaman_tunai'} WHERE no_pinjaman = $1 AND anggota_id = $2`, [ref, anggotaId]);
     if (!ada.rowCount) return null;
     await db.query('DELETE FROM qr_anggota WHERE berlaku_sampai < now()');

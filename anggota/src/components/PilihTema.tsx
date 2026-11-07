@@ -16,22 +16,21 @@ const PILIHAN: { nilai: Tema; label: string; ikon: LucideIcon }[] = [
     { nilai: "gelap", label: "Gelap", ikon: Moon },
 ]
 
-/** Pilih tampilan terang/gelap, atau ikuti pengaturan HP. Disimpan per perangkat; langsung berlaku tanpa muat ulang. */
+/** Pilih tampilan terang/gelap, atau ikuti pengaturan HP. Bawaan terang. Disimpan per perangkat; langsung berlaku tanpa muat ulang. */
 export function PilihTema() {
-    const [tema, setTema] = useState<Tema>("otomatis")
+    const [tema, setTema] = useState<Tema>("terang")
 
     useEffect(() => {
         try {
             const t = localStorage.getItem(KUNCI)
-            if (t === "terang" || t === "gelap") setTema(t)
-        } catch { /* penyimpanan tidak tersedia: tetap otomatis */ }
+            if (t === "otomatis" || t === "gelap") setTema(t)
+        } catch { /* penyimpanan tidak tersedia: tetap terang */ }
     }, [])
 
     const pilih = (t: Tema) => {
         setTema(t)
         try {
-            if (t === "otomatis") localStorage.removeItem(KUNCI)
-            else localStorage.setItem(KUNCI, t)
+            localStorage.setItem(KUNCI, t)
         } catch { /* tema tetap berlaku untuk sesi ini */ }
         window.kopkarTema?.(t === "otomatis" ? "" : t)
     }

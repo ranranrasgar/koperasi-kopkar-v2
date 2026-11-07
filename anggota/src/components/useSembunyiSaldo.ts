@@ -4,11 +4,11 @@ import { useEffect, useState } from "react"
 
 const KUNCI = "kopkar-sembunyi-saldo"
 
-/** Pilihan sembunyikan nominal (mis. HP dilihat orang lain), diingat di perangkat ini dan dipakai bersama semua kartu saldo. */
+/** Nominal tersembunyi secara bawaan (mis. HP dilihat orang lain) sampai anggota membukanya; pilihan diingat di perangkat ini dan dipakai semua kartu saldo. */
 export function useSembunyiSaldo() {
-    const [sembunyi, setSembunyi] = useState(false)
+    const [sembunyi, setSembunyi] = useState(true)
     useEffect(() => {
-        try { setSembunyi(localStorage.getItem(KUNCI) === "1") } catch { /* penyimpanan diblokir: tampilkan */ }
+        try { setSembunyi(localStorage.getItem(KUNCI) !== "0") } catch { /* penyimpanan diblokir: tetap tersembunyi */ }
     }, [])
     const ubah = () => {
         setSembunyi(!sembunyi)

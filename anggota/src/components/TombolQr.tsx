@@ -4,7 +4,6 @@ import { useEffect, useState, useTransition } from "react"
 import { Loader2, QrCode, RefreshCw, X } from "lucide-react"
 import qrcode from "qrcode-generator"
 import { buatQrAction } from "@/app/actions/qr"
-import type { JenisQr } from "@kopkar/backend/src/anggota/qr.ts"
 
 function gambarQr(teks: string) {
     const q = qrcode(0, "M")
@@ -13,8 +12,9 @@ function gambarQr(teks: string) {
     return q.createSvgTag({ cellSize: 6, margin: 0, scalable: true })
 }
 
-/** Tombol yang membuka QR untuk ditunjukkan ke kasir: saat setor simpanan atau membayar angsuran. Berlaku 5 menit. */
-export function TombolQr({ jenis, kode, judul, sub, penuh = false }: { jenis: JenisQr; kode: string; judul: string; sub: string; penuh?: boolean }) {
+/** Tombol QR saya di kartu saldo: QR satu untuk semua transaksi di kasir. Berlaku 5 menit. */
+export function TombolQr({ nama }: { nama: string }) {
+    const judul = "QR saya", sub = nama
     const [buka, setBuka] = useState(false)
     const [svg, setSvg] = useState("")
     const [sisa, setSisa] = useState(0)
@@ -23,7 +23,7 @@ export function TombolQr({ jenis, kode, judul, sub, penuh = false }: { jenis: Je
 
     const muat = () => mulai(async () => {
         setGalat("")
-        const r = await buatQrAction(jenis, kode)
+        const r = await buatQrAction()
         if (!r.ok) { setSvg(""); setGalat(r.error); return }
         setSvg(gambarQr(r.teks))
         setSisa(r.detik)
@@ -38,18 +38,12 @@ export function TombolQr({ jenis, kode, judul, sub, penuh = false }: { jenis: Je
     const habis = !sibuk && !galat && svg !== "" && sisa <= 0
     return (
         <>
-            {penuh ? (
-                <button type="button" onClick={bukaQr} className="flex w-full items-center justify-center gap-2 rounded-2xl border border-garis bg-permukaan py-2.5 text-sm font-semibold text-utama active:bg-garis/40">
-                    <QrCode size={17} /> Tampilkan QR pembayaran
-                </button>
-            ) : (
-                <button type="button" onClick={bukaQr} aria-label={`Tampilkan QR ${judul}`} className="mr-3 grid size-10 shrink-0 place-items-center rounded-full text-utama active:bg-garis/40">
-                    <QrCode size={20} />
-                </button>
-            )}
+            <button type="button" onClick={bukaQr} aria-label="Tampilkan QR saya" className="grid size-10 place-items-center rounded-full opacity-80 hover:opacity-100">
+                <QrCode size={19} strokeWidth={1.75} />
+            </button>
             {buka && (
                 <div role="dialog" aria-modal="true" aria-label={`QR ${judul}`} className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-5">
-                    <div className="w-full max-w-sm rounded-[var(--radius-kartu)] bg-permukaan p-5 text-center">
+                    <div className="w-full max-w-sm rounded-[var(--radius-kartu)] bg-permukaan p-5 text-center text-teks">
                         <div className="flex items-start justify-between gap-3 text-left">
                             <div className="min-w-0">
                                 <p className="font-bold leading-snug">{judul}</p>

@@ -13,7 +13,7 @@ Menu: **Simpanan → Pengambilan Simpanan**. Membutuhkan izin menu pencairan sim
 
 ## Langkah
 
-1. Pilih **Anggota**, atau tekan ikon **QR** dan pindai QR dari HP anggota; anggota dan jenis simpanannya terisi otomatis. Tetap cocokkan identitas anggota sebelum menyerahkan uang.
+1. Pilih **Anggota**, atau pindai **QR saya** dari HP anggota lewat ikon **QR** di navbar atau di sebelah isian ini; anggotanya terisi otomatis, lalu pilih jenis simpanan. Tetap cocokkan identitas anggota sebelum menyerahkan uang.
 2. Pilih **Jenis Simpanan** yang akan diambil.
 3. Isi **Tanggal** dan **Jumlah (Rp)**.
 4. Pilih **Kas/Bank** sumber uang keluar.

@@ -18,6 +18,8 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { OperatorTampil } from "./DashboardShell"
 import { Lonceng } from "./Lonceng"
+import { ScanQrAnggota } from "@/components/transaksi/ScanQrAnggota"
+import { MENU_TRANSAKSI, punyaIzin } from "@/config/akses"
 
 export function Navbar({ operator }: { operator: OperatorTampil }) {
     const pathname = usePathname()
@@ -71,6 +73,7 @@ export function Navbar({ operator }: { operator: OperatorTampil }) {
 
             {/* Right Profile Controls */}
             <div className="flex items-center gap-3">
+                {punyaIzin(izin, MENU_TRANSAKSI) && <ScanQrAnggota />}
                 <Lonceng />
                 {/* Bantuan: buka panduan yang terkait dengan halaman ini (atau Pusat Panduan bila belum ada). */}
                 {!pathname.startsWith("/dashboard/panduan") && (
