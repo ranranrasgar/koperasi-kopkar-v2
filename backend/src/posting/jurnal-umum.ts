@@ -62,11 +62,13 @@ export interface BuktiJurnal {
 }
 
 /**
- * Bukti yang boleh diubah atau dihapus dari web: jurnal umum (JU/), jurnal penyesuaian (JP/), dan bukti Bank Book (BB/).
- * Bukti buatan transaksi lain (simpanan, pinjaman, SHU, tutup buku) tidak boleh, supaya buku pembantunya tidak tidak sinkron.
+ * Semua jenis bukti boleh diubah atau dihapus dari web. Yang berubah hanya jurnalnya: buku pembantu transaksi asal
+ * (simpanan, pinjaman, SHU) tidak ikut berubah. Periode tutup buku dijaga cekBuktiTerbuka.
+ * Pengecualian: jurnal tutup buku (TBT/). Bukti itu bertanggal di awal tahun yang baru dibuka dan postJournal tidak memeriksa periodenya,
+ * jadi cekBuktiTerbuka tidak melindunginya; ubah atau batalkan lewat menu Tutup Buku & SHU.
  */
 export function alasanTerkunci(nomorBukti: string): string | null {
-    if (!/^(JU|JP|BB)\//.test(nomorBukti)) return 'Bukti ini dibuat oleh transaksi lain; ubah atau hapus dari asal transaksinya.';
+    if (nomorBukti.startsWith('TBT/')) return 'Jurnal tutup buku tidak bisa diubah atau dihapus di sini; batalkan lewat menu Tutup Buku & SHU.';
     return null;
 }
 
@@ -90,18 +92,22 @@ export async function bacaJurnalUmum(db: Pick<Db, 'query'>, nomorBukti: string):
     };
 }
 
-/** Ubah jurnal umum JU/ atau jurnal penyesuaian JP/: isi diganti, nomor, tanggal, dan penanda penyesuaian tetap (tanggal bagian dari nomor). */
+/**
+ * Ubah bukti jurnal jenis apa pun: isi diganti; nomor, tanggal, penanda penyesuaian, serta asal transaksi
+ * (sumber_tipe, sumber_id, awalan tahun) tetap seperti semula.
+ */
 export async function ubahJurnalUmum(db: Db, nomorBukti: string, i: JurnalUmumInput): Promise<{ nomorBukti: string; baris: number }> {
-    if (!/^(JU|JP)\//.test(nomorBukti)) throw new Error(`${nomorBukti} bukan jurnal umum atau penyesuaian; bukti BB diubah lewat Bank Book`);
     const b = await bacaJurnalUmum(db, nomorBukti);
     if (!b) throw new Error(`Bukti ${nomorBukti} tidak ditemukan`);
+    const asal = (await db.query<{ sumber_tipe: string | null; sumber_id: string | null; tahun: string | null }>(
+        'SELECT sumber_tipe, sumber_id, tahun FROM jurnal_umum WHERE nomor_bukti = $1 ORDER BY urutan LIMIT 1', [nomorBukti])).rows[0];
     if (b.terkunci) throw new Error(`Bukti ${nomorBukti}: ${b.terkunci}`);
     if (b.tanggal !== i.tanggal) throw new Error('Tanggal jurnal tidak bisa diubah; hapus lalu buat jurnal baru di tanggal lain');
     if (!i.deskripsi.trim()) throw new Error('Keterangan jurnal wajib diisi');
     await cekAkunDetail(db, i.lines.map((l) => l.kodePerkiraan), b.baris.map((x) => x.kodePerkiraan));
-    const awalan = nomorBukti.slice(0, 2);
+    const awalan = (asal.tahun ?? '').slice(0, -6); // tahun = awalan + yymmdd
     const baris = await postJournal(db, { nomorBukti, tanggal: i.tanggal, deskripsi: i.deskripsi.trim(), opr: i.opr,
-        sumberTipe: awalan === 'JP' ? 'penyesuaian' : 'jurnal', sumberId: null, tahunPrefix: awalan, lines: i.lines,
+        sumberTipe: asal.sumber_tipe, sumberId: asal.sumber_id, tahunPrefix: awalan, lines: i.lines,
         noBuktiTransaksi: cekReff(i.noReff), status: b.penyesuaian ? STATUS_PENYESUAIAN : '' });
     return { nomorBukti, baris };
 }

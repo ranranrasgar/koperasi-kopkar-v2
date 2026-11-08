@@ -28,15 +28,18 @@ export function TombolVoucher({ nomorBukti }: { nomorBukti: string }) {
 }
 
 /**
- * Aksi per baris daftar Jurnal Umum: cetak voucher untuk semua bukti; ubah (hanya JU/) dan hapus (JU/ dan BB/) untuk bukti yang boleh.
- * Bukti transaksi lain ditolak server dengan pesan alasannya.
+ * Aksi per baris daftar Jurnal Umum: cetak voucher, ubah, dan hapus untuk semua jenis bukti.
+ * Bukti dari transaksi lain (simpanan, pinjaman, SHU) hanya berubah jurnalnya, dengan peringatan. Periode tertutup ditolak server.
  */
 export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
     const boleh = useBolehAksi()
     const router = useRouter()
     const [sibuk, mulai] = useTransition()
     const nomor = String(item.nomor_bukti ?? "")
-    const jp = nomor.startsWith("JP/"), ju = nomor.startsWith("JU/") || jp, bb = nomor.startsWith("BB/")
+    const jp = nomor.startsWith("JP/"), bb = nomor.startsWith("BB/")
+    if (nomor.startsWith("TBT/")) return <TombolVoucher nomorBukti={nomor} /> // jurnal tutup buku terkunci di server; hanya cetak
+    const asalLain = !/^(JU|JP|BB)\//.test(nomor) // bukti dari transaksi simpanan/pinjaman/SHU dsb.
+    const catatanAsal = asalLain ? `\n\nBukti ini dibuat oleh transaksi lain. Hanya jurnalnya yang berubah; data simpanan/pinjaman asalnya tidak ikut berubah.` : ""
     const penyesuaian = jp || item.jenis === "penyesuaian"
     const tandai = () => {
         if (!confirm(penyesuaian ? `Kembalikan ${nomor} menjadi jurnal umum biasa?` : `Tandai ${nomor} sebagai jurnal penyesuaian? Nomor tetap; jurnal ini akan dipisahkan di kolom penyesuaian neraca lajur.`)) return
@@ -47,7 +50,7 @@ export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
         })
     }
     const hapus = () => {
-        if (!confirm(`Hapus baris ini dari bukti ${nomor}? Tidak bisa dibatalkan.`)) return
+        if (!confirm(`Hapus baris ini dari bukti ${nomor}? Tidak bisa dibatalkan.${catatanAsal}`)) return
         mulai(async () => {
             const h = await hapusBarisJurnalAction(nomor, Number(item.urutan))
             if (h && !h.ok && h.error.includes("tidak seimbang")) {
@@ -63,12 +66,12 @@ export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
     return (
         <>
             <TombolVoucher nomorBukti={nomor} />
-            {ju && boleh([MENU.jurnalUmum, MENU.jurnalPenyesuaian], "ubah") && <TombolJurnalUbah nomorBukti={nomor} hariIni={hariIni()} />}
+            {boleh([MENU.jurnalUmum, MENU.jurnalPenyesuaian], "ubah") && <TombolJurnalUbah nomorBukti={nomor} hariIni={hariIni()} catatan={asalLain ? catatanAsal.trim() : undefined} />}
             {nomor.startsWith("JU/") && (
                 <button type="button" title={penyesuaian ? "Kembalikan ke jurnal umum biasa" : "Tandai sebagai jurnal penyesuaian"} onClick={tandai} disabled={sibuk}
                     className={`${tombol} ${penyesuaian ? "text-indigo-600" : "text-gray-500"}`}><Scale className="h-4 w-4" /></button>
             )}
-            {(ju || bb) && boleh(bb ? [MENU.bankBook] : [MENU.jurnalUmum, MENU.jurnalPenyesuaian], "hapus") && (
+            {boleh(bb ? [MENU.bankBook] : [MENU.jurnalUmum, MENU.jurnalPenyesuaian], "hapus") && (
                 <button type="button" title="Hapus baris ini" onClick={hapus} disabled={sibuk} className={`${tombol} text-red-600`}>
                     {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
                 </button>

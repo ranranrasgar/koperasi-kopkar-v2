@@ -149,20 +149,25 @@ export function TombolJurnalBaru({ akun, hariIni, penyesuaian = false }: { akun:
     )
 }
 
-function MuatUbah({ nomorBukti, hariIni, selesai }: { nomorBukti: string; hariIni: string; selesai: () => void }) {
+function MuatUbah({ nomorBukti, hariIni, selesai, catatan }: { nomorBukti: string; hariIni: string; selesai: () => void; catatan?: string }) {
     const [data, setData] = useState<Awaited<ReturnType<typeof bacaJurnalAction>> | null>(null)
     useEffect(() => { void bacaJurnalAction(nomorBukti).then(setData) }, [nomorBukti])
     if (!data) return <Loader2 className="mx-auto h-5 w-5 animate-spin text-muted-foreground" />
     if ("error" in data) return <p role="alert" className="text-sm text-red-700">{data.error}</p>
     if (data.bukti.terkunci) return <p role="alert" className="text-sm text-amber-700">{data.bukti.terkunci}</p>
-    return <JurnalForm akun={data.akun} hariIni={hariIni} awal={data.bukti} selesai={selesai} />
+    return (
+        <>
+            {catatan && <p role="note" className="mb-3 rounded-md bg-amber-50 p-2 text-sm text-amber-800">{catatan}</p>}
+            <JurnalForm akun={data.akun} hariIni={hariIni} awal={data.bukti} selesai={selesai} />
+        </>
+    )
 }
 
 /** Ikon ubah di baris daftar jurnal: form ubah di modal, isinya dibaca saat dibuka. */
-export function TombolJurnalUbah({ nomorBukti, hariIni }: { nomorBukti: string; hariIni: string }) {
+export function TombolJurnalUbah({ nomorBukti, hariIni, catatan }: { nomorBukti: string; hariIni: string; catatan?: string }) {
     return (
         <TombolModal label={<Pencil className="h-4 w-4" />} judul={`Ubah ${nomorBukti}`} lebar="sm:max-w-4xl" className="grid h-8 w-8 place-items-center rounded-md text-blue-600 hover:bg-muted/50">
-            {(selesai) => <MuatUbah nomorBukti={nomorBukti} hariIni={hariIni} selesai={selesai} />}
+            {(selesai) => <MuatUbah nomorBukti={nomorBukti} hariIni={hariIni} selesai={selesai} catatan={catatan} />}
         </TombolModal>
     )
 }

@@ -182,7 +182,7 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
                                                     <td className="px-3 py-1.5 whitespace-nowrap">{k.waktu}</td>
                                                     <td className="px-3 py-1.5 whitespace-nowrap">{JENIS_KOREKSI[k.jenis] ?? k.jenis}</td>
                                                     <td className="px-3 py-1.5 font-mono text-xs">{k.no_bukti}</td>
-                                                    <td className="px-3 py-1.5 whitespace-nowrap">{k.aksi === "batal" ? "Batal" : "Jurnal susulan"}</td>
+                                                    <td className="px-3 py-1.5 whitespace-nowrap">{k.aksi === "batal" ? "Batal" : k.aksi === "hapus" ? "Hapus" : "Jurnal susulan"}</td>
                                                     <td className="px-3 py-1.5 font-mono text-xs">{k.no_bukti_pembalik ?? "-"}</td>
                                                     <td className="px-3 py-1.5">{k.alasan}</td>
                                                     <td className="px-3 py-1.5">{k.opr}</td>

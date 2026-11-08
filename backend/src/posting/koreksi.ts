@@ -26,14 +26,14 @@ const SISA_LUNAS = 100;
 const yymm = (t: string) => t.slice(2, 4) + t.slice(5, 7);
 const nomor = (awalan: string, t: string, urut: number) => `${awalan}-${yymm(t)}-${urut}`;
 
-function bersihkanAlasan(a: string) {
+export function bersihkanAlasan(a: string) {
     const alasan = a.trim().replace(/\s+/g, ' ');
     if (alasan.length < MIN_ALASAN) throw new Error(`Alasan wajib diisi, minimal ${MIN_ALASAN} karakter`);
     if (alasan.length > 255) throw new Error('Alasan maksimal 255 karakter');
     return alasan;
 }
 
-async function cekBelumDikoreksi(db: Db, jenis: JenisKoreksi, no: string) {
+export async function cekBelumDikoreksi(db: Pick<Db, 'query'>, jenis: JenisKoreksi, no: string) {
     const ada = (await db.query<{ no_bukti: string }>(
         "SELECT no_bukti FROM transaksi_koreksi WHERE jenis = $1 AND aksi = 'batal' AND (no_bukti = $2 OR no_bukti_pembalik = $2)", [jenis, no])).rows[0];
     if (ada) throw new Error(ada.no_bukti === no ? `Bukti ${no} sudah dibatalkan` : `Bukti ${no} adalah pembalik dari ${ada.no_bukti}; tidak bisa dibatalkan`);
@@ -142,7 +142,7 @@ async function batalAngsuran(db: Db, i: BatalInput): Promise<BatalHasil> {
     return { jenis: 'angsuran', noBukti };
 }
 
-async function cekTidakDitutup(db: Db, pinjamanId: string) {
+export async function cekTidakDitutup(db: Pick<Db, 'query'>, pinjamanId: string) {
     const t = (await db.query('SELECT 1 FROM pinjaman_penutupan WHERE pinjaman_tunai_id = $1 AND dibatalkan_pada IS NULL', [pinjamanId])).rowCount;
     if (t) throw new Error('Pinjaman ini sedang ditutup tanpa jurnal; batalkan penutupannya dulu');
 }
@@ -243,7 +243,7 @@ async function batalPencairanKpr(db: Db, i: BatalInput): Promise<BatalHasil> {
 }
 
 /** Sumber satu nomor bukti. Nomor yang dipakai lebih dari satu sumber ditolak, supaya koreksi tidak mengenai transaksi yang salah. */
-async function sumberBukti(db: Pick<Db, 'query'>, no: string): Promise<JenisKoreksi> {
+export async function sumberBukti(db: Pick<Db, 'query'>, no: string): Promise<JenisKoreksi> {
     const ada = (await db.query<{ jenis: JenisKoreksi }>(
         `SELECT 'simpanan' jenis FROM simpanan WHERE no_bukti = $1
          UNION ALL SELECT 'angsuran' FROM pinjaman_tunai_rincian WHERE no_bukti = $1 AND no_bukti <> no_pinjaman

@@ -1,5 +1,6 @@
 import Link from "next/link"
 import { HalamanLaporan } from "@/components/laporan/HalamanLaporan"
+import { AksiBermasalah } from "@/components/akuntansi/AksiBermasalah"
 import { TombolHapusKosong, TombolHapusSemuaKosong } from "@/components/akuntansi/HapusBarisKosong"
 import { KopLaporan } from "@/components/laporan/Periode"
 import { jurnalBermasalah } from "@/lib/queries/laporan"
@@ -50,7 +51,7 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
                             <table className="w-full text-sm">
                                 <thead className="bg-muted text-xs text-muted-foreground">
                                     <tr><th className="px-3 py-2 text-left">Bukti</th><th className="px-3 py-2 text-left">Tanggal</th><th className="px-3 py-2 text-left">Keterangan</th>
-                                        <th className="px-3 py-2 text-right">Baris</th><th className="px-3 py-2 text-right">Debit</th><th className="px-3 py-2 text-right">Kredit</th><th className="px-3 py-2 text-right">Selisih</th></tr>
+                                        <th className="px-3 py-2 text-right">Baris</th><th className="px-3 py-2 text-right">Debit</th><th className="px-3 py-2 text-right">Kredit</th><th className="px-3 py-2 text-right">Selisih</th><th className="px-3 py-2 text-right print:hidden">Aksi</th></tr>
                                 </thead>
                                 <tbody>
                                     {tidakSeimbang.map((b) => (
@@ -63,6 +64,7 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
                                             <td className="px-3 py-1.5 text-right tabular-nums">{formatAngka(b.debit)}</td>
                                             <td className="px-3 py-1.5 text-right tabular-nums">{formatAngka(b.kredit)}</td>
                                             <td className="px-3 py-1.5 text-right font-semibold tabular-nums text-amber-700">{formatAngka(b.selisih)}</td>
+                                            <td className="px-2 py-1 text-right whitespace-nowrap print:hidden"><AksiBermasalah nomorBukti={b.nomor_bukti} /></td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -81,7 +83,7 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
                             <table className="w-full text-sm">
                                 <thead className="bg-muted text-xs text-muted-foreground">
                                     <tr><th className="px-3 py-2 text-left">Bukti</th><th className="px-3 py-2 text-left">Tanggal</th><th className="px-3 py-2 text-left">Kode akun</th>
-                                        <th className="px-3 py-2 text-left">Keterangan</th><th className="px-3 py-2 text-right">Debit</th><th className="px-3 py-2 text-right">Kredit</th><th className="w-12 px-3 py-2 print:hidden" /></tr>
+                                        <th className="px-3 py-2 text-left">Keterangan</th><th className="px-3 py-2 text-right">Debit</th><th className="px-3 py-2 text-right">Kredit</th><th className="px-3 py-2 text-right print:hidden">Aksi</th></tr>
                                 </thead>
                                 <tbody>
                                     {tanpaAkun.map((b) => (
@@ -92,7 +94,10 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
                                             <td className="px-3 py-1.5 max-w-[22rem] truncate">{b.deskripsi ?? "-"}</td>
                                             <td className="px-3 py-1.5 text-right tabular-nums">{formatAngka(b.debit)}</td>
                                             <td className="px-3 py-1.5 text-right tabular-nums">{formatAngka(b.kredit)}</td>
-                                            <td className="px-2 py-1 text-right print:hidden">{kosong(b) && bolehHapus(b.nomor_bukti) && <TombolHapusKosong nomor={b.nomor_bukti} urutan={b.urutan} />}</td>
+                                            <td className="px-2 py-1 text-right whitespace-nowrap print:hidden">
+                                                {kosong(b) && bolehHapus(b.nomor_bukti) && <TombolHapusKosong nomor={b.nomor_bukti} urutan={b.urutan} />}
+                                                <AksiBermasalah nomorBukti={b.nomor_bukti} />
+                                            </td>
                                         </tr>
                                     ))}
                                 </tbody>
@@ -100,7 +105,7 @@ export default async function JurnalTidakSeimbangPage(props: PageProps<"/dashboa
                         </div>
                     )}
                 </section>
-                <p className="text-xs text-muted-foreground">{bolehJurnal ? "Klik nomor bukti untuk membuka jurnalnya di Jurnal Umum (bisa diedit atau dihapus di sana)." : "Perbaikan jurnal dilakukan di Jurnal Umum oleh operator yang berizin."} Selisih neraca hilang bila bukti diperbaiki sampai debit sama dengan kredit dan akunnya ada di COA.</p>
+                <p className="text-xs text-muted-foreground">{bolehJurnal ? "Ubah atau hapus bukti langsung dari kolom Aksi; ikon kaca pembesar menampilkan transaksi asalnya (simpanan atau pinjaman) dan bisa menghapusnya beserta jurnal. Klik nomor bukti untuk membukanya di Jurnal Umum." : "Perbaikan jurnal dilakukan oleh operator yang berizin."} Selisih neraca hilang bila bukti diperbaiki sampai debit sama dengan kredit dan akunnya ada di COA.</p>
             </div>
         </HalamanLaporan>
     )

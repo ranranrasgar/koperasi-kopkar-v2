@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
+import { postJournal } from '../src/posting/journal.ts';
 import { alasanTerkunci, bacaJurnalUmum, hapusBarisJurnal, hapusJurnalUmum, hapusSemuaBarisKosong, postJurnalUmum, STATUS_PENYESUAIAN, tandaiPenyesuaian, ubahJurnalUmum } from '../src/posting/jurnal-umum.ts';
 
 const pool = createPool();
@@ -52,7 +53,7 @@ test('jurnal umum: tidak seimbang dan tanpa keterangan ditolak', async () => {
     });
 });
 
-test('jurnal umum: baca, ubah, hapus; bukti non-JU/BB terkunci', async () => {
+test('jurnal umum: baca, ubah, hapus', async () => {
     await inTx(async (db) => {
         const a = await postJurnalUmum(db, { tanggal: '2031-04-01', deskripsi: 'Awal', opr: 'uji', lines: [
             { kodePerkiraan: '5.1.00.95', debit: '600', deskripsi: 'baris sendiri' }, { kodePerkiraan: '5.1.00.95', debit: '400' }, { kodePerkiraan: '1.1.01.21', kredit: '1000' }] });
@@ -69,7 +70,23 @@ test('jurnal umum: baca, ubah, hapus; bukti non-JU/BB terkunci', async () => {
         await db.query('ROLLBACK TO a');
         await hapusJurnalUmum(db, a.nomorBukti);
         assert.equal(await bacaJurnalUmum(db, a.nomorBukti), null);
-        assert.match(alasanTerkunci('CR-1026-23315') ?? '', /transaksi lain/);
+    });
+});
+
+test('bukti dari transaksi lain (bukan JU/JP/BB) bisa diubah dan dihapus; asal transaksinya tetap', async () => {
+    await inTx(async (db) => {
+        const nomor = 'SMPK-3104-999001';
+        await postJournal(db, { nomorBukti: nomor, tanggal: '2031-04-01', deskripsi: 'Setoran', opr: 'uji', sumberTipe: 'simpanan', sumberId: 77, tahunPrefix: 'SMPK',
+            lines: [{ kodePerkiraan: '1.1.01.21', debit: '1000' }, { kodePerkiraan: '5.1.00.95', kredit: '1000' }] });
+        assert.equal(alasanTerkunci(nomor), null);
+        assert.match(alasanTerkunci('TBT/251231/001') ?? '', /tutup buku/);
+        assert.equal((await bacaJurnalUmum(db, nomor))?.terkunci, null);
+        await ubahJurnalUmum(db, nomor, { tanggal: '2031-04-01', deskripsi: 'Setoran koreksi', opr: 'uji',
+            lines: [{ kodePerkiraan: '1.1.01.21', debit: '1500' }, { kodePerkiraan: '5.1.00.95', kredit: '1500' }] });
+        const baris = (await db.query('SELECT tahun, sumber_tipe, sumber_id::text sid, debit_jurnalumum d FROM jurnal_umum WHERE nomor_bukti = $1 ORDER BY urutan', [nomor])).rows;
+        assert.deepEqual(baris.map((r) => [r.tahun, r.sumber_tipe, r.sid, Number(r.d)]), [['SMPK310401', 'simpanan', '77', 1500], ['SMPK310401', 'simpanan', '77', 0]]);
+        await hapusJurnalUmum(db, nomor);
+        assert.equal(await bacaJurnalUmum(db, nomor), null);
     });
 });
 

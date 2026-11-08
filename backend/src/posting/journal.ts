@@ -37,7 +37,7 @@ export interface JournalInput {
 }
 
 /** Tolak tanggal di tahun yang sudah ditutup: saldonya sudah dipindah oleh jurnal tutup buku (TBT), jadi perubahan di sana membuat neraca berselisih. */
-async function cekPeriodeTerbuka(db: Pick<Db, 'query'>, tanggal: string) {
+export async function cekPeriodeTerbuka(db: Pick<Db, 'query'>, tanggal: string) {
     const o = (await db.query<{ t: string | null }>(
         `SELECT MAX(tanggal_jurnalumum)::text t FROM jurnal_umum WHERE nomor_bukti LIKE 'TBT/%' AND tanggal_jurnalumum = date_trunc('year', tanggal_jurnalumum)::date`)).rows[0].t;
     if (o && tanggal < o) throw new Error(`Periode sampai ${o.slice(0, 4)}-01-01 sudah ditutup; tanggal ${tanggal} tidak bisa diubah`);

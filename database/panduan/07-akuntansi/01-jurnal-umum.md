@@ -18,13 +18,13 @@ Di sisi kanan tiap baris ada ikon:
 | Ikon | Fungsi | Untuk bukti |
 | --- | --- | --- |
 | Printer | **Cetak voucher** | Semua bukti |
-| Pensil | **Ubah** | Hanya jurnal umum `JU/` |
-| Tempat sampah | **Hapus baris ini** | Jurnal umum `JU/` dan bukti Bank Book `BB/` |
+| Pensil | **Ubah** | Semua jenis bukti, kecuali jurnal tutup buku `TBT/` |
+| Tempat sampah | **Hapus baris ini** | Semua jenis bukti, kecuali jurnal tutup buku `TBT/` |
 | Mata | Detail baris | Semua |
 
 **Voucher** adalah dokumen cetak satu bukti: kop koperasi, nomor bukti, tanggal, keterangan, rincian akun (kode, nama, keterangan, debit, kredit), total, dan tiga kolom tanda tangan (Dibuat, Diperiksa, Disetujui). Ukurannya otomatis muat di kertas A4.
 
-> **Penting:** Bukti yang dibuat oleh transaksi lain (simpanan, pinjaman, angsuran, SHU, tutup buku) **tidak bisa diubah atau dihapus dari sini**, supaya buku pembantunya (saldo simpanan, sisa pinjaman) tidak tidak sinkron. Ubah atau batalkan dari asal transaksinya. Server menolak dengan pesan alasannya.
+> **Penting:** Bukti dari transaksi lain (simpanan, pinjaman, angsuran, SHU) kini bisa diubah atau dihapus dari sini, tetapi **hanya jurnalnya yang berubah**; saldo simpanan atau sisa pinjaman asalnya tidak ikut berubah dan bisa tidak sinkron dengan buku besar. Dialog dan form ubah memberi peringatan untuk bukti seperti ini. Untuk membatalkan transaksinya dengan benar, pakai Audit Data → Batalkan Transaksi. Jurnal tutup buku `TBT/` tetap terkunci; batalkan lewat menu Tutup Buku & SHU. Periode yang sudah ditutup ditolak.
 
 Tanda *Reconcile* yang tampak pada baris kas/bank bukan rekonsiliasi bank: aplikasi desktop menandainya otomatis saat Bank Book disimpan, dan tanda itu **tidak menguncinya**.
 
@@ -51,6 +51,12 @@ Tekan ikon pensil pada baris jurnal `JU/`. Isinya dimuat ke form yang sama; ubah
 Ikon tempat sampah menghapus **satu baris**, misalnya baris kosong bernilai nol dengan kode akun `0`. Bukti harus tetap seimbang, jadi baris bernilai yang membuat bukti tidak seimbang tidak bisa dihapus sendiri. Dalam kasus itu sistem menawarkan menghapus **seluruh bukti**. Bukti di tahun yang sudah ditutup atau bukti Bank Book yang sudah direkonsiliasi ditolak.
 
 Baris kosong juga bisa dihapus dari **Akuntansi → Jurnal Bermasalah**: ikon di baris bernilai nol, atau tombol **Hapus ... baris kosong** untuk semuanya sekaligus. Tombol sekaligus butuh izin hapus di Jurnal Umum dan Bank Book. Baris berisi di bukti yang sama tidak berubah, dan bukti yang terkunci dilewati.
+
+### Aksi langsung di Jurnal Bermasalah
+
+Tiap bukti di **Jurnal Bermasalah** punya kolom **Aksi**: ikon **pensil** mengubah jurnalnya dan ikon **tempat sampah** menghapus seluruh bukti jurnal, tanpa membuka Jurnal Umum dulu. Untuk bukti dari transaksi lain (nomor berawalan `SMPK-`/`SMPM-` simpanan, `ANGS-CR-` angsuran pinjaman, `ANGS-KPR-` angsuran KPR, atau nomor pinjaman) ada ikon **kaca pembesar**: modal info yang membaca master transaksinya (anggota, jenis, tanggal, jumlah, akun kas, operator) sebagai info saja.
+
+Dari modal itu, operator yang berizin **hapus di Batal Transaksi** bisa menghapus **transaksi beserta seluruh jurnalnya** (alasan minimal 10 karakter). Aturannya: simpanan boleh dihapus selama saldo tidak menjadi negatif; angsuran hanya yang terakhir (cicilan dan jadwal tagih kembali, jadi bisa dibayar lagi); transaksi dari Potongan Gaji, pinjaman yang sedang ditutup, dan periode yang sudah ditutup ditolak. Pencairan pinjaman hanya ditampilkan; batalkan lewat Audit Data. Salinan transaksi dan jurnalnya yang dihapus tercatat di riwayat koreksi Audit Data (aksi *Hapus*). Jurnal tutup buku `TBT/` tidak punya aksi di sini.
 
 Pilihan **Akun** di Jurnal Umum, Jurnal Penyesuaian, dan Bank Book hanya memuat akun detail. Akun induk seperti *AKTIVA LANCAR* atau *BEBAN USAHA* tidak tampil supaya tidak salah pilih. Jurnal lama yang terlanjur memakai akun induk tetap bisa dibuka dan diubah.
 
