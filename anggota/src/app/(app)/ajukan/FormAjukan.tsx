@@ -256,7 +256,7 @@ export function FormAjukan({ produk, hariIni, batasTanggal, namaMenunggu }: {
                             className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-utama text-base font-semibold text-pada-utama transition hover:bg-utama-tekan disabled:opacity-45">
                             Lanjutkan pengajuan <ArrowRight size={19} />
                         </button>
-                        <p className="mt-3 text-center text-xs leading-relaxed text-redup">Diperiksa pengurus koperasi. Keputusannya dikabari lewat notifikasi.</p>
+                        <p className="mt-3 text-center text-xs leading-relaxed text-redup">Keputusannya dikabari lewat notifikasi.</p>
                     </div>
                 </>
             ) : (
@@ -345,12 +345,11 @@ function Estimasi({ est, lama }: { est: ReturnType<typeof estimasiAngsuran>; lam
                         <dd className="angka font-medium">{rupiah(est.biaya)}</dd>
                     </div>
                 )}
-                <div className="border-t border-garis pt-2.5">
-                    {est.biaya > 0 && (
-                        <div className="flex items-baseline justify-between gap-3 pb-1.5"><dt className="text-xs font-semibold uppercase tracking-wide text-redup">Angsuran pertama</dt><dd className="angka font-bold">{rupiah(est.pertama)}</dd></div>
-                    )}
-                    <div className="flex items-baseline justify-between gap-3"><dt className="text-xs font-semibold uppercase tracking-wide text-redup">Total jasa {lama} bulan</dt><dd className="angka font-bold">{rupiah(est.totalJasa)}</dd></div>
-                </div>
+                {est.biaya > 0 && (
+                    <div className="border-t border-garis pt-2.5">
+                        <div className="flex items-baseline justify-between gap-3"><dt className="text-xs font-semibold uppercase tracking-wide text-redup">Angsuran pertama</dt><dd className="angka font-bold">{rupiah(est.pertama)}</dd></div>
+                    </div>
+                )}
             </dl>
             <p className="mt-3 flex gap-2 text-xs leading-relaxed text-redup"><Info size={14} className="mt-px shrink-0" />Perkiraan memakai jadwal yang sama dengan saat pinjaman dicairkan; angka akhir mengikuti keputusan pengurus.</p>
         </div>
