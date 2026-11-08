@@ -2,8 +2,11 @@
 
 import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
-import { dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, ubahStatusAkun, type DataLengkapi, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
+import { aturEmail, dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, ubahStatusAkun, type DataLengkapi, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
 import { antreEmail } from "@kopkar/backend/src/email/antrean.ts"
+import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
+import { kirimKodeVerifikasi, statusEmail } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
+import { buatTokenVerifikasi } from "@kopkar/backend/src/anggota/token.ts"
 import { modeUji, pool, query, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, wajibAksi, type Operator } from "@/lib/operator"
 import { MENU } from "@/config/akses"
@@ -11,6 +14,8 @@ import { MENU } from "@/config/akses"
 export type HasilPendaftaran = { ok: true; pesan: string } | { ok: false; error: string }
 
 const MENU_USER = [MENU.user, MENU.requestUser] as const
+/** Mengganti email dan mengirim verifikasi juga boleh dari Pengajuan Kredit: petugas yang meninjau pengajuan membantu anggota yang emailnya belum terverifikasi. */
+const MENU_EMAIL = [...MENU_USER, MENU.pengajuan] as const
 
 /** Hapus akun yang sudah terhubung ke anggota hanya boleh oleh superadmin atau grup admin. */
 const bolehHapusAkunAnggota = (o: Pick<Operator, "superadmin" | "grup">) => o.superadmin || (o.grup ?? "").trim().toLowerCase() === "admin"
@@ -103,6 +108,75 @@ export async function ubahStatusAkunAction(id: number, aktif: boolean): Promise<
         return { ok: true, pesan: r.pesan }
     } catch (e) {
         if (!(e instanceof GalatSesi)) console.error("ubah status akun gagal:", e)
+        return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
+    }
+}
+
+/**
+ * Ubah email akun anggota atas permintaan anggota (mis. email lama tidak aktif). Email baru belum terverifikasi: kode verifikasi (berlaku 24 jam)
+ * dan tautan ke halaman verifikasi aplikasi anggota langsung dikirim ke email itu, jadi anggota tinggal membukanya. Notifikasi lewat email baru
+ * berjalan setelah terverifikasi. Email lama diberi tahu, dan anggota dikabari lewat notifikasi HP.
+ * Kode di-hash dengan ANGGOTA_SESSION_SECRET aplikasi anggota; tanpa rahasia yang sama di .env.local admin kode tidak akan cocok, jadi tidak dikirim.
+ */
+export async function ubahEmailAkunAction(id: number, email: string): Promise<HasilPendaftaran> {
+    try {
+        const o = await operatorAktif(MENU_EMAIL)
+        wajibAksi(o, MENU_EMAIL, "ubah")
+        const r = await tx(async (db) => {
+            const lama = (await db.query<{ username: string; email: string | null; anggota_id: string | null; nama: string }>(
+                `SELECT u.username, u.email, u.anggota_id::text, COALESCE(NULLIF(btrim(a.nama), ''), u.username) AS nama
+                   FROM app_user u LEFT JOIN anggota a ON a.id = u.anggota_id WHERE u.id = $1 FOR UPDATE OF u`, [id])).rows[0]
+            if (!lama) return { ok: false as const, error: "Akun tidak ditemukan" }
+            const h = await aturEmail(db as never, id, email)
+            if (!h.ok) return h
+            const baru = email.trim().toLowerCase()
+            const sama = (lama.email ?? "").trim().toLowerCase() === baru
+            if (!sama && lama.email?.trim()) {
+                await antreEmail(db, { jenis: "status_akun", ke: lama.email.trim().toLowerCase(), judul: "Email aplikasi anggota diganti",
+                    teks: `Yth. ${lama.username},
+
+Email akun aplikasi anggota Anda diganti oleh pengurus koperasi menjadi ${baru}. Hubungi pengurus koperasi bila ini bukan permintaan Anda.` })
+            }
+            // Kirim kode dan tautan verifikasi ke email baru (juga bila email sama tetapi belum terverifikasi).
+            let kirim: "terkirim" | "terverifikasi" | "tanpa_rahasia" = "tanpa_rahasia"
+            const dasar = (process.env.ANGGOTA_URL ?? "").replace(/\/+$/, "")
+            if ((process.env.ANGGOTA_SESSION_SECRET ?? "").length >= 32) {
+                const k = await kirimKodeVerifikasi(db, id, baru, lama.nama, { abaikanJeda: true, berlakuMenit: 24 * 60,
+                    tautan: dasar ? `${dasar}/verifikasi-email?u=${buatTokenVerifikasi(id, 24 * 60 * 60)}` : undefined })
+                kirim = k.ok ? "terkirim" : "terverifikasi"
+            }
+            const catatan = {
+                terkirim: `Kode verifikasi${dasar ? " dan tombol tautan" : ""} sudah dikirim ke email itu (berlaku 24 jam); anggota tinggal membukanya.${dasar ? "" : " Tombol tautan tidak disertakan karena ANGGOTA_URL belum diisi di .env.local admin."}`,
+                terverifikasi: "Email ini sudah terverifikasi.",
+                tanpa_rahasia: "Kode verifikasi BELUM dikirim karena ANGGOTA_SESSION_SECRET belum diisi di .env.local admin (samakan dengan anggota/.env.local). Minta anggota memverifikasi di aplikasi: Akun, Email.",
+            }[kirim]
+            return { ok: true as const, pesan: `Email ${lama.username} disimpan: ${baru}. ${catatan}`, username: lama.username, anggotaId: lama.anggota_id, sama, kirim }
+        })
+        if (!r.ok) return r
+        await catatAksi("User Mobile", `Email akun ${r.username} diubah`, o)
+        if (await modeUji()) return { ok: true, pesan: `MODE UJI, tidak tersimpan: ${r.pesan}` }
+        revalidatePath("/dashboard/members", "layout")
+        if (r.anggotaId && r.kirim !== "terverifikasi") {
+            await kirimNotifikasi(pool, Number(r.anggotaId), { judul: "Email akun diperbarui", url: "/akun/email", email: false,
+                isi: r.kirim === "terkirim"
+                    ? "Pengurus memperbarui email akun Anda dan mengirim kode verifikasi ke email itu. Buka emailnya lalu verifikasi agar notifikasi juga dikirim ke email."
+                    : "Pengurus memperbarui email akun Anda. Buka Akun, Email, lalu tekan Verifikasi agar notifikasi juga dikirim ke email." })
+                .catch((e) => console.error("notifikasi ubah email gagal:", e))
+        }
+        return { ok: true, pesan: r.pesan }
+    } catch (e) {
+        if (!(e instanceof GalatSesi)) console.error("ubah email akun gagal:", e)
+        return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
+    }
+}
+
+/** Email dan status verifikasi sebuah akun (ya, belum, kosong), untuk menyegarkan tampilan setelah anggota memverifikasi. Hanya membaca. */
+export async function statusEmailAkunAction(id: number): Promise<{ ok: true; email: string | null; status: "ya" | "belum" | "kosong" } | { ok: false; error: string }> {
+    try {
+        await operatorAktif(MENU_EMAIL)
+        const st = await statusEmail(pool, id)
+        return { ok: true, email: st.email, status: !st.email?.trim() ? "kosong" : st.terverifikasi ? "ya" : "belum" }
+    } catch (e) {
         return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
     }
 }

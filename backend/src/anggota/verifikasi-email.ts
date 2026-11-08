@@ -25,7 +25,7 @@ export type HasilKode = { ok: true; kode: string } | { ok: false; error: string 
  * Buat kode baru untuk (akun, email), menimpa kode lama. Tidak mengirim email (lihat kirimKodeVerifikasi).
  * aktivasi: akun pendaftaran baru (tetap berlaku untuk kode berikutnya). Email yang sudah terverifikasi tidak dibuat ulang.
  */
-export async function buatKodeVerifikasi(db: Db, userId: number, email: string, opsi: { aktivasi?: boolean; abaikanJeda?: boolean } = {}): Promise<HasilKode> {
+export async function buatKodeVerifikasi(db: Db, userId: number, email: string, opsi: { aktivasi?: boolean; abaikanJeda?: boolean; berlakuMenit?: number } = {}): Promise<HasilKode> {
     const em = normal(email);
     const r = (await db.query(
         `SELECT email, terverifikasi_pada, EXTRACT(EPOCH FROM now() - terakhir_kirim) detik FROM app_user_email_verif WHERE app_user_id = $1`, [userId])).rows[0];
@@ -41,17 +41,24 @@ export async function buatKodeVerifikasi(db: Db, userId: number, email: string, 
          VALUES ($1, $2, $3, now() + ($4::int * interval '1 minute'), 0, now(), $5, NULL)
          ON CONFLICT (app_user_id) DO UPDATE SET email = EXCLUDED.email, kode_hash = EXCLUDED.kode_hash, kedaluwarsa = EXCLUDED.kedaluwarsa,
             percobaan = 0, terakhir_kirim = now(), aktivasi = app_user_email_verif.aktivasi OR EXCLUDED.aktivasi, terverifikasi_pada = NULL`,
-        [userId, em, hashKode(userId, em, kode), BERLAKU_MENIT, !!opsi.aktivasi]);
+        [userId, em, hashKode(userId, em, kode), opsi.berlakuMenit ?? BERLAKU_MENIT, !!opsi.aktivasi]);
     return { ok: true, kode };
 }
 
-/** Buat kode lalu masukkan email berisi kode ke antrean (dikirim segera oleh pekerja atau prosesAntrean). */
-export async function kirimKodeVerifikasi(db: Db, userId: number, email: string, nama: string, opsi: { aktivasi?: boolean; abaikanJeda?: boolean } = {}) {
+const lamaTeks = (menit: number) => (menit >= 120 && menit % 60 === 0 ? `${menit / 60} jam` : `${menit} menit`);
+
+/**
+ * Buat kode lalu masukkan email berisi kode ke antrean (dikirim segera oleh pekerja atau prosesAntrean).
+ * `berlakuMenit` dan `tautan` dipakai pengurus yang mengirim verifikasi ke email baru anggota: kode berlaku lebih lama, dan tombol di email
+ * membuka halaman verifikasi aplikasi anggota (tautan bertoken).
+ */
+export async function kirimKodeVerifikasi(db: Db, userId: number, email: string, nama: string, opsi: { aktivasi?: boolean; abaikanJeda?: boolean; berlakuMenit?: number; tautan?: string } = {}) {
     const h = await buatKodeVerifikasi(db, userId, email, opsi);
     if (!h.ok) return h;
     await antreEmail(db, {
         jenis: 'verifikasi', ke: normal(email), judul: 'Kode verifikasi email aplikasi anggota',
-        teks: `Halo ${nama},\n\nKode verifikasi Anda: ${h.kode}\n\nKode berlaku ${BERLAKU_MENIT} menit. Jangan berikan kode ini kepada siapa pun, termasuk pengurus koperasi.\n\nAbaikan email ini bila Anda tidak mendaftar atau mengubah email di aplikasi anggota.`,
+        tautan: opsi.tautan ?? null,
+        teks: `Halo ${nama},\n\nKode verifikasi Anda: ${h.kode}${opsi.tautan ? '\n\nTekan tombol di bawah email ini untuk membuka halaman verifikasi, lalu masukkan kode di atas.' : ''}\n\nKode berlaku ${lamaTeks(opsi.berlakuMenit ?? BERLAKU_MENIT)}. Jangan berikan kode ini kepada siapa pun, termasuk pengurus koperasi.\n\nAbaikan email ini bila Anda tidak mendaftar atau mengubah email di aplikasi anggota.`,
     });
     return { ok: true as const };
 }

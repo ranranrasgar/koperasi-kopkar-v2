@@ -9,6 +9,7 @@ import { InputUang } from "@/components/ui/InputUang"
 import { bukaCetak, esc } from "@/lib/cetak-klien"
 import type { Pengajuan } from "@/lib/queries/keanggotaan"
 import { formatAngka2, formatRupiah, formatTanggal } from "@/lib/format"
+import { EmailAnggotaPengajuan } from "./EmailAnggotaPengajuan"
 import { RiwayatAnggotaPanel, RingkasRisiko } from "./RiwayatAnggota"
 
 /** Nomor HP Indonesia ke format wa.me (628...); null bila tidak berupa nomor HP. */
@@ -143,11 +144,14 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
             {data && !data.ok && <div role="alert" className="rounded-md border border-red-300 bg-red-50 p-2.5 text-sm text-red-700">{data.error}</div>}
             {p && t && i && (
                 <div className="space-y-4">
-                    <div className="flex flex-wrap justify-end gap-2">
+                    <div className="flex flex-wrap items-start justify-between gap-3">
+                        <EmailAnggotaPengajuan key={p.id} akunId={i.akun_id} email={i.email_akun} status={i.status_email} />
+                        <div className="flex flex-wrap justify-end gap-2">
                         <button type="button" onClick={cetak} title="Dokumen berkop; pilih Simpan sebagai PDF di jendela cetak"
                             className="inline-flex h-9 items-center gap-1.5 rounded-md border px-3 text-sm font-medium hover:bg-muted"><Printer className="h-4 w-4" />Cetak / PDF</button>
                         <button type="button" onClick={kirimWa} disabled={!wa} title={wa ? `Buka WhatsApp ke ${i.hp}; lampirkan PDF hasil cetak` : "Nomor HP anggota kosong atau tidak valid"}
                             className="inline-flex h-9 items-center gap-1.5 rounded-md border border-green-300 px-3 text-sm font-medium text-green-700 hover:bg-green-50 disabled:opacity-50"><MessageCircle className="h-4 w-4" />Kirim ke WA</button>
+                        </div>
                     </div>
                     <div className="space-y-4">
                     <section className="grid gap-3 rounded-md border p-3 text-sm sm:grid-cols-4" aria-label="Rincian pengajuan">

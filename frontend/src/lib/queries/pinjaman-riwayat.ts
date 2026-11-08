@@ -125,14 +125,20 @@ export async function pengajuanUntukDitinjau(id: number) {
         anggota_id: number; kode_agt: string; rp_pinjaman_pokok: number; lama_angsuran: number; persen_bunga: number; keterangan: string | null; status: string
         kd_kredit: string; nama_kredit: string | null; kunci_grade: boolean; maks_plafond: number
         persen_adm: number; persen_provisi: number; per_angsuran: boolean
+        /** Akun aplikasi anggota (null bila belum punya), emailnya, dan status verifikasi: ya, belum, atau kosong. */
+        akun_id: number | null; email_akun: string | null; status_email: 'ya' | 'belum' | 'kosong'
     } & IdentitasAnggota>(`
         SELECT pp.anggota_id, a.kode_agt, pp.rp_pinjaman_pokok, pp.lama_angsuran, pp.persen_bunga, pp.keterangan, pp.status, pp.kd_kredit, jk.nama_kredit,
                COALESCE(jk.kunci_jika_melebihi_grade = 1, false) AS kunci_grade, COALESCE(jk.maks_plafond, 0) AS maks_plafond,
                COALESCE(pp.persen_adm, 0) AS persen_adm, COALESCE(pp.persen_provisi, 0) AS persen_provisi, upper(COALESCE(jk.bunga_per, '')) = 'PER ANGSURAN' AS per_angsuran,
                a.nik, a.jns_kelamin, a.status, a.alamat, a.kota, a.hp, a.telp_rmh, a.bank_nama, a.bank_no_rek, a.bank_atas_nama, a.grade,
                ad.no_ktp_sim AS no_ktp, ad.jabatan, ad.rp_gaji_pokok,
-               k.plant, k.deptname, k.sectname, k.joindate::text AS joindate, k.tgl_lahir::text AS tgl_lahir
+               k.plant, k.deptname, k.sectname, k.joindate::text AS joindate, k.tgl_lahir::text AS tgl_lahir,
+               u.id AS akun_id, u.email AS email_akun,
+               CASE WHEN COALESCE(btrim(u.email), '') = '' THEN 'kosong'
+                    WHEN EXISTS (SELECT 1 FROM app_user_email_verif v WHERE v.app_user_id = u.id AND v.email = lower(btrim(u.email)) AND v.terverifikasi_pada IS NOT NULL) THEN 'ya' ELSE 'belum' END AS status_email
           FROM pengajuan_pinjaman pp JOIN anggota a ON a.id = pp.anggota_id
+          LEFT JOIN LATERAL (SELECT id, email FROM app_user WHERE anggota_id = a.id ORDER BY id LIMIT 1) u ON true
           LEFT JOIN jenis_kredit jk ON jk.id = pp.jenis_kredit_id
           LEFT JOIN karyawan_mattel k ON k.id = a.karyawan_mattel_id
           LEFT JOIN LATERAL (SELECT no_ktp_sim, jabatan, rp_gaji_pokok FROM anggota_detail WHERE anggota_id = a.id ORDER BY id DESC LIMIT 1) ad ON true

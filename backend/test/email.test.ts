@@ -6,6 +6,7 @@ import { htmlEmail, teksEmail } from '../src/email/templat.ts';
 import {
     buatKodeVerifikasi, kirimKodeVerifikasi, MAKS_SALAH, penerimaEmailAnggota, periksaKodeVerifikasi, statusEmail,
 } from '../src/anggota/verifikasi-email.ts';
+import { bacaTokenVerifikasi, buatTokenVerifikasi } from '../src/anggota/token.ts';
 import { masukAnggota } from '../src/anggota/akun.ts';
 import { kabariAnggotaBalasan } from '../src/anggota/pesan.ts';
 import { beritahuAdmin, MENU_PENGAJUAN } from '../src/anggota/notif-admin.ts';
@@ -278,4 +279,30 @@ test('templat: kop koperasi, subjudul, poin, dan tabel rincian; teks polos tanpa
     const t = teksEmail({ judul: 'J', teks });
     assert.doesNotMatch(t, /## /);
     assert.match(t, /Username: budi/);
+});
+
+test('verifikasi dari pengurus: kode berlaku 24 jam, email memuat tautan, token tautan 24 jam, dan kode tetap bisa dipakai anggota', async () => {
+    process.env.ANGGOTA_SESSION_SECRET ??= 'x'.repeat(40);
+    await inTx(async (db) => {
+        const { userId } = await akunUji(db);
+        const tautan = `https://anggota.contoh.id/verifikasi-email?u=${buatTokenVerifikasi(userId, 24 * 3600)}`;
+        const h = await kirimKodeVerifikasi(db, userId, 'uji.verif@contoh.id', 'Uji', { abaikanJeda: true, berlakuMenit: 24 * 60, tautan });
+        assert.equal(h.ok, true);
+        const e = (await db.query(`SELECT teks, tautan FROM email_antrean WHERE jenis = 'verifikasi' AND ke = 'uji.verif@contoh.id' ORDER BY id DESC LIMIT 1`)).rows[0];
+        assert.match(e.teks, /Kode berlaku 24 jam/);
+        assert.equal(e.tautan, tautan);
+        const sisa = Number((await db.query('SELECT EXTRACT(EPOCH FROM kedaluwarsa - now()) s FROM app_user_email_verif WHERE app_user_id = $1', [userId])).rows[0].s);
+        assert.ok(sisa > 23 * 3600 && sisa <= 24 * 3600, `sisa ${sisa}`);
+        const t = bacaTokenVerifikasi(tautan.split('u=')[1]);
+        assert.equal(t?.u, userId);
+        assert.ok(t!.exp - Math.floor(Date.now() / 1000) > 23 * 3600);
+        assert.equal((await periksaKodeVerifikasi(db, userId, await kodeDariAntrean(db, 'uji.verif@contoh.id'))).ok, true);
+        assert.equal((await statusEmail(db, userId)).terverifikasi, true);
+        // Bawaan tetap 15 menit tanpa tautan.
+        await db.query('DELETE FROM app_user_email_verif WHERE app_user_id = $1', [userId]);
+        await kirimKodeVerifikasi(db, userId, 'uji.verif@contoh.id', 'Uji', { abaikanJeda: true });
+        const b = (await db.query(`SELECT teks, tautan FROM email_antrean WHERE jenis = 'verifikasi' AND ke = 'uji.verif@contoh.id' ORDER BY id DESC LIMIT 1`)).rows[0];
+        assert.match(b.teks, /Kode berlaku 15 menit/);
+        assert.equal(b.tautan, null);
+    });
 });

@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Check, Loader2, Trash2, UserPlus, X } from "lucide-react"
-import { dataLengkapiAnggotaAction, hapusUserMobileAction, jadikanAnggotaAction, putuskanPendaftaranAction, ubahStatusAkunAction, type HasilPendaftaran } from "@/app/actions/pendaftaran"
+import { Check, Loader2, Mail, Trash2, UserPlus, X } from "lucide-react"
+import { dataLengkapiAnggotaAction, hapusUserMobileAction, jadikanAnggotaAction, putuskanPendaftaranAction, ubahEmailAkunAction, ubahStatusAkunAction, type HasilPendaftaran } from "@/app/actions/pendaftaran"
 import { Button } from "@/components/ui/button"
 import { FormLengkapiAnggota, type BahanLengkapi } from "@/components/master/FormLengkapiAnggota"
 
@@ -53,6 +53,18 @@ export function AksiUserMobile({ item }: { item: Record<string, unknown> }) {
         setBahan({ setuju, data: { username: d.username, nik: d.nik, form: d.form, dariPengaturan: d.dariPengaturan, daftarGrade: d.daftarGrade, gradeKaryawan: d.gradeKaryawan } })
     })
 
+    /** Ubah email akun atas permintaan anggota; email baru perlu diverifikasi anggota di aplikasi. */
+    const ubahEmail = () => {
+        const baru = prompt(`Email baru untuk ${nama}${item.email ? ` (sekarang ${String(item.email)})` : ""}.
+
+Kode verifikasi langsung dikirim ke email baru ini; anggota tinggal membuka emailnya lalu memverifikasi.`, String(item.email ?? ""))
+        if (baru === null || !baru.trim()) return
+        mulai(async () => {
+            const h = await ubahEmailAkunAction(id, baru)
+            setPesan(h); alert(h.ok ? h.pesan : h.error); router.refresh()
+        })
+    }
+
     const jalankan = (konfirmasi: string, fn: () => Promise<HasilPendaftaran>) => {
         if (!confirm(konfirmasi)) return
         mulai(async () => {
@@ -95,6 +107,9 @@ export function AksiUserMobile({ item }: { item: Record<string, unknown> }) {
                     <UserPlus className="h-4 w-4" />
                 </Button>
             )}
+            <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:bg-muted" title="Ubah email akun" onClick={ubahEmail}>
+                <Mail className="h-4 w-4" />
+            </Button>
             <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-red-600 hover:bg-red-50 hover:text-red-700" title="Hapus akun"
                 onClick={hapus}>
                 <Trash2 className="h-4 w-4" />

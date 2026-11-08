@@ -15,6 +15,7 @@ Anggota memakai **aplikasi anggota** (di browser HP, dan aplikasi Android lama) 
 | Email | Email akun |
 | Status | **Aktif**, **Tidak aktif**, **Menunggu** (pendaftaran baru), atau **Ditolak** |
 | Notifikasi | Apakah perangkat sudah menerima notifikasi (tersembunyi; buka lewat **Kolom**) |
+| Verifikasi Email | *Terverifikasi* (email sudah dikonfirmasi anggota dengan kode, jadi menerima email), *Belum* (sudah diisi tetapi belum dikonfirmasi), atau *Belum ada* |
 | Dibuat / Diubah | Tanggal akun dibuat dan terakhir diubah |
 
 ## Filter Status
@@ -35,6 +36,7 @@ Anggota memakai **aplikasi anggota** (di browser HP, dan aplikasi Android lama) 
 | Silang oranye (**Nonaktifkan**) | Akun Aktif | Menonaktifkan akun kapan saja. Pemilik akun langsung keluar dari aplikasi anggota (browser dan Android) dan tidak bisa masuk sampai diaktifkan lagi. Data simpanan dan pinjaman tidak berubah. |
 | Centang hijau (**Aktifkan**) | Akun Tidak aktif atau Ditolak | Mengaktifkan kembali akun. Akun yang pendaftarannya dulu ditolak hanya bisa diaktifkan bila emailnya sudah terverifikasi. Bila akun belum terhubung ke anggota, gunakan **Jadikan anggota** sesudahnya. |
 | Ikon tambah orang (**Jadikan anggota**) | Akun aktif yang belum terhubung ke anggota | Membuat data anggota (atau menautkan ke anggota dengan NIK yang sama). |
+| Amplop (**Ubah email akun**) | Semua baris | Mengganti email akun atas permintaan anggota (mis. email lama tidak aktif). Setelah disimpan, **kode verifikasi dan tombol tautan langsung dikirim ke email baru itu** (berlaku 24 jam); anggota tinggal membuka emailnya, menekan tombol, dan mengetik kodenya. Sampai itu dilakukan statusnya *Belum* dan email belum menerima notifikasi. Memilih ikon ini lagi pada email yang sama mengirim ulang kodenya. Anggota dikabari lewat notifikasi HP, dan email lama diberi tahu. Satu email hanya untuk satu akun. |
 | Tempat sampah (**Hapus**) | Semua baris | Menghapus akun beserta data aplikasinya. Akun yang sudah terhubung ke anggota hanya boleh dihapus **superadmin atau grup admin**. Untuk akun beranggota, ketik kode anggota pada kotak verifikasi bila keanggotaannya ikut dihapus (hanya bila belum ada transaksi); status karyawan kembali bukan anggota. |
 | Mata (**Detail**) | Semua baris | Melihat semua kolom baris itu. |
 

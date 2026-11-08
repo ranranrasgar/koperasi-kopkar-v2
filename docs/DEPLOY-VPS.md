@@ -117,6 +117,8 @@ openssl rand -base64 48      # jalankan dua kali: SESSION_SECRET dan ANGGOTA_SES
 
 ```ini
 SESSION_SECRET=<hasil openssl pertama>
+# Admin ikut mengirim kode verifikasi email anggota (User Mobile > ubah email): rahasia ini SAMA PERSIS dengan ANGGOTA_SESSION_SECRET di anggota/.env.local
+ANGGOTA_SESSION_SECRET=(salin dari anggota/.env.local)
 ADMIN_URL=https://admin.kopkarmjsmattel.com
 ANGGOTA_URL=https://anggota.kopkarmjsmattel.com
 

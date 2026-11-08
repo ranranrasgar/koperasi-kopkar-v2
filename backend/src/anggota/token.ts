@@ -78,8 +78,9 @@ export function bacaTokenReset(nilai: string | undefined): Sesi | null {
 const LAMA_VERIFIKASI_DETIK = 60 * 60
 const tandaVerifikasi = (data: string) => tanda(`verifikasi:${data}`)
 
-export function buatTokenVerifikasi(u: number) {
-    const data = Buffer.from(JSON.stringify({ u, pv: "-", exp: Math.floor(Date.now() / 1000) + LAMA_VERIFIKASI_DETIK })).toString("base64url")
+/** `detik`: umur token; bawaan 60 menit, lebih lama untuk tautan yang dikirim pengurus ke email anggota. */
+export function buatTokenVerifikasi(u: number, detik = LAMA_VERIFIKASI_DETIK) {
+    const data = Buffer.from(JSON.stringify({ u, pv: "-", exp: Math.floor(Date.now() / 1000) + detik })).toString("base64url")
     return `${data}.${tandaVerifikasi(data)}`
 }
 

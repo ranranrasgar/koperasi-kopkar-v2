@@ -46,6 +46,8 @@ export async function daftarUserMobile(s: SearchParams) {
     else if (st === "true" || st === "false") where.push(`u.status = ${p(st === "true")}`)
     const base = `
         SELECT u.id, u.username, u.kode_agt, a.nama, a.nik, u.email, u.status, u.created_at::date AS dibuat, u.updated_at::date AS diubah,
+               CASE WHEN COALESCE(btrim(u.email), '') = '' THEN 'kosong'
+                    WHEN EXISTS (SELECT 1 FROM app_user_email_verif v WHERE v.app_user_id = u.id AND v.email = lower(btrim(u.email)) AND v.terverifikasi_pada IS NOT NULL) THEN 'ya' ELSE 'belum' END AS status_email,
                u.fcm_token IS NOT NULL AS punya_token, (${menunggu} AND NOT u.status) AS menunggu_admin, (u.anggota_id IS NOT NULL) AS punya_anggota,
                CASE WHEN ${menunggu} AND NOT u.status THEN 'menunggu' WHEN ${keputusan} = 'ditolak' AND NOT u.status THEN 'ditolak' WHEN u.status THEN 'true' ELSE 'false' END AS status_tampil
           FROM app_user u LEFT JOIN anggota a ON a.id = u.anggota_id

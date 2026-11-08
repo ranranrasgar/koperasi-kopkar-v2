@@ -268,6 +268,7 @@ export const userMobileConfig: ModuleConfig = {
         { key: "nik", label: "KPK", type: "string", sortable: true, mono: true },
         { key: "nama", label: "Nama", type: "string", sortable: true },
         { key: "email", label: "Email", type: "string" },
+        { key: "status_email", label: "Verifikasi Email", type: "badge", badgeMap: { ya: { label: "Terverifikasi", color: "green" }, belum: { label: "Belum", color: "orange" }, kosong: { label: "Belum ada", color: "gray" } } },
         { key: "status_tampil", label: "Status", type: "badge", sortable: true,
             badgeMap: { "true": { label: "Aktif", color: "green" }, "false": { label: "Tidak aktif", color: "gray" }, "menunggu": { label: "Menunggu", color: "orange" }, "ditolak": { label: "Ditolak", color: "red" } } },
         { key: "punya_token", label: "Notifikasi", type: "boolean", hidden: true },
