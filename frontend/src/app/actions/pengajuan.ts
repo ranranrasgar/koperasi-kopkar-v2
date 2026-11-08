@@ -2,7 +2,8 @@
 
 import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
-import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
+import { kirimNotifikasi, MAKS_ISI, MAKS_JUDUL } from "@kopkar/backend/src/anggota/push.ts"
+import { bacaTemplat, isiTemplat } from "@kopkar/backend/src/anggota/templat-notif.ts"
 import { modeUji, pool, tx } from "@/lib/db"
 import { GalatSesi, operatorAktif, wajibAksi } from "@/lib/operator"
 import { MENU } from "@/config/akses"
@@ -32,10 +33,14 @@ export async function putuskanPengajuanAction(id: number, setuju: boolean): Prom
         if (r[0].anggota_id) {
             const rp = Number(r[0].rp_pinjaman_pokok).toLocaleString("id-ID")
             const { rows: [jk] } = await pool.query("SELECT nama_kredit FROM jenis_kredit WHERE id = $1", [r[0].jenis_kredit_id])
-            const nama = jk?.nama_kredit ?? "pinjaman"
+            const { rows: [ag] } = await pool.query("SELECT nama FROM anggota WHERE id = $1", [r[0].anggota_id])
+            // Judul dan isi (notifikasi push di HP dan email) bisa diatur pengurus di Pengaturan Perusahaan.
+            const t = await bacaTemplat(pool)
+            const kunci = setuju ? "pengajuan_disetujui" : "pengajuan_ditolak"
+            const nilai = { nama: String(ag?.nama ?? "").trim(), jenis: jk?.nama_kredit ?? "pinjaman", pokok: `Rp ${rp}`, lama: String(r[0].lama_angsuran) }
             await kirimNotifikasi(pool, Number(r[0].anggota_id), {
-                judul: setuju ? "Pengajuan kredit disetujui" : "Pengajuan kredit ditolak",
-                isi: `Pengajuan ${nama} Rp ${rp} (${r[0].lama_angsuran} bulan) ${setuju ? "disetujui. Pencairan diproses oleh koperasi." : "tidak disetujui. Hubungi pengurus koperasi untuk keterangan."}`,
+                judul: isiTemplat(t[`${kunci}.judul`], nilai).slice(0, MAKS_JUDUL),
+                isi: isiTemplat(t[`${kunci}.isi`], nilai).slice(0, MAKS_ISI),
                 url: "/ajukan",
                 jenisEmail: "status_pengajuan",
             }).catch((e) => console.error("kirim notifikasi pengajuan gagal:", e))

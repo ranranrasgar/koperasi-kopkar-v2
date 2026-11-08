@@ -19,6 +19,9 @@ export interface JenisKreditOpsi {
 
 type Pratinjau = Awaited<ReturnType<typeof pratinjauPinjamanAction>>
 
+/** Kas/bank bawaan pencairan: Bank OCBC NISP. Operator tetap bisa memilih akun lain; bila akun ini tidak ada, pilihan pertama. */
+const KAS_BAWAAN = "1.1.01.41"
+
 /** Isi awal dari pengajuan kredit yang disetujui. */
 export interface AwalPinjaman extends AnggotaRingkas { kode_kredit: string; pokok: string; lama: number; persen_bunga: string }
 
@@ -30,6 +33,7 @@ export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = f
     const [pokok, setPokok] = useState(awal ? String(Number(awal.pokok)) : "")
     const [lama, setLama] = useState(awal ? String(awal.lama) : "")
     const [persenBunga, setPersenBunga] = useState(awal ? String(Number(awal.persen_bunga)) : "")
+    const [keterangan, setKeterangan] = useState("")
     const [pratinjau, setPratinjau] = useState<Pratinjau>(null)
     const form = useRef<HTMLFormElement>(null)
     const [riwayat, setRiwayat] = useState<RiwayatAnggota | null>(null)
@@ -72,6 +76,9 @@ export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = f
     }, [riwayat, kelompok, kodeKredit, awal])
     const batas = jk && riwayat ? batasPlafon({ kunciGrade: jk.kunci_grade, maksPlafond: jk.maks_plafond }, riwayat.anggota.rp_grade) : null
     const pesanBatas = batas && Number(pokok) > 0 ? pesanPlafon(Number(pokok), batas, "anggota") : null
+    // Jenis yang terpilih (mis. dari pengajuan) tetapi tidak tersedia untuk anggota ini: pilihan nonaktif tidak ikut terkirim, jadi dicegah dengan alasannya.
+    const terkunci = kelompok.tidak.find((x) => x.j.kode_kredit === kodeKredit)
+    const pesanKunci = terkunci ? `${terkunci.j.kode_kredit} ${terkunci.j.nama_kredit} tidak bisa dicairkan untuk anggota ini: ${terkunci.alasan}. ${terkunci.alasan.startsWith("masih ada") ? "Selesaikan dulu pinjaman itu atau pilih jenis kredit lain." : "Pilih jenis kredit lain."}` : null
 
     useEffect(() => {
         let batal = false
@@ -84,7 +91,7 @@ export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = f
     }, [kodeKredit, tanggal, pokok, lama, persenBunga])
 
     useEffect(() => {
-        if (hasil?.ok) { setPokok(""); setLama(""); setPersenBunga(""); setAnggota(null) }
+        if (hasil?.ok) { setPokok(""); setLama(""); setPersenBunga(""); setKeterangan(""); setAnggota(null) }
     }, [hasil])
 
     return (
@@ -117,7 +124,7 @@ export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = f
                                         </optgroup>)}
                                 </select>
                             </Field>
-                            <Field label="Tanggal Pinjaman" htmlFor="tanggal">
+                            <Field label="Tanggal Pencairan" htmlFor="tanggal" hint="Tanggal dana keluar; jatuh tempo angsuran dihitung dari tanggal ini.">
                                 <Input id="tanggal" name="tanggal" type="date" required value={tanggal} onChange={(e) => setTanggal(e.target.value)} />
                             </Field>
                             <Field label="Pokok Pinjaman (Rp)" htmlFor="pokok"
@@ -138,13 +145,17 @@ export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = f
                                     readOnly={!bolehUbahBunga} disabled={!bolehUbahBunga} className={bolehUbahBunga ? undefined : "bg-muted/50"} />
                             </Field>
                             <Field label="Dibayar dari Kas/Bank" htmlFor="kas" className="sm:col-span-2">
-                                <KasSelect akun={akunKas} />
+                                <KasSelect akun={akunKas} defaultValue={akunKas.find((a) => a.kode_perkiraan === KAS_BAWAAN)?.id} />
+                            </Field>
+                            <Field label="Keterangan" htmlFor="keterangan" className="sm:col-span-2" hint="Opsional, mis. tempat pencairan. Tersimpan di data pinjaman dan ikut di email informasi pencairan ke anggota.">
+                                <Input id="keterangan" name="keterangan" maxLength={255} value={keterangan} onChange={(e) => setKeterangan(e.target.value)} placeholder="Mis. Pencairan dilakukan di Bank OCBC NISP" />
                             </Field>
                         </div>
+                        {pesanKunci && <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{pesanKunci}</p>}
                         {pesanBatas && <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{pesanBatas}</p>}
                         <HasilTransaksi hasil={hasil} />
                         <div className="flex justify-end">
-                            <SubmitButton pending={pending} disabled={!anggota || !kodeKredit || Boolean(pesanBatas)}>Cairkan Pinjaman</SubmitButton>
+                            <SubmitButton pending={pending} disabled={!anggota || !kodeKredit || Boolean(pesanBatas) || Boolean(pesanKunci)}>Cairkan Pinjaman</SubmitButton>
                         </div>
                     </form>
                 </FormCard>

@@ -20,11 +20,12 @@ Menu: **Pinjaman Tunai → Input Pinjaman Tunai**. Membutuhkan izin pencairan pi
    - **Tersedia**: jenis yang boleh diajukan anggota lewat aplikasi.
    - **Khusus operator**: jenis bertanda *Tidak untuk mobile* (misalnya produk bank atau pihak lain). Tetap bisa dipilih operator.
    - **Tidak tersedia untuk anggota ini** (tidak bisa dipilih, dengan alasannya): hanya untuk Staff / bukan untuk Staff, masih ada pinjaman jenis ini yang berjalan (jenis yang mengunci tunggakan), atau grade anggota belum diisi.
-3. Isi **Tanggal Pinjaman**, **Pokok Pinjaman (Rp)**, dan **Lama Angsuran (kali)**. Di bawah isian pokok tampil **batas maksimal** anggota untuk jenis itu; bila pokok melebihinya muncul pesan merah dan tombol Cairkan nonaktif.
+3. Isi **Tanggal Pencairan** (tanggal dana keluar; jatuh tempo angsuran dihitung dari tanggal ini), **Pokok Pinjaman (Rp)**, dan **Lama Angsuran (kali)**. Di bawah isian pokok tampil **batas maksimal** anggota untuk jenis itu; bila pokok melebihinya muncul pesan merah dan tombol Cairkan nonaktif.
 4. **Bunga (%)** mengikuti pengaturan jenis kredit. **Hanya admin atau superadmin yang boleh mengubahnya**; untuk operator lain isian ini terkunci.
-5. Pilih **Dibayar dari Kas/Bank**.
+5. **Dibayar dari Kas/Bank** sudah terisi akun **1.1.01.41 Bank OCBC NISP**; ganti bila dana keluar dari akun lain.
 6. Periksa **Pratinjau Jadwal** di samping form: total jasa, adm, provisi, dan jadwal setiap angsuran beserta tanggal jatuh temponya. Pratinjau dihitung dengan rumus yang sama dengan saat menyimpan.
-7. Tekan **Cairkan Pinjaman**.
+7. Isi **Keterangan** bila perlu (opsional, maksimal 255 karakter), mis. *Pencairan dilakukan di Bank OCBC NISP*. Keterangan tersimpan di data pinjaman dan ikut di email informasi pencairan ke anggota.
+8. Tekan **Cairkan Pinjaman**.
 
 ## Riwayat dan risiko anggota
 
@@ -72,6 +73,8 @@ Setelah pencairan tersimpan, anggota otomatis dikabari:
 
 - **Notifikasi di aplikasi anggota** (riwayat dan notifikasi ke HP): jenis kredit, pokok, lama, tanggal pencairan, serta angsuran ke-1 dan jatuh temponya.
 - **Email** (hanya bila emailnya sudah terverifikasi) berisi ringkasan kredit, jadwal angsuran, dan **lampiran PDF jadwal angsuran** yang bisa diunduh.
+
+Notifikasi masuk ke HP anggota lewat aplikasi anggota (PWA) walau aplikasi tidak dibuka. Judul, isi notifikasi, dan kalimat pembuka serta penutup email bisa disesuaikan di **Data Master → Pengaturan Perusahaan → Teks Notifikasi dan Email Pinjaman**; rincian kredit, jadwal angsuran, dan lampiran PDF tetap otomatis.
 
 Pesan hasil di layar menyebutkan apakah notifikasi dan email terkirim. Kegagalan mengirim **tidak membatalkan pencairan**. Di mode uji tidak ada yang dikirim.
 

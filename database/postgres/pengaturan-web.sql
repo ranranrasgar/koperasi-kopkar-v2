@@ -139,3 +139,6 @@ CREATE TABLE IF NOT EXISTS log_aktivitas (
     ket varchar(255)
 );
 CREATE INDEX IF NOT EXISTS ix_log_aktivitas_waktu ON log_aktivitas (waktu DESC);
+
+-- Keterangan bebas saat pencairan pinjaman tunai (form Pencairan). Kolom deskripsi desktop hanya 25 karakter, jadi tidak dipakai.
+ALTER TABLE pinjaman_tunai ADD COLUMN IF NOT EXISTS keterangan varchar(255);

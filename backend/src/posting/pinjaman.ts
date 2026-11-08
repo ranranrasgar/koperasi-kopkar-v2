@@ -14,6 +14,7 @@ export interface PencairanInput {
     opr: string;
     persenBunga?: string | number; // bawaan: jenis_kredit.bunga_kredit
     jatuhTempoHari?: number;       // bawaan: jenis_kredit.jatuh_tempo
+    keterangan?: string;           // keterangan bebas pencairan (pinjaman_tunai.keterangan, maks 255 karakter)
 }
 
 export interface PencairanResult {
@@ -70,11 +71,11 @@ export async function cairkanPinjaman(db: Db, i: PencairanInput): Promise<Pencai
     const h = await db.query<{ id: string }>(
         `INSERT INTO pinjaman_tunai (kode_agt, kode_kredit, no_pinjaman, no_pinjaman_urut, tgl_pinjaman, jatuh_tempo, persen_bunga, bunga_per,
             rp_pinjaman_pokok, lama_angsuran, jml_cicilan, sisa_cicilan, persen_adm, rp_adm, persen_provisi, rp_provisi, opr,
-            anggota_id, jenis_kredit_id, kas_perkiraan_id)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`,
+            anggota_id, jenis_kredit_id, kas_perkiraan_id, keterangan)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,0,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING id`,
         [i.kodeAgt, i.kodeKredit, noPinjaman, urutNo, i.tglPinjaman, hari, persenBunga, perAngsuran ? 1 : i.lama,
          fromUnits(pokok), i.lama, jk.persen_adm, fromUnits(rpAdm(t)), jk.persen_provisi, fromUnits(rpProvisi(t)), i.opr,
-         a.rows[0].id, jk.id, i.kasPerkiraanId]);
+         a.rows[0].id, jk.id, i.kasPerkiraanId, i.keterangan?.trim().slice(0, 255) || null]);
     const pinjamanId = h.rows[0].id;
     // Pengajuan jenis ini yang disetujui untuk anggota ini sudah terpenuhi oleh pencairan ini (lewat tombol Cairkan atau form biasa).
     await db.query('UPDATE pengajuan_pinjaman SET menunggu_cair = false WHERE anggota_id = $1 AND jenis_kredit_id = $2 AND menunggu_cair', [a.rows[0].id, jk.id]);

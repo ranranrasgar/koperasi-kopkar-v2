@@ -29,6 +29,16 @@ Kartu **Nilai Awal Anggota Baru** berisi **simpanan pokok, wajib, dan sukarela**
 - **Kosongkan** kolom untuk memakai tebakan (nilai yang paling sering dipakai anggota baru bergrade sama).
 - Perubahan hanya berlaku untuk anggota yang disetujui sesudahnya.
 
+## Teks notifikasi dan email pinjaman
+
+Kartu **Teks Notifikasi dan Email Pinjaman** mengatur kalimat yang diterima anggota saat **pengajuan disetujui**, **pengajuan ditolak**, dan **pinjaman dicairkan**. Satu tab per peristiwa. Notifikasi masuk ke HP anggota lewat aplikasi anggota (muncul walau aplikasi tidak dibuka); email dikirim bila alamat emailnya terverifikasi.
+
+- Isian **Judul** dan **Isi** dipakai untuk notifikasi HP sekaligus email. Judul maksimal 50 karakter, isi notifikasi maksimal 500.
+- Pada tab pencairan ada juga kalimat **pembuka** dan **penutup** email. Rincian kredit, jadwal angsuran, dan lampiran PDF ditambahkan otomatis.
+- Selipkan data dengan tanda kurung kurawal, mis. `{nama}`, `{jenis}`, `{pokok}`, `{lama}`; pencairan juga punya `{tanggal}`, `{no_pinjaman}`, `{angsuran1}`, `{jatuh_tempo1}`, `{keterangan}`. Daftar peubah tiap isian ada di bawah kolomnya; peubah yang salah ditolak saat disimpan.
+- **Kosongkan** isian untuk kembali ke teks bawaan.
+- Perubahan berlaku untuk pengiriman berikutnya. Pencairan KPR tetap memakai teks bawaan.
+
 ## Data perusahaan
 
 | Isian | Dipakai untuk |

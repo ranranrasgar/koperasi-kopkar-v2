@@ -5,6 +5,7 @@ import { createPool, withTx, type Db } from '../src/db.ts';
 import { cairkanPinjaman } from '../src/posting/pinjaman.ts';
 import { cairkanKpr } from '../src/posting/kpr.ts';
 import { bacaInfoPinjaman, jadwalAngsuranPdf, kirimInfoPencairan, teksInfoPinjaman } from '../src/anggota/info-pinjaman.ts';
+import { bacaTemplat, bersihkanTemplat, BIDANG_TEMPLAT, isiTemplat, kunciTemplat } from '../src/anggota/templat-notif.ts';
 
 const pool = createPool();
 const ROLLBACK = new Error('rollback-uji');
@@ -89,4 +90,47 @@ test('info KPR: jadwal dari angsuran tetap, PDF, dan notifikasi', async () => {
         const n = (await db.query('SELECT title FROM log_notifikasi WHERE anggota_id = $1 ORDER BY id DESC LIMIT 1', [a.id])).rows[0];
         assert.equal(n.title, 'KPR Anda sudah dicatat');
     });
+});
+
+test('teks notifikasi dan email pencairan bisa diatur pengurus; keterangan pencairan ikut tersimpan dan terkirim', async () => {
+    await inTx(async (db) => {
+        // Tanpa pengaturan: teks bawaan.
+        const bawaan = await bacaTemplat(db);
+        assert.equal(bawaan['pencairan.judul'], 'Pinjaman Anda sudah dicairkan');
+        // Pengurus mengubah judul, isi, pembuka, dan penutup.
+        const simpan = (k: string, v: string) => db.query(`INSERT INTO pengaturan_web (kunci, nilai) VALUES ($1, $2) ON CONFLICT (kunci) DO UPDATE SET nilai = EXCLUDED.nilai`, [kunciTemplat(k), v]);
+        await simpan('pencairan.judul', 'Dana cair, {nama}');
+        await simpan('pencairan.isi', '{jenis} {pokok} cair {tanggal}, cicilan pertama {angsuran1} ({jatuh_tempo1}). Ket: {keterangan}');
+        await simpan('pencairan.email_pembuka', 'Halo, pinjaman {no_pinjaman} sudah cair.');
+        await simpan('pencairan.email_penutup', 'Terima kasih, salam koperasi.');
+
+        const a = (await db.query(`SELECT kode_agt FROM anggota a WHERE aktif = 'Y' AND rp_grade >= 3000000 AND trim(status_staff) <> 'Staff'
+            AND NOT EXISTS (SELECT 1 FROM app_user u WHERE u.anggota_id = a.id OR u.kode_agt = a.kode_agt) ORDER BY id LIMIT 1`)).rows[0];
+        const kas = (await db.query("SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'")).rows[0].id;
+        const c = await cairkanPinjaman(db, { kodeAgt: a.kode_agt, kodeKredit: 'C01', tglPinjaman: '2026-10-22', pokok: 2_400_000, lama: 6, kasPerkiraanId: kas, opr: 'uji', keterangan: '  Renovasi rumah  ' });
+        assert.equal((await db.query('SELECT keterangan FROM pinjaman_tunai WHERE no_pinjaman = $1', [c.noPinjaman])).rows[0].keterangan, 'Renovasi rumah');
+        const i = (await bacaInfoPinjaman(db, c.noPinjaman))!;
+        assert.equal(i.keterangan, 'Renovasi rumah');
+        const teks = teksInfoPinjaman(i, { pembuka: 'PEMBUKA', penutup: 'PENUTUP' });
+        assert.match(teks, /^PEMBUKA\n/);
+        assert.match(teks, /Keterangan: Renovasi rumah/);
+        assert.match(teks, /PENUTUP$/);
+        assert.doesNotMatch(teksInfoPinjaman({ ...i, keterangan: '' }), /Keterangan:/, 'tanpa keterangan, baris keterangan tidak ada');
+
+        // Notifikasi memakai teks pengurus (anggota tanpa akun: tidak ada penerima, jadi dicek lewat pembentukan teks yang sama).
+        const t = await bacaTemplat(db);
+        const nilai = { nama: i.anggota.nama, jenis: i.namaKredit, pokok: 'Rp 2.400.000', lama: '6', tanggal: '22 Oktober 2026', no_pinjaman: i.noPinjaman, angsuran1: 'Rp 1', jatuh_tempo1: 'x', keterangan: i.keterangan };
+        assert.equal(isiTemplat(t['pencairan.judul'], nilai), `Dana cair, ${i.anggota.nama}`);
+        assert.match(isiTemplat(t['pencairan.isi'], nilai), /Ket: Renovasi rumah$/);
+        assert.equal(isiTemplat(t['pencairan.email_pembuka'], nilai), `Halo, pinjaman ${c.noPinjaman} sudah cair.`);
+    });
+});
+
+test('templat notif: peubah dikenal, batas panjang, kosong = bawaan', () => {
+    const judul = BIDANG_TEMPLAT.find((b) => b.kunci === 'pengajuan_disetujui.judul')!;
+    assert.equal(isiTemplat('Halo {nama} {tidak_ada}', { nama: 'Ani' }), 'Halo Ani {tidak_ada}');
+    assert.equal(bersihkanTemplat(judul, '  Disetujui, {nama}  '), 'Disetujui, {nama}');
+    assert.equal(bersihkanTemplat(judul, '   '), '');
+    assert.throws(() => bersihkanTemplat(judul, 'Halo {tanggal}'), /peubah \{tanggal\} tidak dikenal/);
+    assert.throws(() => bersihkanTemplat(judul, 'x'.repeat(51)), /maksimal 50 karakter/);
 });

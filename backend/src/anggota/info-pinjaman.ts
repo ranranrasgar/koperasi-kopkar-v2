@@ -1,7 +1,8 @@
 import PDFDocument from 'pdfkit';
 import { fromUnits, toUnits } from '../posting/money.ts';
 import { jatuhTempo } from '../posting/pinjaman-calc.ts';
-import { kirimNotifikasi, type HasilKirim } from './push.ts';
+import { kirimNotifikasi, MAKS_ISI, MAKS_JUDUL, type HasilKirim } from './push.ts';
+import { bacaTemplat, isiTemplat } from './templat-notif.ts';
 
 // Informasi pinjaman untuk anggota setelah pencairan: notifikasi (riwayat dan Web Push di PWA) dan email berisi ringkasan kredit, jadwal
 // angsuran, dan lampiran PDF jadwal angsuran. Email hanya terkirim ke anggota yang emailnya terverifikasi (lihat push.ts).
@@ -18,6 +19,8 @@ export interface InfoPinjaman {
     noPinjaman: string; namaKredit: string; kodeKredit: string; tanggal: string;
     pokok: string; lama: number; persenBunga: string; perAngsuran: boolean; persenAdm: string; persenProvisi: string; tanggalTagih: number;
     jasaTotal: string; admTotal: string; provisiTotal: string;
+    /** Keterangan bebas saat pencairan (pinjaman tunai); kosong bila tidak diisi. */
+    keterangan: string;
     jadwal: BarisJadwal[];
 }
 
@@ -51,7 +54,7 @@ async function bacaInfoKpr(db: Pick<Db, 'query'>, noPinjaman: string): Promise<I
         anggota: { id: Number(h.anggota_id), nama: String(h.nama ?? '').trim(), kodeAgt: h.kode_agt, nik: h.nik },
         noPinjaman: h.no_pinjaman, namaKredit: h.nama_kredit ?? 'KPR', kodeKredit: h.kode_kredit ?? '', tanggal: h.tanggal,
         pokok: h.pokok, lama: h.lama_angsuran, persenBunga: '0', perAngsuran: true, persenAdm: '0', persenProvisi: '0', tanggalTagih: h.jatuh_tempo,
-        jasaTotal: '0', admTotal: '0', provisiTotal: '0', jadwal,
+        jasaTotal: '0', admTotal: '0', provisiTotal: '0', keterangan: '', jadwal,
     };
 }
 
@@ -61,7 +64,7 @@ export async function bacaInfoPinjaman(db: Pick<Db, 'query'>, noPinjaman: string
     if (hkpr) return hkpr;
     const h = (await db.query(
         `SELECT p.id, p.no_pinjaman, p.tgl_pinjaman::text AS tanggal, p.rp_pinjaman_pokok::text AS pokok, p.lama_angsuran, p.persen_bunga::text AS bunga,
-                upper(jk.bunga_per) = 'PER ANGSURAN' AS per_angsuran, p.persen_adm::text AS adm, p.persen_provisi::text AS provisi, p.jatuh_tempo,
+                upper(jk.bunga_per) = 'PER ANGSURAN' AS per_angsuran, p.persen_adm::text AS adm, p.persen_provisi::text AS provisi, p.jatuh_tempo, p.keterangan,
                 jk.nama_kredit, jk.kode_kredit, a.id AS anggota_id, a.nama, a.kode_agt, a.nik
            FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
           WHERE p.no_pinjaman = $1`, [noPinjaman])).rows[0];
@@ -82,7 +85,7 @@ export async function bacaInfoPinjaman(db: Pick<Db, 'query'>, noPinjaman: string
         anggota: { id: Number(h.anggota_id), nama: String(h.nama ?? '').trim(), kodeAgt: h.kode_agt, nik: h.nik },
         noPinjaman: h.no_pinjaman, namaKredit: h.nama_kredit ?? 'Pinjaman', kodeKredit: h.kode_kredit ?? '', tanggal: h.tanggal,
         pokok: h.pokok, lama: h.lama_angsuran, persenBunga: h.bunga, perAngsuran: !!h.per_angsuran, persenAdm: h.adm, persenProvisi: h.provisi, tanggalTagih: h.jatuh_tempo,
-        jasaTotal: fromUnits(jasa), admTotal: fromUnits(adm), provisiTotal: fromUnits(provisi), jadwal,
+        jasaTotal: fromUnits(jasa), admTotal: fromUnits(adm), provisiTotal: fromUnits(provisi), keterangan: String(h.keterangan ?? '').trim(), jadwal,
     };
 }
 
@@ -160,19 +163,23 @@ export function jadwalAngsuranPdf(i: InfoPinjaman): Promise<Buffer> {
     });
 }
 
-/** Teks email: ringkasan kredit lalu jadwal angsuran (dipotong 36 baris; selengkapnya ada di lampiran PDF). */
-export function teksInfoPinjaman(i: InfoPinjaman) {
+/**
+ * Teks email: kalimat pembuka, ringkasan kredit, jadwal angsuran (dipotong 36 baris; selengkapnya ada di lampiran PDF), lalu kalimat penutup.
+ * Pembuka dan penutup bawaan bisa diganti pengurus (templat-notif.ts).
+ */
+export function teksInfoPinjaman(i: InfoPinjaman, opsi: { pembuka?: string; penutup?: string } = {}) {
     const kpr = i.jenis === 'kpr';
     const bar = i.jadwal.slice(0, 36).map((b) => `${String(b.ke).padStart(2)}. ${tgl(b.tanggal).padEnd(17)} angsuran ${rupiah(b.total)}`).join('\n');
     return [
-        kpr ? 'KPR Anda telah dicatat. Berikut informasinya:' : 'Pinjaman Anda telah dicairkan. Berikut informasinya:',
+        opsi.pembuka ?? (kpr ? 'KPR Anda telah dicatat. Berikut informasinya:' : 'Pinjaman Anda telah dicairkan. Berikut informasinya:'),
         [`${kpr ? 'No. KPR' : 'No. pinjaman'}: ${i.noPinjaman}`, `Jenis kredit: ${i.kodeKredit} ${i.namaKredit}`.trim(), `Tanggal pencairan: ${tgl(i.tanggal)}`, `${kpr ? 'Pokok KPR' : 'Pokok pinjaman'}: ${rupiah(i.pokok)}`,
             `Lama angsuran: ${i.lama} kali, jatuh tempo tanggal ${i.tanggalTagih} tiap bulan`,
             ...(kpr ? [`Angsuran: ${rupiah(i.jadwal[0]?.total ?? 0)} per bulan`] : [
                 `Jasa: ${persen(i.persenBunga)} ${i.perAngsuran ? 'per bulan' : 'sekali'} (total ${rupiah(i.jasaTotal)})`,
-                `Biaya adm dan provisi: ${rupiah(Number(i.admTotal) + Number(i.provisiTotal))}, ditagih pada angsuran ke-1`])].join('\n'),
+                `Biaya adm dan provisi: ${rupiah(Number(i.admTotal) + Number(i.provisiTotal))}, ditagih pada angsuran ke-1`]),
+            ...(i.keterangan ? [`Keterangan: ${i.keterangan}`] : [])].join('\n'),
         `Jadwal angsuran:\n${bar}${i.jadwal.length > 36 ? `\n... dan ${i.jadwal.length - 36} angsuran lagi (lihat lampiran)` : ''}`,
-        'Jadwal angsuran lengkap tersedia di lampiran PDF email ini. Status pinjaman dan angsuran juga bisa dilihat kapan saja di aplikasi anggota.',
+        opsi.penutup ?? 'Jadwal angsuran lengkap tersedia di lampiran PDF email ini. Status pinjaman dan angsuran juga bisa dilihat kapan saja di aplikasi anggota.',
     ].join('\n\n');
 }
 
@@ -185,10 +192,18 @@ export async function kirimInfoPencairan(db: Db, noPinjaman: string): Promise<Ha
     if (!i) return null;
     const pertama = i.jadwal[0];
     const pdf = await jadwalAngsuranPdf(i);
+    // Pinjaman tunai memakai teks yang diatur pengurus (Pengaturan Perusahaan); KPR tetap teks bawaan.
+    const t = i.jenis === 'tunai' ? await bacaTemplat(db) : null;
+    const nilai = {
+        nama: i.anggota.nama, jenis: i.namaKredit, pokok: rupiah(i.pokok), lama: String(i.lama), tanggal: tgl(i.tanggal), no_pinjaman: i.noPinjaman,
+        angsuran1: pertama ? rupiah(pertama.total) : '-', jatuh_tempo1: pertama ? tgl(pertama.tanggal) : '-', keterangan: i.keterangan || '-',
+    };
+    const pakai = (kunci: string) => (t ? isiTemplat(t[kunci], nilai) : undefined);
     return kirimNotifikasi(db as never, i.anggota.id, {
-        judul: i.jenis === 'kpr' ? 'KPR Anda sudah dicatat' : 'Pinjaman Anda sudah dicairkan',
-        isi: `${i.namaKredit} ${rupiah(i.pokok)} (${i.lama} bulan) ${i.jenis === 'kpr' ? 'dicatat' : 'dicairkan'} ${tgl(i.tanggal)}.${pertama ? ` Angsuran ke-1 ${rupiah(pertama.total)} jatuh tempo ${tgl(pertama.tanggal)}.` : ''} Jadwal lengkap dikirim ke email Anda.`,
+        judul: (pakai('pencairan.judul') ?? (i.jenis === 'kpr' ? 'KPR Anda sudah dicatat' : 'Pinjaman Anda sudah dicairkan')).slice(0, MAKS_JUDUL),
+        isi: (pakai('pencairan.isi')
+            ?? `${i.namaKredit} ${rupiah(i.pokok)} (${i.lama} bulan) ${i.jenis === 'kpr' ? 'dicatat' : 'dicairkan'} ${tgl(i.tanggal)}.${pertama ? ` Angsuran ke-1 ${rupiah(pertama.total)} jatuh tempo ${tgl(pertama.tanggal)}.` : ''} Jadwal lengkap dikirim ke email Anda.`).slice(0, MAKS_ISI),
         url: '/pinjaman', jenisEmail: 'pencairan_pinjaman',
-        teksEmail: teksInfoPinjaman(i), lampiran: { nama: `Jadwal-Angsuran-${i.noPinjaman}.pdf`, isi: pdf },
+        teksEmail: teksInfoPinjaman(i, { pembuka: pakai('pencairan.email_pembuka'), penutup: pakai('pencairan.email_penutup') }), lampiran: { nama: `Jadwal-Angsuran-${i.noPinjaman}.pdf`, isi: pdf },
     });
 }

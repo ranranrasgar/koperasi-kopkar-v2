@@ -2,8 +2,9 @@ import { FormCard } from "@/components/transaksi/common"
 import { FormEdit, type FieldSpec } from "@/components/master/FormEdit"
 import { FormLogo } from "@/components/master/FormLogo"
 import { PosterDaftar } from "@/components/master/PosterDaftar"
-import { simpanKontakWaAction, simpanNilaiAwalAnggotaAction, simpanPerusahaanAction } from "@/app/actions/master"
+import { simpanKontakWaAction, simpanNilaiAwalAnggotaAction, simpanPerusahaanAction, simpanTemplatNotifAction } from "@/app/actions/master"
 import { KUNCI_NILAI_AWAL } from "@kopkar/backend/src/anggota/akun.ts"
+import { BIDANG_TEMPLAT, kunciTemplat } from "@kopkar/backend/src/anggota/templat-notif.ts"
 import { query } from "@/lib/db"
 import { identitasKoperasi } from "@/lib/koperasi"
 import { wajibIzin } from "@/lib/operator"
@@ -27,17 +28,25 @@ const FIELDS: FieldSpec[] = [
     { name: "ket_nota", label: "Keterangan Nota", type: "textarea", wide: true },
 ]
 
+/** Teks notifikasi push dan email yang bisa diatur pengurus; satu tab per peristiwa. */
+const FIELD_TEMPLAT: FieldSpec[] = BIDANG_TEMPLAT.map((b) => ({
+    name: b.kunci, label: b.label, type: b.panjang ? "textarea" : "text", wide: true, tab: b.kelompok,
+    hint: `Kosongkan untuk teks bawaan: "${b.bawaan}" Peubah yang bisa dipakai: ${b.peubah.map((k) => `{${k}}`).join(" ")}. Maksimal ${b.maks} karakter.`,
+}))
+
 export default async function PerusahaanPage() {
     await wajibIzin("/dashboard/settings") // layout tidak dijalankan ulang pada navigasi antarhalaman
-    const [[p], k, [wa], awal] = await Promise.all([
+    const [[p], k, [wa], awal, templat] = await Promise.all([
         query<Record<string, string | number | null>>(`SELECT nama_perusahaan, nama_manager, alamat_perusahaan1, alamat_perusahaan2,
             kota_perusahaan, email, http, npwp, siup, tdp, rp_adm_bank, persen_pajak_pendapatan, ket_nota FROM perusahaan ORDER BY id LIMIT 1`),
         identitasKoperasi(),
         query<{ nilai: string }>("SELECT nilai FROM pengaturan_web WHERE kunci = 'wa_kontak'").catch(() => []),
         query<{ kunci: string; nilai: string }>("SELECT kunci, nilai FROM pengaturan_web WHERE kunci = ANY($1::text[])", [Object.values(KUNCI_NILAI_AWAL)]).catch(() => []),
+        query<{ kunci: string; nilai: string }>("SELECT kunci, nilai FROM pengaturan_web WHERE kunci = ANY($1::text[])", [BIDANG_TEMPLAT.map((b) => kunciTemplat(b.kunci))]).catch(() => []),
     ])
     const alamatAnggota = (process.env.ANGGOTA_URL || ALAMAT_ANGGOTA_BAWAAN).replace(/\/+$/, "")
     const nilaiAwal = Object.fromEntries(Object.entries(KUNCI_NILAI_AWAL).map(([b, kunci]) => [b, awal.find((r) => r.kunci === kunci)?.nilai ?? ""]))
+    const nilaiTemplat = Object.fromEntries(BIDANG_TEMPLAT.map((b) => [b.kunci, templat.find((r) => r.kunci === kunciTemplat(b.kunci))?.nilai ?? ""]))
     return (
         <div className="max-w-4xl space-y-6">
             <FormCard title="Logo Koperasi" description="Tampil di sidebar, halaman login, dan sebagai ikon aplikasi di tab browser.">
@@ -56,6 +65,9 @@ export default async function PerusahaanPage() {
                     { name: "wajib", label: "Simpanan Wajib (Rp per bulan)", type: "uang" },
                     { name: "sukarela", label: "Simpanan Sukarela (Rp per bulan)", type: "uang" },
                 ]} nilai={nilaiAwal} aksi={simpanNilaiAwalAnggotaAction} kolom={3} />
+            </FormCard>
+            <FormCard title="Teks Notifikasi dan Email Pinjaman" description="Judul dan isi notifikasi di HP anggota (aplikasi anggota, muncul walau aplikasi tidak dibuka) dan email saat pengajuan disetujui, ditolak, dan pinjaman dicairkan. Kosongkan satu isian untuk memakai teks bawaan. Nomor pinjaman, jadwal angsuran, dan lampiran PDF tetap ditambahkan otomatis.">
+                <FormEdit fields={FIELD_TEMPLAT} nilai={nilaiTemplat} aksi={simpanTemplatNotifAction} kolom={1} />
             </FormCard>
             <FormCard title="Pengaturan Perusahaan" description="Identitas koperasi untuk kop laporan, nota, dan tampilan aplikasi.">
                 <FormEdit fields={FIELDS} nilai={p ?? {}} aksi={simpanPerusahaanAction} />

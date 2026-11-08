@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache"
 import { modeUji, tx } from "@/lib/db"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { KUNCI_NILAI_AWAL } from "@kopkar/backend/src/anggota/akun.ts"
+import { BIDANG_TEMPLAT, bersihkanTemplat, kunciTemplat } from "@kopkar/backend/src/anggota/templat-notif.ts"
 import { GalatSesi, operatorAktif, wajibAksi } from "@/lib/operator"
 import { jenisGambar } from "@/lib/gambar"
 import { MENU, type AksiIzin } from "@/config/akses"
@@ -105,6 +106,24 @@ export async function simpanNilaiAwalAnggotaAction(_: HasilSimpan, f: FormData):
                 ON CONFLICT (kunci) DO UPDATE SET nilai = EXCLUDED.nilai, diubah_pada = now()`, [kunci, n])
         }
         return "Nilai awal anggota baru disimpan"
+    })
+}
+
+/**
+ * Teks notifikasi push (HP anggota) dan email untuk pengajuan disetujui, pengajuan ditolak, dan pinjaman dicairkan (pengaturan_web, kunci templat.*).
+ * Kosong = kunci dihapus, sehingga dipakai teks bawaan. Peubah {…} yang tidak dikenal ditolak.
+ */
+export async function simpanTemplatNotifAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
+    return simpan(MENU.company, "/dashboard/settings", "ubah", async (db) => {
+        for (const b of BIDANG_TEMPLAT) {
+            let t: string
+            try { t = bersihkanTemplat(b, String(f.get(b.kunci) ?? "")) } catch (e) { throw new Salah(e instanceof Error ? e.message : "Teks tidak valid") }
+            const kunci = kunciTemplat(b.kunci)
+            if (!t) await db.query("DELETE FROM pengaturan_web WHERE kunci = $1", [kunci])
+            else await db.query(`INSERT INTO pengaturan_web (kunci, nilai, diubah_pada) VALUES ($1, $2, now())
+                ON CONFLICT (kunci) DO UPDATE SET nilai = EXCLUDED.nilai, diubah_pada = now()`, [kunci, t])
+        }
+        return "Teks notifikasi dan email disimpan"
     })
 }
 

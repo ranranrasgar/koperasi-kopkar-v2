@@ -50,11 +50,27 @@ Pilih status di kotak di atas tabel untuk melihat pengajuan per status, atau **S
 
 > **Penting:** Penolakan **tidak bisa dibatalkan** dari web, dan persetujuan hanya bisa dibatalkan selama belum dicairkan (lihat di bawah). Hanya pengajuan berstatus Menunggu yang bisa disetujui atau ditolak; jika dua petugas memutuskan bersamaan, yang kedua mendapat pesan *Pengajuan tidak ada atau sudah diputuskan*.
 
-Anggota dikabari keputusan lewat notifikasi aplikasi (dan email bila emailnya terverifikasi).
+Anggota dikabari keputusan lewat notifikasi aplikasi (dan email bila emailnya terverifikasi). Notifikasinya masuk ke HP anggota lewat aplikasi anggota (PWA), juga saat aplikasi tidak sedang dibuka. Judul dan isi notifikasi serta email bisa Anda sesuaikan di **Data Master → Pengaturan Perusahaan → Teks Notifikasi dan Email Pinjaman**.
 
 Menyetujui pengajuan **belum mencairkan uang**. Tidak ada jurnal yang terbentuk sampai pencairan dicatat.
 
 Selama pengajuan yang disetujui belum dicairkan, jenis pinjaman yang memakai **Kunci jika belum lunas** tidak bisa diajukan lagi oleh anggota itu. Tandanya hilang begitu pinjaman tunai jenis yang sama dicairkan untuk anggota tersebut, baik lewat tombol **Cairkan** maupun lewat form pencairan biasa. Bila pengajuan tidak jadi dicairkan, tekan **Batalkan** pada barisnya: status menjadi Ditolak, anggota dikabari, dan kuncinya terbuka.
+
+## Email anggota di tinjauan
+
+Di bagian atas jendela **Lihat** tampil email akun aplikasi anggota dan statusnya: *Terverifikasi*, *Belum diverifikasi*, atau *Belum ada*. Notifikasi lewat **email** (keputusan pengajuan, informasi pencairan) hanya sampai ke email yang sudah terverifikasi; notifikasi di HP anggota tetap sampai.
+
+Bila belum terverifikasi, tanyakan email anggota, tekan **Isi email & kirim verifikasi**, ketik emailnya, lalu **Kirim verifikasi**. Kode dan tombol verifikasi (berlaku 24 jam) dikirim ke email itu; anggota membukanya dan memverifikasi sendiri. Tekan **Periksa lagi** untuk melihat apakah anggota sudah selesai. Aksi ini butuh izin ubah di Pengajuan Pinjaman atau User Mobile.
+
+## Arti tombol di kolom aksi
+
+| Tombol | Tampil pada | Fungsinya |
+|---|---|---|
+| **Lihat** | Semua pengajuan | Identitas dan riwayat pinjaman anggota untuk bahan keputusan. Tidak mengubah apa pun. |
+| **Setujui** / **Tolak** | Status Menunggu | Memutuskan pengajuan. Anggota dikabari lewat notifikasi HP dan email. |
+| **Cairkan** | Disetujui dan **belum dicairkan** | Membuka form pencairan yang sudah terisi dari pengajuan ini. |
+| **Batalkan** | Disetujui dan **belum dicairkan** | Membatalkan persetujuan: status menjadi Ditolak, anggota dikabari, dan kunci "belum lunas" anggota terbuka lagi. |
+| *Sudah dicairkan* | Disetujui dan pinjamannya sudah dicairkan | Hanya keterangan. **Batalkan** tidak ada karena pinjamannya sudah berjalan; untuk membatalkannya pakai Audit Data → Batalkan Transaksi. |
 
 ## Mencairkan pengajuan yang disetujui
 

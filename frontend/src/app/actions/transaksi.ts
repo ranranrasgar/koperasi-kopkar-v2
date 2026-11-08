@@ -218,7 +218,7 @@ export async function cairkanPinjamanAction(_: Hasil, f: FormData): Promise<Hasi
         const r = await tx((db) => cairkanPinjaman(db, {
             kodeAgt: teks(f, "kodeAgt"), kodeKredit: teks(f, "kodeKredit"), tglPinjaman: tanggal(f),
             pokok: uang(f, "pokok", "Pokok pinjaman"), lama: bulat(f, "lama", "Lama angsuran"), kasPerkiraanId: teks(f, "kas"), opr,
-            persenBunga: bolehUbahBunga(o) ? bungaIsian : undefined,
+            persenBunga: bolehUbahBunga(o) ? bungaIsian : undefined, keterangan: teks(f, "keterangan", false).slice(0, 255),
         }))
         // Kabari anggota: notifikasi di aplikasi dan email berisi informasi kredit, jadwal angsuran, dan PDF-nya. Mode uji tidak menyimpan
         // apa pun, jadi tidak mengirim; kegagalan kirim tidak membatalkan pencairan yang sudah tersimpan.
