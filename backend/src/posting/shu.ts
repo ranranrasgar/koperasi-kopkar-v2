@@ -146,6 +146,21 @@ export async function tutupBuku(db: Db, i: { tahun: number; opr: string }): Prom
         const net = toUnits(x.net);
         return net > 0n ? { kodePerkiraan: x.k, debit: fromUnits(net), tanggal: awal } : { kodePerkiraan: x.k, debit: undefined, kredit: fromUnits(-net), tanggal: awal };
     });
+    // Seimbangkan selisih pembulatan historis saldo awal ke Cadangan Modal (3.0.00.22) agar jurnal pembuka seimbang.
+    const selBuka = buka.reduce((s, l) => s + toUnits(l.debit ?? 0) - toUnits(l.kredit ?? 0), 0n);
+    if (selBuka !== 0n) {
+        const cm = buka.find((l) => l.kodePerkiraan === '3.0.00.22');
+        if (cm) {
+            const netCm = toUnits(cm.kredit ?? 0) - toUnits(cm.debit ?? 0) + selBuka;
+            if (netCm >= 0n) {
+                cm.kredit = fromUnits(netCm);
+                cm.debit = undefined;
+            } else {
+                cm.debit = fromUnits(-netCm);
+                cm.kredit = undefined;
+            }
+        }
+    }
     n += await postJournal(db, { ...dasar, tanggal: awal, lines: buka, tambah: true });
 
     const kolam = rencana.shuAnggota;
