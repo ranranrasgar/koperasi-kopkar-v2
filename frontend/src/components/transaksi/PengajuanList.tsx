@@ -146,12 +146,12 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                         </Button>
                     )}
                     {isPending && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
-                    <div className="ml-auto flex shrink-0 items-center gap-2">
-                        <Button type="button" variant="outline" size="sm" className="h-9 font-medium shadow-sm" onClick={() => keluarkan("cetak")} disabled={menyiapkan !== null || data.total === 0}>
-                            {menyiapkan === "cetak" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Printer className="mr-1.5 h-4 w-4" />} Cetak
+                    <div className="ml-auto flex shrink-0 items-center gap-1.5">
+                        <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 shadow-sm" title="Cetak pengajuan" aria-label="Cetak pengajuan" onClick={() => keluarkan("cetak")} disabled={menyiapkan !== null || data.total === 0}>
+                            {menyiapkan === "cetak" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
                         </Button>
-                        <Button type="button" variant="outline" size="sm" className="h-9 font-medium shadow-sm" onClick={() => keluarkan("ekspor")} disabled={menyiapkan !== null || data.total === 0}>
-                            {menyiapkan === "ekspor" ? <Loader2 className="mr-1.5 h-4 w-4 animate-spin" /> : <Download className="mr-1.5 h-4 w-4" />} Ekspor
+                        <Button type="button" variant="outline" size="icon" className="h-9 w-9 shrink-0 shadow-sm" title="Ekspor ke Excel" aria-label="Ekspor ke Excel" onClick={() => keluarkan("ekspor")} disabled={menyiapkan !== null || data.total === 0}>
+                            {menyiapkan === "ekspor" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Download className="h-4 w-4" />}
                         </Button>
                     </div>
                 </div>
