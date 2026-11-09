@@ -210,7 +210,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                                             </>
                                         ))}
                                         {p.status === "Y" && p.menunggu_cair && bolehCair && (
-                                            <Link href={`/dashboard/loans/create-cash?pengajuan=${p.id}`} className="text-xs text-primary hover:underline">Cairkan</Link>
+                                            <Link href={`/dashboard/loans/create-cash?pengajuan=${p.id}&kembali=${encodeURIComponent(`${pathname}${sp.toString() ? `?${sp.toString()}` : ""}`)}`} className="text-xs text-primary hover:underline">Cairkan</Link>
                                         )}
                                         {p.status === "Y" && p.menunggu_cair && (sibuk === p.id ? <Loader2 className="ml-3 h-4 w-4 animate-spin inline" /> : (
                                             <button type="button" onClick={() => putuskan(p, false)} disabled={sibuk !== null} title="Batalkan persetujuan yang belum dicairkan"

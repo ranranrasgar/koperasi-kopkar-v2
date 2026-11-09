@@ -1,6 +1,10 @@
 "use client"
 
 import { useEffect, useMemo, useRef, useState } from "react"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
+import { ArrowLeft } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { InputUang } from "@/components/ui/InputUang"
 import { batasPlafon, pesanPlafon } from "@kopkar/backend/src/posting/plafon.ts"
@@ -26,6 +30,8 @@ const KAS_BAWAAN = "1.1.01.41"
 export interface AwalPinjaman extends AnggotaRingkas { kode_kredit: string; pokok: string; lama: number; persen_bunga: string }
 
 export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = false }: { jenis: JenisKreditOpsi[]; akunKas: Akun[]; hariIni: string; awal?: AwalPinjaman; bolehUbahBunga?: boolean }) {
+    const sp = useSearchParams()
+    const kembali = sp.get("kembali") || (awal ? "/dashboard/loans/apply?status=Y" : "/dashboard/loans/apply")
     const { hasil, onSubmit, pending } = useAksiForm(cairkanPinjamanAction)
     const [anggota, setAnggota] = useState<AnggotaRingkas | null>(awal ?? null)
     const [kodeKredit, setKodeKredit] = useState(awal?.kode_kredit ?? jenis[0]?.kode_kredit ?? "")
@@ -95,9 +101,17 @@ export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = f
     }, [hasil])
 
     return (
-        <div className="grid gap-6 lg:grid-cols-5">
-            <div className="lg:col-span-3 space-y-6">
-                <FormCard title="Pencairan Pinjaman Tunai"
+        <div className="space-y-4">
+            <div>
+                <Button asChild variant="outline" size="sm" className="h-9 font-medium shadow-sm">
+                    <Link href={kembali}>
+                        <ArrowLeft className="mr-1.5 h-4 w-4" /> Kembali ke Pengajuan
+                    </Link>
+                </Button>
+            </div>
+            <div className="grid gap-6 lg:grid-cols-5">
+                <div className="lg:col-span-3 space-y-6">
+                    <FormCard title="Pencairan Pinjaman Tunai"
                     description="Mencatat header pinjaman, baris pencairan, jadwal tagih, dan jurnal (debit piutang, kredit kas) dalam satu transaksi.">
                     <form ref={form} onSubmit={onSubmit} className="space-y-4">
                         <Field label="Anggota" htmlFor="anggota">
@@ -154,7 +168,21 @@ export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = f
                         {pesanKunci && <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{pesanKunci}</p>}
                         {pesanBatas && <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700">{pesanBatas}</p>}
                         <HasilTransaksi hasil={hasil} />
-                        <div className="flex justify-end">
+                        {hasil?.ok && (
+                            <div className="pt-1">
+                                <Button asChild size="sm" className="bg-green-700 hover:bg-green-800 text-white font-medium shadow-sm">
+                                    <Link href={kembali}>
+                                        <ArrowLeft className="mr-1.5 h-4 w-4" /> Kembali ke Pengajuan Kredit
+                                    </Link>
+                                </Button>
+                            </div>
+                        )}
+                        <div className="flex items-center justify-between gap-2 pt-2">
+                            <Button asChild variant="outline" size="sm" className="h-9">
+                                <Link href={kembali}>
+                                    <ArrowLeft className="mr-1.5 h-4 w-4" /> Batal
+                                </Link>
+                            </Button>
                             <SubmitButton pending={pending} disabled={!anggota || !kodeKredit || Boolean(pesanBatas) || Boolean(pesanKunci)}>Cairkan Pinjaman</SubmitButton>
                         </div>
                     </form>
@@ -175,6 +203,7 @@ export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = f
                 </FormCard>
             </div>
             {riwayat && <div className="lg:col-span-5"><RiwayatAnggotaPanel data={riwayat} batas={batas} /></div>}
+        </div>
         </div>
     )
 }
