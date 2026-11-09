@@ -84,7 +84,6 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
                                     </div>
                                     <div className="text-right">
                                         <p className="angka text-[0.9375rem] font-semibold">{rupiah(b.pokok + b.jasa)}</p>
-                                        <p className="angka text-xs text-redup">Pokok {rupiah(b.pokok)} · Jasa {rupiah(b.jasa)}</p>
                                     </div>
                                 </div>
                             ))}
