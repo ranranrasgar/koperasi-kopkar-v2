@@ -290,7 +290,9 @@ export async function rancangJurnalSusulan(db: Pick<Db, 'query'>, no: string): P
         lines = setor > 0n ? [{ kodePerkiraan: kas, debit: fromUnits(setor) }, { kodePerkiraan: s.akun, kredit: fromUnits(setor) }]
             : [{ kodePerkiraan: s.akun, debit: fromUnits(ambil) }, { kodePerkiraan: kas, kredit: fromUnits(ambil) }];
     } else if (jenis === 'angsuran') {
-        const b = (await db.query(`SELECT x.tanggal_angsuran::text tanggal, x.debit_pokok, x.debit_bunga, x.rp_adm, x.rp_provisi, x.kas_perkiraan_id, x.angsuran_ke, x.no_pinjaman nomor, p.id pinjaman_id, a.nama, a.nik, jk.nama_kredit,
+        const b = (await db.query(`SELECT x.id, x.tanggal_angsuran::text tanggal, x.debit_pokok, x.debit_bunga, x.rp_adm, x.rp_provisi,
+                COALESCE(x.kas_perkiraan_id, p.kas_perkiraan_id, (SELECT y.kas_perkiraan_id FROM pinjaman_tunai_rincian y WHERE y.pinjaman_tunai_id = p.id AND y.kas_perkiraan_id IS NOT NULL ORDER BY y.angsuran_ke DESC LIMIT 1)) AS kas_perkiraan_id,
+                x.angsuran_ke, x.no_pinjaman nomor, p.id pinjaman_id, a.nama, a.nik, jk.nama_kredit,
                 p1.kode_perkiraan akun_kredit, p2.kode_perkiraan akun_jasa, p3.kode_perkiraan akun_adm, p4.kode_perkiraan akun_provisi
             FROM pinjaman_tunai_rincian x JOIN pinjaman_tunai p ON p.id = x.pinjaman_tunai_id JOIN anggota a ON a.id = p.anggota_id JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
             LEFT JOIN perkiraan p1 ON p1.id = jk.coa_kredit_id LEFT JOIN perkiraan p2 ON p2.id = jk.coa_jasa_id LEFT JOIN perkiraan p3 ON p3.id = jk.coa_adm_id LEFT JOIN perkiraan p4 ON p4.id = jk.coa_provisi_id
@@ -308,7 +310,9 @@ export async function rancangJurnalSusulan(db: Pick<Db, 'query'>, no: string): P
         r = { tanggal: p.tanggal, deskripsi: `Pencairan ${p.nama_kredit} a/n: ${p.nama}/${p.nik}`, sumberTipe: 'pinjaman_tunai', sumberId: p.id };
         lines = [{ kodePerkiraan: p.akun_kredit, debit: pokok }, { kodePerkiraan: await akunKas(db, p.kas_perkiraan_id, no), kredit: pokok }];
     } else if (jenis === 'kpr_angsuran') {
-        const b = (await db.query(`SELECT x.tanggal_angsuran::text tanggal, x.debit_pokok, x.kas_perkiraan_id, x.angsuran_ke, k.no_pinjaman nomor, k.id kpr_id, a.nama, jk.nama_kredit, p.kode_perkiraan akun_titipan
+        const b = (await db.query(`SELECT x.id, x.tanggal_angsuran::text tanggal, x.debit_pokok,
+                COALESCE(x.kas_perkiraan_id, (SELECT y.kas_perkiraan_id FROM kpr_rincian y WHERE y.kpr_id = k.id AND y.kas_perkiraan_id IS NOT NULL ORDER BY y.angsuran_ke DESC LIMIT 1)) AS kas_perkiraan_id,
+                x.angsuran_ke, k.no_pinjaman nomor, k.id kpr_id, a.nama, jk.nama_kredit, p.kode_perkiraan akun_titipan
             FROM kpr_rincian x JOIN kpr k ON k.id = x.kpr_id JOIN anggota a ON a.id = k.anggota_id JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id JOIN perkiraan p ON p.id = jk.coa_kredit_id WHERE x.no_bukti = $1`, [no])).rows;
         if (b.length !== 1 || b[0].angsuran_ke <= 0) throw new Error(`Bukti ${no} bukan satu baris angsuran`);
         const x = b[0], rp = fromUnits(round2(toUnits(x.debit_pokok)));
@@ -328,6 +332,9 @@ export async function buatJurnalSusulan(db: Db, i: Omit<BatalInput, 'tanggal'>):
     const r = await rancangJurnalSusulan(db, i.noBukti);
     await postJournal(db, { nomorBukti: r.noBukti, tanggal: r.tanggal, deskripsi: r.deskripsi.slice(0, 200), opr: i.opr, sumberTipe: r.sumberTipe, sumberId: r.sumberId,
         noBuktiTransaksi: r.noBuktiTransaksi, lines: r.baris.map((b) => ({ kodePerkiraan: b.kodePerkiraan, debit: b.debit, kredit: b.kredit })) });
+    if (r.jenis === 'angsuran') {
+        await db.query(`UPDATE pinjaman_tunai_rincian SET kas_perkiraan_id = (SELECT id FROM perkiraan WHERE kode_perkiraan = $2 LIMIT 1) WHERE no_bukti = $1 AND kas_perkiraan_id IS NULL`, [r.noBukti, r.baris[0]?.kodePerkiraan]);
+    }
     await db.query(
         `INSERT INTO transaksi_koreksi (jenis, sumber_id, no_bukti, aksi, alasan, opr, operator_id, data_lama, data_baru)
          VALUES ($1, $2, $3, 'jurnal_susulan', $4, $5, $6, '{}', $7)`,
