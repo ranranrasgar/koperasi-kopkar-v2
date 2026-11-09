@@ -63,18 +63,20 @@ export interface Pengajuan {
     menunggu_cair: boolean
 }
 
-const STATUS_PENGAJUAN = ["P", "Y", "N"]
+const STATUS_PENGAJUAN = ["P", "N"]
 
 /**
  * Daftar pengajuan kredit dari aplikasi anggota, dengan pencarian (KPK = anggota.nik, nama, kode anggota, NIK/KTP di
  * detail anggota), filter status, jenis kredit, rentang tanggal realisasi, dan lama angsuran, serta paginasi.
- * Status kosong = semua; tanpa parameter status = Menunggu.
+ * Status kosong = semua; tanpa parameter status = Menunggu. Y = disetujui dan belum dicairkan; C = disetujui dan sudah dicairkan.
  */
 export async function daftarPengajuan(s: SearchParams) {
     const { values, p } = params()
     const where: string[] = []
     const status = s.status === undefined ? "P" : sp(s, "status")
     if (STATUS_PENGAJUAN.includes(status)) where.push(`pp.status = ${p(status)}`)
+    else if (status === "Y") where.push(`pp.status = 'Y' AND pp.menunggu_cair IS TRUE`)
+    else if (status === "C") where.push(`pp.status = 'Y' AND pp.menunggu_cair IS NOT TRUE`)
     const cari = sp(s, "search")
     if (cari) {
         const kw = p(`%${cari}%`)

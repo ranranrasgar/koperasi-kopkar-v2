@@ -113,7 +113,7 @@ export function jadwalAngsuranPdf(i: InfoPinjaman): Promise<Buffer> {
             ...(kpr
                 ? [['Angsuran', `${rupiah(i.jadwal[0]?.total ?? 0)} per bulan`] as [string, string]]
                 : [
-                    ['Jasa', `${persen(i.persenBunga)} ${i.perAngsuran ? 'per bulan' : 'sekali untuk seluruh masa pinjaman'} · total ${rupiah(i.jasaTotal)}`] as [string, string],
+                    ['Jasa', `${persen(i.persenBunga)} ${i.perAngsuran ? 'per bulan' : 'sekali untuk seluruh masa pinjaman'}`] as [string, string],
                     ['Biaya', `adm ${persen(i.persenAdm)} (${rupiah(i.admTotal)}), provisi ${persen(i.persenProvisi)} (${rupiah(i.provisiTotal)}), ditagih pada angsuran ke-1`] as [string, string],
                 ]),
         ];
@@ -175,7 +175,7 @@ export function teksInfoPinjaman(i: InfoPinjaman, opsi: { pembuka?: string; penu
         [`${kpr ? 'No. KPR' : 'No. pinjaman'}: ${i.noPinjaman}`, `Jenis kredit: ${i.kodeKredit} ${i.namaKredit}`.trim(), `Tanggal pencairan: ${tgl(i.tanggal)}`, `${kpr ? 'Pokok KPR' : 'Pokok pinjaman'}: ${rupiah(i.pokok)}`,
             `Lama angsuran: ${i.lama} kali, jatuh tempo tanggal ${i.tanggalTagih} tiap bulan`,
             ...(kpr ? [`Angsuran: ${rupiah(i.jadwal[0]?.total ?? 0)} per bulan`] : [
-                `Jasa: ${persen(i.persenBunga)} ${i.perAngsuran ? 'per bulan' : 'sekali'} (total ${rupiah(i.jasaTotal)})`,
+                `Jasa: ${persen(i.persenBunga)} ${i.perAngsuran ? 'per bulan' : 'sekali'}`,
                 `Biaya adm dan provisi: ${rupiah(Number(i.admTotal) + Number(i.provisiTotal))}, ditagih pada angsuran ke-1`]),
             ...(i.keterangan ? [`Keterangan: ${i.keterangan}`] : [])].join('\n'),
         `Jadwal angsuran:\n${bar}${i.jadwal.length > 36 ? `\n... dan ${i.jadwal.length - 36} angsuran lagi (lihat lampiran)` : ''}`,

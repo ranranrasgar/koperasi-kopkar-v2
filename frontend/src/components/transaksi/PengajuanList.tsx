@@ -20,7 +20,19 @@ import { TinjauPengajuan } from "./TinjauPengajuan"
 const STATUS: Record<string, { label: string; cls: string }> = {
     P: { label: "Menunggu", cls: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400" },
     Y: { label: "Disetujui", cls: "bg-green-100 text-green-700 dark:bg-green-500/15 dark:text-green-400" },
+    C: { label: "Sudah dicairkan", cls: "bg-blue-100 text-blue-700 dark:bg-blue-500/15 dark:text-blue-400" },
     N: { label: "Ditolak", cls: "bg-red-100 text-red-700 dark:bg-red-500/15 dark:text-red-400" },
+}
+/** Status tampilan: disetujui yang pinjamannya sudah dicairkan ditampilkan sebagai C. */
+const statusTampil = (p: Pengajuan) => (p.status === "Y" && !p.menunggu_cair ? "C" : p.status)
+
+/** Pilihan filter status terakhir disimpan di cookie, supaya kembali ke halaman ini (mis. setelah pencairan) tidak pindah ke Menunggu.
+ *  Dibaca di app/dashboard/loans/apply/page.tsx (nama cookie sama). */
+const COOKIE_STATUS_PENGAJUAN = "pengajuan_status"
+const simpanStatus = (v: string | null) => {
+    document.cookie = v === null
+        ? `${COOKIE_STATUS_PENGAJUAN}=; path=/dashboard/loans/apply; max-age=0`
+        : `${COOKIE_STATUS_PENGAJUAN}=${v === "" ? "semua" : v}; path=/dashboard/loans/apply; max-age=31536000; samesite=lax`
 }
 
 const KOLOM: { key: string; label: string; kelas: string; urut?: boolean }[] = [
@@ -61,7 +73,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
         startTransition(() => router.push(`${pathname}?${params.toString()}`))
     }
     // Status "Menunggu" adalah bawaan (tanpa parameter); "Semua" ditulis status= kosong.
-    const ubahStatus = (v: string) => ubah({ status: v === "P" ? null : v === "" ? "" : v })
+    const ubahStatus = (v: string) => { simpanStatus(v); ubah({ status: v === "P" ? null : v === "" ? "" : v }) }
     const urut = (key: string) => ubah({ sortBy: key, sortOrder: urutKey === key && urutArah === "asc" ? "desc" : "asc" })
 
     const putuskan = (p: Pengajuan, setuju: boolean) => {
@@ -85,7 +97,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
             if ("error" in r) { alert(r.error); return }
             const items = r.items as unknown as Pengajuan[]
             const baris = items.map((p) => [formatTanggal(p.tgl_realisasi), p.kode_agt, p.nik ?? "-", p.nama, p.nama_kredit ?? "-", formatAngka(p.rp_pinjaman_pokok),
-                `${p.lama_angsuran} bln`, `${formatAngka2(p.persen_bunga)}%`, p.keterangan ?? "", STATUS[p.status ?? ""]?.label ?? p.status ?? ""])
+                `${p.lama_angsuran} bln`, `${formatAngka2(p.persen_bunga)}%`, p.keterangan ?? "", STATUS[statusTampil(p) ?? ""]?.label ?? p.status ?? ""])
             const total = ["", "", "", `Total (${items.length.toLocaleString("id-ID")} pengajuan)`, "", formatAngka(items.reduce((t, p) => t + Number(p.rp_pinjaman_pokok), 0)), "", "", "", ""]
             const namaStatus = status ? STATUS[status]?.label : "Semua status"
             const subjudul = [namaStatus, sp.get("search") ? `Pencarian: ${sp.get("search")}` : "", sp.get("dari") ? `Dari ${formatTanggal(sp.get("dari"))}` : "", sp.get("sampai") ? `Sampai ${formatTanggal(sp.get("sampai"))}` : ""].filter(Boolean).join(" · ")
@@ -111,9 +123,10 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                             placeholder="KPK, nama, kode anggota, atau NIK"
                             className="h-9 w-full rounded-md border bg-background pl-9 pr-3 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500" />
                     </form>
-                    <select aria-label="Status" className={`${kolomInput} w-[7.5rem] shrink-0`} value={status} onChange={(e) => ubahStatus(e.target.value)}>
+                    <select aria-label="Status" className={`${kolomInput} w-[9.5rem] shrink-0`} value={status} onChange={(e) => ubahStatus(e.target.value)}>
                         <option value="P">Menunggu</option>
                         <option value="Y">Disetujui</option>
+                        <option value="C">Sudah dicairkan</option>
                         <option value="N">Ditolak</option>
                         <option value="">Semua</option>
                     </select>
@@ -128,7 +141,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                     </div>
                     {adaFilter && (
                         <Button type="button" variant="ghost" size="sm" className="h-9 shrink-0 px-2 text-muted-foreground"
-                            onClick={() => { setCari(""); startTransition(() => router.push(pathname)) }}>
+                            onClick={() => { setCari(""); simpanStatus(null); startTransition(() => router.push(pathname)) }}>
                             <X className="mr-1 h-4 w-4" /> Atur ulang
                         </Button>
                     )}
@@ -183,7 +196,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                                     <td className="px-3 py-2 text-right">{formatAngka2(p.persen_bunga)}%</td>
                                     <td className="px-3 py-2 max-w-[16rem] truncate" title={p.keterangan ?? ""}>{p.keterangan}</td>
                                     <td className="px-3 py-2 text-center">
-                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase ${STATUS[p.status]?.cls ?? ""}`}>{STATUS[p.status]?.label ?? p.status}</span>
+                                        <span className={`rounded-full px-2 py-0.5 text-[10px] font-bold uppercase whitespace-nowrap ${STATUS[statusTampil(p)]?.cls ?? ""}`}>{STATUS[statusTampil(p)]?.label ?? p.status}</span>
                                     </td>
                                     <td className="px-3 py-2 text-right whitespace-nowrap">
                                         <button type="button" onClick={() => setTinjau(p)} title="Lihat identitas dan riwayat pinjaman anggota"
@@ -199,7 +212,6 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
                                         {p.status === "Y" && p.menunggu_cair && bolehCair && (
                                             <Link href={`/dashboard/loans/create-cash?pengajuan=${p.id}`} className="text-xs text-primary hover:underline">Cairkan</Link>
                                         )}
-                                        {p.status === "Y" && !p.menunggu_cair && <span className="text-xs text-muted-foreground" title="Pinjaman dari pengajuan ini sudah dicairkan">Sudah dicairkan</span>}
                                         {p.status === "Y" && p.menunggu_cair && (sibuk === p.id ? <Loader2 className="ml-3 h-4 w-4 animate-spin inline" /> : (
                                             <button type="button" onClick={() => putuskan(p, false)} disabled={sibuk !== null} title="Batalkan persetujuan yang belum dicairkan"
                                                 className="ml-3 inline-flex items-center gap-1 text-xs text-red-700 hover:underline"><X className="h-3.5 w-3.5" />Batalkan</button>
