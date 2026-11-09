@@ -169,15 +169,20 @@ export function jadwalAngsuranPdf(i: InfoPinjaman): Promise<Buffer> {
  */
 export function teksInfoPinjaman(i: InfoPinjaman, opsi: { pembuka?: string; penutup?: string } = {}) {
     const kpr = i.jenis === 'kpr';
-    const bar = i.jadwal.slice(0, 36).map((b) => `${String(b.ke).padStart(2)}. ${tgl(b.tanggal).padEnd(17)} angsuran ${rupiah(b.total)}`).join('\n');
+    const bar = i.jadwal.slice(0, 36).map((b) => `  ${String(b.ke).padStart(2)}. ${tgl(b.tanggal).padEnd(17)} angsuran ${rupiah(b.total)}`).join('\n');
     return [
         opsi.pembuka ?? (kpr ? 'KPR Anda telah dicatat. Berikut informasinya:' : 'Pinjaman Anda telah dicairkan. Berikut informasinya:'),
-        [`${kpr ? 'No. KPR' : 'No. pinjaman'}: ${i.noPinjaman}`, `Jenis kredit: ${i.kodeKredit} ${i.namaKredit}`.trim(), `Tanggal pencairan: ${tgl(i.tanggal)}`, `${kpr ? 'Pokok KPR' : 'Pokok pinjaman'}: ${rupiah(i.pokok)}`,
+        [
+            `${kpr ? 'No. KPR' : 'No. pinjaman'}: ${i.noPinjaman}`,
+            `Jenis kredit: ${i.kodeKredit} ${i.namaKredit}`.trim(),
+            `Tanggal pencairan: ${tgl(i.tanggal)}`,
+            `${kpr ? 'Pokok KPR' : 'Pokok pinjaman'}: ${rupiah(i.pokok)}`,
             `Lama angsuran: ${i.lama} kali, jatuh tempo tanggal ${i.tanggalTagih} tiap bulan`,
             ...(kpr ? [`Angsuran: ${rupiah(i.jadwal[0]?.total ?? 0)} per bulan`] : [
                 `Jasa: ${persen(i.persenBunga)} ${i.perAngsuran ? 'per bulan' : 'sekali'}`,
                 `Biaya adm dan provisi: ${rupiah(Number(i.admTotal) + Number(i.provisiTotal))}, ditagih pada angsuran ke-1`]),
-            ...(i.keterangan ? [`Keterangan: ${i.keterangan}`] : [])].join('\n'),
+            ...(i.keterangan ? [`Keterangan: ${i.keterangan}`] : [])
+        ].join('\n'),
         `Jadwal angsuran:\n${bar}${i.jadwal.length > 36 ? `\n... dan ${i.jadwal.length - 36} angsuran lagi (lihat lampiran)` : ''}`,
         opsi.penutup ?? 'Jadwal angsuran lengkap tersedia di lampiran PDF email ini. Status pinjaman dan angsuran juga bisa dilihat kapan saja di aplikasi anggota.',
     ].join('\n\n');

@@ -163,11 +163,6 @@ export function FormAjukan({ produk, hariIni, batasTanggal, namaMenunggu }: {
                                     setBesarTeks(n ? Number(n).toLocaleString("id-ID") : "")
                                 }} />
                         </div>
-                        <input type="range" aria-label="Geser jumlah pengajuan" min={LANGKAH_GESER} max={maksGeser} step={LANGKAH_GESER} className="h-6 w-full accent-utama"
-                            value={Math.min(Math.max(besar, LANGKAH_GESER), maksGeser)} onChange={(e) => isiBesar(Number(e.target.value))} />
-                        <div className="flex justify-between text-[0.6875rem] text-redup">
-                            <span>{rupiah(LANGKAH_GESER)}</span><span>kelipatan {rupiah(LANGKAH_GESER)}</span><span>{rupiah(maksGeser)}</span>
-                        </div>
                         <div className="flex flex-wrap gap-2">
                             {NOMINAL_CEPAT.filter((n) => n <= maksGeser).map((n) => (
                                 <button key={n} type="button" onClick={() => isiBesar(n)}
@@ -325,8 +320,7 @@ function Estimasi({ est, lama }: { est: ReturnType<typeof estimasiAngsuran>; lam
         return <div className="rounded-2xl bg-utama-lembut px-4 py-3.5 text-sm text-redup">Isi besar pinjaman untuk melihat perkiraan angsuran.</div>
     }
     const baris: [string, string, string][] = [
-        ["Angsuran pokok", rupiah(est.pokok), "bg-utama"],
-        ["Jasa koperasi", rupiah(est.jasa), "bg-masuk"],
+        ["Total angsuran (pokok + jasa)", rupiah(est.berikutnya), "bg-utama"],
     ]
     return (
         <div className="rounded-[var(--radius-kartu)] bg-utama-lembut p-5">
