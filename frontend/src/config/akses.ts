@@ -221,7 +221,7 @@ const TAMBAH = ["tambah"] as const, UBAH = ["ubah"] as const, UBAH_HAPUS = ["uba
 /** Aksi yang bisa diatur per menu, hanya yang benar-benar ada di server action. Menu lain cukup izin lihat. Proses (tutup buku, hitung SHU, posting) dihitung tambah. */
 export const AKSI_IZIN: Record<string, readonly AksiIzin[]> = {
     [MENU.daftarAnggota]: UBAH_HAPUS, [MENU.inputAnggota]: TAMBAH, [MENU.karyawanMattel]: UBAH_HAPUS, [MENU.daftarKaryawan]: UBAH_HAPUS, [MENU.user]: UBAH_HAPUS,
-    [MENU.company]: UBAH, [MENU.jenisSimpanan]: UBAH, [MENU.jenisPinjaman]: SEMUA, [MENU.gradeAnggota]: SEMUA, [MENU.coa]: UBAH_HAPUS,
+    [MENU.company]: UBAH, [MENU.jenisSimpanan]: UBAH, [MENU.jenisPinjaman]: SEMUA, [MENU.gradeAnggota]: SEMUA, [MENU.coa]: SEMUA,
     [MENU.setoranSimpanan]: TAMBAH, [MENU.pencairanSimpanan]: TAMBAH, [MENU.pengajuan]: UBAH,
     [MENU.cairKoperasi]: TAMBAH, [MENU.cairBank]: TAMBAH, [MENU.cairKpr]: TAMBAH, [MENU.angsurKoperasi]: TAMBAH, [MENU.angsurBank]: TAMBAH, [MENU.angsurKpr]: TAMBAH,
     [MENU.titipan]: ["tambah", "hapus"], [MENU.jurnalUmum]: SEMUA, [MENU.jurnalPenyesuaian]: SEMUA, [MENU.bankBook]: SEMUA,

@@ -61,6 +61,20 @@ export const pohonCoa = () =>
 
 export interface Akun { id: number; kode_perkiraan: string; nama_perkiraan: string }
 
+export interface IndukCoa extends Akun { d_k: string; kode_klasifikasi: number; punya_jurnal: boolean }
+export interface KlasifikasiCoa { kode_klasifikasi: number; nama_klasifikasi: string }
+
+/** Bahan form Tambah COA: semua akun sebagai calon induk (akun berjurnal ditandai, tidak boleh jadi induk) dan daftar Group. */
+export const bahanTambahCoa = async () => {
+    const [induk, klasifikasi] = await Promise.all([
+        query<IndukCoa>(`SELECT p.id, p.kode_perkiraan, p.nama_perkiraan, p.d_k, p.kode_klasifikasi,
+                                EXISTS (SELECT 1 FROM jurnal_umum j WHERE j.perkiraan_id = p.id) AS punya_jurnal
+                           FROM perkiraan p ORDER BY p.kode_perkiraan`),
+        query<KlasifikasiCoa>("SELECT kode_klasifikasi, nama_klasifikasi FROM klasifikasi_perkiraan ORDER BY kode_klasifikasi"),
+    ])
+    return { induk, klasifikasi }
+}
+
 /** Semua akun, termasuk akun induk; untuk laporan seperti Buku Besar. */
 export const semuaAkun = () =>
     query<Akun>("SELECT id, kode_perkiraan, nama_perkiraan FROM perkiraan ORDER BY kode_perkiraan")

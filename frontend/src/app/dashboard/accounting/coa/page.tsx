@@ -4,13 +4,14 @@ import { ModuleTable } from "@/components/ui/ModuleTable"
 import { PohonCoa } from "@/components/akuntansi/PohonCoa"
 import { FormPeriode } from "@/components/laporan/Periode"
 import { coaConfig } from "@/config/modules"
-import { daftarCoa, pohonCoa } from "@/lib/queries/akuntansi"
+import { bahanTambahCoa, daftarCoa, pohonCoa } from "@/lib/queries/akuntansi"
 import { saldoAkhirPerAkun } from "@/lib/queries/laporan"
 import { formatTanggal, hariIni } from "@/lib/format"
 import { isTanggal, sp } from "@/lib/list"
 import { wajibIzin } from "@/lib/operator"
 import { cn } from "@/lib/utils"
 import { AksiCoa } from "@/components/master/AksiCoa"
+import { TambahCoa } from "@/components/master/TambahCoa"
 
 export default async function CoaPage(props: PageProps<"/dashboard/accounting/coa">) {
     await wajibIzin("/dashboard/accounting/coa") // layout tidak dijalankan ulang pada navigasi antarhalaman
@@ -22,10 +23,14 @@ export default async function CoaPage(props: PageProps<"/dashboard/accounting/co
             <Ikon className="h-4 w-4" /> {label}
         </Link>
     )
+    const bahan = await bahanTambahCoa()
     const tombolTampilan = (
-        <div className="inline-flex gap-1 rounded-lg border p-1 print:hidden">
-            {pilih(!tabel, "?", ListTree, "Pohon")}
-            {pilih(tabel, "?tampilan=tabel", Table2, "Tabel")}
+        <div className="flex flex-wrap items-center gap-2 print:hidden">
+            <div className="inline-flex gap-1 rounded-lg border p-1">
+                {pilih(!tabel, "?", ListTree, "Pohon")}
+                {pilih(tabel, "?tampilan=tabel", Table2, "Tabel")}
+            </div>
+            <TambahCoa induk={bahan.induk} klasifikasi={bahan.klasifikasi} />
         </div>
     )
 

@@ -34,4 +34,4 @@ Angka **merah** berarti saldo berlawanan dengan saldo normal akun, misalnya akun
 
 Tampilan **Tabel** (tombol di kanan atas) menampilkan daftar datar dengan urutan, filter saldo normal D/C, dan ekspor CSV.
 
-> **Catatan:** Akun COA belum bisa ditambah atau diubah dari web. Perubahan bagan akun masih dilakukan di aplikasi desktop.
+> **Catatan:** Akun COA bisa ditambah (tombol **Tambah Akun**), diubah, dan dihapus dari halaman ini sesuai izin grup Anda. Rinciannya di artikel **Mengelola Chart of Accounts** (kategori Akuntansi).

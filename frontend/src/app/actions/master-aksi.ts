@@ -9,6 +9,7 @@ import { modeUji, pool, query, tx } from "@/lib/db"
 import { isTanggal } from "@/lib/list"
 import { GalatSesi, operatorAktif, wajibAksi, type Operator } from "@/lib/operator"
 import { AKSES_HALAMAN, MENU, type AksiIzin } from "@/config/akses"
+import { FLAG_COA } from "@/config/coa"
 import type { HasilSimpan } from "./master"
 
 class Salah extends Error {}
@@ -274,6 +275,44 @@ export async function simpanCoaAction(_: HasilSimpan, f: FormData): Promise<Hasi
             [teks(f, "nama_perkiraan", "Nama perkiraan", 100, true), dk,
              teks(f, "keterangan", "Keterangan", 100), angka(f, "rp_budget", "Anggaran"), id])
         return `Akun COA ${lama.kode_perkiraan} diubah`
+    })
+}
+
+/**
+ * Tambah akun COA seperti form desktop: nomor, nama, induk, D/K, group (klasifikasi), flag. pr_id lama = max+1 di bawah advisory lock
+ * (kolom coa_* desktop menyimpan pr_id). Induk wajib (lima akun utama AKTIVA s.d. BIAYA sudah ada).
+ * Induk tidak boleh akun yang sudah berjurnal: akun itu akan menjadi akun induk sehingga jurnalnya tidak lagi terbaca sebagai akun detail.
+ * Saldo awal tidak diisi: saldo web dihitung dari jurnal (pembuka TBT), rp_saldo_awal tidak dipakai laporan.
+ */
+export async function tambahCoaAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
+    return simpan([MENU.coa], "/dashboard/accounting/coa", "tambah", async (db) => {
+        const kode = teks(f, "kode_perkiraan", "Nomor akun", 100, true)
+        if (!/^[0-9A-Za-z.-]+$/.test(kode)) throw new Salah("Nomor akun hanya boleh angka, huruf, dan titik (mis. 1.1.01.47)")
+        const nama = teks(f, "nama_perkiraan", "Nama akun", 100, true)
+        const dk = teks(f, "d_k", "Debit / Kredit", 1, true).toUpperCase()
+        if (dk !== "D" && dk !== "C") throw new Salah("Debit / Kredit harus D atau C")
+        const flag = teks(f, "keterangan", "Flag", 100) || "-"
+        if (!FLAG_COA.some((x) => x.value === flag)) throw new Salah("Flag tidak dikenal")
+        const { rows: [kelas] } = await db.query<{ id: string; kode_klasifikasi: number }>(
+            "SELECT id, kode_klasifikasi FROM klasifikasi_perkiraan WHERE kode_klasifikasi = $1", [Number(f.get("kode_klasifikasi"))])
+        if (!kelas) throw new Salah("Pilih Group")
+
+        await db.query("SELECT pg_advisory_xact_lock(hashtext('perkiraan.pr_id'))")
+        if ((await db.query("SELECT 1 FROM perkiraan WHERE kode_perkiraan = $1", [kode])).rowCount)
+            throw new Salah(`Nomor akun ${kode} sudah ada`)
+        const indukId = Number(f.get("parent_id"))
+        if (!Number.isSafeInteger(indukId) || indukId < 1) throw new Salah("Pilih akun induk")
+        const { rows: [induk] } = await db.query<{ id: string; pr_id: number; kode_perkiraan: string }>(
+            "SELECT id, pr_id, kode_perkiraan FROM perkiraan WHERE id = $1 FOR UPDATE", [indukId])
+        if (!induk) throw new Salah("Akun induk tidak ditemukan")
+        if ((await db.query("SELECT 1 FROM jurnal_umum WHERE perkiraan_id = $1 OR kode_perkiraan = $2 LIMIT 1", [induk.id, induk.kode_perkiraan])).rowCount)
+            throw new Salah(`Akun ${induk.kode_perkiraan} sudah punya jurnal sehingga tidak bisa dijadikan induk; pilih akun induk (golongan) di atasnya`)
+        const { rows: [{ pr_id }] } = await db.query<{ pr_id: number }>("SELECT COALESCE(MAX(pr_id), 0) + 1 AS pr_id FROM perkiraan")
+        await db.query(
+            `INSERT INTO perkiraan (pr_id, pr_parent, parent_id, kode_perkiraan, nama_perkiraan, d_k, kode_klasifikasi, klasifikasi_id, keterangan)
+             VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+            [pr_id, induk.pr_id, induk.id, kode, nama, dk, kelas.kode_klasifikasi, kelas.id, flag])
+        return `Akun COA ${kode} ${nama} ditambahkan di bawah ${induk.kode_perkiraan}`
     })
 }
 
