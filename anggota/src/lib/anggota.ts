@@ -14,6 +14,8 @@ export interface Anggota {
     kodeAgt: string
     nama: string
     email: string | null
+    /** Masuk dengan password sementara dari pengurus; wajib mengganti password dulu. */
+    wajibGantiPassword: boolean
 }
 
 /**
@@ -29,6 +31,7 @@ export const anggotaSesi = cache(async (): Promise<Anggota | null> => {
     return {
         userId: Number(a.user_id), username: a.username, anggotaId: a.anggota_id ? Number(a.anggota_id) : null,
         kodeAgt: a.kode_agt, nama: a.nama?.trim() || a.username, email: a.email,
+        wajibGantiPassword: a.wajib_ganti_password,
     }
 })
 
@@ -36,12 +39,14 @@ export const anggotaSesi = cache(async (): Promise<Anggota | null> => {
 export const punyaEmail = (a: Pick<Anggota, "email">) => (a.email ?? "").trim().length >= 5
 
 /**
- * Untuk halaman di dalam aplikasi: alihkan ke halaman masuk bila sesi tidak sah, dan ke Lengkapi Email bila akun
- * belum punya email (wajib seperti aplikasi lama; dicek di setiap halaman karena layout tidak dijalankan ulang).
+ * Untuk halaman di dalam aplikasi: alihkan ke halaman masuk bila sesi tidak sah, ke Ganti Password bila masuk dengan
+ * password sementara dari pengurus, dan ke Lengkapi Email bila akun belum punya email (wajib seperti aplikasi lama;
+ * dicek di setiap halaman karena layout tidak dijalankan ulang).
  */
-export async function wajibMasuk(opsi: { bolehTanpaEmail?: boolean } = {}) {
+export async function wajibMasuk(opsi: { bolehTanpaEmail?: boolean; bolehPasswordSementara?: boolean } = {}) {
     const a = await anggotaSesi()
     if (!a) redirect("/masuk")
+    if (!opsi.bolehPasswordSementara && a.wajibGantiPassword) redirect("/ganti-password")
     if (!opsi.bolehTanpaEmail && !punyaEmail(a)) redirect("/lengkapi-email")
     return a
 }

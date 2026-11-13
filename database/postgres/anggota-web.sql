@@ -166,6 +166,9 @@ CREATE TABLE IF NOT EXISTS app_user_google (
 ALTER TABLE app_user ADD COLUMN IF NOT EXISTS menunggu_admin boolean NOT NULL DEFAULT false;
 -- Keputusan admin atas pendaftaran baru: 'disetujui' atau 'ditolak' (kosong = akun lama / belum diputuskan). Dipakai filter User Mobile.
 ALTER TABLE app_user ADD COLUMN IF NOT EXISTS keputusan_daftar varchar(10);
+-- Password sementara dari pengurus (User Mobile, ikon kunci): true sampai anggota mengganti passwordnya sendiri. PWA mewajibkan
+-- ganti password setelah masuk; aplikasi Android lama tidak bisa memaksa. Setiap aturPassword mengembalikannya ke false.
+ALTER TABLE app_user ADD COLUMN IF NOT EXISTS wajib_ganti_password boolean NOT NULL DEFAULT false;
 
 -- Pengajuan kredit yang disetujui di web dan belum dicairkan: true saat disetujui, false lagi saat pinjaman tunai jenis yang sama
 -- dicairkan untuk anggota itu atau persetujuannya dibatalkan. Dipakai aturan "Kunci jika belum lunas". Baris lama otomatis false.

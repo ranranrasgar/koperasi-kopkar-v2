@@ -2,7 +2,7 @@
 
 import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
-import { aturEmail, dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, ubahStatusAkun, type DataLengkapi, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
+import { aturEmail, dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, passwordSementaraAkun, putuskanPendaftaran, ubahStatusAkun, type DataLengkapi, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
 import { antreEmail } from "@kopkar/backend/src/email/antrean.ts"
 import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
 import { kirimKodeVerifikasi, statusEmail } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
@@ -118,6 +118,24 @@ export async function ubahStatusAkunAction(id: number, aktif: boolean): Promise<
  * berjalan setelah terverifikasi. Email lama diberi tahu, dan anggota dikabari lewat notifikasi HP.
  * Kode di-hash dengan ANGGOTA_SESSION_SECRET aplikasi anggota; tanpa rahasia yang sama di .env.local admin kode tidak akan cocok, jadi tidak dikirim.
  */
+/**
+ * Password sementara untuk anggota yang lupa password (ditampilkan sekali ke petugas). Tidak lewat tx()/mode uji, sama dengan
+ * reset password operator: password harus benar-benar tersimpan supaya anggota bisa masuk. PWA mewajibkan ganti setelah masuk.
+ */
+export async function passwordSementaraAkunAction(id: number): Promise<HasilPendaftaran & { passwordSementara?: string }> {
+    try {
+        const o = await operatorAktif(MENU_USER)
+        wajibAksi(o, MENU_USER, "ubah")
+        const r = await passwordSementaraAkun(pool, id)
+        if (!r.ok) return r
+        await catatAksi("User Mobile", `Password sementara akun ${r.username} dibuat`, o) // password tidak pernah dicatat
+        return { ok: true, pesan: `Password sementara ${r.username} dibuat`, passwordSementara: r.password }
+    } catch (e) {
+        if (!(e instanceof GalatSesi)) console.error("password sementara akun gagal:", e)
+        return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
+    }
+}
+
 export async function ubahEmailAkunAction(id: number, email: string): Promise<HasilPendaftaran> {
     try {
         const o = await operatorAktif(MENU_EMAIL)

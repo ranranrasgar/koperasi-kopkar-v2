@@ -4,7 +4,7 @@ import crypto from 'node:crypto';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import {
     akunUntukResetEmail, aturEmail, bahanAnggotaBaru, cariAkun, cariAkunGoogle, cekPasswordBaruAnggota, daftarMenungguAdmin, bersihkanLengkap, dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, putuskanPendaftaran, tambahAnggota, ubahStatusAkun, cocokJawaban, cocokPasswordAnggota, daftarAkun, gantiPassword,
-    hashJawaban, hashPasswordAnggota, masukAnggota, pertanyaanUntuk, resetLewatJawaban,
+    hashJawaban, hashPasswordAnggota, masukAnggota, passwordSementaraAkun, pertanyaanUntuk, resetLewatJawaban,
 } from '../src/anggota/akun.ts';
 
 const pool = createPool();
@@ -56,6 +56,35 @@ test('login anggota: MD5 cocok diganti bcrypt, salah dan nonaktif ditolak', asyn
         await db.query('UPDATE app_user SET status = true WHERE id = $1', [u.id]);
         await db.query('UPDATE anggota SET aktif = false WHERE id = (SELECT anggota_id FROM app_user WHERE id = $1)', [u.id]);
         assert.deepEqual(await masukAnggota(p, u.username, 'uji-lama-1'), { ok: false, alasan: 'anggota_nonaktif' });
+    });
+});
+
+test('password sementara dari pengurus: hanya akun aktif, password lama mati, wajib ganti sampai anggota mengganti sendiri', async () => {
+    await inTx(async (db) => {
+        const u = (await db.query(`SELECT u.id, u.username FROM app_user u JOIN anggota a ON a.id = u.anggota_id
+            WHERE u.status AND a.aktif ORDER BY u.id LIMIT 1`)).rows[0];
+        const id = Number(u.id);
+        await db.query('UPDATE app_user SET password_hash = $1, wajib_ganti_password = false WHERE id = $2', [await hashPasswordAnggota('Lama12345'), id]);
+        const p = sebagaiPool(db);
+
+        const r = await passwordSementaraAkun(db, id);
+        assert.ok(r.ok);
+        assert.match(r.password, /^[A-Za-z2-9]{12}$/);
+        assert.equal(cekPasswordBaruAnggota(r.password), null);
+        assert.equal((await masukAnggota(p, u.username, 'Lama12345')).ok, false);
+        const masuk = await masukAnggota(p, u.username, r.password);
+        assert.ok(masuk.ok && masuk.akun.wajib_ganti_password);
+
+        // Password sementara tidak boleh dipakai lagi sebagai password baru; ganti sendiri mencabut tandanya.
+        assert.deepEqual(await gantiPassword(db, id, r.password, r.password, r.password), { ok: false, error: 'Password baru harus berbeda dari password lama' });
+        assert.equal((await gantiPassword(db, id, r.password, 'Sendiri123', 'Sendiri123')).ok, true);
+        assert.equal((await cariAkun(db, { id }))!.wajib_ganti_password, false);
+
+        await db.query('UPDATE app_user SET status = false WHERE id = $1', [id]);
+        assert.deepEqual(await passwordSementaraAkun(db, id), { ok: false, error: 'Akun ini nonaktif. Aktifkan dulu sebelum membuat password sementara.' });
+        await db.query('UPDATE app_user SET status = false, menunggu_admin = true WHERE id = $1', [id]);
+        assert.deepEqual(await passwordSementaraAkun(db, id), { ok: false, error: 'Pendaftaran akun ini belum disetujui' });
+        assert.deepEqual(await passwordSementaraAkun(db, -1), { ok: false, error: 'Akun tidak ditemukan' });
     });
 });
 

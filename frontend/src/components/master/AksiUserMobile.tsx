@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Check, Loader2, Mail, Trash2, UserPlus, X } from "lucide-react"
-import { dataLengkapiAnggotaAction, hapusUserMobileAction, jadikanAnggotaAction, putuskanPendaftaranAction, ubahEmailAkunAction, ubahStatusAkunAction, type HasilPendaftaran } from "@/app/actions/pendaftaran"
+import { Check, KeyRound, Loader2, Mail, Trash2, UserPlus, X } from "lucide-react"
+import { dataLengkapiAnggotaAction, hapusUserMobileAction, jadikanAnggotaAction, passwordSementaraAkunAction, putuskanPendaftaranAction, ubahEmailAkunAction, ubahStatusAkunAction, type HasilPendaftaran } from "@/app/actions/pendaftaran"
 import { Button } from "@/components/ui/button"
 import { FormLengkapiAnggota, type BahanLengkapi } from "@/components/master/FormLengkapiAnggota"
 
@@ -65,6 +65,18 @@ Kode verifikasi langsung dikirim ke email baru ini; anggota tinggal membuka emai
         })
     }
 
+    /** Password sementara untuk anggota yang lupa password; tampil sekali di kotak yang bisa disalin. */
+    const passwordSementara = () => {
+        if (!confirm(`Buat password sementara baru untuk ${nama}? Password lama tidak berlaku lagi dan perangkat yang sedang masuk akan keluar. Di aplikasi web anggota, ${nama} wajib mengganti password setelah masuk.`)) return
+        mulai(async () => {
+            const h = await passwordSementaraAkunAction(id)
+            setPesan(h)
+            if (!h.ok) alert(h.error)
+            else prompt(`${h.pesan}. Password ini hanya tampil sekali: salin lalu sampaikan langsung ke ${nama}.`, h.passwordSementara)
+            router.refresh()
+        })
+    }
+
     const jalankan = (konfirmasi: string, fn: () => Promise<HasilPendaftaran>) => {
         if (!confirm(konfirmasi)) return
         mulai(async () => {
@@ -105,6 +117,11 @@ Kode verifikasi langsung dikirim ke email baru ini; anggota tinggal membuka emai
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-600 hover:bg-blue-50 hover:text-blue-700" title="Jadikan anggota"
                     onClick={() => lengkapi(false)}>
                     <UserPlus className="h-4 w-4" />
+                </Button>
+            )}
+            {!menunggu && item.status === true && (
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-muted" title="Buat password sementara" onClick={passwordSementara}>
+                    <KeyRound className="h-4 w-4" />
                 </Button>
             )}
             <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:bg-muted" title="Ubah email akun" onClick={ubahEmail}>

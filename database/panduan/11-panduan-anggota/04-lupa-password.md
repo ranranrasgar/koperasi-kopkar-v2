@@ -24,4 +24,6 @@ Akun yang **sudah punya email terverifikasi tidak bisa** memakai jalur ini dan a
 
 ## Tidak bisa dua-duanya?
 
-Hubungi pengurus koperasi (tombol WhatsApp di halaman Pendaftaran diterima, atau nomor yang tertera di Kebijakan Privasi). Pengurus tidak bisa melihat atau mengubah password Anda; mereka membantu memastikan email Anda terdaftar dengan benar.
+Hubungi pengurus koperasi (tombol WhatsApp di halaman Pendaftaran diterima, atau nomor yang tertera di Kebijakan Privasi). Pengurus tidak bisa melihat password Anda. Pengurus bisa membantu memastikan email Anda terdaftar dengan benar, atau memberi **password sementara**.
+
+Bila mendapat password sementara: masuk dengan username Anda dan password sementara itu, lalu aplikasi langsung meminta Anda membuat password baru sendiri sebelum bisa memakai menu lain. Bila Anda masuk lewat aplikasi Android lama, segera ganti password di menu Akun.

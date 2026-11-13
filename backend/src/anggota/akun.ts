@@ -44,6 +44,8 @@ export interface AkunAnggota {
     akun_aktif: boolean;
     /** Pendaftaran baru yang belum disetujui admin koperasi. */
     menunggu_admin: boolean;
+    /** Password sementara dari pengurus yang belum diganti anggota. */
+    wajib_ganti_password: boolean;
     anggota_id: string | null;
     kode_agt: string;
     nama: string | null;
@@ -57,7 +59,7 @@ export interface AkunAnggota {
  */
 export async function cariAkun(db: pg.Pool | pg.PoolClient, by: { id?: string | number; username?: string }) {
     const r = await db.query<AkunAnggota>(
-        `SELECT u.id::text user_id, u.username, u.password_hash, u.email, u.foto, u.status akun_aktif, u.menunggu_admin,
+        `SELECT u.id::text user_id, u.username, u.password_hash, u.email, u.foto, u.status akun_aktif, u.menunggu_admin, u.wajib_ganti_password,
                 u.anggota_id::text anggota_id, u.kode_agt, a.nama, a.nik, a.aktif anggota_aktif
            FROM app_user u LEFT JOIN anggota a ON a.id = u.anggota_id
           WHERE ${by.id !== undefined ? 'u.id = $1' : 'lower(trim(u.username)) = lower(trim($1))'}`, [by.id ?? by.username]);
@@ -561,11 +563,40 @@ export async function resetLewatJawaban(db: pg.PoolClient, username: string, jaw
     return { ok: true, pesan: 'Password berhasil diganti. Silakan masuk dengan password baru.' };
 }
 
-/** Simpan password baru (bcrypt $2y$). Sesi lama di perangkat lain otomatis tidak berlaku (sidik password berubah). */
+/**
+ * Simpan password baru pilihan anggota (bcrypt $2y$) dan cabut tanda password sementara.
+ * Sesi lama di perangkat lain otomatis tidak berlaku (sidik password berubah).
+ */
 export async function aturPassword(db: pg.Pool | pg.PoolClient, userId: number, baru: string) {
     const hash = await hashPasswordAnggota(baru);
-    await db.query('UPDATE app_user SET password_hash = $1, updated_at = now() WHERE id = $2', [hash, userId]);
+    await db.query('UPDATE app_user SET password_hash = $1, wajib_ganti_password = false, updated_at = now() WHERE id = $2', [hash, userId]);
     return hash;
+}
+
+/** Password sementara acak (12 karakter, huruf dan angka, tanpa huruf/angka yang mirip), sama dengan password sementara operator. */
+function passwordAcak() {
+    const huruf = 'abcdefghjkmnpqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ', angka = '23456789', semua = huruf + angka;
+    const pilih = (s: string) => s[crypto.randomInt(s.length)];
+    const isi = [pilih(huruf), pilih(angka), ...Array.from({ length: 10 }, () => pilih(semua))];
+    for (let i = isi.length - 1; i > 0; i--) { const j = crypto.randomInt(i + 1); [isi[i], isi[j]] = [isi[j], isi[i]]; }
+    return isi.join('');
+}
+
+/**
+ * Password sementara dari pengurus untuk anggota yang lupa password (User Mobile, ikon kunci). Hanya akun aktif.
+ * Password lama dan semua sesi/token di perangkat lain langsung tidak berlaku; PWA mewajibkan ganti password setelah masuk.
+ */
+export async function passwordSementaraAkun(db: pg.Pool | pg.PoolClient, userId: number):
+    Promise<{ ok: true; username: string; password: string } | { ok: false; error: string }> {
+    const u = (await db.query<{ username: string; status: boolean; menunggu_admin: boolean }>(
+        'SELECT username, status, menunggu_admin FROM app_user WHERE id = $1', [userId])).rows[0];
+    if (!u) return { ok: false, error: 'Akun tidak ditemukan' };
+    if (u.menunggu_admin) return { ok: false, error: 'Pendaftaran akun ini belum disetujui' };
+    if (!u.status) return { ok: false, error: 'Akun ini nonaktif. Aktifkan dulu sebelum membuat password sementara.' };
+    const password = passwordAcak();
+    await db.query('UPDATE app_user SET password_hash = $1, wajib_ganti_password = true, updated_at = now() WHERE id = $2',
+        [await hashPasswordAnggota(password), userId]);
+    return { ok: true, username: u.username.trim(), password };
 }
 
 /** Ganti password dari menu Akun: password lama harus benar. */
