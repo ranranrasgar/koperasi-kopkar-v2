@@ -10,6 +10,7 @@ Menu: **Angsuran & Pemantauan → Setoran Angsuran**. Ada dua tab: **Pinjaman Tu
 Transaksi yang sudah diposting tidak bisa diubah atau dihapus. Operator berizin **D** di baris Audit Data pada Kelola Hak Akses (awalnya hanya superadmin) bisa membatalkannya dengan alasan minimal 10 karakter:
 
 - **Pinjaman tunai**: buka detail pinjaman. Ikon batal ada di baris **angsuran terakhir**; tombol **Batalkan Pencairan** ada bila belum ada angsuran.
+- **Seluruh pinjaman sekaligus**: tombol **Batalkan Pinjaman** di detail pinjaman (muncul bila sudah ada angsuran) membatalkan semua angsuran dari yang terakhir, lalu pencairannya, dengan satu alasan. Bila satu langkah ditolak (misalnya ada angsuran dari Potongan Gaji), tidak ada yang diubah dan pesannya menyebut penyebabnya.
 - **KPR**: masukkan nomor buktinya di **Sistem → Audit Data**, bagian *Batalkan transaksi lewat nomor bukti*.
 
 Sistem membuat pembalik `BTL...` bertanggal hari ini beserta jurnal kebalikannya. Baris asal tetap terlihat di buku pinjaman dengan tanda *DIBATALKAN*.
@@ -18,7 +19,7 @@ Sistem membuat pembalik `BTL...` bertanggal hari ini beserta jurnal kebalikannya
 - Pencairan hanya bisa dibatalkan bila belum ada angsuran. Pinjamannya tetap ada di Daftar Pinjaman dengan sisa 0 dan tampil sebagai lunas; detailnya menampilkan keterangan pembatalan.
 - Ditolak untuk angsuran dari Potongan Gaji yang diposting di web, pinjaman yang sedang ditutup tanpa jurnal, serta pencairan yang masih ada di periode Potongan Gaji belum selesai atau masih punya titipan.
 - Titipan yang sudah **POSTING** tidak kembali otomatis saat angsurannya dibatalkan.
-- **Anggota membatalkan pinjaman dan mengembalikan uangnya** sebelum ada angsuran: pakai **Batalkan Pencairan** di detail pinjaman. Jangan diinput sebagai angsuran berjasa 0: pinjaman akan tampil sebagai pinjaman yang dibayar berkali-kali di aplikasi anggota, dan jasanya tercatat tidak ditagih. Bila sudah terlanjur, batalkan angsurannya dari yang terakhir, lalu batalkan pencairannya.
+- **Pinjaman salah input, atau anggota membatalkan pinjaman dan mengembalikan uangnya**: pakai **Batalkan Pencairan** (belum ada angsuran) atau **Batalkan Pinjaman** (sudah ada angsuran) di detail pinjaman. Jangan diinput sebagai angsuran berjasa 0: pinjaman akan tampil sebagai pinjaman yang dibayar berkali-kali di aplikasi anggota, dan jasanya tercatat tidak ditagih. Bila sudah terlanjur, pakai **Batalkan Pinjaman**.
 - Pembatalan tidak bisa diurungkan, dan tercatat di **Audit Data**, bagian Riwayat koreksi.
 
 ## Angsuran pinjaman tunai

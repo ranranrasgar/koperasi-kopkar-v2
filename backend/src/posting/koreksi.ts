@@ -262,6 +262,31 @@ export async function batalBukti(db: Db, i: BatalInput): Promise<BatalHasil> {
     return proses[await sumberBukti(db, i.noBukti)](db, i);
 }
 
+/**
+ * Batalkan satu pinjaman tunai seluruhnya (mis. salah input, atau anggota membatalkan dan mengembalikan uangnya): semua angsuran dibatalkan dari yang
+ * terakhir, lalu pencairannya, masing-masing dengan batalAngsuran/batalPencairan dan alasan yang sama. Satu transaksi: bila satu langkah ditolak
+ * (mis. angsuran dari Potongan Gaji), tidak ada yang tersimpan. Jalankan di dalam transaksi.
+ */
+export async function batalPinjaman(db: Db, i: BatalInput): Promise<{ angsuran: string[]; pencairan: string }> {
+    bersihkanAlasan(i.alasan);
+    const p = (await db.query<{ id: string }>('SELECT id FROM pinjaman_tunai WHERE no_pinjaman = $1 FOR UPDATE', [i.noBukti])).rows[0];
+    if (!p) throw new Error(`Pinjaman ${i.noBukti} tidak ditemukan`);
+    // Dicek di depan: pencairan yang sudah dibatalkan atau pinjaman yang ditutup memakai penghitung cicilan penuh, jadi bukan angsuran yang perlu dibalik.
+    await cekBelumDikoreksi(db, 'pencairan', i.noBukti);
+    await cekTidakDitutup(db, p.id);
+    const angsuran: string[] = [];
+    for (;;) {
+        const n = (await db.query<{ jml_cicilan: number }>('SELECT jml_cicilan FROM pinjaman_tunai WHERE id = $1', [p.id])).rows[0].jml_cicilan;
+        if (n <= 0) break;
+        const b = (await db.query<{ no_bukti: string }>(
+            "SELECT no_bukti FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = $1 AND angsuran_ke = $2 AND COALESCE(no_bukti, '') <> ''", [p.id, n])).rows;
+        if (b.length !== 1) throw new Error(`Angsuran ke-${n} pinjaman ${i.noBukti} tidak tercatat sebagai satu bukti di buku pinjaman; batalkan lewat jurnal`);
+        angsuran.push((await batalAngsuran(db, { ...i, noBukti: b[0].no_bukti })).noBukti);
+    }
+    const c = await batalPencairan(db, i);
+    return { angsuran, pencairan: c.noBukti };
+}
+
 // ---------- jurnal susulan ----------
 
 export interface RancanganJurnal {

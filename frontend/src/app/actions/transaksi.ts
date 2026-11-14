@@ -8,7 +8,7 @@ import { bacaQr } from "@kopkar/backend/src/anggota/qr.ts"
 import { pembagianBank } from "@kopkar/backend/src/posting/pinjaman.ts"
 import { akunDetail } from "@/lib/queries/akuntansi"
 import { hapusCacheAudit } from "@/lib/queries/audit"
-import { batalBukti, buatJurnalSusulan, rancangJurnalSusulan, type RancanganJurnal } from "@kopkar/backend/src/posting/koreksi.ts"
+import { batalBukti, batalPinjaman, buatJurnalSusulan, rancangJurnalSusulan, type RancanganJurnal } from "@kopkar/backend/src/posting/koreksi.ts"
 import { hapusTitipan, postingTitipan, tambahTitipan } from "@kopkar/backend/src/posting/titipan.ts"
 import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts"
 import { kirimInfoPencairan } from "@kopkar/backend/src/anggota/info-pinjaman.ts"
@@ -464,6 +464,15 @@ export async function batalBuktiAction(noBukti: string, alasan: string): Promise
         const r = await tx((db) => batalBukti(db, { noBukti, tanggal: hariIni(), alasan, opr: o.nama, operatorId: o.id }))
         hapusCacheAudit()
         return { ok: true, pesan: `Bukti ${noBukti} dibatalkan dengan pembalik ${r.noBukti}` }
+    })
+}
+
+/** Batalkan satu pinjaman tunai seluruhnya: semua angsuran dari yang terakhir, lalu pencairannya, dalam satu transaksi. Izin sama dengan batal bukti. */
+export async function batalPinjamanAction(noPinjaman: string, alasan: string): Promise<Hasil> {
+    return posting([MENU.batalTransaksi], "hapus", async (o) => {
+        const r = await tx((db) => batalPinjaman(db, { noBukti: noPinjaman, tanggal: hariIni(), alasan, opr: o.nama, operatorId: o.id }))
+        hapusCacheAudit()
+        return { ok: true, pesan: `Pinjaman ${noPinjaman} dibatalkan: ${r.angsuran.length} angsuran dan pencairannya (pembalik ${r.pencairan})` }
     })
 }
 

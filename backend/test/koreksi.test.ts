@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
-import { batalBukti, batalSimpanan, buatJurnalSusulan, rancangJurnalSusulan } from '../src/posting/koreksi.ts';
+import { batalBukti, batalPinjaman, batalSimpanan, buatJurnalSusulan, rancangJurnalSusulan } from '../src/posting/koreksi.ts';
 import { bayarAngsuranKpr, cairkanKpr } from '../src/posting/kpr.ts';
 import { bayarAngsuran, cairkanPinjaman } from '../src/posting/pinjaman.ts';
 import { cekBuktiTerbuka, postJournal } from '../src/posting/journal.ts';
@@ -131,6 +131,31 @@ test('batal angsuran: hanya yang terakhir, cicilan dan jadwal kembali, bisa diba
         const nilai = async (no: string) => (await jurnalBukti(db, no)).reduce((x, j) => x + j.d - j.c, 0);
         assert.equal(await nilai(rc.noBukti), 0);
         await gagal(db, () => batalBukti(db, { ...b, noBukti: c.noPinjaman }), /sudah dibatalkan/);
+    });
+});
+
+test('batal pinjaman sekaligus: semua angsuran dari yang terakhir lalu pencairan, dalam satu langkah', async () => {
+    const a = (await pool.query('SELECT kode_agt FROM anggota WHERE rp_grade >= 1000000 ORDER BY id LIMIT 1')).rows[0].kode_agt;
+    await inTx(async (db) => {
+        const kas = (await db.query("SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'")).rows[0].id;
+        const c = await cairkanPinjaman(db, { kodeAgt: a, kodeKredit: 'C01', tglPinjaman: TANGGAL, pokok: 1000000, lama: 3, kasPerkiraanId: kas, opr: 'uji' });
+        // Kasus SUMIRAH: uang dikembalikan lewat angsuran berjasa 0.
+        for (let k = 0; k < 3; k++) await bayarAngsuran(db, { noPinjaman: c.noPinjaman, tanggal: TANGGAL, kasPerkiraanId: kas, opr: 'uji', override: { jasa: 0 }, dariKasir: true, alasanJasa: 'pinjaman dibatalkan anggota' });
+        await gagal(db, () => batalPinjaman(db, { noBukti: c.noPinjaman, tanggal: TANGGAL, alasan: 'pendek', opr: 'uji' }), /minimal 10/);
+        await gagal(db, () => batalPinjaman(db, { noBukti: 'CR-TIDAK-ADA', tanggal: TANGGAL, alasan, opr: 'uji' }), /tidak ditemukan/);
+
+        const r = await batalPinjaman(db, { noBukti: c.noPinjaman, tanggal: TANGGAL, alasan, opr: 'uji', operatorId: 1 });
+        assert.equal(r.angsuran.length, 3);
+        assert.match(r.pencairan, /^BTLC-2611-\d+$/);
+        const buku = (await db.query('SELECT SUM(kredit_pokok - debit_pokok)::float p, SUM(kredit_bunga - debit_bunga)::float b, SUM(debit_pokok + debit_bunga)::float bayar FROM pinjaman_tunai_rincian WHERE no_pinjaman = $1', [c.noPinjaman])).rows[0];
+        assert.deepEqual([buku.p, buku.b, buku.bayar], [0, 0, 0], 'buku nol, tidak ada uang terhitung dibayar');
+        const jurnal = (await db.query(`SELECT SUM(debit_jurnalumum - kredit_jurnalumum)::float s, count(*)::int n FROM jurnal_umum
+            WHERE (nomor_bukti = $1 OR nomor_bukti IN (SELECT no_bukti FROM pinjaman_tunai_rincian WHERE no_pinjaman = $1)) AND kode_perkiraan = '1.1.01.41'`, [c.noPinjaman])).rows[0];
+        assert.ok(jurnal.n > 0);
+        assert.equal(jurnal.s, 0, 'kas kembali seperti sebelum pencairan');
+        const log = (await db.query("SELECT jenis, count(*)::int n FROM transaksi_koreksi WHERE alasan = $1 AND no_bukti_pembalik = ANY($2) GROUP BY jenis ORDER BY jenis", [alasan, [r.pencairan, ...r.angsuran]])).rows;
+        assert.deepEqual(log, [{ jenis: 'angsuran', n: 3 }, { jenis: 'pencairan', n: 1 }]);
+        await gagal(db, () => batalPinjaman(db, { noBukti: c.noPinjaman, tanggal: TANGGAL, alasan, opr: 'uji' }), /sudah dibatalkan/);
     });
 });
 

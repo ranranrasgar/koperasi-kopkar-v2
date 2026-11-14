@@ -126,6 +126,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                     {admin && !r.lunas && <TombolTutupPinjaman noPinjaman={r.no_pinjaman} sisa={rp(r.sisa_pokok)} />}
                     {admin && penutupan && <TombolBatalTutup noPinjaman={r.no_pinjaman} />}
                     {bolehBatal && !batalCair && !penutupan && r.jml_cicilan === 0 && <TombolBatalBukti no={r.no_pinjaman} label="Batalkan Pencairan" />}
+                    {bolehBatal && !batalCair && !penutupan && r.jml_cicilan > 0 && <TombolBatalBukti no={r.no_pinjaman} label="Batalkan Pinjaman" seluruhPinjaman />}
                 </span>
             </div>
 
