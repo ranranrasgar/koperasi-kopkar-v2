@@ -31,7 +31,7 @@ Susunan layarnya sama dengan layar desktop *Jenis Pinjaman (Credit)*.
 | UM jika melebihi Grade | Tanda uang muka bila pinjaman melebihi grade anggota. Disimpan seperti di desktop; web belum menghitung uang muka otomatis dari tanda ini |
 | Kunci jika melebihi grade | Pinjaman tidak boleh melebihi plafon grade anggota |
 | Staff | Jenis hanya untuk anggota Staff. Tidak dicentang: hanya untuk anggota non-staff |
-| Kunci jika belum lunas | Anggota tidak bisa mengajukan jenis ini selama masih punya pinjaman jenis yang sama yang belum lunas (sisa pokok + jasa lebih dari Rp 100), walaupun tidak menunggak, atau selama pengajuan jenis yang sama sudah disetujui tetapi belum dicairkan. Berlaku di aplikasi anggota (browser dan Android); jenis yang terkunci ditandai di form pengajuan anggota. |
+| Kunci jika belum lunas | Anggota tidak bisa mengajukan jenis ini selama masih punya pinjaman jenis yang sama yang belum lunas (cicilan belum penuh dan sisa pokok lebih dari Rp 100, sama dengan status Lunas di Daftar Pinjaman; sisa jasa yang tidak ditagih tidak dihitung), walaupun tidak menunggak, atau selama pengajuan jenis yang sama sudah disetujui tetapi belum dicairkan. Berlaku di aplikasi anggota (browser dan Android); jenis yang terkunci ditandai di form pengajuan anggota. |
 | Hitung SHU | Jasa pinjaman jenis ini ikut dihitung dalam pembagian SHU |
 | Tidak untuk mobile | Jenis disembunyikan dari pengajuan di aplikasi anggota; pinjaman lama tetap berjalan normal |
 

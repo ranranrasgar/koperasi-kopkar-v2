@@ -18,6 +18,7 @@ Sistem membuat pembalik `BTL...` bertanggal hari ini beserta jurnal kebalikannya
 - Pencairan hanya bisa dibatalkan bila belum ada angsuran. Pinjamannya tetap ada di Daftar Pinjaman dengan sisa 0 dan tampil sebagai lunas; detailnya menampilkan keterangan pembatalan.
 - Ditolak untuk angsuran dari Potongan Gaji yang diposting di web, pinjaman yang sedang ditutup tanpa jurnal, serta pencairan yang masih ada di periode Potongan Gaji belum selesai atau masih punya titipan.
 - Titipan yang sudah **POSTING** tidak kembali otomatis saat angsurannya dibatalkan.
+- **Anggota membatalkan pinjaman dan mengembalikan uangnya** sebelum ada angsuran: pakai **Batalkan Pencairan** di detail pinjaman. Jangan diinput sebagai angsuran berjasa 0: pinjaman akan tampil sebagai pinjaman yang dibayar berkali-kali di aplikasi anggota, dan jasanya tercatat tidak ditagih. Bila sudah terlanjur, batalkan angsurannya dari yang terakhir, lalu batalkan pencairannya.
 - Pembatalan tidak bisa diurungkan, dan tercatat di **Audit Data**, bagian Riwayat koreksi.
 
 ## Angsuran pinjaman tunai

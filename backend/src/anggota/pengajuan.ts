@@ -35,16 +35,18 @@ export async function jenisKreditUntuk(db: pg.Pool | Db, anggotaId: number) {
 }
 
 /**
- * Id jenis kredit yang masih punya pinjaman tunai belum lunas (sisa pokok + jasa lebih dari SISA_LUNAS) milik anggota ini,
- * atau pengajuan yang sudah disetujui tetapi belum dicairkan (menunggu_cair).
- * Dipakai aturan "Kunci jika belum lunas" (kunci_jika_sisa) saat mengajukan dan untuk menandai jenis yang terkunci di form.
+ * Id jenis kredit yang masih punya pinjaman tunai belum lunas milik anggota ini, atau pengajuan yang sudah disetujui tetapi belum
+ * dicairkan (menunggu_cair). Dipakai aturan "Kunci jika belum lunas" (kunci_jika_sisa) saat mengajukan dan untuk menandai jenis yang terkunci di form.
+ * Lunas sama dengan Daftar Pinjaman admin (lib/queries/pinjaman-sql.ts): cicilan penuh ATAU sisa pokok <= SISA_LUNAS. Sisa jasa tidak dihitung:
+ * jasa tidak dicatat sebagai piutang di jurnal, dan jasa yang tidak ditagih (mis. pinjaman dibatalkan lewat angsuran berjasa 0) dianggap dilepas.
  */
 export async function jenisBelumLunas(db: pg.Pool | Db, anggotaId: number): Promise<Set<string>> {
     const r = await db.query<{ id: string }>(
         `SELECT DISTINCT pt.jenis_kredit_id::text id FROM pinjaman_tunai pt
-           JOIN LATERAL (SELECT SUM(kredit_pokok + kredit_bunga) - SUM(debit_pokok + debit_bunga) sisa
+           JOIN LATERAL (SELECT count(*) n, SUM(kredit_pokok - debit_pokok) sisa
                            FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = pt.id) r ON true
-          WHERE pt.anggota_id = $1 AND pt.jenis_kredit_id IS NOT NULL AND r.sisa > $2
+          WHERE pt.anggota_id = $1 AND pt.jenis_kredit_id IS NOT NULL AND pt.jml_cicilan < pt.lama_angsuran
+            AND CASE WHEN r.n = 0 THEN pt.rp_pinjaman_pokok - pt.rp_uang_muka ELSE r.sisa END > $2
          UNION
          SELECT jenis_kredit_id::text FROM pengajuan_pinjaman WHERE anggota_id = $1 AND status = 'Y' AND menunggu_cair AND jenis_kredit_id IS NOT NULL`, [anggotaId, SISA_LUNAS]);
     return new Set(r.rows.map((x) => x.id));

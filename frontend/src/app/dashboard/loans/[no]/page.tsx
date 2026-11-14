@@ -69,6 +69,11 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
         return { t: "Belum jatuh tempo", w: "biru" as const }
     }
     const totBayar = bayar.reduce((t, b) => ({ p: t.p + b.debit_pokok, b: t.b + b.debit_bunga }), { p: 0, b: 0 })
+    // Sudah Dibayar dari uang yang benar-benar masuk (buku pinjaman), bukan cicilan x jadwal: angsuran berjasa 0 tidak terhitung sebagai jasa terbayar.
+    const sudahDibayar = totBayar.p + totBayar.b
+    const jasaDibebankan = bayar.reduce((t, b) => t + b.kredit_bunga, 0)
+    // Pinjaman lunas yang jasanya dibayar kurang dari yang dibebankan: selisihnya tidak ditagih (dibebaskan), ditampilkan supaya pengurus tahu.
+    const jasaTidakDitagih = r.lunas && !penutupan && !batalCair ? Math.max(jasaDibebankan - totBayar.b, 0) : 0
     let saldo = 0
     const baris = bayar.map((b) => { saldo += b.kredit_pokok - b.debit_pokok; return { ...b, saldo } })
     const tunggak = Number(r.jml_tunggakan ?? 0)
@@ -89,7 +94,7 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
             ["Jenis Kredit", `${info.nama_kredit ?? "-"} (${r.kode_kredit ?? "-"})`], ["Grup", info.group_pinjaman ?? "-"], ["Tgl Realisasi", formatTanggal(r.tgl_pinjaman, "long")],
             ["Lama Angsuran", `${r.lama_angsuran} bulan, terbayar ${r.jml_cicilan}`], ["Bunga", `${formatAngka(info.persen_bunga)}% / ${info.bunga_per} bln`], ["Pinjaman", rp(r.rp_pinjaman_pokok)],
             ["Uang Muka", rp(r.uang_muka)], ["Adm / Provisi", `${rp(r.rp_adm)} / ${rp(r.rp_provisi)}`], ["Angsuran / Bulan", rp(r.temp_angs_per_bulan)], ["Total Jasa", rp(r.temp_total_jasa)],
-            ["Sudah Dibayar (pokok + jasa)", rp(r.total_bayar)], ["Sisa Pokok", rp(r.sisa_pokok)], ["Jatuh Tempo Berikut", r.jatuh_tempo ? formatTanggal(r.jatuh_tempo, "long") : "-"], ["Operator", r.opr || "-"]] },
+            ["Sudah Dibayar (pokok + jasa)", rp(sudahDibayar)], ...(jasaTidakDitagih > 100 ? [["Jasa Tidak Ditagih", rp(jasaTidakDitagih)]] : []), ["Sisa Pokok", rp(r.sisa_pokok)], ["Jatuh Tempo Berikut", r.jatuh_tempo ? formatTanggal(r.jatuh_tempo, "long") : "-"], ["Operator", r.opr || "-"]] },
         { judul: "Jadwal Angsuran", baris: [["Ke", "Jatuh Tempo", "Pokok", "Jasa", "Angsuran", "Status", "Tgl Bayar", "Dibayar", "No. Bukti"],
             ...jadwal.map((j) => {
                 const b = bayarPerKe.get(j.angsuran_ke) ?? []
@@ -151,13 +156,18 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                     <Isi label="Adm / Provisi">Rp {formatAngka(r.rp_adm)} / Rp {formatAngka(r.rp_provisi)}</Isi>
                     <Isi label="Angsuran / Bulan" tebal>Rp {formatAngka(r.temp_angs_per_bulan)}</Isi>
                     <Isi label="Total Jasa">Rp {formatAngka(r.temp_total_jasa)}</Isi>
-                    <Isi label="Sudah Dibayar (pokok + jasa)" tebal>Rp {formatAngka(r.total_bayar)}</Isi>
+                    <Isi label="Sudah Dibayar (pokok + jasa)" tebal>Rp {formatAngka(sudahDibayar)}</Isi>
                     <Isi label="Sisa Pokok" tebal>Rp {formatAngka(r.sisa_pokok)}{r.lunas && Number(r.sisa_buku) > 100 ? " *" : ""}</Isi>
                     <Isi label="Jatuh Tempo Berikut">{r.jatuh_tempo ? formatTanggal(r.jatuh_tempo, "long") : "-"}</Isi>
                 </dl>
                 {!r.lunas && Math.abs(Number(r.sisa_buku) - Number(r.sisa_pokok)) > 100 && (
                     <p className="mt-3 text-xs text-muted-foreground">
                         Sisa Pokok mengikuti jadwal cicilan seperti aplikasi desktop. Buku pinjaman membagi pembayaran berbeda, dengan saldo buku Rp {formatAngka(r.sisa_buku)}; rinciannya ada di Riwayat Pembayaran.
+                    </p>
+                )}
+                {jasaTidakDitagih > 100 && (
+                    <p className="mt-3 text-xs text-amber-700 dark:text-amber-400">
+                        Jasa tidak ditagih Rp {formatAngka(jasaTidakDitagih)}: jasa yang dibebankan Rp {formatAngka(jasaDibebankan)}, yang dibayar Rp {formatAngka(totBayar.b)}. Pinjaman tetap lunas karena pokoknya sudah kembali; selisih jasa dianggap dibebaskan.
                     </p>
                 )}
                 {r.lunas && Number(r.sisa_buku) > 100 && (
