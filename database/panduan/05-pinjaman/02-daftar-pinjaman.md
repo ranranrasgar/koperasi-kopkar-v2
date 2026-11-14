@@ -29,8 +29,8 @@ Daftar ini hanya memuat pinjaman yang punya catatan di buku pinjaman, sama denga
 | Provisi | Biaya provisi |
 | Angs Per Bulan | Angsuran pokok + jasa per bulan |
 | Lama / Cicilan / Sisa | Lama angsuran, angsuran yang sudah dibayar, dan sisanya |
-| Bayar Pokok / Bayar Bunga | Dihitung dari jadwal seperti aplikasi desktop: pokok atau jasa dibagi lama, dikali jumlah cicilan |
-| Sisa Pokok | Plafond dikurangi Bayar Pokok. Bisa berbeda dengan saldo buku di Riwayat Pembayaran dan Buku Besar bila pembayaran pernah dibagi berbeda dari jadwal, misalnya pinjaman BRI |
+| Byr Pokok / Byr Jasa / Total Bayar | Uang yang benar-benar diterima menurut buku pinjaman (Riwayat Pembayaran), sama dengan *Sudah Dibayar* di detail pinjaman. Bila kasir mengubah pokok atau jasa saat setoran (misalnya jasa dibebaskan), yang tampil adalah nilai yang diterima, bukan nilai jadwal. Angsuran yang dibatalkan tidak dihitung |
+| Sisa Pokok | Dihitung dari jadwal seperti aplikasi desktop: plafond dikurangi pokok jadwal (pokok dibagi lama, dikali jumlah cicilan). Karena itu Sisa Pokok bisa tidak sama dengan Plafond dikurangi Byr Pokok bila pokok pernah diubah kasir atau pembayaran dibagi berbeda dari jadwal, misalnya pinjaman BRI |
 | Tunggakan | Angsuran yang sudah lewat jatuh tempo tetapi belum dibayar |
 
 Untuk melihat tunggakan secara rinci per pinjaman, buka **Angsuran & Pemantauan → Kredit Macet**.

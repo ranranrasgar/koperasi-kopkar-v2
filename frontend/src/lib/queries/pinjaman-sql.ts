@@ -3,7 +3,10 @@
 // Sumber data tiap kolom:
 //  - kontrak (tgl, no, anggota, plafond, provisi, jasa, angsuran/bulan, lama): tabel pinjaman_tunai (+ anggota, jenis_kredit).
 //    Jasa = plafond x bunga% x (lama / bunga_per); angsuran per bulan = (plafond + jasa) / lama (rumus desktop).
-//  - Bayar Pokok, Bayar Bunga, dan Sisa Pokok: rumus desktop, plafond atau jasa / lama x jml_cicilan (backend/src/pinjaman-sisa.ts). Buku pinjaman bisa
+//  - Bayar Pokok, Bayar Bunga, dan Total Bayar: uang yang benar-benar diterima menurut buku pinjaman (SUM debit_pokok / debit_bunga, pembatalan BTLA
+//    bernilai negatif), sama dengan Sudah Dibayar di detail pinjaman. Kasir bisa mengubah pokok/jasa saat setoran (mis. jasa dibebaskan), jadi rumus
+//    jadwal desktop bisa melaporkan uang yang tidak pernah diterima (keputusan pengguna 14 November 2026).
+//  - Sisa Pokok: rumus desktop, plafond / lama x jml_cicilan (`pokok_jadwal`, backend/src/pinjaman-sisa.ts). Buku pinjaman bisa
 //    membagi uang yang sama berbeda dari jadwal (mis. BRI pokok 3.301.200 + jasa 661.656, jadwal 3.951.200 + 11.656), jadi SUM(debit_pokok) membuat
 //    sisa terlalu besar. Riwayat pembayaran dan jurnal tetap memakai angka buku; `sisa_buku` menyimpannya. Kolom saldo_pokok di rincian TIDAK dipakai.
 //  - Lunas = sisa buku <= SISA_LUNAS ATAU semua cicilan sudah terbayar (jml_cicilan >= lama), aturan yang sama dengan aplikasi
@@ -92,15 +95,15 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
 
     // Nilai dari buku pinjaman dan jadwal tagih, hanya dihitung untuk baris yang dibutuhkan (satu halaman, atau semua bila ada filter status).
     const lengkap = (sumber: string) => `
-        SELECT y.*, CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.temp_total_plafond - y.bayar_pokok, 0) END AS sisa_pokok,
+        SELECT y.*, CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.temp_total_plafond - y.pokok_jadwal, 0) END AS sisa_pokok,
                CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.lama_angsuran - y.jml_cicilan, 0) END AS sisa_cicilan,
                CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.jatuh_tempo_n - y.jml_cicilan, 0) END AS jml_tunggakan
           FROM (
             SELECT h.id, h.tgl_pinjaman, h.no_pinjaman, h.no_pinjaman_urut, h.kode_agt, h.nik, h.nama, h.bank_no_rek, h.bank_atas_nama, h.rp_pinjaman_pokok, h.uang_muka, h.rp_provisi, h.rp_adm,
                    h.temp_total_plafond, h.temp_total_jasa, h.lama_angsuran, h.jml_cicilan, h.opr, h.kode_kredit,
                    h.angs_pokok, h.angs_jasa, h.temp_angs_per_bulan,
-                   s.sisa_pokok AS sisa_buku, ROUND(h.temp_total_plafond * c.porsi) AS bayar_pokok, ROUND(h.temp_total_jasa * c.porsi) AS bayar_bunga,
-                   ROUND(h.temp_total_plafond * c.porsi) + ROUND(h.temp_total_jasa * c.porsi) AS total_bayar,
+                   s.sisa_pokok AS sisa_buku, ROUND(h.temp_total_plafond * c.porsi) AS pokok_jadwal,
+                   s.dibayar_pokok AS bayar_pokok, s.dibayar_bunga AS bayar_bunga, s.dibayar_pokok + s.dibayar_bunga AS total_bayar,
                    (s.sisa_pokok <= ${SISA_LUNAS} OR h.jml_cicilan >= h.lama_angsuran) AS lunas,
                    COALESCE(j.jatuh_tempo_n, 0) AS jatuh_tempo_n, j.jatuh_tempo AS jatuh_tempo
               FROM ${sumber} h
@@ -108,7 +111,7 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
               LEFT JOIN LATERAL (
                     SELECT CASE WHEN count(*) = 0 THEN h.temp_total_plafond
                                 ELSE LEAST(h.temp_total_plafond, GREATEST(COALESCE(SUM(r.kredit_pokok - r.debit_pokok), 0), 0)) END AS sisa_pokok,
-                           COALESCE(SUM(r.debit_pokok), 0) AS dibayar_pokok
+                           COALESCE(SUM(r.debit_pokok), 0) AS dibayar_pokok, COALESCE(SUM(r.debit_bunga), 0) AS dibayar_bunga
                       FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = h.id) s ON true
               LEFT JOIN LATERAL (
                     -- Jadwal tagih: jumlah angsuran yang sudah terlambat (bulan jatuh temponya berakhir, untuk tunggakan) dan tanggal angsuran berikutnya yang belum dibayar.
