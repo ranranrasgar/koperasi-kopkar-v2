@@ -32,6 +32,7 @@ Sistem membuat pembalik `BTL...` bertanggal hari ini beserta jurnal kebalikannya
 - Pembayaran selalu untuk **angsuran berikutnya** secara berurutan. Satu kali simpan = satu angsuran.
 - Centang **Ubah pokok/jasa/adm/provisi** bila ada keputusan khusus, misalnya adm dibebaskan atau anggota membayar pokok lebih besar. Isi nilai baru di kotak yang muncul.
 - **Pokok yang diubah** tidak boleh melebihi **Sisa pokok**, dan keterangan baris angsurannya ditandai *pokok diubah*.
+- **Jasa di bawah jadwal** (misalnya jasa dibebaskan saat pelunasan dipercepat) wajib disertai **alasan** minimal 10 karakter. Alasan tercatat di keterangan angsuran (*jasa tidak ditagih: ...*) dan angsurannya muncul di **Audit Data → Angsuran dengan jasa di bawah jadwal**. Angsuran dari Potongan Gaji tidak terkena aturan ini karena memakai nominal jadwal.
 - Mengubah pokok **tidak menyusun ulang jadwal**. Satu kali simpan tetap dihitung satu cicilan, dan angsuran berikutnya tetap memakai nilai jadwal. Pelunasan beberapa angsuran sekaligus belum tersedia.
 - Bila pokok pernah diubah, periksa angsuran terakhir: isikan pokok sama dengan **Sisa pokok** supaya pinjaman pas lunas. Form memberi peringatan bila nilainya berbeda.
 - **Pinjaman bank seperti BRI** mengikuti pembagian pokok dan jasa terakhir pinjaman itu, bila totalnya sama dengan jadwal. Pembagian ini berlaku di Setoran Angsuran dan Potongan Gaji, dan bisa diubah lewat kotak Ubah.

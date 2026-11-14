@@ -104,6 +104,18 @@ export const CEK_AUDIT: CekAudit[] = [
                WHERE t.dibayar - t.pokok > 100`,
     },
     {
+        id: "jasa-tidak-ditagih", modul: "Pinjaman Tunai", judul: "Angsuran dengan jasa di bawah jadwal",
+        arti: "Angsuran yang jasanya dibayar kurang dari jadwal tagih: jasa dibebaskan atau pinjaman dibatalkan lewat angsuran. Nilai = jasa yang tidak ditagih. Sejak 14 November 2026 alasannya wajib diisi di form angsuran dan tampil di keterangan. Pinjaman bank tidak diperiksa karena pembagian pokok/jasanya memang berbeda dari jadwal.",
+        sql: `SELECT r.tanggal_angsuran AS tanggal, r.no_bukti AS bukti, a.nama AS anggota, a.kode_agt AS kode_agt,
+                     'Pinjaman ' || p.no_pinjaman || ', ' || r.deskripsi || ', jasa jadwal ' || TO_CHAR(t.jasa, 'FM999G999G999G990') AS keterangan, t.jasa - r.debit_bunga AS nilai
+                FROM pinjaman_tunai_rincian r JOIN pinjaman_tunai p ON p.id = r.pinjaman_tunai_id JOIN anggota a ON a.id = p.anggota_id
+                JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id AND jk.group_pinjaman <> 'BANK / PIHAK LAIN'
+                JOIN LATERAL (SELECT x.debit_bunga AS jasa FROM pinjaman_tunai_rincian_tagih x
+                               WHERE x.pinjaman_tunai_id = r.pinjaman_tunai_id AND x.angsuran_ke = r.angsuran_ke ORDER BY x.id LIMIT 1) t ON true
+               WHERE r.tanggal_angsuran BETWEEN $1 AND $2 AND r.angsuran_ke > 0 AND r.no_bukti NOT LIKE 'BTL%'
+                 AND t.jasa - r.debit_bunga >= 1 AND ${BELUM_BATAL("r.no_bukti")}`,
+    },
+    {
         id: "kpr-angsuran-tanpa-jurnal", modul: "KPR", judul: "Angsuran KPR tanpa jurnal",
         arti: "Baris angsuran KPR yang tidak punya jurnal. Pencairan KPR memang tidak berjurnal, jadi hanya angsuran yang diperiksa.",
         sql: `SELECT r.tanggal_angsuran AS tanggal, r.no_bukti AS bukti, a.nama AS anggota, a.kode_agt AS kode_agt, 'KPR ' || k.no_pinjaman AS keterangan, r.debit_pokok AS nilai

@@ -64,6 +64,32 @@ test('alur penuh: cairkan lalu bayar semua angsuran; saldo nol dan jurnal seimba
     });
 });
 
+test('jasa di bawah jadwal dari kasir wajib beralasan; potongan gaji (bukan kasir) tidak', async () => {
+    const a = (await pool.query(`SELECT kode_agt FROM anggota WHERE rp_grade >= 1000000 ORDER BY id LIMIT 1`)).rows[0];
+    await inTx(async (db) => {
+        const kas = (await db.query(`SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'`)).rows[0].id;
+        const c = await cairkanPinjaman(db, { kodeAgt: a.kode_agt, kodeKredit: 'C01', tglPinjaman: '2026-10-22', pokok: 1000000, lama: 6, kasPerkiraanId: kas, opr: 'uji' });
+        const dasar = { noPinjaman: c.noPinjaman, tanggal: '2026-11-10', kasPerkiraanId: kas, opr: 'uji' };
+        // Kasir mengisi jasa 0 tanpa alasan: ditolak, tidak ada yang tersimpan.
+        await db.query('SAVEPOINT x');
+        await assert.rejects(bayarAngsuran(db, { ...dasar, dariKasir: true, override: { jasa: 0 } }), /isi alasan jasa tidak ditagih/);
+        await db.query('ROLLBACK TO x');
+        await assert.rejects(bayarAngsuran(db, { ...dasar, dariKasir: true, alasanJasa: 'pendek', override: { jasa: 0 } }), /minimal 10/);
+        await db.query('ROLLBACK TO x');
+        // Dengan alasan: tersimpan, alasan masuk keterangan angsuran.
+        const r = await bayarAngsuran(db, { ...dasar, dariKasir: true, alasanJasa: '  pelunasan   dipercepat, jasa dibebaskan ', override: { jasa: 0 } });
+        assert.equal(r.jasa, '0.0000');
+        const d = (await db.query('SELECT deskripsi FROM pinjaman_tunai_rincian WHERE no_bukti = $1', [r.noBukti])).rows[0].deskripsi;
+        assert.equal(d, 'Setoran ke 1 (jasa tidak ditagih: pelunasan dipercepat, jasa dibebaskan)');
+        // Jasa sesuai jadwal dari kasir: tanpa alasan, keterangan biasa.
+        const r2 = await bayarAngsuran(db, { ...dasar, dariKasir: true });
+        assert.equal((await db.query('SELECT deskripsi FROM pinjaman_tunai_rincian WHERE no_bukti = $1', [r2.noBukti])).rows[0].deskripsi, 'Setoran ke 2');
+        // Bukan dari kasir (Potongan Gaji memakai nominal jadwal tagih): tidak diperiksa.
+        const r3 = await bayarAngsuran(db, { ...dasar, override: { jasa: 0 } });
+        assert.equal((await db.query('SELECT deskripsi FROM pinjaman_tunai_rincian WHERE no_bukti = $1', [r3.noBukti])).rows[0].deskripsi, 'Setoran ke 3');
+    });
+});
+
 test('pencairan ditolak: lama melebihi maksimum, anggota tidak ada', async () => {
     await inTx(async (db) => {
         const kas = (await db.query(`SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'`)).rows[0].id;

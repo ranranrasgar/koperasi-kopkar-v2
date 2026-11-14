@@ -117,7 +117,18 @@ export interface AngsuranInput {
     pokokManual?: boolean;
     /** Bila diisi, galat bila angsuran berikutnya bukan angsuran ke ini (mis. sudah dibayar setelah potongan digenerate). */
     angsuranKe?: number;
+    /**
+     * Dari form Setoran Angsuran (kasir), bukan Potongan Gaji: jasa di bawah jadwal wajib disertai alasan (minimal MIN_ALASAN_JASA karakter),
+     * yang ikut tercatat di keterangan angsuran supaya jasa yang tidak ditagih terlihat di riwayat dan laporan Audit Data.
+     */
+    dariKasir?: boolean;
+    alasanJasa?: string;
 }
+
+export const MIN_ALASAN_JASA = 10;
+/** Selisih di bawah Rp 1 dianggap pembulatan isian, bukan jasa yang dikurangi. */
+const TOLERANSI_JASA = 10000n;
+const rupiah = (u: bigint) => Number(fromUnits(round2(u))).toLocaleString('id-ID');
 
 export interface AngsuranResult {
     noBukti: string;
@@ -180,7 +191,7 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
         const bagian = await pembagianBank(db, i.noPinjaman, c.pokok, c.jasa);
         if (bagian) { c.pokok = bagian.pokok; c.jasa = bagian.jasa; }
     }
-    const pokokJadwal = c.pokok;
+    const pokokJadwal = c.pokok, jasaJadwal = c.jasa;
     if (i.override?.pokok !== undefined) c.pokok = toUnits(i.override.pokok);
     if (i.override?.jasa !== undefined) c.jasa = toUnits(i.override.jasa);
     if (i.override?.adm !== undefined) c.adm = toUnits(i.override.adm);
@@ -195,6 +206,12 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
         if (c.pokok + c.jasa + c.adm + c.provisi <= 0n) throw new Error('Jumlah angsuran harus lebih dari nol');
     }
     const sisaPokok = toUnits(sisa.p) - c.pokok, sisaBunga = toUnits(sisa.b) - c.jasa;
+    const jasaKurang = i.dariKasir && c.jasa < jasaJadwal - TOLERANSI_JASA;
+    const alasanJasa = (i.alasanJasa ?? '').replace(/\s+/g, ' ').trim();
+    if (jasaKurang && alasanJasa.length < MIN_ALASAN_JASA)
+        throw new Error(`Jasa Rp ${rupiah(c.jasa)} di bawah jadwal Rp ${rupiah(jasaJadwal)}: isi alasan jasa tidak ditagih (minimal ${MIN_ALASAN_JASA} karakter)`);
+    const deskripsi = [`Setoran ke ${ke}`, i.pokokManual && c.pokok !== pokokJadwal ? ' (pokok diubah)' : '', jasaKurang ? ` (jasa tidak ditagih: ${alasanJasa})` : '']
+        .join('').slice(0, 100);
 
     const urut = Number((await db.query("SELECT nextval('seq_pinjaman_rincian_urut') v")).rows[0].v);
     const noBukti = `ANGS-CR-${mmyy(i.tanggal)}-${urut}`;
@@ -202,7 +219,7 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
         `INSERT INTO pinjaman_tunai_rincian (no_bukti, urut, no_pinjaman, deskripsi, debit_pokok, saldo_pokok, debit_bunga, saldo_bunga,
             rp_adm, rp_provisi, angsuran_ke, tanggal_angsuran, kas_perkiraan_id, pinjaman_tunai_id)
          VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`,
-        [noBukti, urut, i.noPinjaman, `Setoran ke ${ke}${i.pokokManual && c.pokok !== pokokJadwal ? ' (pokok diubah)' : ''}`, fromUnits(c.pokok), fromUnits(sisaPokok), fromUnits(c.jasa), fromUnits(sisaBunga),
+        [noBukti, urut, i.noPinjaman, deskripsi, fromUnits(c.pokok), fromUnits(sisaPokok), fromUnits(c.jasa), fromUnits(sisaBunga),
          fromUnits(c.adm), fromUnits(c.provisi), ke, i.tanggal, i.kasPerkiraanId, p.id]);
 
     // Tandai baris jadwal angsuran ini sebagai terbayar.

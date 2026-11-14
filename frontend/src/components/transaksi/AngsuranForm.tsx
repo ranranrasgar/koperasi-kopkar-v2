@@ -45,6 +45,8 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: Inf
     // Kirim pokok hanya bila benar-benar diubah: nilai jadwal punya 4 desimal, sedangkan isian dibulatkan.
     const pokokDiubah = !!berikut && ubah && Number(isian.pokok || 0) !== berikut.pokok
     const sisaBeda = !!berikut && berikut.ke === berikut.lama && Math.abs(berikut.sisa - berikut.pokok) > 1
+    // Jasa di bawah jadwal (selisih lebih dari Rp 1): server mewajibkan alasan, yang ikut tercatat di keterangan angsuran.
+    const jasaKurang = !!berikut && ubah && Number(isian.jasa || 0) < berikut.jasa - 1
     return (
         <form onSubmit={onSubmit} className="space-y-4">
             <Field label="Pinjaman" htmlFor="noPinjaman">
@@ -82,6 +84,16 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: Inf
                     </label>
                     {pokokDiubah && <input type="hidden" name="pokok" value={isian.pokok} />}
                     {pokokDiubah && <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">Pokok berbeda dengan jadwal. Jadwal angsuran berikutnya tidak berubah, dan angsuran ini tetap dihitung satu cicilan.</p>}
+                    {jasaKurang && (
+                        <div className="mt-2 space-y-1">
+                            <label htmlFor="alasanJasa" className="block text-xs font-semibold text-amber-700 dark:text-amber-400">
+                                Jasa di bawah jadwal ({formatRupiah(berikut.jasa)}). Alasan jasa tidak ditagih (wajib, minimal 10 karakter)
+                            </label>
+                            <Input id="alasanJasa" name="alasanJasa" required minLength={10} maxLength={50} className="h-8"
+                                placeholder="mis. pelunasan dipercepat, jasa dibebaskan pengurus" />
+                            <p className="text-xs text-muted-foreground">Alasan tercatat di keterangan angsuran dan muncul di Audit Data. Bila anggota membatalkan pinjaman, pakai Batalkan Pencairan, bukan angsuran.</p>
+                        </div>
+                    )}
                     {sisaBeda && <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">Ini angsuran terakhir dan sisa pokok berbeda dengan jadwal. Centang ubah supaya pokoknya sama dengan sisa, kalau tidak pinjaman selesai dengan saldo tersisa.</p>}
                 </div>
             )}

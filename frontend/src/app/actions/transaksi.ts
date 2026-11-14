@@ -268,6 +268,7 @@ export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil>
             const r = await bayarAngsuran(db, {
                 noPinjaman: teks(f, "noPinjaman"), tanggal: tanggal(f), kasPerkiraanId: teks(f, "kas"), opr,
                 override: Object.values(override).some((v) => v !== undefined) ? override : undefined, pokokManual: override.pokok !== undefined,
+                dariKasir: true, alasanJasa: teks(f, "alasanJasa", false),
             })
             return { r, titip: dariTitipan ? await postingTitipan(db, teks(f, "noPinjaman")) : null }
         })

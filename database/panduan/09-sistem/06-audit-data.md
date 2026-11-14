@@ -49,6 +49,7 @@ Pastikan aplikasi tidak sedang **Mode Uji**, karena dalam mode itu perbaikan tid
 | **Hitungan cicilan berbeda** | Buka pinjamannya, bandingkan kolom Bayar dengan baris angsuran | Tidak ada jurnal yang perlu dibuat. Wajar bila pinjaman dilunasi lewat potongan atau ditutup: biarkan dengan catatan. Bila pinjaman masih berjalan dan salah, minta pengelola sistem memperbaiki datanya |
 | **Cicilan selesai masih bersaldo** | Apakah pinjaman dilunasi langsung ke bank atau di-top-up | **Tutup Pinjaman** tidak bisa dipakai karena cicilannya sudah selesai. Bila piutang di neraca harus dikeluarkan: jurnal koreksi. Bila tidak: biarkan dengan catatan |
 | **Pokok dibayar melebihi pinjaman** | Apakah ada angsuran dobel | Angsuran terakhir yang dobel: batalkan. Selain itu: jurnal koreksi, dan bila uangnya harus dikembalikan, catat pengembaliannya bersama akuntan |
+| **Angsuran dengan jasa di bawah jadwal** | Apakah pembebasan jasanya disetujui pengurus; alasan ada di keterangan (wajib sejak 14 November 2026) | Disetujui: biarkan, pendapatan jasa memang tidak masuk. Pinjaman yang sebenarnya dibatalkan anggota: batalkan angsurannya lalu Batalkan Pencairan. Jasa yang seharusnya ditagih: tagih lewat angsuran berikutnya atau jurnal bersama akuntan |
 | **Angsuran KPR tanpa jurnal** | Mutasi bank bulan itu | Sama dengan angsuran pinjaman tunai |
 | **Nilai angsuran KPR berbeda** | Buku KPR dibanding jurnalnya | Sama dengan nilai angsuran pinjaman tunai |
 | **Pokok KPR dibayar berlebih** | Apakah ada angsuran dobel | Sama dengan pokok pinjaman dibayar berlebih |
@@ -101,6 +102,7 @@ Jurnal koreksi memperbaiki Buku Besar, tetapi nomor buktinya berbeda. Karena itu
 | Pinjaman Tunai | Hitungan cicilan berbeda dengan buku | Kolom Bayar tidak sama dengan jumlah baris angsuran. Sebagian wajar, misalnya pinjaman yang ditutup |
 | Pinjaman Tunai | Cicilan selesai tetapi masih bersaldo | Saldo pokok masih lebih dari Rp 100 |
 | Pinjaman Tunai | Pokok dibayar melebihi pinjaman | Pokok yang dibayar melebihi pokok pinjaman lebih dari Rp 100 |
+| Pinjaman Tunai | Angsuran dengan jasa di bawah jadwal | Jasa yang dibayar kurang dari jadwal tagih angsuran itu (nilai = jasa tidak ditagih). Pinjaman bank tidak diperiksa |
 | KPR | Angsuran tanpa jurnal, nilai berbeda, pokok dibayar berlebih | Sama seperti pinjaman tunai. Pencairan KPR memang tidak berjurnal |
 
 Bagian **Buku Besar** menampilkan jumlah bukti tidak seimbang dan baris ke akun yang tidak ada di COA, dengan tautan ke **Jurnal Bermasalah**.
