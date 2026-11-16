@@ -182,6 +182,21 @@ export const allGroups: MenuGroup[] = [
         ]
     },
     {
+        groupLabel: "Unit Usaha",
+        items: [
+            {
+                label: "Produk Kantin",
+                icon: "restaurant_menu",
+                href: "/dashboard/kantin/produk"
+            },
+            {
+                label: "Daftar Unit Usaha",
+                icon: "storefront",
+                href: "/dashboard/unit-usaha"
+            }
+        ]
+    },
+    {
         groupLabel: "Akuntansi",
         items: [
             {

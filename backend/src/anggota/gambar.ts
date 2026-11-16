@@ -7,7 +7,7 @@ import crypto from 'node:crypto';
 interface Db { query: (sql: string, params?: unknown[]) => Promise<{ rows: any[]; rowCount?: number | null }> }
 
 export const MAKS_GAMBAR = 400 * 1024;
-export type JenisRef = 'himbauan' | 'promo' | 'notifikasi';
+export type JenisRef = 'himbauan' | 'promo' | 'notifikasi' | 'produk';
 export type JenisGambar = 'image/jpeg' | 'image/png' | 'image/webp';
 
 export class GambarSalah extends Error {}

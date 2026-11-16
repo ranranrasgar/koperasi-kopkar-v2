@@ -331,6 +331,8 @@ export async function hapusCoaAction(_: HasilSimpan, f: FormData): Promise<Hasil
                 OR EXISTS (SELECT 1 FROM jenis_kredit WHERE coa_kredit_id=$1 OR coa_jasa_id=$1 OR coa_adm_id=$1 OR coa_provisi_id=$1)
                 OR EXISTS (SELECT 1 FROM jenis_pos_shu WHERE perkiraan_id=$1 OR kode_coa=$2)
                 OR EXISTS (SELECT 1 FROM variable_akun WHERE perkiraan_id=$1)
+                OR EXISTS (SELECT 1 FROM unit_usaha WHERE $1 IN (akun_kas_id, akun_persediaan_id, akun_penjualan_id, akun_hpp_id,
+                    akun_piutang_tenant_id, akun_utang_tenant_id, akun_pendapatan_tenant_id))
                 OR EXISTS (SELECT 1 FROM saldo_perkiraan WHERE perkiraan_id=$1) AS dipakai`,
             [id, akun.kode_perkiraan, akun.pr_id])
         if (r.dipakai) throw new Salah(`Akun ${akun.kode_perkiraan} masih dipakai jurnal, sub-akun, saldo, atau pengaturan; tidak bisa dihapus`)

@@ -30,7 +30,7 @@ CREATE TABLE IF NOT EXISTS pengumuman_gambar (
     dibuat_pada timestamptz NOT NULL DEFAULT now()
 );
 CREATE TABLE IF NOT EXISTS pengumuman_gambar_ref (
-    jenis varchar(12) NOT NULL CHECK (jenis IN ('himbauan', 'promo', 'notifikasi')),
+    jenis varchar(12) NOT NULL CHECK (jenis IN ('himbauan', 'promo', 'notifikasi', 'produk')),
     ref_id bigint NOT NULL,
     gambar_id bigint NOT NULL REFERENCES pengumuman_gambar(id) ON DELETE CASCADE,
     PRIMARY KEY (jenis, ref_id)
@@ -193,3 +193,115 @@ CREATE TABLE IF NOT EXISTS absensi_staff (
     UNIQUE (anggota_id, tanggal)
 );
 CREATE INDEX IF NOT EXISTS ix_absensi_staff_tanggal ON absensi_staff (tanggal DESC);
+
+-- Unit usaha koperasi (kantin dulu; PPOB dan e-commerce menyusul). Rancangan: docs/prd-kantin.md.
+-- Model per unit: 'milik' (barang dan kas milik koperasi), 'bagi_hasil' (tenant, koperasi mendapat persen penjualan), 'sewa' (tenant, sewa tetap).
+CREATE TABLE IF NOT EXISTS tenant (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nama_usaha varchar(100) NOT NULL,
+    pemilik varchar(100),
+    telepon varchar(30),
+    email varchar(100),
+    bank varchar(50),
+    no_rekening varchar(50),
+    nama_rekening varchar(100),
+    aktif boolean NOT NULL DEFAULT true,
+    dibuat_pada timestamptz NOT NULL DEFAULT now()
+);
+CREATE TABLE IF NOT EXISTS unit_usaha (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    jenis varchar(12) NOT NULL DEFAULT 'KANTIN' CHECK (jenis IN ('KANTIN', 'PPOB', 'ECOMMERCE')),
+    kode varchar(20) NOT NULL UNIQUE,
+    nama varchar(80) NOT NULL,
+    lokasi varchar(100),
+    jam_buka time,
+    jam_tutup time,
+    aktif boolean NOT NULL DEFAULT true,
+    tampil_anggota boolean NOT NULL DEFAULT true,
+    model varchar(12) NOT NULL DEFAULT 'milik' CHECK (model IN ('milik', 'bagi_hasil', 'sewa')),
+    tenant_id bigint REFERENCES tenant(id),
+    -- Akun jurnal, dibuat otomatis saat unit disimpan (backend/src/unit-usaha/kantin.ts). Model milik: kas, persediaan, penjualan, hpp.
+    -- Model tenant: piutang tenant, utang ke tenant, pendapatan (bagi hasil atau sewa).
+    akun_kas_id bigint REFERENCES perkiraan(id),
+    akun_persediaan_id bigint REFERENCES perkiraan(id),
+    akun_penjualan_id bigint REFERENCES perkiraan(id),
+    akun_hpp_id bigint REFERENCES perkiraan(id),
+    akun_piutang_tenant_id bigint REFERENCES perkiraan(id),
+    akun_utang_tenant_id bigint REFERENCES perkiraan(id),
+    akun_pendapatan_tenant_id bigint REFERENCES perkiraan(id),
+    terima_tunai boolean NOT NULL DEFAULT true,
+    terima_sukarela boolean NOT NULL DEFAULT true,
+    batas_sukarela_transaksi numeric(20,4) NOT NULL DEFAULT 100000,
+    batas_sukarela_harian numeric(20,4) NOT NULL DEFAULT 200000,
+    saldo_sukarela_minimal numeric(20,4) NOT NULL DEFAULT 0,
+    menit_batal_pesanan integer NOT NULL DEFAULT 30,
+    dibuat_oleh varchar(50),
+    dibuat_pada timestamptz NOT NULL DEFAULT now(),
+    diubah_pada timestamptz
+);
+-- Kontrak tenant per unit; yang berlaku = baris dengan mulai terbaru.
+CREATE TABLE IF NOT EXISTS tenant_kontrak (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id) ON DELETE CASCADE,
+    tenant_id bigint NOT NULL REFERENCES tenant(id),
+    mulai date NOT NULL,
+    selesai date,
+    persen_bagi_hasil numeric(7,4) NOT NULL DEFAULT 0,
+    minimum_bulanan numeric(20,4) NOT NULL DEFAULT 0,
+    sewa_bulanan numeric(20,4) NOT NULL DEFAULT 0,
+    periode_penyelesaian varchar(10) NOT NULL DEFAULT 'bulanan' CHECK (periode_penyelesaian IN ('bulanan', 'mingguan')),
+    dibuat_pada timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_tenant_kontrak_unit ON tenant_kontrak (unit_usaha_id, mulai DESC);
+-- Operator yang boleh memakai satu unit. Admin (izin Unit Usaha) melihat semua unit tanpa baris di sini.
+CREATE TABLE IF NOT EXISTS unit_usaha_opr (
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id) ON DELETE CASCADE,
+    opr_id bigint NOT NULL REFERENCES opr(id) ON DELETE CASCADE,
+    peran varchar(10) NOT NULL CHECK (peran IN ('pengelola', 'kasir')),
+    PRIMARY KEY (unit_usaha_id, opr_id)
+);
+CREATE INDEX IF NOT EXISTS ix_unit_usaha_opr_opr ON unit_usaha_opr (opr_id);
+
+CREATE TABLE IF NOT EXISTS kantin_kategori (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id) ON DELETE CASCADE,
+    nama varchar(50) NOT NULL,
+    urutan integer NOT NULL DEFAULT 0
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_kantin_kategori_nama ON kantin_kategori (unit_usaha_id, lower(nama));
+CREATE TABLE IF NOT EXISTS kantin_produk (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id),
+    kategori_id bigint REFERENCES kantin_kategori(id) ON DELETE SET NULL,
+    kode varchar(30) NOT NULL,
+    barcode varchar(50),
+    nama varchar(100) NOT NULL,
+    satuan varchar(20) NOT NULL DEFAULT 'pcs',
+    harga_beli numeric(20,4) NOT NULL DEFAULT 0,
+    harga_jual numeric(20,4) NOT NULL,
+    harga_pokok numeric(20,4) NOT NULL DEFAULT 0,          -- HPP per satuan: rata-rata bergerak untuk produk berstok, harga beli untuk yang tidak
+    kelola_stok boolean NOT NULL DEFAULT false,
+    stok numeric(20,4) NOT NULL DEFAULT 0,                 -- hanya berubah lewat mutasi stok (stok masuk, penjualan, opname)
+    stok_minimal numeric(20,4) NOT NULL DEFAULT 0,
+    tampil_anggota boolean NOT NULL DEFAULT true,
+    aktif boolean NOT NULL DEFAULT true,
+    keterangan varchar(255),
+    dibuat_pada timestamptz NOT NULL DEFAULT now(),
+    diubah_pada timestamptz,
+    UNIQUE (unit_usaha_id, kode)
+);
+CREATE UNIQUE INDEX IF NOT EXISTS ux_kantin_produk_barcode ON kantin_produk (unit_usaha_id, barcode) WHERE barcode IS NOT NULL;
+CREATE TABLE IF NOT EXISTS kantin_harga_riwayat (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    produk_id bigint NOT NULL REFERENCES kantin_produk(id) ON DELETE CASCADE,
+    harga_beli_lama numeric(20,4),
+    harga_beli_baru numeric(20,4) NOT NULL,
+    harga_jual_lama numeric(20,4),
+    harga_jual_baru numeric(20,4) NOT NULL,
+    opr varchar(50) NOT NULL,
+    waktu timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_kantin_harga_riwayat_produk ON kantin_harga_riwayat (produk_id, waktu DESC);
+-- Gambar produk memakai pengumuman_gambar (jenis ref 'produk').
+ALTER TABLE pengumuman_gambar_ref DROP CONSTRAINT IF EXISTS pengumuman_gambar_ref_jenis_check;
+ALTER TABLE pengumuman_gambar_ref ADD CONSTRAINT pengumuman_gambar_ref_jenis_check CHECK (jenis IN ('himbauan', 'promo', 'notifikasi', 'produk'));

@@ -6,6 +6,12 @@
             "runtimeExecutable": "npm",
             "runtimeArgs": ["run", "dev", "-w", "frontend"],
             "port": 3100
+        },
+        {
+            "name": "frontend-uji",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev:uji", "-w", "frontend"],
+            "port": 3101
         }
     ]
 }
