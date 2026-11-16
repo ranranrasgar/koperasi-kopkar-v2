@@ -400,6 +400,62 @@ CREATE TABLE IF NOT EXISTS tenant_penyelesaian (
 );
 CREATE INDEX IF NOT EXISTS ix_tenant_penyelesaian_unit ON tenant_penyelesaian (unit_usaha_id, periode_mulai DESC);
 
+-- PIN transaksi anggota (6 angka, bcrypt) untuk menyetujui pembayaran dari HP: tagihan QR kantin dan belanja di aplikasi.
+-- Salah 5 kali berturut-turut: terkunci 15 menit. Mengatur/mengganti PIN wajib memasukkan password akun.
+CREATE TABLE IF NOT EXISTS anggota_pin (
+    anggota_id bigint PRIMARY KEY REFERENCES anggota(id) ON DELETE CASCADE,
+    pin_hash varchar(100) NOT NULL,
+    gagal integer NOT NULL DEFAULT 0,
+    kunci_sampai timestamptz,
+    diubah_pada timestamptz NOT NULL DEFAULT now()
+);
+
+-- Tagihan QR kantin: kasir menampilkan QR (KOPKAR1:T:token), anggota memindai dan menyetujui di HP dengan PIN. Isi = keranjang saat tagihan dibuat.
+CREATE TABLE IF NOT EXISTS kantin_tagihan (
+    token varchar(32) PRIMARY KEY,
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id),
+    opr_id bigint NOT NULL REFERENCES opr(id),
+    opr varchar(50) NOT NULL,
+    isi jsonb NOT NULL,
+    total numeric(20,4) NOT NULL,
+    kunci uuid NOT NULL,
+    berlaku_sampai timestamptz NOT NULL,
+    penjualan_id bigint REFERENCES kantin_penjualan(id),
+    dibatalkan_pada timestamptz,
+    dibuat_pada timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS ix_kantin_tagihan_berlaku ON kantin_tagihan (berlaku_sampai);
+
+-- Belanja dari aplikasi anggota: tas per anggota per kantin (disimpan di server), lalu pesanan.
+CREATE TABLE IF NOT EXISTS kantin_tas (
+    anggota_id bigint NOT NULL REFERENCES anggota(id) ON DELETE CASCADE,
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id) ON DELETE CASCADE,
+    produk_id bigint NOT NULL REFERENCES kantin_produk(id) ON DELETE CASCADE,
+    qty numeric(20,4) NOT NULL,
+    diubah_pada timestamptz NOT NULL DEFAULT now(),
+    PRIMARY KEY (anggota_id, unit_usaha_id, produk_id)
+);
+-- Pesanan: sukarela dibayar saat checkout (penjualan langsung diposting, status 'dibayar'); tunai dibayar saat diambil di kasir
+-- (status 'menunggu' sampai kasir memposting penjualannya, batal otomatis setelah batas_ambil). Alur: dibayar/menunggu -> diproses -> siap -> selesai.
+CREATE TABLE IF NOT EXISTS kantin_pesanan (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id),
+    anggota_id bigint NOT NULL REFERENCES anggota(id),
+    isi jsonb NOT NULL,
+    total numeric(20,4) NOT NULL,
+    metode varchar(10) NOT NULL CHECK (metode IN ('tunai', 'sukarela')),
+    status varchar(10) NOT NULL CHECK (status IN ('menunggu', 'dibayar', 'diproses', 'siap', 'selesai', 'batal')),
+    catatan varchar(255),
+    batas_ambil timestamptz,
+    penjualan_id bigint REFERENCES kantin_penjualan(id),
+    alasan_batal varchar(255),
+    dibuat_pada timestamptz NOT NULL DEFAULT now(),
+    diubah_pada timestamptz NOT NULL DEFAULT now(),
+    diubah_oleh varchar(50)
+);
+CREATE INDEX IF NOT EXISTS ix_kantin_pesanan_unit ON kantin_pesanan (unit_usaha_id, status, dibuat_pada DESC);
+CREATE INDEX IF NOT EXISTS ix_kantin_pesanan_anggota ON kantin_pesanan (anggota_id, dibuat_pada DESC);
+
 -- Kartu stok: setiap perubahan stok produk berstok (stok masuk, penjualan, batal, opname).
 CREATE TABLE IF NOT EXISTS kantin_stok_mutasi (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,

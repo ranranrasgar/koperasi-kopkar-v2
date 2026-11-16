@@ -4,8 +4,9 @@ import { revalidatePath } from "next/cache"
 import { bersihkanYatim, GambarSalah, lepasGambar, simpanGambar, tautkanGambar } from "@kopkar/backend/src/anggota/gambar.ts"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { KantinSalah, simpanProduk, simpanUnit, type UnitInput } from "@kopkar/backend/src/unit-usaha/kantin.ts"
-import { batalJual, bukaSesi, jualSukarela, jualTunai, ringkasSesi, sesiTerbuka, stokMasuk, tutupSesi } from "@kopkar/backend/src/posting/kantin.ts"
+import { batalJual, batalTagihan, bukaSesi, buatTagihan, jualSukarela, jualTunai, ringkasSesi, sesiTerbuka, statusTagihan, stokMasuk, tutupSesi } from "@kopkar/backend/src/posting/kantin.ts"
 import { batalPenyelesaian, hitungPenyelesaian, simpanPenyelesaian } from "@kopkar/backend/src/posting/kantin-tenant.ts"
+import { batalkanKedaluwarsa, batalPesanan, ubahStatusPesanan } from "@kopkar/backend/src/posting/kantin-pesanan.ts"
 import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
 import { catatAksi } from "@/lib/aktivitas"
 import { modeUji, pool, tx } from "@/lib/db"
@@ -74,7 +75,7 @@ export async function tutupSesiAction(unitId: number, sesiId: number, uangFisik:
     })
 }
 
-export async function jualTunaiAction(i: { unitId: number; kodeAgt: string | null; items: { produkId: number; qty: string }[]; diskon: string; uangDiterima: string; kunci: string }) {
+export async function jualTunaiAction(i: { unitId: number; kodeAgt: string | null; items: { produkId: number; qty: string }[]; diskon: string; uangDiterima: string; kunci: string; pesananId?: number | null }) {
     return jalankanData(MENU.kasirKantin, "/dashboard/kantin/kasir", "tambah", async (db, o) => {
         const u = await unitTugas(db, o, i.unitId)
         const r = await jualTunai(db, { ...i, oprId: o.id, opr: o.nama, tanggal: hariIni() })
@@ -97,6 +98,85 @@ export async function jualSukarelaAction(i: { unitId: number; items: { produkId:
             .catch((e) => console.error("notifikasi bayar kantin gagal:", e))
     }
     return h
+}
+
+export interface PesananMasuk {
+    id: number; anggota: string; kode_agt: string; metode: "tunai" | "sukarela"; status: string; total: number; catatan: string | null
+    dibuat: string; batas: string | null; isi: { produkId: number; nama: string; qty: string; harga: string }[]
+}
+
+/** Pesanan aplikasi yang belum selesai di satu kantin (pesanan tunai kedaluwarsa dibatalkan dulu). Dipanggil berkala oleh layar kasir. */
+export async function daftarPesananAction(unitId: number): Promise<{ ok: true; data: PesananMasuk[] } | { ok: false; error: string }> {
+    try {
+        const o = await operatorAktif([MENU.kasirKantin])
+        if (!(await unitBoleh(pool, o)).some((u) => u.id === unitId)) return { ok: false, error: "Kantin bukan tugas Anda" }
+        await batalkanKedaluwarsa(pool)
+        const r = await pool.query<PesananMasuk>(`SELECT p.id, a.nama anggota, a.kode_agt, p.metode, p.status, p.total::float8 total, p.catatan, p.isi,
+                to_char(p.dibuat_pada AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') dibuat, to_char(p.batas_ambil AT TIME ZONE 'Asia/Jakarta', 'HH24:MI') batas
+            FROM kantin_pesanan p JOIN anggota a ON a.id = p.anggota_id WHERE p.unit_usaha_id = $1 AND p.status NOT IN ('selesai', 'batal') ORDER BY p.id`, [unitId])
+        return { ok: true, data: r.rows.map((x) => ({ ...x, id: Number(x.id) })) }
+    } catch (e) {
+        return { ok: false, error: e instanceof Error ? e.message : "Gagal membaca pesanan" }
+    }
+}
+
+const PESAN_STATUS: Record<string, string> = { diproses: "sedang disiapkan", siap: "siap diambil", selesai: "selesai" }
+
+export async function ubahStatusPesananAction(unitId: number, id: number, status: "diproses" | "siap" | "selesai"): Promise<HasilSimpan> {
+    let anggotaId = 0, kantin = ""
+    const h = await jalankan(MENU.kasirKantin, "/dashboard/kantin/kasir", "tambah", async (db, o) => {
+        const u = await unitTugas(db, o, unitId)
+        anggotaId = (await ubahStatusPesanan(db, { id, unitId, status, opr: o.nama })).anggotaId; kantin = u.nama
+        return `Pesanan #${id} ${u.nama} ${PESAN_STATUS[status]}`
+    })
+    if (h?.ok && !h.pesan.startsWith("MODE UJI") && status !== "selesai")
+        await kirimNotifikasi(pool, anggotaId, { judul: status === "siap" ? "Pesanan siap diambil" : "Pesanan sedang disiapkan", url: `/kantin/pesanan/${id}`, email: false,
+            isi: `Pesanan #${id} di ${kantin} ${PESAN_STATUS[status]}.` }).catch((e) => console.error("notifikasi pesanan gagal:", e))
+    return h
+}
+
+export async function batalPesananKasirAction(unitId: number, id: number, alasan: string): Promise<HasilSimpan> {
+    let anggotaId = 0, kembali = false, kantin = ""
+    const h = await jalankan(MENU.kasirKantin, "/dashboard/kantin/kasir", "tambah", async (db, o) => {
+        const u = await unitTugas(db, o, unitId)
+        const r = await batalPesanan(db, { id, unitId, alasan, opr: o.nama, hariIni: hariIni() })
+        anggotaId = r.anggotaId; kembali = r.dikembalikan; kantin = u.nama
+        return `Pesanan #${id} ${u.nama} ditolak: ${alasan.trim().slice(0, 100)}`
+    })
+    if (h?.ok && !h.pesan.startsWith("MODE UJI"))
+        await kirimNotifikasi(pool, anggotaId, { judul: "Pesanan dibatalkan kantin", url: `/kantin/pesanan/${id}`, email: false,
+            isi: `Pesanan #${id} di ${kantin} dibatalkan: ${alasan.trim().slice(0, 100)}.${kembali ? " Saldo Simpanan Sukarela sudah dikembalikan." : ""}` })
+            .catch((e) => console.error("notifikasi pesanan gagal:", e))
+    return h
+}
+
+/** F10: kasir menampilkan QR tagihan dari keranjang; anggota memindai dan menyetujui di HP dengan PIN. */
+export async function buatTagihanAction(i: { unitId: number; items: { produkId: number; qty: string }[]; diskon: string }) {
+    return jalankanData(MENU.kasirKantin, "/dashboard/kantin/kasir", "tambah", async (db, o) => {
+        const u = await unitTugas(db, o, i.unitId)
+        const t = await buatTagihan(db, { ...i, oprId: o.id, opr: o.nama })
+        return { pesan: `Tagihan QR ${u.nama} Rp ${Number(t.total).toLocaleString("id-ID", { maximumFractionDigits: 0 })} ditampilkan`, data: t }
+    })
+}
+
+/** Status tagihan untuk layar kasir (dipanggil berulang selama QR tampil; tidak dicatat di Aktivitas Pengguna). */
+export async function statusTagihanAction(token: string) {
+    try {
+        const o = await operatorAktif([MENU.kasirKantin])
+        return { ok: true as const, data: await statusTagihan(pool, token, o.id) }
+    } catch (e) {
+        return { ok: false as const, error: e instanceof Error ? e.message : "Gagal membaca tagihan" }
+    }
+}
+
+export async function batalTagihanAction(token: string) {
+    try {
+        const o = await operatorAktif([MENU.kasirKantin])
+        await batalTagihan(pool, token, o.id)
+        return { ok: true as const }
+    } catch (e) {
+        return { ok: false as const, error: e instanceof Error ? e.message : "Gagal membatalkan tagihan" }
+    }
 }
 
 export async function hitungPenyelesaianAction(unitId: number, dari: string, sampai: string) {

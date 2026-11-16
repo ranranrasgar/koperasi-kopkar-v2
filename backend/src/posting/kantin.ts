@@ -1,3 +1,4 @@
+import crypto from 'node:crypto';
 import type { Db } from '../db.ts';
 import { pakaiQrBayar } from '../anggota/qr.ts';
 import { akunBersama, KantinSalah, uang, type ModelKantin } from '../unit-usaha/kantin.ts';
@@ -151,8 +152,11 @@ export async function stokMasuk(db: Db, i: StokMasukInput) {
 // ---------- penjualan ----------
 
 export interface JualInput {
-    unitId: number; oprId: number; opr: string; tanggal: string
+    /** oprId null: pesanan dari aplikasi anggota (tanpa sesi kasir, sumber 'mobile'). */
+    unitId: number; oprId: number | null; opr: string; tanggal: string
     kodeAgt?: string | null
+    /** Pesanan tunai dari aplikasi yang dibayar saat diambil: pembelinya anggota pemesan, pesanannya ditandai selesai. */
+    pesananId?: number | null
     items: { produkId: number; qty: string | number }[]
     diskon?: string | number
     uangDiterima: string | number
@@ -165,7 +169,8 @@ export interface HasilJual {
     /** Bayar sukarela: anggota yang membayar dan saldo sukarelanya setelah belanja. */
     anggotaId?: number; namaAnggota?: string; saldoSukarela?: string
 }
-type Bayar = { metode: 'tunai'; uangDiterima: string | number; kodeAgt?: string | null } | { metode: 'sukarela'; qrTeks: string };
+/** Sukarela: dari QR bayar anggota (qrTeks, dipindai kasir) atau dari anggota yang menyetujui tagihan QR kantin di HP-nya (anggotaId). */
+type Bayar = { metode: 'tunai'; uangDiterima: string | number; kodeAgt?: string | null } | { metode: 'sukarela'; qrTeks?: string; anggotaId?: number };
 
 /** Penjualan tunai di kasir. Wajib ada sesi kasir terbuka milik operator ini. */
 export const jualTunai = (db: Db, i: JualInput) => jual(db, i, { metode: 'tunai', uangDiterima: i.uangDiterima, kodeAgt: i.kodeAgt });
@@ -176,6 +181,10 @@ export const jualTunai = (db: Db, i: JualInput) => jual(db, i, { metode: 'tunai'
  */
 export const jualSukarela = (db: Db, i: Omit<JualInput, 'uangDiterima' | 'kodeAgt'> & { qrTeks: string }) =>
     jual(db, { ...i, uangDiterima: 0 }, { metode: 'sukarela', qrTeks: i.qrTeks });
+
+/** Pesanan dari aplikasi anggota yang dibayar Simpanan Sukarela saat checkout (PIN diperiksa pemanggil). Tanpa sesi kasir. */
+export const jualAplikasiSukarela = (db: Db, i: { unitId: number; anggotaId: number; tanggal: string; items: { produkId: number; qty: string | number }[]; catatan?: string }) =>
+    jual(db, { unitId: i.unitId, oprId: null, opr: 'aplikasi', tanggal: i.tanggal, items: i.items, uangDiterima: 0, catatan: i.catatan }, { metode: 'sukarela', anggotaId: i.anggotaId });
 
 async function jual(db: Db, i: JualInput, bayar: Bayar): Promise<HasilJual> {
     const tanggal = tgl(i.tanggal);
@@ -189,17 +198,27 @@ async function jual(db: Db, i: JualInput, bayar: Bayar): Promise<HasilJual> {
     if (!u.aktif) throw new KantinSalah(`${u.nama} nonaktif`);
     if (bayar.metode === 'tunai' && !u.terima_tunai) throw new KantinSalah(`${u.nama} tidak menerima tunai`);
     if (bayar.metode === 'sukarela' && !u.terima_sukarela) throw new KantinSalah(`${u.nama} tidak menerima bayar dari Simpanan Sukarela`);
-    const sesi = await sesiTerbuka(db, i.unitId, i.oprId);
-    if (!sesi) throw new KantinSalah('Buka sesi kasir dulu');
+    const sesi = i.oprId === null ? null : await sesiTerbuka(db, i.unitId, i.oprId);
+    if (i.oprId !== null && !sesi) throw new KantinSalah('Buka sesi kasir dulu');
 
     let anggotaId: string | null = null, namaAnggota = '', qrToken: string | null = null;
     if (bayar.metode === 'sukarela') {
-        const q = await pakaiQrBayar(db, bayar.qrTeks);
-        if (!q) throw new KantinSalah('QR bayar tidak berlaku atau sudah dipakai. Minta anggota membuka QR bayar yang baru.');
-        qrToken = q.token;
-        const a = (await db.query<{ id: string; nama: string; aktif: boolean }>('SELECT id, nama, aktif FROM anggota WHERE id = $1 FOR UPDATE', [q.anggotaId])).rows[0];
+        let pemilik = bayar.anggotaId ?? null;
+        if (bayar.qrTeks !== undefined) {
+            const q = await pakaiQrBayar(db, bayar.qrTeks);
+            if (!q) throw new KantinSalah('QR bayar tidak berlaku atau sudah dipakai. Minta anggota membuka QR bayar yang baru.');
+            qrToken = q.token; pemilik = q.anggotaId;
+        }
+        if (!pemilik) throw new KantinSalah('Anggota pembayar tidak diketahui');
+        const a = (await db.query<{ id: string; nama: string; aktif: boolean }>('SELECT id, nama, aktif FROM anggota WHERE id = $1 FOR UPDATE', [pemilik])).rows[0];
         if (!a?.aktif) throw new KantinSalah('Anggota tidak aktif');
         anggotaId = a.id; namaAnggota = a.nama;
+    } else if (i.pesananId) {
+        const ps = (await db.query<{ anggota_id: string; nama: string; metode: string; status: string; unit_usaha_id: string }>(
+            `SELECT p.anggota_id, a.nama, p.metode, p.status, p.unit_usaha_id FROM kantin_pesanan p JOIN anggota a ON a.id = p.anggota_id WHERE p.id = $1 FOR UPDATE OF p`, [i.pesananId])).rows[0];
+        if (!ps || Number(ps.unit_usaha_id) !== i.unitId) throw new KantinSalah('Pesanan tidak ditemukan di kantin ini');
+        if (ps.metode !== 'tunai' || !['menunggu', 'diproses', 'siap'].includes(ps.status)) throw new KantinSalah(`Pesanan #${i.pesananId} tidak menunggu pembayaran tunai`);
+        anggotaId = ps.anggota_id; namaAnggota = ps.nama;
     } else if (bayar.kodeAgt) {
         const a = (await db.query<{ id: string; nama: string }>('SELECT id, nama FROM anggota WHERE kode_agt = $1', [bayar.kodeAgt])).rows[0];
         if (!a) throw new KantinSalah(`Anggota ${bayar.kodeAgt} tidak ditemukan`);
@@ -266,11 +285,12 @@ async function jual(db: Db, i: JualInput, bayar: Bayar): Promise<HasilJual> {
 
     const no = `KTN-${yymm(tanggal)}-${(await db.query<{ n: string }>("SELECT nextval('seq_kantin_jual') n")).rows[0].n}`;
     const id = Number((await db.query<{ id: string }>(`INSERT INTO kantin_penjualan (no_bukti, unit_usaha_id, sesi_kasir_id, anggota_id, tanggal, metode, model,
-            subtotal, diskon, total, total_pokok, persen_bagi_hasil, bagi_hasil, uang_diterima, kembalian, kunci_idempoten, catatan, opr, qr_token)
-        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING id`,
-        [no, i.unitId, sesi.id, anggotaId, tanggal, bayar.metode, u.model, fromUnits(subtotal), fromUnits(diskon), fromUnits(total), fromUnits(totalPokok),
+            subtotal, diskon, total, total_pokok, persen_bagi_hasil, bagi_hasil, uang_diterima, kembalian, kunci_idempoten, catatan, opr, qr_token, sumber)
+        VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20) RETURNING id`,
+        [no, i.unitId, sesi?.id ?? null, anggotaId, tanggal, bayar.metode, u.model, fromUnits(subtotal), fromUnits(diskon), fromUnits(total), fromUnits(totalPokok),
          persen === null ? null : fromUnits(persen), fromUnits(bagi), terima === null ? null : fromUnits(terima), terima === null ? null : fromUnits(terima - total),
-         kunci, i.catatan?.trim().slice(0, 255) || null, i.opr, qrToken])).rows[0].id);
+         kunci, i.catatan?.trim().slice(0, 255) || null, i.opr, qrToken, i.oprId === null ? 'mobile' : 'pos'])).rows[0].id);
+    if (i.pesananId) await db.query(`UPDATE kantin_pesanan SET penjualan_id = $1, status = 'selesai', diubah_pada = now(), diubah_oleh = $2 WHERE id = $3`, [id, i.opr, i.pesananId]);
     for (const b of baris) {
         await db.query(`INSERT INTO kantin_penjualan_item (penjualan_id, produk_id, nama_produk, satuan, qty, harga_jual, harga_pokok, subtotal)
             VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`, [id, b.produkId, b.nama, b.satuan, fromUnits(b.q), fromUnits(b.jual), fromUnits(b.pokok), fromUnits(b.sub)]);
@@ -348,4 +368,96 @@ export async function batalJual(db: Db, i: { id: number; unitId: number; alasan:
     await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [p.no_bukti]);
     await db.query(`UPDATE kantin_penjualan SET status = 'batal', dibatalkan_pada = now(), opr_batal = $1, alasan_batal = $2 WHERE id = $3`, [i.opr, alasan.slice(0, 255), i.id]);
     return { noBukti: p.no_bukti };
+}
+
+// ---------- tagihan QR kantin (kasir menampilkan QR, anggota menyetujui di HP) ----------
+
+const AWALAN_TAGIHAN = 'KOPKAR1:T:';
+export const DETIK_TAGIHAN = 180;
+const tokenTagihan = (teks: string) => new RegExp(`^${AWALAN_TAGIHAN}([A-Za-z0-9_-]{22})$`).exec(teks.trim())?.[1] ?? null;
+
+interface IsiTagihan { items: { produkId: number; qty: string }[]; diskon: string }
+
+/** Kasir membuat tagihan dari keranjang: total dihitung dari harga sekarang, QR berlaku DETIK_TAGIHAN detik. */
+export async function buatTagihan(db: Db, i: { unitId: number; oprId: number; opr: string; items: { produkId: number; qty: string | number }[]; diskon?: string | number }) {
+    const u = await unit(db, i.unitId);
+    if (!u.aktif) throw new KantinSalah(`${u.nama} nonaktif`);
+    if (!u.terima_sukarela) throw new KantinSalah(`${u.nama} tidak menerima bayar dari Simpanan Sukarela`);
+    if (!(await sesiTerbuka(db, i.unitId, i.oprId))) throw new KantinSalah('Buka sesi kasir dulu');
+    if (!i.items.length) throw new KantinSalah('Keranjang kosong');
+    let subtotal = 0n;
+    for (const it of i.items) {
+        const p = (await db.query<{ nama: string; harga_jual: string; aktif: boolean; kelola_stok: boolean; stok: string }>(
+            'SELECT nama, harga_jual, aktif, kelola_stok, stok FROM kantin_produk WHERE id = $1 AND unit_usaha_id = $2', [it.produkId, i.unitId])).rows[0];
+        if (!p?.aktif) throw new KantinSalah('Produk tidak ditemukan atau nonaktif');
+        const q = qty(it.qty);
+        if (p.kelola_stok && toUnits(p.stok) < q) throw new KantinSalah(`Stok ${p.nama} tidak cukup`);
+        subtotal += kali(toUnits(p.harga_jual), q);
+    }
+    const diskon = round2(toUnits(uang(i.diskon, 'Diskon')));
+    if (diskon > subtotal) throw new KantinSalah('Diskon melebihi subtotal');
+    const token = crypto.randomBytes(16).toString('base64url');
+    const isi: IsiTagihan = { items: i.items.map((x) => ({ produkId: x.produkId, qty: String(x.qty) })), diskon: fromUnits(diskon) };
+    await db.query("DELETE FROM kantin_tagihan WHERE berlaku_sampai < now() - interval '1 day' AND penjualan_id IS NULL");
+    await db.query(`INSERT INTO kantin_tagihan (token, unit_usaha_id, opr_id, opr, isi, total, kunci, berlaku_sampai)
+        VALUES ($1, $2, $3, $4, $5, $6, gen_random_uuid(), now() + make_interval(secs => $7))`,
+        [token, i.unitId, i.oprId, i.opr, JSON.stringify(isi), fromUnits(subtotal - diskon), DETIK_TAGIHAN]);
+    return { teks: `${AWALAN_TAGIHAN}${token}`, token, detik: DETIK_TAGIHAN, total: fromUnits(subtotal - diskon) };
+}
+
+export interface RincianTagihan {
+    kantin: string; total: string; diskon: string; status: 'menunggu' | 'lunas' | 'kedaluwarsa' | 'batal'; sisaDetik: number
+    item: { nama: string; satuan: string; qty: string; harga: string }[]
+}
+
+/** Rincian tagihan untuk layar persetujuan di HP anggota (hanya membaca). null bila bukan QR tagihan. */
+export async function bacaTagihan(db: Pick<Db, 'query'>, teks: string): Promise<RincianTagihan | null> {
+    const token = tokenTagihan(teks);
+    if (!token) return null;
+    const t = (await db.query<{ kantin: string; isi: IsiTagihan; total: string; sisa: number; penjualan_id: string | null; dibatalkan_pada: string | null; unit_usaha_id: string }>(
+        `SELECT u.nama kantin, t.isi, t.total, extract(epoch FROM t.berlaku_sampai - now())::int sisa, t.penjualan_id, t.dibatalkan_pada, t.unit_usaha_id
+           FROM kantin_tagihan t JOIN unit_usaha u ON u.id = t.unit_usaha_id WHERE t.token = $1`, [token])).rows[0];
+    if (!t) return null;
+    const item: RincianTagihan['item'] = [];
+    for (const it of t.isi.items) {
+        const p = (await db.query<{ nama: string; satuan: string; harga_jual: string }>('SELECT nama, satuan, harga_jual FROM kantin_produk WHERE id = $1', [it.produkId])).rows[0];
+        item.push({ nama: p?.nama ?? '-', satuan: p?.satuan ?? '', qty: it.qty, harga: p?.harga_jual ?? '0' });
+    }
+    const status = t.penjualan_id ? 'lunas' : t.dibatalkan_pada ? 'batal' : t.sisa <= 0 ? 'kedaluwarsa' : 'menunggu';
+    return { kantin: t.kantin, total: t.total, diskon: t.isi.diskon, status, sisaDetik: Math.max(t.sisa, 0), item };
+}
+
+/**
+ * Anggota menyetujui tagihan (PIN sudah diperiksa pemanggil, di luar transaksi ini). Penjualan diposting atas nama kasir pembuat tagihan,
+ * dibayar Simpanan Sukarela anggota ini. Bila harga berubah sejak tagihan dibuat, ditolak supaya anggota tidak membayar nilai yang tidak ia lihat.
+ */
+export async function bayarTagihan(db: Db, i: { teks: string; anggotaId: number; tanggal: string }) {
+    const token = tokenTagihan(i.teks);
+    if (!token) throw new KantinSalah('Bukan QR tagihan kantin');
+    const t = (await db.query<{ unit_usaha_id: string; opr_id: string; opr: string; isi: IsiTagihan; total: string; kunci: string; aktif: boolean; penjualan_id: string | null; dibatalkan_pada: string | null }>(
+        `SELECT unit_usaha_id, opr_id, opr, isi, total, kunci, berlaku_sampai > now() aktif, penjualan_id, dibatalkan_pada FROM kantin_tagihan WHERE token = $1 FOR UPDATE`, [token])).rows[0];
+    if (!t) throw new KantinSalah('Tagihan tidak ditemukan');
+    if (t.penjualan_id) throw new KantinSalah('Tagihan ini sudah dibayar');
+    if (t.dibatalkan_pada) throw new KantinSalah('Tagihan ini dibatalkan kasir');
+    if (!t.aktif) throw new KantinSalah('Tagihan sudah kedaluwarsa. Minta kasir menampilkan QR baru.');
+    const r = await jual(db, { unitId: Number(t.unit_usaha_id), oprId: Number(t.opr_id), opr: t.opr, tanggal: i.tanggal, items: t.isi.items, diskon: t.isi.diskon,
+        uangDiterima: 0, kunci: t.kunci }, { metode: 'sukarela', anggotaId: i.anggotaId });
+    if (toUnits(r.total) !== toUnits(t.total)) throw new KantinSalah('Harga berubah sejak tagihan dibuat. Minta kasir menampilkan QR baru.');
+    await db.query('UPDATE kantin_tagihan SET penjualan_id = $1 WHERE token = $2', [r.id, token]);
+    return r;
+}
+
+/** Status tagihan untuk layar kasir (hanya kasir pembuatnya). */
+export async function statusTagihan(db: Pick<Db, 'query'>, token: string, oprId: number) {
+    const t = (await db.query<{ aktif: boolean; dibatalkan_pada: string | null; penjualan_id: string | null; no_bukti: string | null; total: string | null; nama: string | null; saldo: string | null }>(
+        `SELECT t.berlaku_sampai > now() aktif, t.dibatalkan_pada, t.penjualan_id, p.no_bukti, p.total, a.nama, s.rp_saldo saldo
+           FROM kantin_tagihan t LEFT JOIN kantin_penjualan p ON p.id = t.penjualan_id LEFT JOIN anggota a ON a.id = p.anggota_id
+           LEFT JOIN simpanan s ON s.id = p.simpanan_id WHERE t.token = $1 AND t.opr_id = $2`, [token, oprId])).rows[0];
+    if (!t) return { status: 'tidak_ada' as const };
+    if (t.penjualan_id) return { status: 'lunas' as const, noBukti: t.no_bukti!, total: t.total!, namaAnggota: t.nama ?? '', saldoSukarela: t.saldo ?? '0' };
+    return { status: t.dibatalkan_pada ? 'batal' as const : t.aktif ? 'menunggu' as const : 'kedaluwarsa' as const };
+}
+
+export async function batalTagihan(db: Pick<Db, 'query'>, token: string, oprId: number) {
+    await db.query('UPDATE kantin_tagihan SET dibatalkan_pada = now() WHERE token = $1 AND opr_id = $2 AND penjualan_id IS NULL AND dibatalkan_pada IS NULL', [token, oprId]);
 }

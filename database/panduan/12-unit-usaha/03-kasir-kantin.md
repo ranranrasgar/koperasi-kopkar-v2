@@ -28,7 +28,26 @@ Setiap kasir membuka sesinya sendiri. Hitung uang modal di laci, ketik nilainya,
 
 Pembayaran ditolak bila QR sudah kedaluwarsa atau sudah dipakai, saldo tidak cukup, melebihi batas per transaksi atau per hari, atau sisa saldo kurang dari saldo minimal (diatur di Daftar Unit Usaha, tab Pembayaran). Pesan penolakan tampil di jendela pindai.
 
+## Bayar dengan QR kantin (F10)
+
+Cara kedua, untuk HP anggota yang tidak bisa menampilkan QR (layar retak, kamera kasir bermasalah):
+
+1. Tekan **F10** (atau tombol **F10 Sukarela (QR kantin)**). Layar kasir menampilkan QR tagihan sebesar total keranjang, berlaku 3 menit.
+2. Anggota membuka **Kantin → Pindai QR kantin** di aplikasi anggota, memeriksa rincian belanja, lalu memasukkan **PIN transaksi**.
+3. Begitu disetujui, layar kasir otomatis menutup tagihan dan mencetak struk.
+
+Esc atau menutup jendela membatalkan tagihan. Bila waktunya habis, tekan **Buat QR baru**. Bila harga produk berubah setelah QR ditampilkan, pembayaran ditolak dan QR perlu dibuat ulang.
+
 Setelah tersimpan, nomor nota (KTN-...) dan kembalian tampil di pojok kanan bawah, struk tercetak bila **Cetak struk otomatis** dicentang, dan keranjang kosong lagi.
+
+## Pesanan dari aplikasi anggota (F6)
+
+Anggota bisa memesan dari aplikasi (menu Kantin). Layar kasir memeriksa pesanan baru tiap 15 detik: tombol **F6 Pesanan aplikasi** menjadi kuning dan berbunyi pendek bila ada pesanan baru. Tekan **F6** untuk melihat daftarnya (nama, barang, catatan, cara bayar).
+
+- **Proses** lalu **Siap diambil**: anggota menerima notifikasi di HP.
+- Pesanan **Simpanan Sukarela** sudah dibayar saat dipesan. Setelah diserahkan, tekan **Sudah diambil**.
+- Pesanan **tunai**: saat anggota datang, tekan **Muat ke keranjang**, lalu **F8 Bayar Tunai** seperti biasa. Pesanan otomatis selesai setelah nota tersimpan. Pesanan tunai yang tidak diambil sampai batas waktunya (pengaturan kantin) batal otomatis.
+- **Tolak** dengan alasan: pesanan Simpanan Sukarela dikembalikan (nota dibatalkan, saldo anggota kembali, stok kembali).
 
 ## Tombol keyboard
 
@@ -38,9 +57,11 @@ Setelah tersimpan, nomor nota (KTN-...) dan kembalian tampil di pojok kanan bawa
 | F2 | Pilih pembeli (anggota atau QR) |
 | F3 | Diskon nota |
 | F4 | Ganti tampilan kartu bergambar / tabel |
+| F6 | Pesanan dari aplikasi anggota |
 | F7 | Tahan transaksi; saat keranjang kosong, panggil transaksi terakhir yang ditahan |
 | F8 | Bayar tunai |
 | F9 | Bayar Simpanan Sukarela: pindai QR bayar di HP anggota |
+| F10 | Bayar Simpanan Sukarela: tampilkan QR tagihan untuk dipindai anggota |
 | Enter | Tambah produk dari kotak cari; simpan di layar bayar |
 | ↑ ↓ | Pilih baris keranjang |
 | + / − | Tambah / kurangi jumlah baris terpilih |
@@ -48,7 +69,7 @@ Setelah tersimpan, nomor nota (KTN-...) dan kembalian tampil di pojok kanan bawa
 | Esc | Tutup dialog atau kosongkan kotak cari |
 | Ctrl+P | Cetak ulang struk terakhir |
 
-**+**, **−**, dan **Del** bekerja saat kotak cari kosong. F10 (QR kantin dipindai anggota) belum aktif.
+**+**, **−**, dan **Del** bekerja saat kotak cari kosong.
 
 ## Struk
 

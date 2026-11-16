@@ -1,5 +1,5 @@
 import type { Metadata } from "next"
-import { BadgeCheck, Bell, BookOpen, Coins, FilePen, KeyRound, Mail, MessageSquare, ReceiptText, Wallet } from "lucide-react"
+import { BadgeCheck, Bell, BookOpen, Coins, FilePen, KeyRound, LockKeyhole, Mail, MessageSquare, ReceiptText, Wallet } from "lucide-react"
 import { hitungBelumDibaca } from "@kopkar/backend/src/anggota/pesan.ts"
 import { statusEmail } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
 import { FotoProfil } from "@/components/FotoProfil"
@@ -65,6 +65,7 @@ export default async function AkunPage() {
                     <BarisTautan href="/akun/email" ikon={Mail} judul="Email" sub={a.email ? `${a.email} · ${stEmail.terverifikasi ? "terverifikasi" : "belum diverifikasi"}` : "Belum diisi"}
                         lencana={a.email && !stEmail.terverifikasi ? "Verifikasi" : undefined} />
                     <BarisTautan href="/akun/password" ikon={KeyRound} judul="Ganti password" sub="Perangkat lain akan keluar dari akun ini" />
+                    <BarisTautan href="/akun/pin" ikon={LockKeyhole} judul="PIN transaksi" sub="Menyetujui pembayaran kantin dari Simpanan Sukarela" />
                     <BarisTautan href="/selamat-datang" ikon={BookOpen} judul="Panduan penggunaan" sub="Kenali isi dan fitur aplikasi" />
                 </Kartu>
 

@@ -3,8 +3,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { ImageOff, LayoutGrid, List, Loader2, LockKeyhole, Minus, Pause, Plus, Printer, QrCode, Search, Trash2, UserRound, X } from "lucide-react"
-import { bukaSesiAction, jualSukarelaAction, jualTunaiAction, ringkasSesiAction, tutupSesiAction } from "@/app/actions/kantin"
+import { Bell, ImageOff, LayoutGrid, List, Loader2, LockKeyhole, Minus, Pause, Plus, Printer, QrCode, Search, Trash2, UserRound, X } from "lucide-react"
+import qrcode from "qrcode-generator"
+import { batalPesananKasirAction, batalTagihanAction, buatTagihanAction, bukaSesiAction, daftarPesananAction, ubahStatusPesananAction, type PesananMasuk, jualSukarelaAction, jualTunaiAction, ringkasSesiAction, statusTagihanAction, tutupSesiAction } from "@/app/actions/kantin"
 import { PindaiQr } from "@/components/transaksi/PindaiQr"
 import { AnggotaPicker } from "@/components/transaksi/common"
 import { Input } from "@/components/ui/input"
@@ -40,7 +41,10 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
     const [pilih, setPilih] = useState(0)
     const [anggota, setAnggota] = useState<AnggotaRingkas | null>(null)
     const [diskon, setDiskon] = useState("")
-    const [modal, setModal] = useState<null | "bayar" | "anggota" | "diskon" | "tutup">(null)
+    const [modal, setModal] = useState<null | "bayar" | "anggota" | "diskon" | "tutup" | "tagihan" | "pesanan">(null)
+    const [pesanan, setPesanan] = useState<PesananMasuk[]>([])
+    const [pesananId, setPesananId] = useState<number | null>(null)
+    const jumlahPesanan = useRef(-1)
     const [pindaiBayar, setPindaiBayar] = useState(false)
     const hasilSukarela = useRef<Struk | null>(null)
     const [tahan, setTahan] = useState<Ditahan[]>([])
@@ -82,7 +86,22 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
         setKeranjang((k) => k.flatMap((x, j) => (j !== i ? [x] : x.qty + delta > 0 ? [{ ...x, qty: x.qty + delta }] : [])))
     }, [keranjang, peta])
     const hapus = useCallback((i: number) => { setKeranjang((k) => k.filter((_, j) => j !== i)); setPilih((n) => Math.max(0, Math.min(n, keranjang.length - 2))) }, [keranjang.length])
-    const kosongkan = () => { setKeranjang([]); setAnggota(null); setDiskon(""); setPilih(0) }
+    const kosongkan = () => { setKeranjang([]); setAnggota(null); setDiskon(""); setPilih(0); setPesananId(null) }
+    // Pesanan dari aplikasi anggota: dibaca tiap 15 detik; bunyi pendek bila ada pesanan baru.
+    const muatPesanan = useCallback(async () => {
+        const r = await daftarPesananAction(unit.id)
+        if (!r.ok) return
+        const baru = r.data.filter((p) => p.status === "menunggu" || p.status === "dibayar").length
+        if (jumlahPesanan.current >= 0 && baru > jumlahPesanan.current) bunyi()
+        jumlahPesanan.current = baru
+        setPesanan(r.data)
+    }, [unit.id])
+    useEffect(() => {
+        if (!sesi) return
+        const t0 = setTimeout(muatPesanan, 0)
+        const t = setInterval(muatPesanan, 15_000)
+        return () => { clearTimeout(t0); clearInterval(t) }
+    }, [sesi, muatPesanan])
 
     const cariEnter = () => {
         const q = cari.trim().toLowerCase()
@@ -104,10 +123,10 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
             const diInput = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement
             const kunciF: Record<string, () => void> = {
                 F1: () => cariRef.current?.focus(), F2: () => setModal("anggota"), F3: () => setModal("diskon"),
-                F4: () => setTampilan((t) => (t === "kartu" ? "tabel" : "kartu")), F7: tahanAtauPanggil,
+                F4: () => setTampilan((t) => (t === "kartu" ? "tabel" : "kartu")), F6: () => { setModal("pesanan"); muatPesanan() }, F7: tahanAtauPanggil,
                 F8: () => { if (keranjang.length) setModal("bayar") },
                 F9: () => { if (keranjang.length) setPindaiBayar(true) },
-                F10: () => setPesan({ ok: false, teks: "QR kantin dipindai anggota hadir di tahap berikutnya" }),
+                F10: () => { if (keranjang.length) setModal("tagihan") },
             }
             if (kunciF[e.key]) { e.preventDefault(); if (!modal && !pindaiBayar) kunciF[e.key](); return }
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") { e.preventDefault(); cetak(); return }
@@ -213,6 +232,7 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
                 <div className="flex flex-col rounded-lg border bg-card">
                     <button type="button" onClick={() => setModal("anggota")} className="flex items-center gap-2 border-b px-3 py-2 text-left text-sm hover:bg-muted/50">
                         <UserRound className="h-4 w-4 text-muted-foreground" />
+                        {pesananId && <span className="rounded bg-amber-100 px-1.5 text-xs font-semibold text-amber-900">Pesanan #{pesananId}</span>}
                         <span className="flex-1">{anggota ? <><b>{anggota.nama}</b> <span className="text-xs text-muted-foreground">{anggota.kode_agt}</span></> : <span className="text-muted-foreground">Pembeli umum</span>}</span>
                         <kbd className="rounded border px-1 text-[10px]">F2</kbd>
                     </button>
@@ -244,24 +264,39 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
                     <div className="grid grid-cols-2 gap-2 border-t p-3">
                         <button type="button" disabled={!keranjang.length} onClick={() => setModal("bayar")} className="col-span-2 h-12 rounded-md bg-primary text-base font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-40">F8 Bayar Tunai</button>
                         <button type="button" disabled={!keranjang.length} onClick={() => setPindaiBayar(true)} className="inline-flex items-center justify-center gap-1 rounded-md border border-primary px-2 py-2 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-40"><QrCode className="h-3.5 w-3.5" /> F9 Sukarela (QR anggota)</button>
-                        <button type="button" onClick={() => setPesan({ ok: false, teks: "QR kantin dipindai anggota hadir di tahap berikutnya" })} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs text-muted-foreground"><QrCode className="h-3.5 w-3.5" /> F10 QR kantin</button>
+                        <button type="button" disabled={!keranjang.length} onClick={() => setModal("tagihan")} className="inline-flex items-center justify-center gap-1 rounded-md border border-primary px-2 py-2 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-40"><QrCode className="h-3.5 w-3.5" /> F10 Sukarela (QR kantin)</button>
+                        <button type="button" onClick={() => { setModal("pesanan"); muatPesanan() }} className={cn("col-span-2 inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs hover:bg-muted", pesanan.some((p) => p.status === "menunggu" || p.status === "dibayar") && "border-amber-400 bg-amber-50 font-semibold text-amber-900")}>
+                            <Bell className="h-3.5 w-3.5" /> F6 Pesanan aplikasi ({pesanan.length})</button>
                         <button type="button" onClick={tahanAtauPanggil} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs hover:bg-muted"><Pause className="h-3.5 w-3.5" /> F7 {keranjang.length ? "Tahan" : `Panggil (${tahan.length})`}</button>
                         <button type="button" disabled={!keranjang.length} onClick={() => confirm("Kosongkan keranjang?") && kosongkan()} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs text-red-700 hover:bg-red-50 disabled:opacity-40"><X className="h-3.5 w-3.5" /> Batal</button>
                     </div>
                 </div>
             </div>
-            <p className="text-[11px] text-muted-foreground">F1 cari · F2 pembeli · F3 diskon · F4 tampilan · F7 tahan/panggil · F8 bayar · ↑↓ pilih baris · + / − jumlah · Del hapus · Esc kosongkan pencarian · Ctrl+P cetak ulang</p>
+            <p className="text-[11px] text-muted-foreground">F1 cari · F2 pembeli · F3 diskon · F4 tampilan · F6 pesanan aplikasi · F7 tahan/panggil · F8 bayar · F9/F10 sukarela · ↑↓ pilih baris · + / − jumlah · Del hapus · Esc kosongkan pencarian · Ctrl+P cetak ulang</p>
 
             {pesan && <div role="status" className={cn("fixed bottom-4 right-4 z-50 max-w-[24rem] rounded-md border px-4 py-3 text-sm shadow-lg", pesan.ok ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-amber-300 bg-amber-50 text-amber-900")}>{pesan.teks}</div>}
 
             <ModalForm open={modal === "bayar"} onOpenChange={(b) => !b && setModal(null)} judul="Bayar tunai" kunci={false}>
                 <Bayar total={total} onBatal={() => setModal(null)} onBayar={async (diterima) => {
-                    const h = await jualTunaiAction({ unitId: unit.id, kodeAgt: anggota?.kode_agt ?? null, items: keranjang.map((b) => ({ produkId: b.produkId, qty: String(b.qty) })), diskon: String(nilaiDiskon), uangDiterima: String(diterima), kunci: kunci.current })
+                    const h = await jualTunaiAction({ unitId: unit.id, kodeAgt: anggota?.kode_agt ?? null, items: keranjang.map((b) => ({ produkId: b.produkId, qty: String(b.qty) })), diskon: String(nilaiDiskon), uangDiterima: String(diterima), kunci: kunci.current, pesananId })
                     if (!h.ok) return h.error
                     selesaiJual({ noBukti: h.data.noBukti, waktu: h.data.waktu, kasir: h.data.kasir, anggota, subtotal, diskon: nilaiDiskon, total: Number(h.data.total), diterima, kembalian: Number(h.data.kembalian),
                         baris: keranjang.map((b) => ({ nama: peta.get(b.produkId)?.nama ?? "", qty: b.qty, harga: peta.get(b.produkId)?.harga ?? 0 })) })
                     if (h.pesan.startsWith("MODE UJI")) setPesan({ ok: false, teks: h.pesan })
                     return null
+                }} />
+            </ModalForm>
+            <ModalForm open={modal === "tagihan"} onOpenChange={(b) => !b && setModal(null)} judul="Bayar dengan QR kantin" keterangan="Anggota memindai QR ini di aplikasi anggota (menu Kantin), lalu menyetujui dengan PIN. Esc membatalkan tagihan." kunci={false}>
+                <TagihanQr unitId={unit.id} items={keranjang.map((b) => ({ produkId: b.produkId, qty: String(b.qty) }))} diskon={String(nilaiDiskon)} total={total}
+                    onLunas={(d) => selesaiJual({ noBukti: d.noBukti, waktu: new Date().toISOString(), kasir, anggota: { kode_agt: "", nik: null, nama: d.namaAnggota, aktif: true },
+                        subtotal, diskon: nilaiDiskon, total: Number(d.total), diterima: Number(d.total), kembalian: 0, saldoSukarela: Number(d.saldoSukarela),
+                        baris: keranjang.map((b) => ({ nama: peta.get(b.produkId)?.nama ?? "", qty: b.qty, harga: peta.get(b.produkId)?.harga ?? 0 })) })} />
+            </ModalForm>
+            <ModalForm open={modal === "pesanan"} onOpenChange={(b) => !b && setModal(null)} judul="Pesanan dari aplikasi anggota" lebar="sm:max-w-2xl" kunci={false}>
+                <DaftarPesanan unitId={unit.id} pesanan={pesanan} muatUlang={muatPesanan} onMuat={(p) => {
+                    setKeranjang(p.isi.map((x) => ({ produkId: x.produkId, qty: Number(x.qty) })).filter((b) => peta.has(b.produkId)))
+                    setAnggota({ kode_agt: p.kode_agt, nik: null, nama: p.anggota, aktif: true }); setDiskon(""); setPesananId(p.id); setModal(null)
+                    setPesan({ ok: true, teks: `Pesanan #${p.id} dimuat. Terima pembayaran tunai dengan F8.` })
                 }} />
             </ModalForm>
             <ModalForm open={modal === "anggota"} onOpenChange={(b) => !b && setModal(null)} judul="Pembeli" keterangan="Opsional untuk tunai. Cari anggota atau pindai QR dari HP anggota." kunci={false}>
@@ -328,6 +363,99 @@ function Bayar({ total, onBayar, onBatal }: { total: number; onBayar: (diterima:
                 </button>
             </div>
         </form>
+    )
+}
+
+/** QR tagihan untuk dipindai anggota: dibuat saat dialog dibuka, status diperiksa tiap 1,5 detik, dibatalkan bila dialog ditutup sebelum lunas. */
+function TagihanQr({ unitId, items, diskon, total, onLunas }: {
+    unitId: number; items: { produkId: number; qty: string }[]; diskon: string; total: number
+    onLunas: (d: { noBukti: string; total: string; namaAnggota: string; saldoSukarela: string }) => void
+}) {
+    const [t, setT] = useState<{ token: string; svg: string; sampai: number } | null>(null)
+    const [sisa, setSisa] = useState(0)
+    const [status, setStatus] = useState<string>("memuat")
+    const [galat, setGalat] = useState("")
+    const lunas = useRef(false)
+    const selesai = useRef(onLunas)
+    useEffect(() => { selesai.current = onLunas })
+    const buat = useCallback(async () => {
+        setGalat(""); setStatus("memuat")
+        const h = await buatTagihanAction({ unitId, items, diskon })
+        if (!h.ok) { setGalat(h.error); setStatus("galat"); return }
+        const q = qrcode(0, "M"); q.addData(h.data.teks); q.make()
+        setT({ token: h.data.token, svg: q.createSvgTag({ cellSize: 6, margin: 0, scalable: true }), sampai: Date.now() + h.data.detik * 1000 })
+        setStatus("menunggu")
+    }, [unitId, items, diskon])
+    const muatAwal = useRef(false)
+    useEffect(() => { if (!muatAwal.current) { muatAwal.current = true; buat() } }, [buat])
+    useEffect(() => {
+        if (!t) return
+        const detik = setInterval(() => setSisa(Math.max(0, Math.round((t.sampai - Date.now()) / 1000))), 500)
+        const cek = setInterval(async () => {
+            const r = await statusTagihanAction(t.token)
+            if (!r.ok) return
+            if (r.data.status === "lunas" && !lunas.current) { lunas.current = true; selesai.current(r.data) }
+            else if (r.data.status !== "menunggu") setStatus(r.data.status)
+        }, 1500)
+        return () => { clearInterval(detik); clearInterval(cek); if (!lunas.current) batalTagihanAction(t.token) }
+    }, [t])
+    return (
+        <div className="space-y-3 text-center">
+            <div className="text-3xl font-bold tabular-nums">Rp {rp(total)}</div>
+            <div className="relative mx-auto aspect-square w-64 rounded-lg bg-white p-3">
+                {t && <div className={status === "menunggu" ? "" : "opacity-10"} dangerouslySetInnerHTML={{ __html: t.svg }} />}
+                {status === "memuat" && <Loader2 className="absolute inset-0 m-auto animate-spin text-black" />}
+            </div>
+            {status === "menunggu" && <p className="text-sm text-muted-foreground">Menunggu persetujuan anggota · <span className="tabular-nums">{Math.floor(sisa / 60)}:{String(sisa % 60).padStart(2, "0")}</span></p>}
+            {(status === "kedaluwarsa" || status === "batal") && <button type="button" onClick={buat} className="rounded-md border px-4 py-2 text-sm font-semibold hover:bg-muted">QR {status === "batal" ? "dibatalkan" : "kedaluwarsa"}. Buat QR baru</button>}
+            {galat && <p role="alert" className="text-sm text-red-700">{galat}</p>}
+        </div>
+    )
+}
+
+/** Bunyi pendek untuk pesanan baru (diabaikan bila browser menolak audio). */
+function bunyi() {
+    try {
+        const ctx = new AudioContext(), o = ctx.createOscillator(), g = ctx.createGain()
+        o.frequency.value = 880; g.gain.value = 0.15; o.connect(g); g.connect(ctx.destination); o.start(); o.stop(ctx.currentTime + 0.25)
+    } catch { /* tanpa suara */ }
+}
+
+const LABEL_PESANAN: Record<string, string> = { menunggu: "Baru, bayar tunai saat ambil", dibayar: "Baru, sudah dibayar sukarela", diproses: "Disiapkan", siap: "Siap diambil" }
+
+/** Pesanan aplikasi yang belum selesai: proses, siap, selesai (sukarela), muat ke keranjang (tunai), atau tolak. */
+function DaftarPesanan({ unitId, pesanan, muatUlang, onMuat }: { unitId: number; pesanan: PesananMasuk[]; muatUlang: () => Promise<void>; onMuat: (p: PesananMasuk) => void }) {
+    const [sibuk, mulai] = useTransition()
+    const [galat, setGalat] = useState("")
+    const jalan = (fn: () => Promise<{ ok: boolean; error?: string } | null>) => mulai(async () => {
+        setGalat("")
+        const h = await fn()
+        if (h && !h.ok) setGalat(h.error ?? "Gagal")
+        await muatUlang()
+    })
+    if (!pesanan.length) return <p className="py-6 text-center text-sm text-muted-foreground">Tidak ada pesanan yang menunggu.</p>
+    return (
+        <div className="space-y-3 text-sm">
+            {galat && <p role="alert" className="rounded-md border border-red-300 bg-red-50 px-3 py-2 text-red-800">{galat}</p>}
+            {pesanan.map((p) => (
+                <div key={p.id} className={cn("rounded-lg border p-3", (p.status === "menunggu" || p.status === "dibayar") && "border-amber-400")}>
+                    <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <span className="font-semibold">#{p.id} · {p.anggota} <span className="text-xs font-normal text-muted-foreground">{p.kode_agt} · {p.dibuat}</span></span>
+                        <span className="font-semibold tabular-nums">Rp {rp(p.total)}</span>
+                    </div>
+                    <div className="text-xs text-muted-foreground">{LABEL_PESANAN[p.status] ?? p.status}{p.metode === "tunai" && p.batas ? ` · batal otomatis ${p.batas}` : ""}</div>
+                    <ul className="mt-1">{p.isi.map((x, i) => <li key={i}>{Number(x.qty)} x {x.nama}</li>)}</ul>
+                    {p.catatan && <p className="mt-1 rounded bg-muted px-2 py-1 text-xs">Catatan: {p.catatan}</p>}
+                    <div className="mt-2 flex flex-wrap gap-2">
+                        {(p.status === "menunggu" || p.status === "dibayar") && <button type="button" disabled={sibuk} onClick={() => jalan(() => ubahStatusPesananAction(unitId, p.id, "diproses"))} className="rounded-md border px-3 py-1 hover:bg-muted">Proses</button>}
+                        {p.status !== "siap" && <button type="button" disabled={sibuk} onClick={() => jalan(() => ubahStatusPesananAction(unitId, p.id, "siap"))} className="rounded-md border px-3 py-1 hover:bg-muted">Siap diambil</button>}
+                        {p.metode === "sukarela" && p.status === "siap" && <button type="button" disabled={sibuk} onClick={() => jalan(() => ubahStatusPesananAction(unitId, p.id, "selesai"))} className="rounded-md bg-primary px-3 py-1 font-semibold text-primary-foreground">Sudah diambil</button>}
+                        {p.metode === "tunai" && <button type="button" onClick={() => onMuat(p)} className="rounded-md bg-primary px-3 py-1 font-semibold text-primary-foreground">Muat ke keranjang (bayar tunai)</button>}
+                        <button type="button" disabled={sibuk} onClick={() => { const a = prompt(`Tolak pesanan #${p.id}? Tulis alasannya:`); if (a) jalan(() => batalPesananKasirAction(unitId, p.id, a)) }} className="rounded-md border border-red-300 px-3 py-1 text-red-700 hover:bg-red-50">Tolak</button>
+                    </div>
+                </div>
+            ))}
+        </div>
     )
 }
 
