@@ -29,3 +29,6 @@ hasil-periksa/
 /android/replay_pid*.log
 /android/output.txt
 /android/cleaned.txt
+
+# Dokumen serah terima (memuat kata sandi), jangan di-commit
+/docs/serah-terima/
