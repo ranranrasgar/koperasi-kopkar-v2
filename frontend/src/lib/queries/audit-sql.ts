@@ -36,11 +36,11 @@ export const CEK_AUDIT: CekAudit[] = [
     },
     {
         id: "simpanan-beda-jurnal", modul: "Simpanan", judul: "Nilai simpanan berbeda dengan jurnal",
-        arti: "Nilai transaksi simpanan tidak sama dengan total debit jurnalnya. Salah satunya pernah diubah atau keliru dicatat. Bukti SHU tidak diperiksa: simpanannya hanya sisa pembulatan dari pengambilan SHU.",
+        arti: "Nilai transaksi simpanan tidak sama dengan total debit jurnalnya. Salah satunya pernah diubah atau keliru dicatat. Bukti SHU tidak diperiksa: simpanannya hanya sisa pembulatan dari pengambilan SHU. Belanja kantin (KTN-) juga tidak: jurnalnya ikut memuat HPP.",
         sql: `SELECT ${SIMPANAN}, 'Jurnal ' || TO_CHAR(j.debit, 'FM999G999G999G990') AS keterangan, ABS(${NILAI_SIMPANAN} - j.debit) AS nilai
                 FROM simpanan s JOIN anggota a ON a.id = s.anggota_id
                 JOIN LATERAL (SELECT SUM(x.debit_jurnalumum) AS debit FROM jurnal_umum x WHERE x.nomor_bukti = s.no_bukti) j ON j.debit IS NOT NULL
-               WHERE s.tgl_transaksi BETWEEN $1 AND $2 AND s.no_bukti NOT LIKE 'SHU/%' AND ABS(${NILAI_SIMPANAN} - j.debit) >= 1 AND ${BELUM_BATAL("s.no_bukti")}`,
+               WHERE s.tgl_transaksi BETWEEN $1 AND $2 AND s.no_bukti NOT LIKE 'SHU/%' AND s.no_bukti NOT LIKE 'KTN-%' AND ABS(${NILAI_SIMPANAN} - j.debit) >= 1 AND ${BELUM_BATAL("s.no_bukti")}`,
     },
     {
         id: "jurnal-simpanan-yatim", modul: "Simpanan", judul: "Jurnal simpanan tanpa transaksi",

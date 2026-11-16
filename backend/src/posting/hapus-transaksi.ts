@@ -60,6 +60,7 @@ async function dariSimpanan(db: Q, no: string, kunci: boolean): Promise<Asal> {
         ],
         periksa: async () => {
             if (no.startsWith('SHU/')) throw new Error('Bukti SHU tidak bisa dihapus di sini; koreksi lewat menu SHU atau jurnal');
+            if (no.startsWith('KTN-')) throw new Error('Belanja kantin dibatalkan lewat menu Penjualan Kantin, supaya stok dan notanya ikut kembali');
             await periksaUmum(db, 'simpanan', no, s.tgl);
             const potongan = (await db.query<{ periode: string }>(
                 `SELECT p.periode FROM potongan_gaji_anggota g JOIN potongan_gaji p ON p.id = g.potongan_gaji_id

@@ -1,7 +1,7 @@
 import type { Metadata } from "next"
 import Link from "next/link"
 import { redirect } from "next/navigation"
-import { CalendarDays, ChevronRight, Coins, FilePen, ReceiptText, Wallet, type LucideIcon } from "lucide-react"
+import { CalendarDays, ChevronRight, Coins, FilePen, ReceiptText, UtensilsCrossed, Wallet, type LucideIcon } from "lucide-react"
 import { AjakanPasang } from "@/components/AjakanPasang"
 import { BarisRiwayat } from "@/components/BarisRiwayat"
 import { KartuSaldo } from "@/components/KartuSaldo"
@@ -21,6 +21,7 @@ function salam() {
 }
 
 const PINTASAN: { href: string; label: string; ikon: LucideIcon }[] = [
+    { href: "/kantin", label: "Kantin", ikon: UtensilsCrossed },
     { href: "/ajukan", label: "Ajukan pinjaman", ikon: FilePen },
     { href: "/potongan", label: "Potongan", ikon: Wallet },
     { href: "/shu", label: "SHU", ikon: Coins },
@@ -77,7 +78,7 @@ export default async function BerandaPage() {
 
             <KartuSaldo simpanan={rupiah(totalSimpanan)} pinjaman={rupiah(sisaTunai)} plafon={rupiah(data?.rp_grade ?? 0)} tren={tren} nama={a.nama} />
 
-            <nav aria-label="Pintasan" className="mt-3 grid grid-cols-4 gap-1">
+            <nav aria-label="Pintasan" className="mt-3 grid grid-cols-5 gap-1">
                 {PINTASAN.map(({ href, label, ikon: Ikon }) => (
                     <Link key={href} href={href}
                         className="flex flex-col items-center gap-2 rounded-2xl px-1 py-2 text-center text-xs font-medium leading-tight transition-colors active:bg-garis/50">

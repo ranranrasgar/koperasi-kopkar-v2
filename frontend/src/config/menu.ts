@@ -205,6 +205,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/kantin/produk"
             },
             {
+                label: "Penyelesaian Tenant",
+                icon: "handshake",
+                href: "/dashboard/unit-usaha/penyelesaian"
+            },
+            {
                 label: "Daftar Unit Usaha",
                 icon: "storefront",
                 href: "/dashboard/unit-usaha"

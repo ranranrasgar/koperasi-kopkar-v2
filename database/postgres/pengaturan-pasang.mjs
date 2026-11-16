@@ -37,6 +37,7 @@ const PECAHAN_IZIN = {
     'Kasir Kantin (web)': ['Produk Kantin (web)', 'Unit Usaha (web)'],
     'Stok Kantin (web)': ['Produk Kantin (web)', 'Unit Usaha (web)'],
     'Penjualan Kantin (web)': ['Produk Kantin (web)', 'Unit Usaha (web)'],
+    'Penyelesaian Tenant (web)': ['Unit Usaha (web)'], // transfer uang ke tenant: pemegang izin Unit Usaha (admin)
 };
 // Grup untuk petugas kantin (boleh orang luar): hanya menu kantin. Dibuat sekali; setelah itu izinnya milik Kelola Hak Akses.
 const GRUP_KANTIN = 'Kantin';

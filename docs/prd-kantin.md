@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | **Tahap 1 dan 2 selesai** (16 November; lihat docs/WORKLOG.md). K3 diputuskan (model A + B, bagian 3a); K1, K2, K4-K9 memakai usulan kecuali diubah |
+| Status | **Tahap 1-3 selesai** (16 November; lihat docs/WORKLOG.md). K3 diputuskan (model A + B, bagian 3a); K1, K2, K4-K9 memakai usulan kecuali diubah |
 | Tanggal | 16 November 2026 |
 | Lingkup | Unit usaha **Kantin** dulu; skema dibuat umum supaya PPOB dan e-commerce bisa menyusul |
 | Bacaan terkait | `CLAUDE.md` (arsitektur, hak akses, nomor bukti), `backend/src/posting/simpanan.ts`, `journal.ts`, `backend/src/anggota/qr.ts`, `docs/prd-pwa-anggota.md` |

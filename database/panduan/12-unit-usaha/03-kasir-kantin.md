@@ -1,6 +1,6 @@
 ---
 judul: Kasir kantin (POS)
-ringkasan: Membuka sesi kasir, menjual dengan keyboard atau klik, bayar tunai, cetak struk, menahan transaksi, dan menutup sesi dengan hitung uang laci.
+ringkasan: Membuka sesi kasir, menjual dengan keyboard atau klik, bayar tunai atau Simpanan Sukarela (QR), cetak struk, menahan transaksi, dan menutup sesi dengan hitung uang laci.
 menu: /dashboard/kantin/kasir
 ---
 Menu: **Unit Usaha → Kasir Kantin**. Kasir hanya melihat kantin tempat ia ditugaskan; bila lebih dari satu, pilih kantinnya dulu.
@@ -20,6 +20,14 @@ Setiap kasir membuka sesinya sendiri. Hitung uang modal di laci, ketik nilainya,
 4. Diskon nota (opsional): **F3**, isi rupiah atau pilih 5% / 10%.
 5. **F8 Bayar Tunai**: uang diterima terisi sebesar total (uang pas) dan sudah tersorot, jadi cukup ketik nominal yang diterima, atau pilih tombol pecahan. Kembalian tampil besar. **Enter** menyimpan.
 
+## Bayar dengan Simpanan Sukarela (F9)
+
+1. Minta anggota membuka **Kantin → Bayar dengan QR** di aplikasi anggota. QR itu berlaku 60 detik dan hanya sekali pakai.
+2. Tekan **F9** (atau tombol **F9 Sukarela**), lalu pindai QR di HP anggota dengan kamera atau alat pemindai USB.
+3. Begitu QR terbaca, pembayaran langsung tersimpan: saldo Simpanan Sukarela anggota terpotong sebesar total, struk tercetak, dan HP anggota menampilkan *Pembayaran berhasil* serta menerima notifikasi.
+
+Pembayaran ditolak bila QR sudah kedaluwarsa atau sudah dipakai, saldo tidak cukup, melebihi batas per transaksi atau per hari, atau sisa saldo kurang dari saldo minimal (diatur di Daftar Unit Usaha, tab Pembayaran). Pesan penolakan tampil di jendela pindai.
+
 Setelah tersimpan, nomor nota (KTN-...) dan kembalian tampil di pojok kanan bawah, struk tercetak bila **Cetak struk otomatis** dicentang, dan keranjang kosong lagi.
 
 ## Tombol keyboard
@@ -32,6 +40,7 @@ Setelah tersimpan, nomor nota (KTN-...) dan kembalian tampil di pojok kanan bawa
 | F4 | Ganti tampilan kartu bergambar / tabel |
 | F7 | Tahan transaksi; saat keranjang kosong, panggil transaksi terakhir yang ditahan |
 | F8 | Bayar tunai |
+| F9 | Bayar Simpanan Sukarela: pindai QR bayar di HP anggota |
 | Enter | Tambah produk dari kotak cari; simpan di layar bayar |
 | ↑ ↓ | Pilih baris keranjang |
 | + / − | Tambah / kurangi jumlah baris terpilih |
@@ -39,7 +48,7 @@ Setelah tersimpan, nomor nota (KTN-...) dan kembalian tampil di pojok kanan bawa
 | Esc | Tutup dialog atau kosongkan kotak cari |
 | Ctrl+P | Cetak ulang struk terakhir |
 
-**+**, **−**, dan **Del** bekerja saat kotak cari kosong. F9 dan F10 (bayar dengan Simpanan Sukarela lewat QR) belum aktif.
+**+**, **−**, dan **Del** bekerja saat kotak cari kosong. F10 (QR kantin dipindai anggota) belum aktif.
 
 ## Struk
 
@@ -61,3 +70,15 @@ Setor uang kantin milik koperasi ke kas induk lewat **Bank Book** (Kas Induk deb
 | Milik koperasi | Kas Kantin debit / Penjualan kredit sebesar total; HPP debit / Persediaan kredit sebesar harga pokok barang |
 | Tenant bagi hasil | Piutang Tenant debit / Pendapatan Bagi Hasil kredit sebesar persen kontrak; uang tunainya dipegang tenant |
 | Tenant sewa | Tanpa jurnal |
+
+## Jurnal bayar Simpanan Sukarela
+
+Saldo anggota berkurang lewat satu baris pengambilan Simpanan Sukarela bernomor sama dengan nota. Jurnalnya:
+
+| Model | Jurnal |
+| --- | --- |
+| Milik koperasi | Simpanan Sukarela debit / Penjualan kredit; HPP debit / Persediaan kredit |
+| Tenant bagi hasil | Simpanan Sukarela debit / Utang ke Tenant kredit (total dikurangi bagi hasil) dan Pendapatan Bagi Hasil kredit |
+| Tenant sewa | Simpanan Sukarela debit / Utang ke Tenant kredit |
+
+Utang ke tenant dibayar saat **Penyelesaian Tenant**.

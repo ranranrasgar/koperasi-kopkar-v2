@@ -106,7 +106,8 @@ export async function bacaQrAction(teks: string): Promise<{ ok: true; anggota: A
     if (!q.aktif) return { ok: false, error: `Anggota ${q.nama} tidak aktif` }
     const anggota: AnggotaRingkas = { kode_agt: q.kode_agt, nik: q.nik, nama: q.nama, aktif: q.aktif }
     if (q.jenis === "simpanan") anggota.jenis_simpanan = q.ref
-    else if (q.jenis !== "anggota") { anggota.no_pinjaman = q.ref; anggota.jenis_pinjaman = q.jenis }
+    else if (q.jenis === "tunai" || q.jenis === "kpr") { anggota.no_pinjaman = q.ref; anggota.jenis_pinjaman = q.jenis }
+    // QR bayar kantin hanya menunjuk anggotanya di form transaksi; tokennya tidak dipakai (tetap bisa untuk membayar).
     return { ok: true, anggota }
 }
 

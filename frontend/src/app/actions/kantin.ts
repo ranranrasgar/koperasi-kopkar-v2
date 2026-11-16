@@ -4,7 +4,9 @@ import { revalidatePath } from "next/cache"
 import { bersihkanYatim, GambarSalah, lepasGambar, simpanGambar, tautkanGambar } from "@kopkar/backend/src/anggota/gambar.ts"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { KantinSalah, simpanProduk, simpanUnit, type UnitInput } from "@kopkar/backend/src/unit-usaha/kantin.ts"
-import { batalJual, bukaSesi, jualTunai, ringkasSesi, sesiTerbuka, stokMasuk, tutupSesi } from "@kopkar/backend/src/posting/kantin.ts"
+import { batalJual, bukaSesi, jualSukarela, jualTunai, ringkasSesi, sesiTerbuka, stokMasuk, tutupSesi } from "@kopkar/backend/src/posting/kantin.ts"
+import { batalPenyelesaian, hitungPenyelesaian, simpanPenyelesaian } from "@kopkar/backend/src/posting/kantin-tenant.ts"
+import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
 import { catatAksi } from "@/lib/aktivitas"
 import { modeUji, pool, tx } from "@/lib/db"
 import { unitBoleh } from "@/lib/kantin"
@@ -77,6 +79,46 @@ export async function jualTunaiAction(i: { unitId: number; kodeAgt: string | nul
         const u = await unitTugas(db, o, i.unitId)
         const r = await jualTunai(db, { ...i, oprId: o.id, opr: o.nama, tanggal: hariIni() })
         return { pesan: `Penjualan ${u.nama} ${r.noBukti} Rp ${Number(r.total).toLocaleString("id-ID")}`, data: { ...r, waktu: new Date().toISOString(), kasir: o.namaLengkap } }
+    })
+}
+
+/** Bayar Simpanan Sukarela: kasir memindai QR bayar di HP anggota. Setelah tersimpan, anggota mendapat notifikasi (tidak di mode uji). */
+export async function jualSukarelaAction(i: { unitId: number; items: { produkId: number; qty: string }[]; diskon: string; kunci: string; qrTeks: string }) {
+    const h = await jalankanData(MENU.kasirKantin, "/dashboard/kantin/kasir", "tambah", async (db, o) => {
+        const u = await unitTugas(db, o, i.unitId)
+        const r = await jualSukarela(db, { ...i, oprId: o.id, opr: o.nama, tanggal: hariIni() })
+        return { pesan: `Penjualan ${u.nama} ${r.noBukti} Rp ${Number(r.total).toLocaleString("id-ID")} dari Simpanan Sukarela ${r.namaAnggota ?? ""}`,
+            data: { ...r, waktu: new Date().toISOString(), kasir: o.namaLengkap, unit: u.nama } }
+    })
+    if (h.ok && !h.pesan.startsWith("MODE UJI") && !h.data.ulang && h.data.anggotaId) {
+        const rp = (s: string | undefined) => `Rp ${Number(s ?? 0).toLocaleString("id-ID")}`
+        await kirimNotifikasi(pool, h.data.anggotaId, { judul: "Pembayaran berhasil", url: "/kantin", email: false,
+            isi: `Belanja ${h.data.unit} ${rp(h.data.total)} dibayar dari Simpanan Sukarela (${h.data.noBukti}). Sisa saldo sukarela ${rp(h.data.saldoSukarela)}.` })
+            .catch((e) => console.error("notifikasi bayar kantin gagal:", e))
+    }
+    return h
+}
+
+export async function hitungPenyelesaianAction(unitId: number, dari: string, sampai: string) {
+    try {
+        await operatorAktif([MENU.penyelesaianTenant])
+        return { ok: true as const, data: await hitungPenyelesaian(pool, unitId, dari, sampai) }
+    } catch (e) {
+        return { ok: false as const, error: e instanceof Error ? e.message : "Gagal menghitung" }
+    }
+}
+
+export async function simpanPenyelesaianAction(i: { unitId: number; dari: string; sampai: string; tanggal: string; akunKas: string; catatan: string }): Promise<HasilSimpan> {
+    return jalankan(MENU.penyelesaianTenant, "/dashboard/unit-usaha/penyelesaian", "tambah", async (db, o) => {
+        const r = await simpanPenyelesaian(db, { ...i, opr: o.nama })
+        return `Penyelesaian ${r.nama} ${r.noBukti} periode ${i.dari} s.d. ${i.sampai}, neto Rp ${Number(r.neto).toLocaleString("id-ID")}`
+    })
+}
+
+export async function batalPenyelesaianAction(id: number): Promise<HasilSimpan> {
+    return jalankan(MENU.penyelesaianTenant, "/dashboard/unit-usaha/penyelesaian", "hapus", async (db, o) => {
+        const r = await batalPenyelesaian(db, { id, opr: o.nama })
+        return `Penyelesaian ${r.noBukti} dibatalkan`
     })
 }
 

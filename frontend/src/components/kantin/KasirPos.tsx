@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { ImageOff, LayoutGrid, List, Loader2, LockKeyhole, Minus, Pause, Plus, Printer, QrCode, Search, Trash2, UserRound, X } from "lucide-react"
-import { bukaSesiAction, jualTunaiAction, ringkasSesiAction, tutupSesiAction } from "@/app/actions/kantin"
+import { bukaSesiAction, jualSukarelaAction, jualTunaiAction, ringkasSesiAction, tutupSesiAction } from "@/app/actions/kantin"
+import { PindaiQr } from "@/components/transaksi/PindaiQr"
 import { AnggotaPicker } from "@/components/transaksi/common"
 import { Input } from "@/components/ui/input"
 import { InputUang } from "@/components/ui/InputUang"
@@ -17,7 +18,9 @@ export interface ProdukPos { id: number; kode: string; barcode: string | null; n
 interface Sesi { sesiId: number; dibuka: string; modal: string; tunai: string; nota: number; batal: number; seharusnya: string }
 interface Baris { produkId: number; qty: number }
 interface Ditahan { keranjang: Baris[]; anggota: AnggotaRingkas | null; diskon: string }
-interface Struk { noBukti: string; waktu: string; kasir: string; anggota: AnggotaRingkas | null; baris: { nama: string; qty: number; harga: number }[]; subtotal: number; diskon: number; total: number; diterima: number; kembalian: number }
+interface Struk { noBukti: string; waktu: string; kasir: string; anggota: AnggotaRingkas | null; baris: { nama: string; qty: number; harga: number }[]; subtotal: number; diskon: number; total: number; diterima: number; kembalian: number
+    /** Bayar Simpanan Sukarela: sisa saldo setelah belanja (tunai: tidak ada). */
+    saldoSukarela?: number }
 
 const rp = (n: number) => n.toLocaleString("id-ID", { maximumFractionDigits: 0 })
 const PECAHAN = [5000, 10000, 20000, 50000, 100000]
@@ -38,6 +41,8 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
     const [anggota, setAnggota] = useState<AnggotaRingkas | null>(null)
     const [diskon, setDiskon] = useState("")
     const [modal, setModal] = useState<null | "bayar" | "anggota" | "diskon" | "tutup">(null)
+    const [pindaiBayar, setPindaiBayar] = useState(false)
+    const hasilSukarela = useRef<Struk | null>(null)
     const [tahan, setTahan] = useState<Ditahan[]>([])
     const [struk, setStruk] = useState<Struk | null>(null)
     const [cetakOtomatis, setCetakOtomatis] = useState(true)
@@ -101,12 +106,12 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
                 F1: () => cariRef.current?.focus(), F2: () => setModal("anggota"), F3: () => setModal("diskon"),
                 F4: () => setTampilan((t) => (t === "kartu" ? "tabel" : "kartu")), F7: tahanAtauPanggil,
                 F8: () => { if (keranjang.length) setModal("bayar") },
-                F9: () => setPesan({ ok: false, teks: "Bayar dengan Simpanan Sukarela (QR) hadir di tahap berikutnya" }),
-                F10: () => setPesan({ ok: false, teks: "Bayar dengan Simpanan Sukarela (QR) hadir di tahap berikutnya" }),
+                F9: () => { if (keranjang.length) setPindaiBayar(true) },
+                F10: () => setPesan({ ok: false, teks: "QR kantin dipindai anggota hadir di tahap berikutnya" }),
             }
-            if (kunciF[e.key]) { e.preventDefault(); if (!modal) kunciF[e.key](); return }
+            if (kunciF[e.key]) { e.preventDefault(); if (!modal && !pindaiBayar) kunciF[e.key](); return }
             if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "p") { e.preventDefault(); cetak(); return }
-            if (modal) return
+            if (modal || pindaiBayar) return
             if (e.key === "Escape") { setCari(""); cariRef.current?.focus(); return }
             if (e.key === "ArrowDown" || e.key === "ArrowUp") { e.preventDefault(); setPilih((n) => Math.max(0, Math.min(keranjang.length - 1, n + (e.key === "ArrowDown" ? 1 : -1)))); return }
             const bebas = !diInput || cari === ""
@@ -126,7 +131,7 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
     const selesaiJual = (s: Struk) => {
         setStruk(s); kosongkan(); setModal(null)
         kunci.current = crypto.randomUUID()
-        setPesan({ ok: true, teks: `${s.noBukti} tersimpan. Kembalian Rp ${rp(s.kembalian)}` })
+        setPesan({ ok: true, teks: s.saldoSukarela !== undefined ? `${s.noBukti} dibayar dari Simpanan Sukarela ${s.anggota?.nama ?? ""}. Sisa saldo Rp ${rp(s.saldoSukarela)}` : `${s.noBukti} tersimpan. Kembalian Rp ${rp(s.kembalian)}` })
         router.refresh()
         if (cetakOtomatis) setTimeout(() => window.print(), 100)
         cariRef.current?.focus()
@@ -238,8 +243,8 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
                     </div>
                     <div className="grid grid-cols-2 gap-2 border-t p-3">
                         <button type="button" disabled={!keranjang.length} onClick={() => setModal("bayar")} className="col-span-2 h-12 rounded-md bg-primary text-base font-semibold text-primary-foreground hover:opacity-90 disabled:opacity-40">F8 Bayar Tunai</button>
-                        <button type="button" onClick={() => setPesan({ ok: false, teks: "Bayar dengan Simpanan Sukarela (QR) hadir di tahap berikutnya" })} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs text-muted-foreground"><QrCode className="h-3.5 w-3.5" /> F9 QR anggota</button>
-                        <button type="button" onClick={() => setPesan({ ok: false, teks: "Bayar dengan Simpanan Sukarela (QR) hadir di tahap berikutnya" })} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs text-muted-foreground"><QrCode className="h-3.5 w-3.5" /> F10 QR kantin</button>
+                        <button type="button" disabled={!keranjang.length} onClick={() => setPindaiBayar(true)} className="inline-flex items-center justify-center gap-1 rounded-md border border-primary px-2 py-2 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-40"><QrCode className="h-3.5 w-3.5" /> F9 Sukarela (QR anggota)</button>
+                        <button type="button" onClick={() => setPesan({ ok: false, teks: "QR kantin dipindai anggota hadir di tahap berikutnya" })} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs text-muted-foreground"><QrCode className="h-3.5 w-3.5" /> F10 QR kantin</button>
                         <button type="button" onClick={tahanAtauPanggil} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs hover:bg-muted"><Pause className="h-3.5 w-3.5" /> F7 {keranjang.length ? "Tahan" : `Panggil (${tahan.length})`}</button>
                         <button type="button" disabled={!keranjang.length} onClick={() => confirm("Kosongkan keranjang?") && kosongkan()} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs text-red-700 hover:bg-red-50 disabled:opacity-40"><X className="h-3.5 w-3.5" /> Batal</button>
                     </div>
@@ -277,6 +282,18 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
                 <TutupSesi unitId={unit.id} sesi={sesi} onSelesai={() => { setModal(null); router.refresh() }} />
             </ModalForm>
 
+            {/* Bayar Simpanan Sukarela: pindai QR bayar di HP anggota; pembayaran langsung diposting saat QR terbaca. */}
+            <PindaiQr buka={pindaiBayar} onTutup={() => setPindaiBayar(false)} onHasil={() => { if (hasilSukarela.current) selesaiJual(hasilSukarela.current) }}
+                baca={async (teks) => {
+                    const h = await jualSukarelaAction({ unitId: unit.id, items: keranjang.map((b) => ({ produkId: b.produkId, qty: String(b.qty) })), diskon: String(nilaiDiskon), kunci: kunci.current, qrTeks: teks })
+                    if (!h.ok) return { ok: false, error: h.error }
+                    const pembeli = { kode_agt: "", nik: null, nama: h.data.namaAnggota ?? "", aktif: true }
+                    hasilSukarela.current = { noBukti: h.data.noBukti, waktu: h.data.waktu, kasir: h.data.kasir, anggota: pembeli, subtotal, diskon: nilaiDiskon, total: Number(h.data.total),
+                        diterima: Number(h.data.total), kembalian: 0, saldoSukarela: Number(h.data.saldoSukarela ?? 0),
+                        baris: keranjang.map((b) => ({ nama: peta.get(b.produkId)?.nama ?? "", qty: b.qty, harga: peta.get(b.produkId)?.harga ?? 0 })) }
+                    if (h.pesan.startsWith("MODE UJI")) setTimeout(() => setPesan({ ok: false, teks: h.pesan }), 200)
+                    return { ok: true, anggota: pembeli }
+                }} />
             {struk && <StrukCetak unit={unit.nama} s={struk} />}
         </div>
     )
@@ -374,7 +391,7 @@ function StrukCetak({ unit, s }: { unit: string; s: Struk }) {
             <div className="my-1 border-t border-dashed border-black" />
             <div>{s.noBukti}</div>
             <div>{new Date(s.waktu).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })} · {s.kasir}</div>
-            {s.anggota && <div>{s.anggota.nama} ({s.anggota.kode_agt})</div>}
+            {s.anggota && <div>{s.anggota.nama}{s.anggota.kode_agt ? ` (${s.anggota.kode_agt})` : ""}</div>}
             <div className="my-1 border-t border-dashed border-black" />
             {s.baris.map((b, i) => (
                 <div key={i}>
@@ -386,8 +403,13 @@ function StrukCetak({ unit, s }: { unit: string; s: Struk }) {
             <div className="flex justify-between"><span>Subtotal</span><span>{rp(s.subtotal)}</span></div>
             {s.diskon > 0 && <div className="flex justify-between"><span>Diskon</span><span>-{rp(s.diskon)}</span></div>}
             <div className="flex justify-between font-bold"><span>TOTAL</span><span>{rp(s.total)}</span></div>
-            <div className="flex justify-between"><span>Tunai</span><span>{rp(s.diterima)}</span></div>
-            <div className="flex justify-between"><span>Kembali</span><span>{rp(s.kembalian)}</span></div>
+            {s.saldoSukarela !== undefined ? <>
+                <div className="flex justify-between"><span>Simpanan Sukarela</span><span>{rp(s.total)}</span></div>
+                <div className="flex justify-between"><span>Sisa saldo</span><span>{rp(s.saldoSukarela)}</span></div>
+            </> : <>
+                <div className="flex justify-between"><span>Tunai</span><span>{rp(s.diterima)}</span></div>
+                <div className="flex justify-between"><span>Kembali</span><span>{rp(s.kembalian)}</span></div>
+            </>}
             <div className="my-1 border-t border-dashed border-black" />
             <div className="text-center">Terima kasih</div>
         </div>

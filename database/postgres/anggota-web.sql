@@ -350,6 +350,12 @@ CREATE TABLE IF NOT EXISTS kantin_penjualan (
     alasan_batal varchar(255)
 );
 CREATE INDEX IF NOT EXISTS ix_kantin_penjualan_unit ON kantin_penjualan (unit_usaha_id, tanggal DESC);
+-- Bayar Simpanan Sukarela: token QR bayar yang dipakai (HP anggota mencocokkan status pembayarannya) dan baris pengambilan simpanannya.
+ALTER TABLE kantin_penjualan ADD COLUMN IF NOT EXISTS qr_token varchar(32);
+ALTER TABLE kantin_penjualan ADD COLUMN IF NOT EXISTS simpanan_id bigint;
+-- Penyelesaian tenant yang mencakup nota ini (nota di periode terselesaikan tidak bisa dibatalkan).
+ALTER TABLE kantin_penjualan ADD COLUMN IF NOT EXISTS penyelesaian_id bigint;
+CREATE INDEX IF NOT EXISTS ix_kantin_penjualan_qr ON kantin_penjualan (qr_token) WHERE qr_token IS NOT NULL;
 CREATE INDEX IF NOT EXISTS ix_kantin_penjualan_anggota ON kantin_penjualan (anggota_id, tanggal DESC) WHERE anggota_id IS NOT NULL;
 CREATE TABLE IF NOT EXISTS kantin_penjualan_item (
     id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
@@ -363,6 +369,36 @@ CREATE TABLE IF NOT EXISTS kantin_penjualan_item (
     subtotal numeric(20,4) NOT NULL
 );
 CREATE INDEX IF NOT EXISTS ix_kantin_penjualan_item_jual ON kantin_penjualan_item (penjualan_id);
+
+-- Penyelesaian tenant per periode (model bagi_hasil/sewa): bagi hasil (dengan minimum bulanan) atau sewa, utang koperasi dari belanja sukarela,
+-- piutang bagi hasil dari penjualan tunai, dan neto yang ditransfer. Nota di periode itu ditandai kantin_penjualan.penyelesaian_id.
+CREATE SEQUENCE IF NOT EXISTS seq_kantin_selesai START 1;
+CREATE TABLE IF NOT EXISTS tenant_penyelesaian (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    no_bukti varchar(30) NOT NULL UNIQUE,
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id),
+    tenant_id bigint REFERENCES tenant(id),
+    model varchar(12) NOT NULL,
+    periode_mulai date NOT NULL,
+    periode_selesai date NOT NULL,
+    tanggal date NOT NULL,
+    nota integer NOT NULL DEFAULT 0,
+    total_penjualan numeric(20,4) NOT NULL DEFAULT 0,
+    total_tunai numeric(20,4) NOT NULL DEFAULT 0,
+    total_sukarela numeric(20,4) NOT NULL DEFAULT 0,
+    bagi_hasil numeric(20,4) NOT NULL DEFAULT 0,          -- dari nota (persen x penjualan)
+    tambahan numeric(20,4) NOT NULL DEFAULT 0,            -- kekurangan dari minimum bulanan, atau sewa
+    utang_tenant numeric(20,4) NOT NULL DEFAULT 0,        -- belanja sukarela dikurangi bagi hasilnya
+    piutang_tenant numeric(20,4) NOT NULL DEFAULT 0,      -- bagi hasil penjualan tunai + tambahan
+    neto numeric(20,4) NOT NULL DEFAULT 0,                -- positif: koperasi membayar tenant; negatif: tenant membayar koperasi
+    akun_kas varchar(30),
+    catatan varchar(255),
+    opr varchar(50) NOT NULL,
+    dibuat_pada timestamptz NOT NULL DEFAULT now(),
+    dibatalkan_pada timestamptz,
+    opr_batal varchar(50)
+);
+CREATE INDEX IF NOT EXISTS ix_tenant_penyelesaian_unit ON tenant_penyelesaian (unit_usaha_id, periode_mulai DESC);
 
 -- Kartu stok: setiap perubahan stok produk berstok (stok masuk, penjualan, batal, opname).
 CREATE TABLE IF NOT EXISTS kantin_stok_mutasi (
