@@ -37,6 +37,15 @@ export async function aturPin(db: Db, i: { userId: number; anggotaId: number; pa
     return { ok: true as const };
 }
 
+/** Hapus PIN anggota pemilik akun aplikasi ini (permintaan pengurus untuk anggota yang lupa PIN). */
+export async function hapusPin(db: Db, userId: number) {
+    const u = (await db.query<{ username: string; anggota_id: string | null }>('SELECT username, anggota_id FROM app_user WHERE id = $1', [userId])).rows[0];
+    if (!u) return { ok: false as const, error: 'Akun tidak ditemukan' };
+    if (!u.anggota_id) return { ok: false as const, error: 'Akun belum terhubung ke anggota' };
+    const r = await db.query('DELETE FROM anggota_pin WHERE anggota_id = $1', [u.anggota_id]);
+    return { ok: true as const, username: u.username, ada: (r.rowCount ?? 0) > 0 };
+}
+
 /** Periksa PIN; melempar PinSalah (belum diatur, terkunci, atau salah dengan sisa percobaan). Panggil dengan pool (autocommit). */
 export async function cekPin(db: Db, anggotaId: number, pin: string) {
     const p = (await db.query<{ pin_hash: string; gagal: number; kunci_sampai: Date | null }>(

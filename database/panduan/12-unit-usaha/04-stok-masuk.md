@@ -1,9 +1,9 @@
 ---
-judul: Stok masuk dan kartu stok
-ringkasan: Mencatat barang datang untuk produk berstok, harga pokok rata-rata, jurnal persediaan, dan membaca kartu stok.
+judul: Stok masuk, opname, barang rusak, dan kartu stok
+ringkasan: Mencatat barang datang, stok opname, barang rusak, peringatan stok menipis, dan kartu stok per produk.
 menu: /dashboard/kantin/stok
 ---
-Menu: **Unit Usaha → Stok Masuk**. Hanya **pengelola** kantin (dan admin) yang bisa mencatat stok masuk; kasir hanya melihat kartu stok.
+Menu: **Unit Usaha → Stok Kantin**. Hanya **pengelola** kantin (dan admin) yang bisa mencatat stok masuk; kasir hanya melihat kartu stok.
 
 ## Mencatat barang datang
 
@@ -24,6 +24,24 @@ Menu: **Unit Usaha → Stok Masuk**. Hanya **pengelola** kantin (dan admin) yang
 
 Bahan masakan (beras, sayur, lauk) untuk produk tanpa kelola stok dicatat lewat **Bank Book**: Persediaan Kantin debit, akun kas kredit. Saat produk terjual, HPP-nya (harga beli di data produk) mengurangi akun Persediaan yang sama.
 
+## Stok menipis
+
+Di atas halaman tampil daftar produk yang stoknya habis atau sudah mencapai **stok minimal** (diatur di Produk Kantin).
+
+## Stok opname
+
+Untuk mencocokkan stok sistem dengan hasil hitung fisik, misalnya akhir minggu atau akhir bulan.
+
+1. Di kartu **Opname dan barang rusak**, pilih **Stok opname**.
+2. Isi **Stok fisik** untuk produk yang dihitung. Produk yang dikosongkan tidak berubah. Selisih dan nilainya (selisih × HPP rata-rata) langsung tampil.
+3. **Simpan opname**. Stok menjadi sama dengan stok fisik; nomor bukti KTO-...
+
+Kantin milik koperasi menjurnal nilainya ke akun **Selisih Persediaan Kantin** (dibuat otomatis): stok kurang = Selisih debit / Persediaan kredit; stok lebih = sebaliknya.
+
+## Barang rusak
+
+Untuk barang yang dibuang karena rusak, kedaluwarsa, atau hilang: pilih **Barang rusak**, isi jumlahnya dan **keterangan** (wajib), lalu simpan. Kantin milik koperasi menjurnal **Beban Barang Rusak Kantin** debit / Persediaan kredit senilai HPP rata-rata. Kantin tenant hanya mengubah stok, tanpa jurnal.
+
 ## Kartu stok
 
-Bagian bawah halaman menampilkan 100 mutasi terakhir: stok masuk (hijau), terjual (merah), dan pengembalian karena nota dibatalkan, lengkap dengan nomor bukti, harga, sisa stok, dan operatornya.
+Bagian bawah halaman menampilkan mutasi terakhir (maksimal 200): stok masuk (hijau), terjual (merah), pengembalian karena nota dibatalkan, opname, dan barang rusak, lengkap dengan nomor bukti, harga, sisa stok, dan operatornya. Pilih nama produk di atas tabel untuk melihat **kartu stok satu produk**.

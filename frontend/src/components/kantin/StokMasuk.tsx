@@ -4,7 +4,7 @@ import { useState, useTransition } from "react"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AlertCircle, CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react"
-import { stokMasukAction } from "@/app/actions/kantin"
+import { penyesuaianStokAction, stokMasukAction } from "@/app/actions/kantin"
 import { Field, FormCard, selectClass } from "@/components/transaksi/common"
 import { Input } from "@/components/ui/input"
 import { InputUang } from "@/components/ui/InputUang"
@@ -19,9 +19,10 @@ const hariIni = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/J
 const JENIS: Record<string, string> = { masuk: "Masuk", jual: "Terjual", batal: "Batal jual", opname: "Opname", rusak: "Rusak" }
 
 /** Catat barang datang (produk berstok) dan lihat kartu stok terakhir. Kantin milik koperasi menjurnal Dr Persediaan / Cr akun bayar. */
-export function StokMasuk({ unit, produk, akun, mutasi, lebihDariSatu }: {
-    unit: UnitOperator; produk: ProdukStok[]; akun: { kode_perkiraan: string; nama_perkiraan: string }[]; mutasi: MutasiStok[]; lebihDariSatu: boolean
+export function StokMasuk({ unit, produk, akun, mutasi, produkFilter, lebihDariSatu }: {
+    unit: UnitOperator; produk: ProdukStok[]; akun: { kode_perkiraan: string; nama_perkiraan: string }[]; mutasi: MutasiStok[]; produkFilter: number | null; lebihDariSatu: boolean
 }) {
+    const tipis = produk.filter((p) => p.stok <= 0 || (p.stok_minimal > 0 && p.stok <= p.stok_minimal))
     const router = useRouter()
     const [tanggal, setTanggal] = useState(hariIni())
     const [akunBayar, setAkunBayar] = useState(akun[0]?.kode_perkiraan ?? "")
@@ -47,6 +48,11 @@ export function StokMasuk({ unit, produk, akun, mutasi, lebihDariSatu }: {
     }
     return (
         <div className="max-w-6xl space-y-6">
+            {tipis.length > 0 && (
+                <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-900">
+                    <b>Stok menipis atau habis:</b> {tipis.map((p) => `${p.nama} (${p.stok} ${p.satuan}${p.stok_minimal > 0 ? `, min. ${p.stok_minimal}` : ""})`).join(", ")}
+                </div>
+            )}
             <FormCard title={`Stok Masuk ${unit.nama}`} description={unit.model === "milik"
                 ? "Barang datang untuk produk berstok. Stok bertambah, HPP rata-rata diperbarui, dan jurnal Dr Persediaan / Cr akun pembayaran dibuat. Bahan masakan (produk tanpa kelola stok) dicatat lewat Bank Book ke akun Persediaan kantin."
                 : "Barang datang milik tenant: stok bertambah tanpa jurnal koperasi."}>
@@ -103,7 +109,13 @@ export function StokMasuk({ unit, produk, akun, mutasi, lebihDariSatu }: {
                 )}
             </FormCard>
 
-            <FormCard title="Kartu stok terakhir" description="100 mutasi terakhir: stok masuk, terjual, dan pembatalan penjualan.">
+            {pengelola && produk.length > 0 && <Penyesuaian unit={unit} produk={produk} />}
+
+            <FormCard title="Kartu stok" description="Mutasi terakhir (maks. 200): stok masuk, terjual, batal jual, opname, dan barang rusak. Pilih produk untuk kartu stok satu produk.">
+                <div className="mb-3 flex flex-wrap gap-1.5 text-sm">
+                    <Link href={`?unit=${unit.id}`} className={cn("rounded-full border px-3 py-1", !produkFilter ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted")}>Semua produk</Link>
+                    {produk.map((p) => <Link key={p.id} href={`?unit=${unit.id}&produk=${p.id}`} className={cn("rounded-full border px-3 py-1", produkFilter === p.id ? "border-primary bg-primary text-primary-foreground" : "hover:bg-muted")}>{p.nama}</Link>)}
+                </div>
                 <div className="overflow-x-auto rounded-md border">
                     <table className="w-full text-sm">
                         <thead className="bg-muted text-xs text-muted-foreground"><tr>
@@ -129,5 +141,82 @@ export function StokMasuk({ unit, produk, akun, mutasi, lebihDariSatu }: {
                 </div>
             </FormCard>
         </div>
+    )
+}
+
+/** Opname (stok fisik hasil hitung) atau barang rusak (jumlah dibuang). Nilainya dihitung dengan HPP rata-rata saat ini. */
+function Penyesuaian({ unit, produk }: { unit: UnitOperator; produk: ProdukStok[] }) {
+    const router = useRouter()
+    const [jenis, setJenis] = useState<"opname" | "rusak">("opname")
+    const [tanggal, setTanggal] = useState(hariIni())
+    const [ket, setKet] = useState("")
+    const [isi, setIsi] = useState<Record<number, string>>({})
+    const [hasil, setHasil] = useState<{ ok: boolean; teks: string } | null>(null)
+    const [sibuk, mulai] = useTransition()
+    const items = Object.entries(isi).filter(([, v]) => v !== "").map(([id, qty]) => ({ produkId: Number(id), qty }))
+    const nilai = (p: ProdukStok) => {
+        const v = isi[p.id]
+        if (v === undefined || v === "") return 0
+        return (jenis === "opname" ? Number(v) - p.stok : -Number(v)) * p.harga_pokok
+    }
+    const totalNilai = produk.reduce((s, p) => s + nilai(p), 0)
+    const simpan = (e: React.FormEvent) => {
+        e.preventDefault()
+        setHasil(null)
+        mulai(async () => {
+            const h = await penyesuaianStokAction({ unitId: unit.id, tanggal, jenis, keterangan: ket, items })
+            setHasil(h.ok ? { ok: true, teks: h.pesan } : { ok: false, teks: h.error })
+            if (h.ok) { setIsi({}); setKet(""); router.refresh() }
+        })
+    }
+    return (
+        <FormCard title="Opname dan barang rusak" description={jenis === "opname"
+            ? "Isi stok fisik hasil hitung untuk produk yang dihitung; produk yang dikosongkan tidak berubah. Selisihnya dicatat senilai HPP rata-rata."
+            : "Isi jumlah barang yang dibuang karena rusak, kedaluwarsa, atau hilang. Nilainya dicatat sebagai beban senilai HPP rata-rata."}>
+            <form onSubmit={simpan} className="space-y-4">
+                <div className="flex gap-1 border-b">
+                    {(["opname", "rusak"] as const).map((j) => (
+                        <button key={j} type="button" onClick={() => { setJenis(j); setIsi({}) }}
+                            className={cn("-mb-px border-b-2 px-4 py-2 text-sm", j === jenis ? "border-primary font-semibold" : "border-transparent text-muted-foreground")}>{j === "opname" ? "Stok opname" : "Barang rusak"}</button>
+                    ))}
+                </div>
+                <div className="grid gap-4 sm:grid-cols-3">
+                    <Field label="Tanggal"><Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} required /></Field>
+                    <Field label={jenis === "rusak" ? "Keterangan (wajib)" : "Keterangan"} className="sm:col-span-2"><Input value={ket} onChange={(e) => setKet(e.target.value)} maxLength={255} required={jenis === "rusak"} placeholder={jenis === "rusak" ? "Mis. kedaluwarsa, kemasan pecah" : "Mis. opname akhir bulan"} /></Field>
+                </div>
+                <div className="overflow-x-auto rounded-md border">
+                    <table className="w-full text-sm">
+                        <thead className="bg-muted text-xs text-muted-foreground"><tr>
+                            <th className="px-3 py-2 text-left">Produk</th><th className="px-3 py-2 text-right">Stok sistem</th>
+                            <th className="w-36 px-3 py-2 text-right">{jenis === "opname" ? "Stok fisik" : "Jumlah dibuang"}</th>
+                            <th className="px-3 py-2 text-right">Selisih</th><th className="px-3 py-2 text-right">Nilai (HPP)</th>
+                        </tr></thead>
+                        <tbody>
+                            {produk.map((p) => {
+                                const v = isi[p.id] ?? ""
+                                const sel = v === "" ? null : jenis === "opname" ? Number(v) - p.stok : -Number(v)
+                                return (
+                                    <tr key={p.id} className="border-t">
+                                        <td className="px-3 py-1.5">{p.nama} <span className="text-xs text-muted-foreground">/{p.satuan}</span></td>
+                                        <td className="px-3 py-1.5 text-right tabular-nums">{p.stok}</td>
+                                        <td className="px-3 py-1.5"><InputUang value={v} onChange={(x) => setIsi((o) => ({ ...o, [p.id]: x }))} className="text-right" /></td>
+                                        <td className={cn("px-3 py-1.5 text-right tabular-nums", sel !== null && sel < 0 && "text-red-700", sel !== null && sel > 0 && "text-emerald-700")}>{sel === null ? "" : `${sel > 0 ? "+" : ""}${sel}`}</td>
+                                        <td className="px-3 py-1.5 text-right tabular-nums">{sel === null ? "" : rp(nilai(p))}</td>
+                                    </tr>
+                                )
+                            })}
+                        </tbody>
+                        {items.length > 0 && <tfoot><tr className="border-t font-semibold"><td colSpan={4} className="px-3 py-2 text-right">Total nilai</td><td className="px-3 py-2 text-right tabular-nums">Rp {rp(totalNilai)}</td></tr></tfoot>}
+                    </table>
+                </div>
+                {hasil && <div role="alert" className={cn("flex items-start gap-2 rounded-md border px-3 py-2 text-sm", hasil.ok ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-red-300 bg-red-50 text-red-900")}>
+                    {hasil.ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />} {hasil.teks}</div>}
+                <div className="flex justify-end">
+                    <button type="submit" disabled={sibuk || !items.length} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50">
+                        {sibuk && <Loader2 className="h-4 w-4 animate-spin" />} Simpan {jenis === "opname" ? "opname" : "barang rusak"}
+                    </button>
+                </div>
+            </form>
+        </FormCard>
     )
 }

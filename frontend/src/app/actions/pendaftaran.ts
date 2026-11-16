@@ -3,6 +3,7 @@
 import { catatAksi } from "@/lib/aktivitas"
 import { revalidatePath } from "next/cache"
 import { aturEmail, dataLengkapiAnggota, hapusAkunAplikasi, hapusKeanggotaan, jadikanAnggota, passwordSementaraAkun, putuskanPendaftaran, ubahStatusAkun, type DataLengkapi, type LengkapAnggota } from "@kopkar/backend/src/anggota/akun.ts"
+import { hapusPin } from "@kopkar/backend/src/anggota/pin.ts"
 import { antreEmail } from "@kopkar/backend/src/email/antrean.ts"
 import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
 import { kirimKodeVerifikasi, statusEmail } from "@kopkar/backend/src/anggota/verifikasi-email.ts"
@@ -132,6 +133,21 @@ export async function passwordSementaraAkunAction(id: number): Promise<HasilPend
         return { ok: true, pesan: `Password sementara ${r.username} dibuat`, passwordSementara: r.password }
     } catch (e) {
         if (!(e instanceof GalatSesi)) console.error("password sementara akun gagal:", e)
+        return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
+    }
+}
+
+/** Hapus PIN transaksi anggota yang lupa PIN; anggota membuat PIN baru sendiri di aplikasi (dengan password akun). */
+export async function hapusPinAkunAction(id: number): Promise<HasilPendaftaran> {
+    try {
+        const o = await operatorAktif(MENU_USER)
+        wajibAksi(o, MENU_USER, "ubah")
+        const r = await hapusPin(pool, id)
+        if (!r.ok) return r
+        await catatAksi("User Mobile", `PIN transaksi akun ${r.username} dihapus`, o)
+        return { ok: true, pesan: r.ada ? `PIN transaksi ${r.username} dihapus` : `${r.username} belum punya PIN transaksi` }
+    } catch (e) {
+        if (!(e instanceof GalatSesi)) console.error("hapus PIN gagal:", e)
         return { ok: false, error: e instanceof Error ? e.message : "Gagal" }
     }
 }

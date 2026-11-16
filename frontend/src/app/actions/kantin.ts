@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { bersihkanYatim, GambarSalah, lepasGambar, simpanGambar, tautkanGambar } from "@kopkar/backend/src/anggota/gambar.ts"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { KantinSalah, simpanProduk, simpanUnit, type UnitInput } from "@kopkar/backend/src/unit-usaha/kantin.ts"
-import { batalJual, batalTagihan, bukaSesi, buatTagihan, jualSukarela, jualTunai, ringkasSesi, sesiTerbuka, statusTagihan, stokMasuk, tutupSesi } from "@kopkar/backend/src/posting/kantin.ts"
+import { batalJual, batalTagihan, bukaSesi, buatTagihan, jualSukarela, jualTunai, penyesuaianStok, ringkasSesi, sesiTerbuka, statusTagihan, stokMasuk, tutupSesi } from "@kopkar/backend/src/posting/kantin.ts"
 import { batalPenyelesaian, hitungPenyelesaian, simpanPenyelesaian } from "@kopkar/backend/src/posting/kantin-tenant.ts"
 import { batalkanKedaluwarsa, batalPesanan, ubahStatusPesanan } from "@kopkar/backend/src/posting/kantin-pesanan.ts"
 import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
@@ -199,6 +199,15 @@ export async function batalPenyelesaianAction(id: number): Promise<HasilSimpan> 
     return jalankan(MENU.penyelesaianTenant, "/dashboard/unit-usaha/penyelesaian", "hapus", async (db, o) => {
         const r = await batalPenyelesaian(db, { id, opr: o.nama })
         return `Penyelesaian ${r.noBukti} dibatalkan`
+    })
+}
+
+export async function penyesuaianStokAction(i: { unitId: number; tanggal: string; jenis: "opname" | "rusak"; keterangan: string; items: { produkId: number; qty: string }[] }) {
+    return jalankanData(MENU.stokKantin, "/dashboard/kantin/stok", "tambah", async (db, o) => {
+        const u = await unitTugas(db, o, i.unitId, true)
+        const r = await penyesuaianStok(db, { ...i, opr: o.nama })
+        const rp = (s: string) => Number(s).toLocaleString("id-ID", { maximumFractionDigits: 0 })
+        return { pesan: `${i.jenis === "rusak" ? "Barang rusak" : "Stok opname"} ${u.nama} ${r.noBukti}: ${r.baris} produk${Number(r.kurang) ? `, berkurang senilai Rp ${rp(r.kurang)}` : ""}${Number(r.lebih) ? `, bertambah senilai Rp ${rp(r.lebih)}` : ""}`, data: r }
     })
 }
 

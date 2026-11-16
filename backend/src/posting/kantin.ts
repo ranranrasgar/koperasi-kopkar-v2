@@ -149,6 +149,65 @@ export async function stokMasuk(db: Db, i: StokMasukInput) {
     return { noBukti: no, total: fromUnits(total) };
 }
 
+// ---------- opname dan barang rusak ----------
+
+export interface PenyesuaianInput {
+    unitId: number; tanggal: string; opr: string; keterangan?: string
+    /** opname: `qty` = stok fisik hasil hitung; rusak: `qty` = jumlah yang dibuang (rusak/kedaluwarsa/hilang). */
+    jenis: 'opname' | 'rusak'
+    items: { produkId: number; qty: string | number }[]
+}
+
+/**
+ * Sesuaikan stok produk berstok dengan nilai HPP rata-rata saat ini (HPP tidak berubah). Kantin milik koperasi menjurnal nilainya:
+ * opname kurang / barang rusak: Dr Selisih Persediaan Kantin (atau Beban Barang Rusak Kantin) / Cr Persediaan; opname lebih: sebaliknya.
+ * Kantin tenant: hanya stok dan kartu stok. Nomor bukti KTO-yymm-n.
+ */
+export async function penyesuaianStok(db: Db, i: PenyesuaianInput) {
+    const tanggal = tgl(i.tanggal);
+    const u = await unit(db, i.unitId);
+    if (!i.items.length) throw new KantinSalah('Isi minimal satu produk');
+    const ket = i.keterangan?.trim().slice(0, 255) || null;
+    if (i.jenis === 'rusak' && !ket) throw new KantinSalah('Tulis keterangan (mis. kedaluwarsa, pecah)');
+    const no = `KTO-${yymm(tanggal)}-${(await db.query<{ n: string }>("SELECT nextval('seq_kantin_stok') n")).rows[0].n}`;
+    let kurang = 0n, lebih = 0n, baris = 0;
+    for (const it of [...i.items].sort((a, b) => a.produkId - b.produkId)) {
+        const p = (await db.query<{ nama: string; stok: string; harga_pokok: string; kelola_stok: boolean }>(
+            'SELECT nama, stok, harga_pokok, kelola_stok FROM kantin_produk WHERE id = $1 AND unit_usaha_id = $2 FOR UPDATE', [it.produkId, i.unitId])).rows[0];
+        if (!p) throw new KantinSalah('Produk tidak ditemukan di kantin ini');
+        if (!p.kelola_stok) throw new KantinSalah(`${p.nama} tidak dikelola stoknya`);
+        const stok = toUnits(p.stok), pokok = toUnits(p.harga_pokok);
+        let selisih: bigint;
+        if (i.jenis === 'opname') {
+            const fisik = toUnits(uang(it.qty, 'Stok fisik'));
+            if (fisik % 100n !== 0n) throw new KantinSalah('Jumlah maksimal dua angka di belakang koma');
+            selisih = fisik - stok;
+        } else {
+            const q = qty(it.qty);
+            if (q > stok) throw new KantinSalah(`Stok ${p.nama} tinggal ${fromUnits(stok).replace(/\.?0+$/, '')}`);
+            selisih = -q;
+        }
+        if (selisih === 0n) continue;
+        baris++;
+        await db.query('UPDATE kantin_produk SET stok = $1, diubah_pada = now() WHERE id = $2', [fromUnits(stok + selisih), it.produkId]);
+        await db.query(`INSERT INTO kantin_stok_mutasi (produk_id, unit_usaha_id, tanggal, jenis, qty, harga, stok_setelah, no_bukti, opr, keterangan)
+            VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)`, [it.produkId, i.unitId, tanggal, i.jenis, fromUnits(selisih), fromUnits(pokok), fromUnits(stok + selisih), no, i.opr, ket]);
+        const nilai = kali(pokok, selisih < 0n ? -selisih : selisih);
+        if (selisih < 0n) kurang += nilai; else lebih += nilai;
+    }
+    if (!baris) throw new KantinSalah('Tidak ada stok yang berubah');
+    if (u.model === 'milik' && (kurang > 0n || lebih > 0n)) {
+        const akun = i.jenis === 'rusak' ? await akunBersama(db, 'Beban Barang Rusak Kantin', '5.1.00.00', 96, 'D')
+            : await akunBersama(db, 'Selisih Persediaan Kantin', '5.1.00.00', 96, 'D');
+        const lines: JournalLine[] = [];
+        if (kurang) lines.push({ kodePerkiraan: akun, debit: fromUnits(kurang) }, { kodePerkiraan: u.persediaan!, kredit: fromUnits(kurang) });
+        if (lebih) lines.push({ kodePerkiraan: u.persediaan!, debit: fromUnits(lebih) }, { kodePerkiraan: akun, kredit: fromUnits(lebih) });
+        await postJournal(db, { nomorBukti: no, tanggal, opr: i.opr, sumberTipe: 'kantin_stok', sumberId: null, lines,
+            deskripsi: `${i.jenis === 'rusak' ? 'Barang rusak' : 'Stok opname'} ${u.nama}${ket ? `: ${ket.slice(0, 100)}` : ''}` });
+    }
+    return { noBukti: no, baris, kurang: fromUnits(kurang), lebih: fromUnits(lebih) };
+}
+
 // ---------- penjualan ----------
 
 export interface JualInput {

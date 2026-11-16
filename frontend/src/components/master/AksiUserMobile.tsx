@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react"
 import { useRouter } from "next/navigation"
-import { Check, KeyRound, Loader2, Mail, Trash2, UserPlus, X } from "lucide-react"
-import { dataLengkapiAnggotaAction, hapusUserMobileAction, jadikanAnggotaAction, passwordSementaraAkunAction, putuskanPendaftaranAction, ubahEmailAkunAction, ubahStatusAkunAction, type HasilPendaftaran } from "@/app/actions/pendaftaran"
+import { Check, KeyRound, Loader2, LockKeyhole, Mail, Trash2, UserPlus, X } from "lucide-react"
+import { dataLengkapiAnggotaAction, hapusPinAkunAction, hapusUserMobileAction, jadikanAnggotaAction, passwordSementaraAkunAction, putuskanPendaftaranAction, ubahEmailAkunAction, ubahStatusAkunAction, type HasilPendaftaran } from "@/app/actions/pendaftaran"
 import { Button } from "@/components/ui/button"
 import { FormLengkapiAnggota, type BahanLengkapi } from "@/components/master/FormLengkapiAnggota"
 
@@ -122,6 +122,12 @@ Kode verifikasi langsung dikirim ke email baru ini; anggota tinggal membuka emai
             {!menunggu && item.status === true && (
                 <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-muted" title="Buat password sementara" onClick={passwordSementara}>
                     <KeyRound className="h-4 w-4" />
+                </Button>
+            )}
+            {!menunggu && item.status === true && (
+                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-primary hover:bg-muted" title="Hapus PIN transaksi (anggota lupa PIN)"
+                    onClick={() => jalankan(`Hapus PIN transaksi ${nama}? ${nama} harus membuat PIN baru di aplikasi (Akun → PIN transaksi, dengan password akun) sebelum bisa membayar dari Simpanan Sukarela lewat HP.`, () => hapusPinAkunAction(id))}>
+                    <LockKeyhole className="h-4 w-4" />
                 </Button>
             )}
             <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-gray-600 hover:bg-muted" title="Ubah email akun" onClick={ubahEmail}>

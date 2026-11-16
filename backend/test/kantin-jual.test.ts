@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import { simpanProduk, simpanUnit, type UnitInput } from '../src/unit-usaha/kantin.ts';
-import { batalJual, bukaSesi, jualTunai, stokMasuk, tutupSesi } from '../src/posting/kantin.ts';
+import { batalJual, bukaSesi, jualTunai, penyesuaianStok, stokMasuk, tutupSesi } from '../src/posting/kantin.ts';
 
 const pool = createPool();
 const ROLLBACK = new Error('rollback-uji');
@@ -96,5 +96,21 @@ test('tutup sesi: selisih kas kurang dijurnal ke Selisih Kas Kantin, sesi tidak 
         const jj = await jurnal(db, `KTS-${TGL.slice(2, 4)}${TGL.slice(5, 7)}-${sesiId}`);
         assert.deepEqual(jj.map((x) => [x.nama_perkiraan, x.d, x.k]), [['Selisih Kas Kantin', 500, 0], ['Kas Kantin Uji', 0, 500]]);
         await assert.rejects(tutupSesi(db, { sesiId, oprId: s.opr, opr: 'uji', uangFisik: 0, tanggal: TGL }), /sudah ditutup/);
+    });
+});
+
+test('opname dan barang rusak: stok disesuaikan dengan HPP rata-rata, jurnal selisih/beban (milik), tanpa jurnal (tenant)', async () => {
+    await inTx(async (db) => {
+        const s = await siapkan(db);
+        await stokMasuk(db, { unitId: s.unitId, tanggal: TGL, opr: 'uji', akunBayar: '1.1.01.20', items: [{ produkId: s.botol, qty: 10, hargaBeli: 4000 }] });
+        await assert.rejects(penyesuaianStok(db, { unitId: s.unitId, tanggal: TGL, opr: 'uji', jenis: 'rusak', items: [{ produkId: s.botol, qty: 2 }] }), /keterangan/);
+        await assert.rejects(penyesuaianStok(db, { unitId: s.unitId, tanggal: TGL, opr: 'uji', jenis: 'rusak', keterangan: 'pecah', items: [{ produkId: s.botol, qty: 11 }] }), /tinggal 10/);
+        const r = await penyesuaianStok(db, { unitId: s.unitId, tanggal: TGL, opr: 'uji', jenis: 'rusak', keterangan: 'pecah', items: [{ produkId: s.botol, qty: 2 }] });
+        assert.deepEqual((await jurnal(db, r.noBukti)).map((x) => [x.nama_perkiraan.replace(/ Kantin Uji$/, ''), x.d, x.k]), [['Beban Barang Rusak Kantin', 8000, 0], ['Persediaan', 0, 8000]]);
+        const o = await penyesuaianStok(db, { unitId: s.unitId, tanggal: TGL, opr: 'uji', jenis: 'opname', items: [{ produkId: s.botol, qty: 9 }] }); // 8 -> 9
+        assert.deepEqual((await jurnal(db, o.noBukti)).map((x) => [x.nama_perkiraan.replace(/ Kantin Uji$/, ''), x.d, x.k]), [['Persediaan', 4000, 0], ['Selisih Persediaan Kantin', 0, 4000]]);
+        assert.deepEqual(await produk(db, s.botol), { stok: 9, harga_pokok: 4000 });
+        await assert.rejects(penyesuaianStok(db, { unitId: s.unitId, tanggal: TGL, opr: 'uji', jenis: 'opname', items: [{ produkId: s.botol, qty: 9 }] }), /Tidak ada stok yang berubah/);
+        await assert.rejects(penyesuaianStok(db, { unitId: s.unitId, tanggal: TGL, opr: 'uji', jenis: 'opname', items: [{ produkId: s.nasi, qty: 1 }] }), /tidak dikelola/);
     });
 });

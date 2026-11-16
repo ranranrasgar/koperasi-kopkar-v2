@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
-import { aturPin, cekPin, cekPinBaru } from '../src/anggota/pin.ts';
+import { aturPin, cekPin, cekPinBaru, hapusPin } from '../src/anggota/pin.ts';
 import { hashPasswordAnggota } from '../src/anggota/akun.ts';
 import { simpanProduk, simpanUnit, type UnitInput } from '../src/unit-usaha/kantin.ts';
 import { bacaTagihan, batalTagihan, bayarTagihan, bukaSesi, buatTagihan, statusTagihan } from '../src/posting/kantin.ts';
@@ -40,6 +40,8 @@ test('PIN: aturan, password akun wajib, salah 5 kali terkunci', async () => {
         for (let n = 4; n >= 1; n--) await assert.rejects(cekPin(db, a.anggotaId, '000001'), new RegExp(`Sisa ${n} kali`));
         await assert.rejects(cekPin(db, a.anggotaId, '000001'), /terkunci 15 menit/);
         await assert.rejects(cekPin(db, a.anggotaId, '482915'), /PIN terkunci/);
+        assert.deepEqual(await hapusPin(db, a.userId), { ok: true, username: (await db.query('SELECT username FROM app_user WHERE id = $1', [a.userId])).rows[0].username, ada: true });
+        await assert.rejects(cekPin(db, a.anggotaId, '482915'), /Atur PIN/);
     });
 });
 
