@@ -2,7 +2,8 @@ import type { Db } from '../db.ts';
 import { postJournal, type JournalLine } from './journal.ts';
 import { fromUnits, round2, toUnits } from './money.ts';
 import { batasPlafon, pesanPlafon } from './plafon.ts';
-import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from './pinjaman-calc.ts';
+import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Cicilan, type Terms } from './pinjaman-calc.ts';
+import { SISA_LUNAS } from '../pinjaman-sisa.ts';
 
 export interface PencairanInput {
     kodeAgt: string;
@@ -28,14 +29,14 @@ const mmyy = (d: string) => d.slice(5, 7) + d.slice(2, 4);
 
 interface JenisKredit {
     id: string; nama_kredit: string; bunga_kredit: string; bunga_per: string; jatuh_tempo: number; mak_cicilan: number;
-    persen_adm: string; persen_provisi: string; kunci_grade: boolean; maks_plafond: string;
+    persen_adm: string; persen_provisi: string; kunci_grade: boolean; maks_plafond: string; group_pinjaman: string;
     akun_kredit: string; akun_jasa: string; akun_adm: string; akun_provisi: string;
 }
 
 async function jenisKredit(db: Db, by: { kode?: string; id?: string }): Promise<JenisKredit> {
     const r = await db.query<JenisKredit>(
         `SELECT jk.id, jk.nama_kredit, jk.bunga_kredit, jk.bunga_per, jk.jatuh_tempo, jk.mak_cicilan, jk.persen_adm, jk.persen_provisi,
-                jk.kunci_jika_melebihi_grade = 1 AS kunci_grade, COALESCE(jk.maks_plafond, 0)::text AS maks_plafond,
+                jk.kunci_jika_melebihi_grade = 1 AS kunci_grade, COALESCE(jk.maks_plafond, 0)::text AS maks_plafond, jk.group_pinjaman,
                 p1.kode_perkiraan akun_kredit, p2.kode_perkiraan akun_jasa, p3.kode_perkiraan akun_adm, p4.kode_perkiraan akun_provisi
            FROM jenis_kredit jk
            LEFT JOIN perkiraan p1 ON p1.id = jk.coa_kredit_id LEFT JOIN perkiraan p2 ON p2.id = jk.coa_jasa_id
@@ -118,8 +119,8 @@ export interface AngsuranInput {
     /** Bila diisi, galat bila angsuran berikutnya bukan angsuran ke ini (mis. sudah dibayar setelah potongan digenerate). */
     angsuranKe?: number;
     /**
-     * Dari form Setoran Angsuran (kasir), bukan Potongan Gaji: jasa di bawah jadwal wajib disertai alasan (minimal MIN_ALASAN_JASA karakter),
-     * yang ikut tercatat di keterangan angsuran supaya jasa yang tidak ditagih terlihat di riwayat dan laporan Audit Data.
+     * Dari form Setoran Angsuran (kasir), bukan Potongan Gaji. Hanya pinjaman BANK / PIHAK LAIN: jasa di bawah jadwal wajib disertai alasan
+     * (minimal MIN_ALASAN_JASA karakter), yang ikut tercatat di keterangan angsuran. Pinjaman KOPERASI tidak butuh alasan: jasa yang kurang tetap tertagih.
      */
     dariKasir?: boolean;
     alasanJasa?: string;
@@ -128,14 +129,69 @@ export interface AngsuranInput {
 export const MIN_ALASAN_JASA = 10;
 /** Selisih di bawah Rp 1 dianggap pembulatan isian, bukan jasa yang dikurangi. */
 const TOLERANSI_JASA = 10000n;
+/** Sisa tagihan sampai nilai ini dianggap lunas (pembulatan jadwal), sama dengan SISA_LUNAS di pinjaman-sisa.ts. */
+const TOLERANSI_LUNAS = toUnits(SISA_LUNAS);
 const rupiah = (u: bigint) => Number(fromUnits(round2(u))).toLocaleString('id-ID');
+const nol = (u: bigint) => (u > 0n ? u : 0n);
 
 export interface AngsuranResult {
     noBukti: string;
     ke: number;
     pokok: string; jasa: string; adm: string; provisi: string;
     sisaPokok: string;
+    /** Pinjaman KOPERASI: jasa kontrak yang belum dibayar setelah angsuran ini. Grup lain: saldo jasa buku. */
+    sisaJasa: string;
     lunas: boolean;
+}
+
+/**
+ * Angsuran berikutnya menurut aturan lunas (keputusan pengguna 16 November 2026), dipakai posting dan form Setoran Angsuran.
+ * Pinjaman KOPERASI (`kontrak`): total pokok + jasa yang dibayar harus sama dengan pokok + jasa kontrak pencairan. Pokok/jasa per setoran boleh
+ * berbeda dari jadwal, tetapi jasa yang kurang tetap tertagih; angsuran terakhir (ke-lama) wajib melunasi seluruh sisa, dan pinjaman yang
+ * cicilannya sudah penuh tetapi masih bersisa menerima satu setoran pelunasan sisa (ke-lama+1 dst). Grup lain mengikuti aturan lama.
+ * Mengembalikan null bila pinjaman sudah lunas.
+ */
+async function rencanaDari(db: Pick<Db, 'query'>, p: PinjamanBaris, grup: string) {
+    const t: Terms = { pokok: toUnits(p.rp_pinjaman_pokok), persenBunga: persenToMicro(p.persen_bunga), perAngsuran: Number(p.bunga_per) === 1,
+        lama: p.lama_angsuran, persenAdm: persenToMicro(p.persen_adm), persenProvisi: persenToMicro(p.persen_provisi) };
+    const s = (await db.query<{ p: string; b: string; jb: string; kp: string }>(
+        `SELECT COALESCE(SUM(kredit_pokok - debit_pokok),0)::text p, COALESCE(SUM(kredit_bunga - debit_bunga),0)::text b,
+                COALESCE(SUM(debit_bunga),0)::text jb, COALESCE(SUM(kredit_pokok),0)::text kp
+           FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = $1`, [p.id])).rows[0];
+    const kontrak = grup === 'KOPERASI';
+    const sisaPokok = toUnits(s.p), saldoBunga = toUnits(s.b);
+    // Pencairan yang dibatalkan (kredit pokok dibalik sampai nol) tidak punya jasa kontrak lagi.
+    const jasaKontrak = toUnits(s.kp) > 0n ? jasaTotal(t) : 0n;
+    const sisaJasa = kontrak ? jasaKontrak - toUnits(s.jb) : saldoBunga;
+    const ke = p.jml_cicilan + 1;
+    if (kontrak ? sisaPokok + sisaJasa <= TOLERANSI_LUNAS : ke > p.lama_angsuran) return null;
+
+    let c: Cicilan;
+    if (ke > p.lama_angsuran) c = { ke, pokok: nol(sisaPokok), jasa: nol(sisaJasa), adm: 0n, provisi: 0n };
+    else {
+        c = cicilan(t, ke);
+        const bagian = await pembagianBank(db, p.no_pinjaman, c.pokok, c.jasa);
+        if (bagian) { c.pokok = bagian.pokok; c.jasa = bagian.jasa; }
+        if (kontrak && ke === p.lama_angsuran) { c.pokok = nol(sisaPokok); c.jasa = nol(sisaJasa); }
+    }
+    return { c, kontrak, akhir: kontrak && ke >= p.lama_angsuran, sisaPokok, sisaJasa, saldoBunga };
+}
+
+interface PinjamanBaris {
+    id: string; no_pinjaman: string; rp_pinjaman_pokok: string; persen_bunga: string; bunga_per: number | string; lama_angsuran: number;
+    jml_cicilan: number; persen_adm: string; persen_provisi: string; jenis_kredit_id: string;
+}
+
+/** Angsuran berikutnya untuk form Setoran Angsuran (nilai rupiah sebagai teks), atau null bila pinjaman sudah lunas / tidak ada. */
+export async function rencanaAngsuran(db: Pick<Db, 'query'>, noPinjaman: string) {
+    const p = (await db.query<PinjamanBaris & { grup: string }>(
+        `SELECT p.*, jk.group_pinjaman grup FROM pinjaman_tunai p JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id WHERE p.no_pinjaman = $1`,
+        [noPinjaman])).rows[0];
+    if (!p) return null;
+    const r = await rencanaDari(db, p, p.grup);
+    if (!r) return null;
+    return { ke: r.c.ke, lama: p.lama_angsuran, pokok: fromUnits(r.c.pokok), jasa: fromUnits(r.c.jasa), adm: fromUnits(r.c.adm), provisi: fromUnits(r.c.provisi),
+        sisaPokok: fromUnits(r.sisaPokok), sisaJasa: fromUnits(r.sisaJasa), kontrak: r.kontrak, akhir: r.akhir };
 }
 
 /** Jurnal angsuran: debit kas sebesar jumlah baris-baris kredit yang sudah dibulatkan 2 desimal. */
@@ -176,41 +232,41 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
     const p = (await db.query(`SELECT p.*, a.nama, a.nik FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id
         WHERE p.no_pinjaman = $1 FOR UPDATE OF p`, [i.noPinjaman])).rows[0];
     if (!p) throw new Error(`Pinjaman ${i.noPinjaman} tidak ditemukan`);
-    const ke = p.jml_cicilan + 1;
-    if (ke > p.lama_angsuran) throw new Error(`Pinjaman ${i.noPinjaman} sudah lunas`);
     const kas = await db.query<{ kode_perkiraan: string }>('SELECT kode_perkiraan FROM perkiraan WHERE id = $1', [i.kasPerkiraanId]);
     if (!kas.rows[0]) throw new Error(`Akun kas ${i.kasPerkiraanId} tidak ada`);
     const jk = await jenisKredit(db, { id: p.jenis_kredit_id });
 
-    const t: Terms = { pokok: toUnits(p.rp_pinjaman_pokok), persenBunga: persenToMicro(p.persen_bunga), perAngsuran: p.bunga_per === 1,
-        lama: p.lama_angsuran, persenAdm: persenToMicro(p.persen_adm), persenProvisi: persenToMicro(p.persen_provisi) };
+    const r = await rencanaDari(db, p, jk.group_pinjaman);
+    if (!r) throw new Error(`Pinjaman ${i.noPinjaman} sudah lunas`);
+    const { c } = r, ke = c.ke;
     if (i.angsuranKe !== undefined && i.angsuranKe !== ke)
         throw new Error(`Pinjaman ${i.noPinjaman}: angsuran berikutnya ke-${ke}, bukan ke-${i.angsuranKe}`);
-    const c = cicilan(t, ke);
-    if (i.override?.pokok === undefined) {
-        const bagian = await pembagianBank(db, i.noPinjaman, c.pokok, c.jasa);
-        if (bagian) { c.pokok = bagian.pokok; c.jasa = bagian.jasa; }
-    }
     const pokokJadwal = c.pokok, jasaJadwal = c.jasa;
     if (i.override?.pokok !== undefined) c.pokok = toUnits(i.override.pokok);
     if (i.override?.jasa !== undefined) c.jasa = toUnits(i.override.jasa);
     if (i.override?.adm !== undefined) c.adm = toUnits(i.override.adm);
     if (i.override?.provisi !== undefined) c.provisi = toUnits(i.override.provisi);
 
-    const sisa = (await db.query<{ p: string; b: string }>(
-        `SELECT COALESCE(SUM(kredit_pokok - debit_pokok),0) p, COALESCE(SUM(kredit_bunga - debit_bunga),0) b
-           FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = $1`, [p.id])).rows[0];
+    if (c.jasa < 0n) throw new Error('Jasa tidak boleh negatif');
     if (i.pokokManual) {
         if (c.pokok < 0n) throw new Error('Pokok tidak boleh negatif');
-        if (c.pokok > toUnits(sisa.p)) throw new Error(`Pokok ${fromUnits(c.pokok)} melebihi sisa pokok ${fromUnits(toUnits(sisa.p))}`);
+        if (c.pokok > r.sisaPokok) throw new Error(`Pokok ${fromUnits(c.pokok)} melebihi sisa pokok ${fromUnits(r.sisaPokok)}`);
         if (c.pokok + c.jasa + c.adm + c.provisi <= 0n) throw new Error('Jumlah angsuran harus lebih dari nol');
     }
-    const sisaPokok = toUnits(sisa.p) - c.pokok, sisaBunga = toUnits(sisa.b) - c.jasa;
-    const jasaKurang = i.dariKasir && c.jasa < jasaJadwal - TOLERANSI_JASA;
+    // Angsuran terakhir pinjaman KOPERASI: pokok + jasa harus pas melunasi sisa tagihan kontrak.
+    // Jasa yang terlanjur lebih bayar (sisa jasa negatif) mengurangi kewajiban minimum, tetapi tidak membuat pokok wajib dibayar lebih.
+    const sisaTagihan = nol(r.sisaPokok) + nol(r.sisaJasa);
+    if (r.akhir && (c.pokok + c.jasa < r.sisaPokok + r.sisaJasa - TOLERANSI_LUNAS || c.pokok + c.jasa > sisaTagihan + TOLERANSI_LUNAS))
+        throw new Error(`Angsuran ke-${ke} adalah angsuran terakhir: pokok + jasa harus melunasi sisa tagihan Rp ${rupiah(sisaTagihan)} `
+            + `(pokok Rp ${rupiah(nol(r.sisaPokok))} + jasa Rp ${rupiah(nol(r.sisaJasa))}), bukan Rp ${rupiah(c.pokok + c.jasa)}`);
+    const sisaPokok = r.sisaPokok - c.pokok, sisaBunga = r.saldoBunga - c.jasa;
+    const jasaKurang = !r.kontrak && i.dariKasir && c.jasa < jasaJadwal - TOLERANSI_JASA;
     const alasanJasa = (i.alasanJasa ?? '').replace(/\s+/g, ' ').trim();
     if (jasaKurang && alasanJasa.length < MIN_ALASAN_JASA)
         throw new Error(`Jasa Rp ${rupiah(c.jasa)} di bawah jadwal Rp ${rupiah(jasaJadwal)}: isi alasan jasa tidak ditagih (minimal ${MIN_ALASAN_JASA} karakter)`);
-    const deskripsi = [`Setoran ke ${ke}`, i.pokokManual && c.pokok !== pokokJadwal ? ' (pokok diubah)' : '', jasaKurang ? ` (jasa tidak ditagih: ${alasanJasa})` : '']
+    const jasaDitunda = r.kontrak && !r.akhir && c.jasa < jasaJadwal - TOLERANSI_JASA;
+    const deskripsi = [ke > p.lama_angsuran ? `Pelunasan sisa ke ${ke}` : `Setoran ke ${ke}`, i.pokokManual && c.pokok !== pokokJadwal ? ' (pokok diubah)' : '',
+        jasaKurang ? ` (jasa tidak ditagih: ${alasanJasa})` : '', jasaDitunda ? ' (jasa kurang, tetap tertagih)' : '']
         .join('').slice(0, 100);
 
     const urut = Number((await db.query("SELECT nextval('seq_pinjaman_rincian_urut') v")).rows[0].v);
@@ -228,7 +284,7 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
           WHERE pinjaman_tunai_id = $5 AND angsuran_ke = $6`,
         [noBukti, i.tanggal, fromUnits(c.pokok), fromUnits(c.jasa), p.id, ke]);
     await db.query('UPDATE pinjaman_tunai SET jml_cicilan = $1, sisa_cicilan = $2, tgl_akhir_bayar = $3 WHERE id = $4',
-        [ke, p.lama_angsuran - ke, i.tanggal, p.id]);
+        [ke, Math.max(p.lama_angsuran - ke, 0), i.tanggal, p.id]);
 
     await postJournal(db, {
         nomorBukti: noBukti, tanggal: i.tanggal, opr: i.opr, sumberTipe: 'pinjaman_tunai_rincian', sumberId: p.id, noBuktiTransaksi: i.noPinjaman,
@@ -236,5 +292,6 @@ export async function bayarAngsuran(db: Db, i: AngsuranInput): Promise<AngsuranR
         lines: barisJurnalAngsuran(c, { kas: kas.rows[0].kode_perkiraan, kredit: jk.akun_kredit, jasa: jk.akun_jasa, adm: jk.akun_adm, provisi: jk.akun_provisi }),
     });
     return { noBukti, ke, pokok: fromUnits(c.pokok), jasa: fromUnits(c.jasa), adm: fromUnits(c.adm), provisi: fromUnits(c.provisi),
-        sisaPokok: fromUnits(sisaPokok), lunas: ke === p.lama_angsuran };
+        sisaPokok: fromUnits(sisaPokok), sisaJasa: fromUnits(r.sisaJasa - c.jasa),
+        lunas: r.kontrak ? sisaPokok + r.sisaJasa - c.jasa <= TOLERANSI_LUNAS : ke >= p.lama_angsuran };
 }

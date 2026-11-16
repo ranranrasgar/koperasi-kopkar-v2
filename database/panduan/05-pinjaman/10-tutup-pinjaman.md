@@ -3,7 +3,7 @@ judul: Menutup pinjaman tanpa jurnal
 ringkasan: Menandai pinjaman yang sudah selesai di luar koperasi sebagai lunas, tanpa setoran, tanpa jurnal, dan tanpa mengubah neraca.
 menu: /dashboard/loans
 ---
-Dipakai untuk pinjaman yang di sistem masih berjalan padahal sudah selesai, misalnya dilunasi langsung ke bank, ditutup karena top-up, atau datanya tertinggal saat migrasi.
+Dipakai untuk pinjaman yang di sistem masih berjalan padahal sudah selesai, misalnya dilunasi langsung ke bank, ditutup karena top-up, atau datanya tertinggal saat migrasi. Juga untuk pinjaman koperasi yang cicilannya sudah penuh tetapi sisa jasanya diputuskan pengurus untuk dibebaskan: tulis keputusan itu di alasan.
 
 Tombol ini hanya untuk grup **superadmin** dan **admin**.
 

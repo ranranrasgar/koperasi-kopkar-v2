@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import { toUnits } from '../src/posting/money.ts';
-import { barisJurnalAngsuran, cairkanPinjaman, bayarAngsuran } from '../src/posting/pinjaman.ts';
+import { barisJurnalAngsuran, cairkanPinjaman, bayarAngsuran, rencanaAngsuran } from '../src/posting/pinjaman.ts';
+import { batalPinjaman } from '../src/posting/koreksi.ts';
+import { sqlLunasTunai } from '../src/pinjaman-sisa.ts';
 
 const pool = createPool();
 const ROLLBACK = new Error('rollback-uji');
@@ -64,11 +66,12 @@ test('alur penuh: cairkan lalu bayar semua angsuran; saldo nol dan jurnal seimba
     });
 });
 
-test('jasa di bawah jadwal dari kasir wajib beralasan; potongan gaji (bukan kasir) tidak', async () => {
+test('pinjaman bank: jasa di bawah jadwal dari kasir wajib beralasan; potongan gaji (bukan kasir) tidak', async () => {
     const a = (await pool.query(`SELECT kode_agt FROM anggota WHERE rp_grade >= 1000000 ORDER BY id LIMIT 1`)).rows[0];
     await inTx(async (db) => {
         const kas = (await db.query(`SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'`)).rows[0].id;
-        const c = await cairkanPinjaman(db, { kodeAgt: a.kode_agt, kodeKredit: 'C01', tglPinjaman: '2026-10-22', pokok: 1000000, lama: 6, kasPerkiraanId: kas, opr: 'uji' });
+        // C22 = MOTOR FIF (BANK / PIHAK LAIN), aturan lama.
+        const c = await cairkanPinjaman(db, { kodeAgt: a.kode_agt, kodeKredit: 'C22', tglPinjaman: '2026-10-22', pokok: 1000000, lama: 6, kasPerkiraanId: kas, opr: 'uji' });
         const dasar = { noPinjaman: c.noPinjaman, tanggal: '2026-11-10', kasPerkiraanId: kas, opr: 'uji' };
         // Kasir mengisi jasa 0 tanpa alasan: ditolak, tidak ada yang tersimpan.
         await db.query('SAVEPOINT x');
@@ -87,6 +90,79 @@ test('jasa di bawah jadwal dari kasir wajib beralasan; potongan gaji (bukan kasi
         // Bukan dari kasir (Potongan Gaji memakai nominal jadwal tagih): tidak diperiksa.
         const r3 = await bayarAngsuran(db, { ...dasar, override: { jasa: 0 } });
         assert.equal((await db.query('SELECT deskripsi FROM pinjaman_tunai_rincian WHERE no_bukti = $1', [r3.noBukti])).rows[0].deskripsi, 'Setoran ke 3');
+        // Angsuran terakhir bank tidak wajib melunasi jasa; lunas mengikuti cicilan penuh.
+        for (let k = 4; k < 6; k++) await bayarAngsuran(db, dasar);
+        const akhir = await bayarAngsuran(db, { ...dasar, override: { jasa: 0 } });
+        assert.equal(akhir.lunas, true);
+        await assert.rejects(bayarAngsuran(db, dasar), /sudah lunas/);
+    });
+});
+
+test('pinjaman KOPERASI: jasa kurang tetap tertagih, angsuran terakhir wajib melunasi pokok + jasa kontrak', async () => {
+    const a = (await pool.query(`SELECT kode_agt FROM anggota WHERE rp_grade >= 1000000 ORDER BY id LIMIT 1`)).rows[0];
+    await inTx(async (db) => {
+        const kas = (await db.query(`SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'`)).rows[0].id;
+        // C01 1,5% per angsuran: pokok 900.000, jasa 13.500 x 3 = 40.500.
+        const c = await cairkanPinjaman(db, { kodeAgt: a.kode_agt, kodeKredit: 'C01', tglPinjaman: '2026-10-22', pokok: 900000, lama: 3, kasPerkiraanId: kas, opr: 'uji' });
+        const dasar = { noPinjaman: c.noPinjaman, tanggal: '2026-11-10', kasPerkiraanId: kas, opr: 'uji' };
+        // Angsuran 1: jasa 0 tanpa alasan diterima, ditandai, dan sisa jasa tetap tertagih.
+        const r1 = await bayarAngsuran(db, { ...dasar, dariKasir: true, override: { jasa: 0 } });
+        assert.equal(r1.sisaJasa, '40500.0000');
+        assert.equal((await db.query('SELECT deskripsi FROM pinjaman_tunai_rincian WHERE no_bukti = $1', [r1.noBukti])).rows[0].deskripsi,
+            'Setoran ke 1 (jasa kurang, tetap tertagih)');
+        // Angsuran 2: pokok dan jasa diubah bebas (pokok kecil, jasa besar).
+        const r2 = await bayarAngsuran(db, { ...dasar, dariKasir: true, pokokManual: true, override: { pokok: 100000, jasa: 30000 } });
+        assert.equal(r2.lunas, false);
+        assert.deepEqual([r2.sisaPokok, r2.sisaJasa], ['500000.0000', '10500.0000']);
+        // Angsuran 3 (terakhir): bawaannya pas sisa pokok + sisa jasa; kurang dari itu ditolak.
+        const rencana = await rencanaAngsuran(db, c.noPinjaman);
+        assert.deepEqual(rencana && [rencana.ke, rencana.pokok, rencana.jasa, rencana.akhir], [3, '500000.0000', '10500.0000', true]);
+        await db.query('SAVEPOINT x');
+        await assert.rejects(bayarAngsuran(db, { ...dasar, dariKasir: true, override: { jasa: 0 } }), /angsuran terakhir: pokok \+ jasa harus melunasi sisa tagihan Rp 510\.500/);
+        await db.query('ROLLBACK TO x');
+        // Pembagian pokok/jasa boleh lain asal totalnya pas.
+        const r3 = await bayarAngsuran(db, { ...dasar, dariKasir: true, pokokManual: true, override: { pokok: 500000, jasa: 10500 } });
+        assert.equal(r3.lunas, true);
+        assert.equal(await rencanaAngsuran(db, c.noPinjaman), null);
+        await assert.rejects(bayarAngsuran(db, dasar), /sudah lunas/);
+        const total = (await db.query('SELECT SUM(debit_pokok + debit_bunga)::float t FROM pinjaman_tunai_rincian WHERE no_pinjaman = $1', [c.noPinjaman])).rows[0].t;
+        assert.equal(total, 940500, 'total bayar = pokok + jasa kontrak');
+        const lunas = (await db.query(`SELECT ${sqlLunasTunai('p')} l FROM pinjaman_tunai p WHERE p.no_pinjaman = $1`, [c.noPinjaman])).rows[0].l;
+        assert.equal(lunas, true, 'Daftar Pinjaman: lunas');
+    });
+});
+
+test('pinjaman KOPERASI lama: cicilan penuh tetapi jasa kurang = belum lunas, terima satu pelunasan sisa', async () => {
+    const a = (await pool.query(`SELECT kode_agt FROM anggota WHERE rp_grade >= 1000000 ORDER BY id LIMIT 1`)).rows[0];
+    await inTx(async (db) => {
+        const kas = (await db.query(`SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'`)).rows[0].id;
+        const c = await cairkanPinjaman(db, { kodeAgt: a.kode_agt, kodeKredit: 'C01', tglPinjaman: '2026-10-22', pokok: 900000, lama: 3, kasPerkiraanId: kas, opr: 'uji' });
+        const dasar = { noPinjaman: c.noPinjaman, tanggal: '2026-11-10', kasPerkiraanId: kas, opr: 'uji' };
+        for (let k = 0; k < 2; k++) await bayarAngsuran(db, dasar);
+        // Data desktop: angsuran terakhir tercatat dengan jasa 0 dan cicilan penuh.
+        await bayarAngsuran(db, { ...dasar, override: { jasa: 13500 } });
+        await db.query(`UPDATE pinjaman_tunai_rincian SET debit_bunga = 0 WHERE no_pinjaman = $1 AND angsuran_ke = 3`, [c.noPinjaman]);
+        const lunas = async () => (await db.query(`SELECT ${sqlLunasTunai('p')} l FROM pinjaman_tunai p WHERE p.no_pinjaman = $1`, [c.noPinjaman])).rows[0].l;
+        assert.equal(await lunas(), false, 'jasa kurang Rp 13.500: belum lunas');
+        const rencana = await rencanaAngsuran(db, c.noPinjaman);
+        assert.deepEqual(rencana && [rencana.ke, rencana.pokok, rencana.jasa], [4, '0.0000', '13500.0000']);
+        const r = await bayarAngsuran(db, { ...dasar, dariKasir: true });
+        assert.equal(r.lunas, true);
+        assert.match((await db.query('SELECT deskripsi FROM pinjaman_tunai_rincian WHERE no_bukti = $1', [r.noBukti])).rows[0].deskripsi, /^Pelunasan sisa ke 4/);
+        assert.equal(await lunas(), true);
+        assert.equal((await db.query('SELECT sisa_cicilan FROM pinjaman_tunai WHERE no_pinjaman = $1', [c.noPinjaman])).rows[0].sisa_cicilan, 0);
+    });
+});
+
+test('pinjaman KOPERASI yang pencairannya dibatalkan tetap lunas (jasa kontrak hilang)', async () => {
+    const a = (await pool.query(`SELECT kode_agt FROM anggota WHERE rp_grade >= 1000000 ORDER BY id LIMIT 1`)).rows[0];
+    await inTx(async (db) => {
+        const kas = (await db.query(`SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'`)).rows[0].id;
+        const c = await cairkanPinjaman(db, { kodeAgt: a.kode_agt, kodeKredit: 'C01', tglPinjaman: '2026-10-22', pokok: 900000, lama: 3, kasPerkiraanId: kas, opr: 'uji' });
+        await batalPinjaman(db, { noBukti: c.noPinjaman, tanggal: '2026-11-10', alasan: 'salah input anggota', opr: 'uji' });
+        const l = (await db.query(`SELECT ${sqlLunasTunai('p')} l FROM pinjaman_tunai p WHERE p.no_pinjaman = $1`, [c.noPinjaman])).rows[0].l;
+        assert.equal(l, true);
+        assert.equal(await rencanaAngsuran(db, c.noPinjaman), null);
     });
 });
 

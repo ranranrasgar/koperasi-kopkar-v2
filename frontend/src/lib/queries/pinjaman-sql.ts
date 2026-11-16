@@ -9,8 +9,9 @@
 //  - Sisa Pokok: rumus desktop, plafond / lama x jml_cicilan (`pokok_jadwal`, backend/src/pinjaman-sisa.ts). Buku pinjaman bisa
 //    membagi uang yang sama berbeda dari jadwal (mis. BRI pokok 3.301.200 + jasa 661.656, jadwal 3.951.200 + 11.656), jadi SUM(debit_pokok) membuat
 //    sisa terlalu besar. Riwayat pembayaran dan jurnal tetap memakai angka buku; `sisa_buku` menyimpannya. Kolom saldo_pokok di rincian TIDAK dipakai.
-//  - Lunas = sisa buku <= SISA_LUNAS ATAU semua cicilan sudah terbayar (jml_cicilan >= lama), aturan yang sama dengan aplikasi
-//    anggota dan API aplikasi lama (pelunasan lewat potongan tidak tercatat di rincian). Pinjaman lunas ditampilkan dengan
+//  - Lunas = sqlLunasTunai (backend/src/pinjaman-sisa.ts, keputusan pengguna 16 November 2026): grup KOPERASI lunas bila total bayar pokok + jasa
+//    sudah mencapai pokok + jasa kontrak (cicilan penuh dengan jasa kurang = belum lunas, dihitung menunggak 1); grup bank tetap sisa buku <= SISA_LUNAS
+//    ATAU semua cicilan sudah terbayar (pelunasan lewat potongan tidak tercatat di rincian); Tutup Pinjaman selalu lunas. Pinjaman lunas ditampilkan dengan
 //    sisa pokok 0, sisa cicilan 0, dan tunggakan 0. `sisa_buku` menyimpan saldo buku apa adanya: ±180 pinjaman yang cicilannya selesai
 //    masih bersaldo buku (182 pinjaman, total Rp 1.502.623.670), umumnya pinjaman bank (BRI) yang di-top-up atau dilunasi sendiri oleh
 //    anggota langsung ke bank: koperasi membereskannya dengan jurnal umum manual ("jurnal balik", pengembalian potongan gaji) tanpa
@@ -23,6 +24,8 @@
 //  - Jml Cicilan: penghitung di pinjaman_tunai (dikelola aplikasi desktop).
 //  - Daftar Pinjaman seperti desktop dan API Android hanya memuat pinjaman yang punya baris rincian (`hanyaBerbuku`): pinjaman tanpa rincian pencairannya
 //    tidak pernah diposting. Pakai EXISTS, bukan JOIN, supaya baris tidak berlipat. Detail pinjaman tetap menemukannya untuk ditelusuri.
+
+import { sqlLunasTunai } from "@kopkar/backend/src/pinjaman-sisa.ts"
 
 export interface FilterPinjaman {
     grup: string                 // "All" = semua grup
@@ -97,16 +100,18 @@ export function sqlLaporanPinjaman(f: FilterPinjaman) {
     const lengkap = (sumber: string) => `
         SELECT y.*, CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.temp_total_plafond - y.pokok_jadwal, 0) END AS sisa_pokok,
                CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.lama_angsuran - y.jml_cicilan, 0) END AS sisa_cicilan,
-               CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.jatuh_tempo_n - y.jml_cicilan, 0) END AS jml_tunggakan
+               -- Cicilan penuh tetapi belum lunas (pinjaman KOPERASI yang jasanya kurang) dihitung menunggak satu angsuran.
+               CASE WHEN y.lunas THEN 0 ELSE GREATEST(y.jatuh_tempo_n - y.jml_cicilan, CASE WHEN y.jml_cicilan >= y.lama_angsuran THEN 1 ELSE 0 END) END AS jml_tunggakan
           FROM (
             SELECT h.id, h.tgl_pinjaman, h.no_pinjaman, h.no_pinjaman_urut, h.kode_agt, h.nik, h.nama, h.bank_no_rek, h.bank_atas_nama, h.rp_pinjaman_pokok, h.uang_muka, h.rp_provisi, h.rp_adm,
                    h.temp_total_plafond, h.temp_total_jasa, h.lama_angsuran, h.jml_cicilan, h.opr, h.kode_kredit,
                    h.angs_pokok, h.angs_jasa, h.temp_angs_per_bulan,
                    s.sisa_pokok AS sisa_buku, ROUND(h.temp_total_plafond * c.porsi) AS pokok_jadwal,
                    s.dibayar_pokok AS bayar_pokok, s.dibayar_bunga AS bayar_bunga, s.dibayar_pokok + s.dibayar_bunga AS total_bayar,
-                   (s.sisa_pokok <= ${SISA_LUNAS} OR h.jml_cicilan >= h.lama_angsuran) AS lunas,
+                   ${sqlLunasTunai("pt")} AS lunas,
                    COALESCE(j.jatuh_tempo_n, 0) AS jatuh_tempo_n, j.jatuh_tempo AS jatuh_tempo
               FROM ${sumber} h
+              JOIN pinjaman_tunai pt ON pt.id = h.id
               CROSS JOIN LATERAL (SELECT COALESCE(LEAST(h.jml_cicilan, h.lama_angsuran)::numeric / NULLIF(h.lama_angsuran, 0), 0) AS porsi) c
               LEFT JOIN LATERAL (
                     SELECT CASE WHEN count(*) = 0 THEN h.temp_total_plafond

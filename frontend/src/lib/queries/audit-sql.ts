@@ -105,7 +105,7 @@ export const CEK_AUDIT: CekAudit[] = [
     },
     {
         id: "jasa-tidak-ditagih", modul: "Pinjaman Tunai", judul: "Angsuran dengan jasa di bawah jadwal",
-        arti: "Angsuran yang jasanya dibayar kurang dari jadwal tagih: jasa dibebaskan atau pinjaman dibatalkan lewat angsuran. Nilai = jasa yang tidak ditagih. Sejak 14 November 2026 alasannya wajib diisi di form angsuran dan tampil di keterangan. Pinjaman bank tidak diperiksa karena pembagian pokok/jasanya memang berbeda dari jadwal.",
+        arti: "Angsuran yang jasanya dibayar kurang dari jadwal tagih. Nilai = selisih jasa angsuran itu. Sejak 16 November 2026 selisih ini tetap tertagih: pinjaman KOPERASI baru lunas bila pokok + jasa kontrak terbayar, dan angsuran terakhir wajib melunasi sisanya; pinjaman yang cicilannya penuh tetapi jasanya kurang tampil belum lunas di Daftar Pinjaman. Pinjaman bank tidak diperiksa karena pembagian pokok/jasanya memang berbeda dari jadwal.",
         sql: `SELECT r.tanggal_angsuran AS tanggal, r.no_bukti AS bukti, a.nama AS anggota, a.kode_agt AS kode_agt,
                      'Pinjaman ' || p.no_pinjaman || ', ' || r.deskripsi || ', jasa jadwal ' || TO_CHAR(t.jasa, 'FM999G999G999G990') AS keterangan, t.jasa - r.debit_bunga AS nilai
                 FROM pinjaman_tunai_rincian r JOIN pinjaman_tunai p ON p.id = r.pinjaman_tunai_id JOIN anggota a ON a.id = p.anggota_id

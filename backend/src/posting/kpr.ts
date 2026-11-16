@@ -84,6 +84,9 @@ export async function bayarAngsuranKpr(db: Db, i: KprAngsuranInput): Promise<Kpr
     if (jumlah <= 0n) throw new Error('Jumlah angsuran harus lebih dari nol');
     const ke = k.jml_cicilan + 1;
     if (jumlah > sisa && i.jumlah !== undefined) throw new Error(`Jumlah ${fromUnits(jumlah)} melebihi sisa pokok ${fromUnits(sisa)}`);
+    // Lunas = seluruh pokok terbayar (KPR tanpa jasa): angsuran terakhir dan sesudahnya wajib melunasi sisa (keputusan pengguna 16 November 2026).
+    if (i.jumlah !== undefined && ke >= k.lama_angsuran && jumlah < sisa)
+        throw new Error(`Angsuran ke-${ke} adalah angsuran terakhir: jumlah harus melunasi sisa pokok ${fromUnits(sisa)}`);
     // Angsuran terakhir (ke-lama) atau yang melebihi sisa mengambil sisa persis, supaya saldo pas nol.
     if (i.jumlah === undefined && (jumlah > sisa || ke >= k.lama_angsuran)) jumlah = sisa;
     const sisaBaru = sisa - jumlah;

@@ -33,12 +33,15 @@ Sistem membuat pembalik `BTL...` bertanggal hari ini beserta jurnal kebalikannya
 - Pembayaran selalu untuk **angsuran berikutnya** secara berurutan. Satu kali simpan = satu angsuran.
 - Centang **Ubah pokok/jasa/adm/provisi** bila ada keputusan khusus, misalnya adm dibebaskan atau anggota membayar pokok lebih besar. Isi nilai baru di kotak yang muncul.
 - **Pokok yang diubah** tidak boleh melebihi **Sisa pokok**, dan keterangan baris angsurannya ditandai *pokok diubah*.
-- **Jasa di bawah jadwal** (misalnya jasa dibebaskan saat pelunasan dipercepat) wajib disertai **alasan** minimal 10 karakter. Alasan tercatat di keterangan angsuran (*jasa tidak ditagih: ...*) dan angsurannya muncul di **Audit Data → Angsuran dengan jasa di bawah jadwal**. Angsuran dari Potongan Gaji tidak terkena aturan ini karena memakai nominal jadwal.
+- **Lunas pinjaman koperasi** (grup KOPERASI) berarti **total bayar pokok + total bayar jasa = pokok + jasa kontrak pencairan**. Nilai pokok dan jasa per setoran boleh diubah berapa pun, tetapi jasa yang kurang **tetap tertagih**: tidak hilang dan tidak perlu alasan. Keterangan angsurannya ditandai *jasa kurang, tetap tertagih*, dan form menampilkan **Sisa jasa** di samping Sisa pokok.
+- **Angsuran terakhir pinjaman koperasi wajib melunasi sisa tagihan.** Form mengisi pokok dan jasanya dengan sisa pokok dan sisa jasa. Pembagian pokok/jasa boleh diubah asal totalnya sama; bila kurang atau lebih, simpan ditolak (*Angsuran ke-n adalah angsuran terakhir: pokok + jasa harus melunasi sisa tagihan ...*).
+- Pinjaman koperasi yang **cicilannya sudah penuh tetapi jasanya masih kurang** (data lama) tetap muncul di daftar dengan judul **Pelunasan sisa**. Satu kali simpan melunasi seluruh sisanya. Bila sisa itu memang dibebaskan pengurus, pakai **Tutup Pinjaman** dengan alasan.
+- **Pinjaman bank** (grup BANK / PIHAK LAIN) memakai aturan lama: jasa di bawah jadwal wajib disertai **alasan** minimal 10 karakter, yang tercatat di keterangan angsuran (*jasa tidak ditagih: ...*), dan pinjaman lunas begitu cicilannya penuh. Angsuran dari Potongan Gaji tidak terkena aturan alasan karena memakai nominal jadwal.
 - Mengubah pokok **tidak menyusun ulang jadwal**. Satu kali simpan tetap dihitung satu cicilan, dan angsuran berikutnya tetap memakai nilai jadwal. Pelunasan beberapa angsuran sekaligus belum tersedia.
-- Bila pokok pernah diubah, periksa angsuran terakhir: isikan pokok sama dengan **Sisa pokok** supaya pinjaman pas lunas. Form memberi peringatan bila nilainya berbeda.
+- Pinjaman bank yang pokoknya pernah diubah: periksa angsuran terakhir dan isikan pokok sama dengan **Sisa pokok** supaya pinjaman pas lunas. Form memberi peringatan bila nilainya berbeda.
 - **Pinjaman bank seperti BRI** mengikuti pembagian pokok dan jasa terakhir pinjaman itu, bila totalnya sama dengan jadwal. Pembagian ini berlaku di Setoran Angsuran dan Potongan Gaji, dan bisa diubah lewat kotak Ubah.
-- Potongan Gaji memakai jadwal untuk pinjaman lain, jadi pinjaman yang pokoknya diubah bisa perlu penyesuaian saat lunas.
-- Setelah angsuran terakhir, pinjaman berstatus lunas dan tidak muncul lagi di daftar. Mencoba membayar lagi menghasilkan *Pinjaman ... sudah lunas*.
+- Potongan Gaji mengikuti aturan yang sama: angsuran terakhir pinjaman koperasi dipotong sebesar sisa pokok + sisa jasa.
+- Setelah lunas, pinjaman tidak muncul lagi di daftar. Mencoba membayar lagi menghasilkan *Pinjaman ... sudah lunas*.
 
 ### Yang dibuat sistem
 
@@ -73,7 +76,7 @@ QR berlaku 5 menit dan hanya memilih data. Periksa nama dan jumlah sebelum menyi
 ### Aturan angsuran KPR
 
 - Jumlah harus lebih dari nol dan **tidak boleh melebihi sisa pokok** (*Jumlah ... melebihi sisa pokok ...*).
-- Bila jumlah dikosongkan, **angsuran terakhir** otomatis mengambil sisa pokok persis sehingga KPR pas lunas.
+- **Angsuran terakhir** (dan setoran sesudahnya bila KPR belum lunas) wajib melunasi sisa pokok. Bila jumlah dikosongkan, nilainya otomatis sisa pokok persis; jumlah yang lebih kecil ditolak. KPR lunas bila seluruh pokok terbayar.
 - Nomor bukti `ANGS-KPR-mmyy-urut`. Jurnal: **Debit** kas/bank, **Kredit** akun titipan KPR.
 
 ## Mengirim ulang informasi kredit

@@ -22,7 +22,7 @@ Menu: **KPR → Daftar KPR**. KPR dicatat di data tersendiri, terpisah dari pinj
 
 Kolom **Jasa** dan **Byr Jasa** bernilai nol karena KPR tidak berbunga di koperasi.
 
-**Sisa Pokok** dihitung dari buku KPR: nilai cair dikurangi angsuran yang dibayar. **Lunas** berarti sisa pokoknya nol atau kurang. Sisa minus berarti pokok dibayar berlebih; telusuri di **Audit Data**.
+**Sisa Pokok** dihitung dari buku KPR: nilai cair dikurangi angsuran yang dibayar. **Lunas** berarti seluruh pokok sudah terbayar (sisa pokok nol atau kurang); angsuran terakhir wajib melunasi sisa pokok. Sisa minus berarti pokok dibayar berlebih; telusuri di **Audit Data**.
 
 ## Detail KPR
 

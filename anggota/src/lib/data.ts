@@ -1,4 +1,4 @@
-import { sqlSisaPokokJadwal } from "@kopkar/backend/src/pinjaman-sisa.ts"
+import { sqlLunasTunai, sqlSisaPokokJadwal, sqlSisaTagihan } from "@kopkar/backend/src/pinjaman-sisa.ts"
 import "server-only"
 import { tokenGambar } from "@kopkar/backend/src/anggota/gambar.ts"
 import * as bersama from "@kopkar/backend/src/anggota/queries.ts"
@@ -13,10 +13,12 @@ import { pool, poolAngka, query } from "@/lib/db"
 /** Sisa pokok di bawah ini dianggap lunas (receh pembulatan), sama dengan status lunas laporan pinjaman admin. */
 const SISA_LUNAS = 100
 
-// Pinjaman LUNAS bila sisa pokok di rincian <= SISA_LUNAS ATAU semua cicilan sudah terbayar (jml_cicilan >= lama_angsuran).
-// Aturan kedua mengikuti API aplikasi lama (getPinjaman: plafon - pokok/lama * jml_cicilan > 0): pelunasan dengan potongan
-// tidak mencatat debit pokok penuh di rincian, jadi rincian masih menyisakan angka walau pinjaman sudah selesai
-// (contoh CR-0321-10998: 48 cicilan tercatat, rincian masih Rp 27,4 juta).
+// Pinjaman tunai LUNAS menurut sqlLunasTunai (backend/src/pinjaman-sisa.ts), sama dengan admin: grup KOPERASI bila pokok + jasa kontrak sudah
+// terbayar (keputusan pengguna 16 November 2026); grup bank bila sisa pokok di rincian <= SISA_LUNAS ATAU semua cicilan sudah terbayar
+// (API aplikasi lama: pelunasan dengan potongan tidak mencatat debit pokok penuh, contoh CR-0321-10998). KPR lunas bila sisa pokok <= SISA_LUNAS.
+// Sisa yang ditampilkan: rumus desktop selama cicilan belum penuh; sesudahnya sisa tagihan (pokok + jasa kontrak) yang masih tertagih.
+const sqlSisaTunai = (p: string) =>
+    `CASE WHEN ${p}.jml_cicilan >= ${p}.lama_angsuran THEN GREATEST(${sqlSisaTagihan(p)}, 0) ELSE ${sqlSisaPokokJadwal(p)} END`
 
 export interface SaldoSimpanan { kode: string; nama: string; saldo: number }
 
@@ -84,12 +86,12 @@ export interface PinjamanAktif {
 export async function pinjamanAktif(anggotaId: number) {
     return query<PinjamanAktif>(
         `SELECT 'tunai' jenis, p.id, p.no_pinjaman, p.tgl_pinjaman, jk.nama_kredit, COALESCE(jk.group_pinjaman, 'KOPERASI') grup,
-                p.rp_pinjaman_pokok pokok, p.lama_angsuran, p.jml_cicilan, ${sqlSisaPokokJadwal("p")} sisa,
-                t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi angsuran, t.tanggal_angsuran jatuh_tempo,
+                p.rp_pinjaman_pokok pokok, p.lama_angsuran, p.jml_cicilan, ${sqlSisaTunai("p")} sisa,
+                COALESCE(t.debit_pokok + t.debit_bunga + t.rp_adm + t.rp_provisi, ${sqlSisaTunai("p")}) angsuran, t.tanggal_angsuran jatuh_tempo,
                 jk.bunga_kredit persen_bunga, (SELECT max(x.tanggal_angsuran) FROM pinjaman_tunai_rincian_tagih x WHERE x.pinjaman_tunai_id = p.id) selesai
            FROM pinjaman_tunai p
            LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
-           JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) sisa FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = p.id) r ON r.sisa > ${SISA_LUNAS} AND p.jml_cicilan < p.lama_angsuran
+           JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) sisa FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = p.id) r ON r.sisa IS NOT NULL AND NOT ${sqlLunasTunai("p")}
            LEFT JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.angsuran_ke = p.jml_cicilan + 1
           WHERE p.anggota_id = $1
          UNION ALL
@@ -98,7 +100,7 @@ export async function pinjamanAktif(anggotaId: number) {
                 jk.bunga_kredit, (SELECT max(x.tanggal_angsuran) FROM kpr_rincian_tagih x WHERE x.kpr_id = k.id)
            FROM kpr k
            LEFT JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id
-           JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) sisa FROM kpr_rincian WHERE kpr_id = k.id) r ON r.sisa > ${SISA_LUNAS} AND k.jml_cicilan < k.lama_angsuran
+           JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) sisa FROM kpr_rincian WHERE kpr_id = k.id) r ON r.sisa > ${SISA_LUNAS}
            LEFT JOIN kpr_rincian_tagih t ON t.kpr_id = k.id AND t.angsuran_ke = k.jml_cicilan + 1
           WHERE k.anggota_id = $1
           ORDER BY 1 DESC, 4 DESC`, [anggotaId])
@@ -115,12 +117,12 @@ export async function pinjamanLunas(anggotaId: number) {
             SELECT 'tunai' jenis, p.id, p.no_pinjaman, p.tgl_pinjaman, jk.nama_kredit, p.rp_pinjaman_pokok pokok, p.lama_angsuran
               FROM pinjaman_tunai p LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
              WHERE p.anggota_id = $1
-               AND (COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = p.id), 0) <= ${SISA_LUNAS} OR p.jml_cicilan >= p.lama_angsuran)
+               AND ${sqlLunasTunai("p")}
             UNION ALL
             SELECT 'kpr', k.id, k.no_pinjaman, k.tgl_pinjaman, jk.nama_kredit, k.rp_pinjaman_pokok, k.lama_angsuran
               FROM kpr k LEFT JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id
              WHERE k.anggota_id = $1
-               AND (COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM kpr_rincian WHERE kpr_id = k.id), 0) <= ${SISA_LUNAS} OR k.jml_cicilan >= k.lama_angsuran)
+               AND COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM kpr_rincian WHERE kpr_id = k.id), 0) <= ${SISA_LUNAS}
          ) x ORDER BY tgl_pinjaman DESC, id DESC LIMIT 30`, [anggotaId])
 }
 
@@ -159,9 +161,9 @@ async function pinjamanAktifAtauLunas(anggotaId: number, jenis: "tunai" | "kpr",
         `SELECT $3::text jenis, p.id, p.no_pinjaman, p.tgl_pinjaman, jk.nama_kredit,
                 ${jenis === "tunai" ? "COALESCE(jk.group_pinjaman, 'KOPERASI')" : "'KPR'"} grup,
                 p.rp_pinjaman_pokok pokok, p.lama_angsuran, p.jml_cicilan, jk.bunga_kredit persen_bunga,
-                CASE WHEN p.jml_cicilan >= p.lama_angsuran THEN 0
-                     WHEN COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM ${rinci} WHERE ${fk} = p.id), 0) <= ${SISA_LUNAS} THEN 0
-                     ELSE ${jenis === "tunai" ? sqlSisaPokokJadwal("p") : `(SELECT SUM(kredit_pokok - debit_pokok) FROM ${rinci} WHERE ${fk} = p.id)`} END sisa
+                ${jenis === "tunai" ? `CASE WHEN ${sqlLunasTunai("p")} THEN 0 ELSE ${sqlSisaTunai("p")} END`
+                    : `CASE WHEN COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM ${rinci} WHERE ${fk} = p.id), 0) <= ${SISA_LUNAS} THEN 0
+                            ELSE (SELECT SUM(kredit_pokok - debit_pokok) FROM ${rinci} WHERE ${fk} = p.id) END`} sisa
            FROM ${tabel} p LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
           WHERE p.id = $1 AND p.anggota_id = $2`, [id, anggotaId, jenis])
 }

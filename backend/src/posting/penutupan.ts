@@ -1,4 +1,5 @@
 import type { Db } from '../db.ts';
+import { sqlLunasTunai } from '../pinjaman-sisa.ts';
 
 /**
  * Tutup pinjaman tunai sebagai lunas tanpa uang masuk: untuk pinjaman yang sudah selesai di luar koperasi (dilunasi langsung ke bank, top-up,
@@ -8,8 +9,6 @@ import type { Db } from '../db.ts';
  */
 export interface InputTutup { noPinjaman: string; alasan: string; opr: string; operatorId?: number }
 
-const SISA_LUNAS = 100;
-
 export async function tutupPinjaman(db: Db, i: InputTutup) {
     const alasan = i.alasan.trim();
     if (alasan.length < 5) throw new Error('Alasan wajib diisi, minimal 5 karakter');
@@ -17,9 +16,10 @@ export async function tutupPinjaman(db: Db, i: InputTutup) {
     const p = (await db.query<{ id: string; jml_cicilan: number; lama_angsuran: number; sisa_cicilan: number | null }>(
         'SELECT id, jml_cicilan, lama_angsuran, sisa_cicilan FROM pinjaman_tunai WHERE no_pinjaman = $1 FOR UPDATE', [i.noPinjaman])).rows[0];
     if (!p) throw new Error(`Pinjaman ${i.noPinjaman} tidak ditemukan`);
-    const sisa = (await db.query<{ s: string }>(
-        'SELECT COALESCE(SUM(kredit_pokok - debit_pokok), 0)::text s FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = $1', [p.id])).rows[0].s;
-    if (p.jml_cicilan >= p.lama_angsuran || Number(sisa) <= SISA_LUNAS) throw new Error(`Pinjaman ${i.noPinjaman} sudah lunas`);
+    const { sisa, lunas } = (await db.query<{ sisa: string; lunas: boolean }>(
+        `SELECT COALESCE((SELECT SUM(kredit_pokok - debit_pokok) FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = p.id), 0)::text sisa,
+                ${sqlLunasTunai('p')} lunas FROM pinjaman_tunai p WHERE p.id = $1`, [p.id])).rows[0];
+    if (lunas) throw new Error(`Pinjaman ${i.noPinjaman} sudah lunas`);
 
     // Potongan bulan berjalan yang belum diposting masih memuat angsuran pinjaman ini.
     const belum = (await db.query<{ periode: string; status: string }>(

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import { ajukanPinjaman, jenisBelumLunas, jenisKreditUntuk, pengajuanSaya, type IsianPengajuan } from '../src/anggota/pengajuan.ts';
 import { estimasiAngsuran } from '../src/anggota/pengajuan-hitung.ts';
+import { sqlLunasTunai, sqlSisaTagihan } from '../src/pinjaman-sisa.ts';
 
 const pool = createPool();
 const ROLLBACK = new Error('rollback-uji');
@@ -73,28 +74,27 @@ test('pengajuan: aturan dicek di server, persen dari jenis kredit', async () => 
     });
 });
 
-test('kunci sisa: lunas = cicilan penuh atau sisa pokok <= Rp 100; sisa jasa tidak mengunci', async () => {
+test('kunci sisa: pinjaman KOPERASI lunas bila pokok + jasa kontrak terbayar; sisa receh tidak mengunci', async () => {
     await inTx(async (db) => {
-        // Pinjaman tunai dengan sisa (pokok + jasa) receh; jenisnya dijadikan kunci_jika_sisa di transaksi ini.
-        const p = (await db.query(`SELECT pt.id, pt.anggota_id, pt.jenis_kredit_id, jk.kode_kredit, jk.mak_cicilan, a.status_staff
-            FROM pinjaman_tunai pt JOIN pinjaman_tunai_rincian r ON r.pinjaman_tunai_id = pt.id
-            JOIN jenis_kredit jk ON jk.id = pt.jenis_kredit_id JOIN anggota a ON a.id = pt.anggota_id
+        // Pinjaman KOPERASI yang sudah lunas menurut aturan baru (sisa tagihan receh); jenisnya dijadikan kunci_jika_sisa di transaksi ini.
+        const p = (await db.query(`SELECT pt.id, pt.anggota_id, pt.jenis_kredit_id, jk.kode_kredit
+            FROM pinjaman_tunai pt JOIN jenis_kredit jk ON jk.id = pt.jenis_kredit_id AND jk.group_pinjaman = 'KOPERASI'
+            JOIN anggota a ON a.id = pt.anggota_id
            WHERE a.aktif AND jk.hide = false AND jk.kunci_hanya_untuk_staff = CASE WHEN trim(a.status_staff) = 'Staff' THEN 1 ELSE 0 END
-             AND jk.kunci_jika_melebihi_grade = 0
-           GROUP BY pt.id, jk.id, a.id
-          HAVING SUM(r.kredit_pokok + r.kredit_bunga) - SUM(r.debit_pokok + r.debit_bunga) BETWEEN 1 AND 100
-             AND NOT EXISTS (SELECT 1 FROM pinjaman_tunai p2 JOIN pinjaman_tunai_rincian r2 ON r2.pinjaman_tunai_id = p2.id
-                              WHERE p2.anggota_id = pt.anggota_id AND p2.jenis_kredit_id = pt.jenis_kredit_id AND p2.id <> pt.id
-                              GROUP BY p2.id HAVING SUM(r2.kredit_pokok + r2.kredit_bunga) - SUM(r2.debit_pokok + r2.debit_bunga) > 100)
+             AND jk.kunci_jika_melebihi_grade = 0 AND pt.jml_cicilan = pt.lama_angsuran AND ${sqlLunasTunai('pt')}
+             AND ${sqlSisaTagihan('pt')} BETWEEN -100 AND 100
+             AND NOT EXISTS (SELECT 1 FROM pinjaman_penutupan tp WHERE tp.pinjaman_tunai_id = pt.id)
+             AND NOT EXISTS (SELECT 1 FROM pinjaman_tunai p2 WHERE p2.anggota_id = pt.anggota_id AND p2.jenis_kredit_id = pt.jenis_kredit_id
+                              AND p2.id <> pt.id AND NOT ${sqlLunasTunai('p2')})
           LIMIT 1`)).rows[0];
-        assert.ok(p, 'ada pinjaman dengan sisa receh');
+        assert.ok(p, 'ada pinjaman KOPERASI lunas');
         await db.query('UPDATE jenis_kredit SET kunci_jika_sisa = 1 WHERE id = $1', [p.jenis_kredit_id]);
         await db.query("DELETE FROM pengajuan_pinjaman WHERE anggota_id = $1 AND status = 'P'", [p.anggota_id]);
         const anggota = Number(p.anggota_id);
         const x = isian({ kodeKredit: p.kode_kredit, lama: 1 });
 
-        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), false, 'sisa receh: tidak ditandai di form');
-        assert.equal((await ajukanPinjaman(db, anggota, x, HARI)).ok, true, 'sisa receh tidak mengunci');
+        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), false, 'lunas: tidak ditandai di form');
+        assert.equal((await ajukanPinjaman(db, anggota, x, HARI)).ok, true, 'lunas tidak mengunci');
         // Disetujui tetapi belum dicairkan juga mengunci; setelah dicairkan/dibatalkan (menunggu_cair false) terbuka lagi.
         await db.query("UPDATE pengajuan_pinjaman SET status = 'Y', menunggu_cair = true WHERE anggota_id = $1 AND status = 'P'", [anggota]);
         assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), true, 'disetujui belum cair: ditandai');
@@ -105,23 +105,34 @@ test('kunci sisa: lunas = cicilan penuh atau sisa pokok <= Rp 100; sisa jasa tid
         assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), false, 'sudah cair: terbuka');
         await db.query("DELETE FROM pengajuan_pinjaman WHERE anggota_id = $1 AND status = 'P'", [anggota]);
 
-        // Kasus pinjaman dibatalkan lewat angsuran berjasa 0: pokok habis, jasa jadwal Rp 2 jt tersisa, cicilan belum penuh. Tidak mengunci.
-        await db.query(`UPDATE pinjaman_tunai_rincian SET kredit_bunga = kredit_bunga + 2000000 WHERE id = (
-            SELECT id FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = $1 ORDER BY id LIMIT 1)`, [p.id]);
-        await db.query('UPDATE pinjaman_tunai SET jml_cicilan = 0 WHERE id = $1', [p.id]);
-        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), false, 'sisa jasa saja: tidak ditandai');
-        assert.equal((await ajukanPinjaman(db, anggota, x, HARI)).ok, true, 'sisa jasa saja tidak mengunci');
-        await db.query("DELETE FROM pengajuan_pinjaman WHERE anggota_id = $1 AND status = 'P'", [anggota]);
-
-        // Sisa pokok besar: mengunci selama cicilan belum penuh; cicilan penuh (lunas menurut admin) tidak mengunci walau saldo buku tersisa.
-        await db.query(`UPDATE pinjaman_tunai_rincian SET kredit_pokok = kredit_pokok + 500000 WHERE id = (
-            SELECT id FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = $1 ORDER BY id LIMIT 1)`, [p.id]);
-        await db.query('UPDATE pinjaman_tunai SET jml_cicilan = lama_angsuran WHERE id = $1', [p.id]);
-        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), false, 'cicilan penuh: tidak ditandai');
-        await db.query('UPDATE pinjaman_tunai SET jml_cicilan = 0 WHERE id = $1', [p.id]);
-        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), true, 'sisa pokok besar: ditandai di form');
+        // Jasa kontrak kurang dibayar Rp 1 jt walau cicilan penuh: belum lunas, mengunci (keputusan pengguna 16 November 2026).
+        await db.query(`UPDATE pinjaman_tunai_rincian SET debit_bunga = debit_bunga - 1000000 WHERE id = (
+            SELECT id FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = $1 AND angsuran_ke > 0 ORDER BY id DESC LIMIT 1)`, [p.id]);
+        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), true, 'sisa jasa: ditandai di form');
         const r = await ajukanPinjaman(db, anggota, x, HARI);
         assert.equal(r.ok, false);
         if (!r.ok) assert.match(r.error, /Selesaikan dulu tagihan/);
+        // Ditutup lewat Tutup Pinjaman: lunas lagi.
+        await db.query(`INSERT INTO pinjaman_penutupan (pinjaman_tunai_id, no_pinjaman, cicilan_sebelum, sisa_buku, alasan, oleh)
+            SELECT id, no_pinjaman, jml_cicilan, 0, 'uji', 'uji' FROM pinjaman_tunai WHERE id = $1`, [p.id]);
+        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), false, 'ditutup: tidak ditandai');
+    });
+});
+
+test('kunci sisa pinjaman bank: aturan lama, cicilan penuh lunas walau saldo buku tersisa', async () => {
+    await inTx(async (db) => {
+        const p = (await db.query(`SELECT pt.id, pt.anggota_id, pt.jenis_kredit_id FROM pinjaman_tunai pt
+            JOIN jenis_kredit jk ON jk.id = pt.jenis_kredit_id AND jk.group_pinjaman = 'BANK / PIHAK LAIN'
+           WHERE pt.jml_cicilan >= pt.lama_angsuran
+             AND (SELECT SUM(kredit_pokok - debit_pokok) FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = pt.id) > 100000
+             AND NOT EXISTS (SELECT 1 FROM pinjaman_penutupan tp WHERE tp.pinjaman_tunai_id = pt.id)
+             AND NOT EXISTS (SELECT 1 FROM pinjaman_tunai p2 WHERE p2.anggota_id = pt.anggota_id AND p2.jenis_kredit_id = pt.jenis_kredit_id
+                              AND p2.id <> pt.id AND NOT ${sqlLunasTunai('p2')})
+          LIMIT 1`)).rows[0];
+        assert.ok(p, 'ada pinjaman bank cicilan penuh bersaldo buku');
+        const anggota = Number(p.anggota_id);
+        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), false, 'cicilan penuh: tidak ditandai');
+        await db.query('UPDATE pinjaman_tunai SET jml_cicilan = 0 WHERE id = $1', [p.id]);
+        assert.equal((await jenisBelumLunas(db, anggota)).has(String(p.jenis_kredit_id)), true, 'sisa pokok besar: ditandai');
     });
 });

@@ -67,5 +67,13 @@ test('KPR ditolak: lama melebihi maksimum, jumlah melebihi sisa', async () => {
         await db.query('ROLLBACK TO x');
         const c = await cairkanKpr(db, { ...base, pokok: 1000000, lama: 2 });
         await assert.rejects(bayarAngsuranKpr(db, { noPinjaman: c.noPinjaman, tanggal: '2026-11-10', kasPerkiraanId: kas, opr: 'u', jumlah: 1000001 }), /melebihi sisa/);
+        // Angsuran terakhir wajib melunasi sisa pokok (lunas KPR = seluruh pokok terbayar).
+        const bayar = { noPinjaman: c.noPinjaman, tanggal: '2026-11-10', kasPerkiraanId: kas, opr: 'u' };
+        await db.query('SAVEPOINT y');
+        await bayarAngsuranKpr(db, { ...bayar, jumlah: 300000 });
+        await assert.rejects(bayarAngsuranKpr(db, { ...bayar, jumlah: 600000 }), /angsuran terakhir: jumlah harus melunasi sisa pokok 700000/);
+        await db.query('ROLLBACK TO y');
+        await bayarAngsuranKpr(db, { ...bayar, jumlah: 300000 });
+        assert.equal((await bayarAngsuranKpr(db, { ...bayar, jumlah: 700000 })).lunas, true);
     });
 });

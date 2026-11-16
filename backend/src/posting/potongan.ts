@@ -3,6 +3,7 @@ import { fromUnits, toUnits } from './money.ts';
 import { setorSimpanan } from './simpanan.ts';
 import { bayarAngsuran, sqlPembagianBank } from './pinjaman.ts';
 import { bayarAngsuranKpr } from './kpr.ts';
+import { sqlJasaKontrak } from '../pinjaman-sisa.ts';
 
 /**
  * Angsuran yang dipotong dari gaji bulan ini, satu baris per pinjaman anggota (tanpa syarat anggota aktif):
@@ -15,17 +16,23 @@ import { bayarAngsuranKpr } from './kpr.ts';
  */
 export const SQL_ANGSURAN_POTONGAN = `
     SELECT p.anggota_id, 'tunai' AS jenis, p.id AS pinjaman_id, p.no_pinjaman, jk.group_pinjaman AS grup, t.angsuran_ke,
-           COALESCE(b.pokok, t.debit_pokok) AS pokok, COALESCE(b.jasa, t.debit_bunga) AS jasa,
+           -- Angsuran terakhir pinjaman KOPERASI melunasi sisa pokok dan sisa jasa kontrak, sama dengan bayarAngsuran.
+           CASE WHEN z.akhir THEN GREATEST(s.sisa, 0) ELSE COALESCE(b.pokok, t.debit_pokok) END AS pokok,
+           CASE WHEN z.akhir THEN GREATEST(s.jasa_kontrak - s.jasa_dibayar, 0) ELSE COALESCE(b.jasa, t.debit_bunga) END AS jasa,
            CASE WHEN p.jml_cicilan = 0 THEN p.rp_adm ELSE 0 END AS adm, CASE WHEN p.jml_cicilan = 0 THEN p.rp_provisi ELSE 0 END AS provisi
       FROM pinjaman_tunai p JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
       JOIN pinjaman_tunai_rincian_tagih t ON t.pinjaman_tunai_id = p.id AND t.angsuran_ke = p.jml_cicilan + 1
       -- LATERAL: saldo hanya dihitung untuk pinjaman yang punya angsuran berikutnya (subquery di WHERE 4x lebih lambat).
-      LEFT JOIN LATERAL (SELECT SUM(r.kredit_pokok - r.debit_pokok) AS sisa FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = p.id) s ON true
+      LEFT JOIN LATERAL (SELECT SUM(r.kredit_pokok - r.debit_pokok) AS sisa, COALESCE(SUM(r.debit_bunga), 0) AS jasa_dibayar,
+                                CASE WHEN SUM(r.kredit_pokok) > 0 THEN ${sqlJasaKontrak('p')} ELSE 0 END AS jasa_kontrak
+                           FROM pinjaman_tunai_rincian r WHERE r.pinjaman_tunai_id = p.id) s ON true
+      CROSS JOIN LATERAL (SELECT jk.group_pinjaman = 'KOPERASI' AND t.angsuran_ke = p.lama_angsuran AND s.sisa IS NOT NULL AS akhir) z
       LEFT JOIN LATERAL (${sqlPembagianBank('p.id', 't.debit_pokok', 't.debit_bunga')}) b ON jk.group_pinjaman = 'BANK / PIHAK LAIN'
      WHERE p.jml_cicilan < p.lama_angsuran AND jk.group_pinjaman IN ('KOPERASI', 'BANK / PIHAK LAIN')
        AND COALESCE(s.sisa, 1000000) > 100
     UNION ALL
-    SELECT k.anggota_id, 'kpr', k.id, k.no_pinjaman, 'KPR', k.jml_cicilan + 1, LEAST(k.rp_angsuran_per_bulan, r.sisa), 0, 0, 0
+    SELECT k.anggota_id, 'kpr', k.id, k.no_pinjaman, 'KPR', k.jml_cicilan + 1,
+           CASE WHEN k.jml_cicilan + 1 >= k.lama_angsuran THEN r.sisa ELSE LEAST(k.rp_angsuran_per_bulan, r.sisa) END, 0, 0, 0
       FROM kpr k JOIN jenis_kredit jk ON jk.id = k.jenis_kredit_id AND jk.group_pinjaman = 'KPR'
       JOIN LATERAL (SELECT SUM(kredit_pokok - debit_pokok) AS sisa FROM kpr_rincian WHERE kpr_id = k.id) r ON r.sisa > 2000`;
 

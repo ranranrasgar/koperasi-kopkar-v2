@@ -12,9 +12,9 @@ Sebagian besar setoran simpanan wajib dan angsuran dibayar lewat **potongan gaji
 | Simpanan pokok | 0 (simpanan pokok dibayar sekali saat masuk) |
 | Simpanan wajib | Nilai simpanan wajib bulanan di data anggota |
 | Simpanan sukarela | Nilai simpanan sukarela bulanan di data anggota |
-| Pinjaman koperasi | Angsuran **berikutnya** semua pinjaman grup KOPERASI yang belum lunas: pokok + jasa + adm + provisi sesuai jadwal tagih |
+| Pinjaman koperasi | Angsuran **berikutnya** semua pinjaman grup KOPERASI yang belum lunas: pokok + jasa + adm + provisi sesuai jadwal tagih. **Angsuran terakhir** sebesar sisa pokok + sisa jasa kontrak, supaya pinjaman pas lunas |
 | Pinjaman bank | Sama, untuk grup BANK / PIHAK LAIN |
-| KPR | Angsuran per bulan setiap KPR yang belum lunas, maksimal sebesar sisa pokoknya |
+| KPR | Angsuran per bulan setiap KPR yang belum lunas, maksimal sebesar sisa pokoknya; angsuran terakhir sebesar sisa pokok |
 | Adm bank | Biaya adm bank dari Pengaturan Perusahaan (saat ini Rp 2.000) |
 | **Total** | Jumlah semua komponen |
 

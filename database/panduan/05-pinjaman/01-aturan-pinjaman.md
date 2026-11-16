@@ -52,7 +52,14 @@ Pokok **Rp 10.000.000**, lama **24 kali**, bunga 2% per angsuran, adm 1%, provis
 
 - **Jadwal tagih** (yang dilihat anggota dan dipakai potongan gaji) dibulatkan ke **rupiah penuh**.
 - Saat angsuran **diposting**, pokok dan jasa dihitung sampai 4 angka desimal (contoh 2: pokok Rp 416.666,6667), lalu dibulatkan 2 desimal di jurnal.
-- **Angsuran terakhir mengambil sisa persis**, sehingga saldo pokok dan jasa pinjaman tepat nol saat lunas, kecuali pokok pernah diubah kasir di Setoran Angsuran.
+- **Angsuran terakhir mengambil sisa persis**, sehingga saldo pokok dan jasa pinjaman tepat nol saat lunas. Pada pinjaman koperasi, angsuran terakhir wajib melunasi sisa pokok + sisa jasa kontrak walaupun setoran sebelumnya pernah diubah kasir.
+
+## Kapan pinjaman lunas
+
+- **Pinjaman koperasi** (grup KOPERASI): total bayar pokok + total bayar jasa sudah sama dengan pokok + jasa kontrak pencairan (selisih sampai Rp 100 dianggap pembulatan). Cicilan penuh saja belum cukup bila jasanya kurang dibayar.
+- **Pinjaman bank** (grup BANK / PIHAK LAIN): cicilan penuh, atau sisa pokok di buku pinjaman sampai Rp 100. Aturan ini tidak diubah karena pembagian pokok/jasa angsuran bank (misalnya BRI) memang berbeda dari jadwal dan jasanya sering tidak diisi.
+- **KPR**: seluruh pokok terbayar (sisa pokok sampai Rp 100).
+- Pinjaman yang ditutup lewat **Tutup Pinjaman** atau yang pencairannya dibatalkan selalu dianggap lunas.
 
 ## Tanggal jatuh tempo
 

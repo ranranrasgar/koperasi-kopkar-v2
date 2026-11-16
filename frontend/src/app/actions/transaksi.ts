@@ -3,9 +3,8 @@
 import type { TombolCetakBukti } from "@/lib/kwitansi-tipe"
 import { revalidatePath } from "next/cache"
 import { setorSimpanan, ambilSimpanan } from "@kopkar/backend/src/posting/simpanan.ts"
-import { cairkanPinjaman, bayarAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
+import { cairkanPinjaman, bayarAngsuran, rencanaAngsuran } from "@kopkar/backend/src/posting/pinjaman.ts"
 import { bacaQr } from "@kopkar/backend/src/anggota/qr.ts"
-import { pembagianBank } from "@kopkar/backend/src/posting/pinjaman.ts"
 import { akunDetail } from "@/lib/queries/akuntansi"
 import { hapusCacheAudit } from "@/lib/queries/audit"
 import { batalBukti, batalPinjaman, buatJurnalSusulan, rancangJurnalSusulan, type RancanganJurnal } from "@kopkar/backend/src/posting/koreksi.ts"
@@ -14,7 +13,7 @@ import { cairkanKpr, bayarAngsuranKpr } from "@kopkar/backend/src/posting/kpr.ts
 import { kirimInfoPencairan } from "@kopkar/backend/src/anggota/info-pinjaman.ts"
 import { bacaJurnalUmum, hapusBarisJurnal, hapusJurnalUmum, hapusSemuaBarisKosong, nomorJurnalBerikut, postJurnalUmum, tandaiPenyesuaian, ubahJurnalUmum, type BuktiJurnal } from "@kopkar/backend/src/posting/jurnal-umum.ts"
 import { bacaBankBook, hapusBankBook, simpanBankBook, type BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
-import { cicilan, jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
+import { jadwal, jasaTotal, jatuhTempo, persenToMicro, rpAdm, rpProvisi, type Terms } from "@kopkar/backend/src/posting/pinjaman-calc.ts"
 import { toUnits, fromUnits } from "@kopkar/backend/src/posting/money.ts"
 import { formatRupiah, hariIni } from "@/lib/format"
 import { modeUji, pool, query, tx } from "@/lib/db"
@@ -238,19 +237,11 @@ export async function angsuranBerikutnyaAction(noPinjaman: string) {
 }
 
 async function angsuranBerikutnya(noPinjaman: string) {
-    const [p] = await query<{ rp_pinjaman_pokok: string; persen_bunga: string; bunga_per: number; lama_angsuran: number; jml_cicilan: number;
-        persen_adm: string; persen_provisi: string }>(
-        `SELECT rp_pinjaman_pokok::text, persen_bunga::text, bunga_per, lama_angsuran, jml_cicilan, persen_adm::text, persen_provisi::text
-           FROM pinjaman_tunai WHERE no_pinjaman = $1`, [noPinjaman])
-    if (!p || p.jml_cicilan >= p.lama_angsuran) return null
-    const t: Terms = { pokok: toUnits(p.rp_pinjaman_pokok), persenBunga: persenToMicro(p.persen_bunga), perAngsuran: p.bunga_per === 1,
-        lama: p.lama_angsuran, persenAdm: persenToMicro(p.persen_adm), persenProvisi: persenToMicro(p.persen_provisi) }
-    const c = cicilan(t, p.jml_cicilan + 1)
-    const bagian = await pembagianBank(pool, noPinjaman, c.pokok, c.jasa)
-    if (bagian) { c.pokok = bagian.pokok; c.jasa = bagian.jasa }
-    const [s] = await query<{ sisa: string }>(
-        `SELECT COALESCE(SUM(r.kredit_pokok - r.debit_pokok), 0)::text AS sisa FROM pinjaman_tunai_rincian r JOIN pinjaman_tunai p ON p.id = r.pinjaman_tunai_id WHERE p.no_pinjaman = $1`, [noPinjaman])
-    return { ke: c.ke, lama: p.lama_angsuran, pokok: rp(c.pokok), jasa: rp(c.jasa), adm: rp(c.adm), provisi: rp(c.provisi), sisa: rp(toUnits(s.sisa)) }
+    // Aturan yang sama dengan mesin posting: pinjaman KOPERASI (kontrak) angsuran terakhir melunasi sisa pokok + jasa kontrak.
+    const r = await rencanaAngsuran(pool, noPinjaman)
+    if (!r) return null
+    return { ke: r.ke, lama: r.lama, pokok: rp(r.pokok), jasa: rp(r.jasa), adm: rp(r.adm), provisi: rp(r.provisi), sisa: rp(r.sisaPokok),
+        sisaJasa: rp(r.sisaJasa), kontrak: r.kontrak, akhir: r.akhir }
 }
 
 export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil> {
@@ -275,7 +266,7 @@ export async function bayarAngsuranAction(_: Hasil, f: FormData): Promise<Hasil>
         const total = toUnits(r.pokok) + toUnits(r.jasa) + toUnits(r.adm) + toUnits(r.provisi)
         return { ok: true, pesan: `Angsuran ke-${r.ke} tercatat dengan nomor ${r.noBukti}${r.lunas ? " (LUNAS)" : ""}${titip ? `; ${titip.jumlah} titipan (${formatRupiah(Number(titip.total))}) ditandai POSTING` : ""}`,
             rincian: { "No. Bukti": r.noBukti, "Pokok": rp(r.pokok), "Jasa": rp(r.jasa), "Adm": rp(r.adm), "Provisi": rp(r.provisi),
-                "Total": rp(total), "Sisa pokok": rp(r.sisaPokok) },
+                "Total": rp(total), "Sisa pokok": rp(r.sisaPokok), ...(jk?.group_pinjaman === "KOPERASI" && !r.lunas && toUnits(r.sisaJasa) > 0n ? { "Sisa jasa": rp(r.sisaJasa) } : {}) },
             cetak: [{ label: "Cetak Kwitansi", jenis: "angsuran", no: r.noBukti }] }
     })
 }

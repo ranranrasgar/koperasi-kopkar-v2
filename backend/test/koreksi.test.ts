@@ -139,13 +139,14 @@ test('batal pinjaman sekaligus: semua angsuran dari yang terakhir lalu pencairan
     await inTx(async (db) => {
         const kas = (await db.query("SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'")).rows[0].id;
         const c = await cairkanPinjaman(db, { kodeAgt: a, kodeKredit: 'C01', tglPinjaman: TANGGAL, pokok: 1000000, lama: 3, kasPerkiraanId: kas, opr: 'uji' });
-        // Kasus SUMIRAH: uang dikembalikan lewat angsuran berjasa 0.
-        for (let k = 0; k < 3; k++) await bayarAngsuran(db, { noPinjaman: c.noPinjaman, tanggal: TANGGAL, kasPerkiraanId: kas, opr: 'uji', override: { jasa: 0 }, dariKasir: true, alasanJasa: 'pinjaman dibatalkan anggota' });
+        // Kasus SUMIRAH: uang dikembalikan lewat angsuran berjasa 0. Angsuran terakhir pinjaman KOPERASI wajib melunasi jasa,
+        // jadi hanya dua angsuran yang bisa berjasa 0; pembatalan yang benar lewat Batalkan Pinjaman.
+        for (let k = 0; k < 2; k++) await bayarAngsuran(db, { noPinjaman: c.noPinjaman, tanggal: TANGGAL, kasPerkiraanId: kas, opr: 'uji', override: { jasa: 0 }, dariKasir: true });
         await gagal(db, () => batalPinjaman(db, { noBukti: c.noPinjaman, tanggal: TANGGAL, alasan: 'pendek', opr: 'uji' }), /minimal 10/);
         await gagal(db, () => batalPinjaman(db, { noBukti: 'CR-TIDAK-ADA', tanggal: TANGGAL, alasan, opr: 'uji' }), /tidak ditemukan/);
 
         const r = await batalPinjaman(db, { noBukti: c.noPinjaman, tanggal: TANGGAL, alasan, opr: 'uji', operatorId: 1 });
-        assert.equal(r.angsuran.length, 3);
+        assert.equal(r.angsuran.length, 2);
         assert.match(r.pencairan, /^BTLC-2611-\d+$/);
         const buku = (await db.query('SELECT SUM(kredit_pokok - debit_pokok)::float p, SUM(kredit_bunga - debit_bunga)::float b, SUM(debit_pokok + debit_bunga)::float bayar FROM pinjaman_tunai_rincian WHERE no_pinjaman = $1', [c.noPinjaman])).rows[0];
         assert.deepEqual([buku.p, buku.b, buku.bayar], [0, 0, 0], 'buku nol, tidak ada uang terhitung dibayar');
@@ -154,7 +155,7 @@ test('batal pinjaman sekaligus: semua angsuran dari yang terakhir lalu pencairan
         assert.ok(jurnal.n > 0);
         assert.equal(jurnal.s, 0, 'kas kembali seperti sebelum pencairan');
         const log = (await db.query("SELECT jenis, count(*)::int n FROM transaksi_koreksi WHERE alasan = $1 AND no_bukti_pembalik = ANY($2) GROUP BY jenis ORDER BY jenis", [alasan, [r.pencairan, ...r.angsuran]])).rows;
-        assert.deepEqual(log, [{ jenis: 'angsuran', n: 3 }, { jenis: 'pencairan', n: 1 }]);
+        assert.deepEqual(log, [{ jenis: 'angsuran', n: 2 }, { jenis: 'pencairan', n: 1 }]);
         await gagal(db, () => batalPinjaman(db, { noBukti: c.noPinjaman, tanggal: TANGGAL, alasan, opr: 'uji' }), /sudah dibatalkan/);
     });
 });

@@ -1,5 +1,6 @@
 import type { Db } from '../db.ts';
 import { fromUnits, toUnits } from './money.ts';
+import { sqlMasihDitagih } from '../pinjaman-sisa.ts';
 
 // Titipan angsuran pinjaman tunai (pengganti form desktop "Setoran Titipan Angsuran", tabel pinjaman_tunai_titipan):
 // anggota menitipkan uang sedikit demi sedikit untuk angsuran berikutnya. Titipan hanya catatan, TIDAK membuat jurnal;
@@ -11,10 +12,10 @@ export interface TitipanInput { noPinjaman: string; tanggal: string; jumlah: str
 
 /** Tambah satu baris titipan untuk pinjaman yang masih berjalan. Jalankan di dalam transaksi. */
 export async function tambahTitipan(db: Db, i: TitipanInput): Promise<{ id: number }> {
-    const p = (await db.query<{ id: string; jml_cicilan: number; lama_angsuran: number }>(
-        'SELECT id, jml_cicilan, lama_angsuran FROM pinjaman_tunai WHERE no_pinjaman = $1 FOR UPDATE', [i.noPinjaman])).rows[0];
+    const p = (await db.query<{ id: string; lunas: boolean }>(
+        `SELECT p.id, NOT ${sqlMasihDitagih('p')} lunas FROM pinjaman_tunai p WHERE p.no_pinjaman = $1 FOR UPDATE`, [i.noPinjaman])).rows[0];
     if (!p) throw new Error(`Pinjaman ${i.noPinjaman} tidak ditemukan`);
-    if (p.jml_cicilan >= p.lama_angsuran) throw new Error(`Pinjaman ${i.noPinjaman} sudah lunas`);
+    if (p.lunas) throw new Error(`Pinjaman ${i.noPinjaman} sudah lunas`);
     const jumlah = toUnits(i.jumlah);
     if (jumlah <= 0n) throw new Error('Jumlah titipan harus lebih dari 0');
     const r = await db.query<{ id: string }>(

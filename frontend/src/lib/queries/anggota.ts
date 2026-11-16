@@ -1,5 +1,6 @@
 import "server-only"
 import { query } from "@/lib/db"
+import { sqlMasihDitagih } from "@kopkar/backend/src/pinjaman-sisa.ts"
 import { paged, params, sp, type SearchParams } from "@/lib/list"
 import { ukuranHalaman } from "@/lib/halaman"
 
@@ -105,7 +106,7 @@ export async function cariPinjamanBerjalan(kata: string) {
     return query<AnggotaRingkas>(
         `SELECT a.kode_agt, a.nik, a.nama, a.aktif, p.no_pinjaman, 'tunai' AS jenis_pinjaman
            FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id
-          WHERE (p.no_pinjaman ILIKE $1 OR p.no_rek ILIKE $1) AND p.jml_cicilan < p.lama_angsuran
+          WHERE (p.no_pinjaman ILIKE $1 OR p.no_rek ILIKE $1) AND ${sqlMasihDitagih("p")}
          UNION ALL
          SELECT a.kode_agt, a.nik, a.nama, a.aktif, k.no_pinjaman, 'kpr'
            FROM kpr k JOIN anggota a ON a.id = k.anggota_id

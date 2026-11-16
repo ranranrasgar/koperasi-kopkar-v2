@@ -25,7 +25,8 @@ export default async function RincianPinjamanPage(props: PageProps<"/pinjaman/[j
     const { pinjaman: p, jadwal, bayar } = r
     const sisaJadwal = jadwal.filter((j) => !j.lunas)
     const berikut = sisaJadwal[0]
-    const lunas = p.sisa <= 100 || p.jml_cicilan >= p.lama_angsuran
+    // sisa = 0 bila lunas menurut aturan admin (pinjaman KOPERASI: pokok + jasa kontrak terbayar; lib/data.ts).
+    const lunas = p.sisa <= 100
         const sisaTenor = Math.max(0, p.lama_angsuran - p.jml_cicilan)
     const targetLunas = jadwal.at(-1)?.tanggal_angsuran
     const tabKelas = (aktif: boolean) =>

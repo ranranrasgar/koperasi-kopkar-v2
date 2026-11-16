@@ -3,6 +3,7 @@ import { query } from "@/lib/db"
 import { params, sp, type SearchParams } from "@/lib/list"
 import type { PageData } from "@/config/modules"
 import { ukuranHalaman } from "@/lib/halaman"
+import { sqlMasihDitagih } from "@kopkar/backend/src/pinjaman-sisa.ts"
 import { sqlLaporanPinjaman, type KOLOM_JUMLAH } from "@/lib/queries/pinjaman-sql"
 
 export const GRUP_PINJAMAN = ["KOPERASI", "BANK / PIHAK LAIN", "KPR"]
@@ -68,12 +69,12 @@ export interface PinjamanBerjalan {
     lama_angsuran: number; jml_cicilan: number
 }
 
-/** Pinjaman tunai anggota yang belum lunas, untuk form angsuran. */
+/** Pinjaman tunai anggota yang masih ditagih (KOPERASI: belum lunas, termasuk pelunasan sisa jasa), untuk form angsuran. */
 export const pinjamanBerjalan = (kodeAgt: string) =>
     query<PinjamanBerjalan>(
         `SELECT p.no_pinjaman, p.tgl_pinjaman, jk.nama_kredit, p.rp_pinjaman_pokok, p.lama_angsuran, p.jml_cicilan
            FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id LEFT JOIN jenis_kredit jk ON jk.id = p.jenis_kredit_id
-          WHERE a.kode_agt = $1 AND p.jml_cicilan < p.lama_angsuran
+          WHERE a.kode_agt = $1 AND ${sqlMasihDitagih("p")}
           ORDER BY p.tgl_pinjaman`, [kodeAgt])
 
 export interface KprBerjalan {

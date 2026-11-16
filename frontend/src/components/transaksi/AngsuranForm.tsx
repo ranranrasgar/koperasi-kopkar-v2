@@ -35,7 +35,8 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: Inf
     useEffect(() => {
         if (!berikut) return
         // Angsuran terakhir: bawaan isian pokok adalah sisanya, supaya pinjaman yang pokoknya pernah diubah bisa pas lunas.
-        const akhir = berikut.ke === berikut.lama
+        // Pinjaman KOPERASI: server sudah mengisi pokok dan jasa angsuran terakhir dengan sisanya.
+        const akhir = berikut.ke === berikut.lama && !berikut.kontrak
         setIsian({ pokok: String(akhir ? berikut.sisa : berikut.pokok), jasa: String(berikut.jasa), adm: String(berikut.adm), provisi: String(berikut.provisi) })
     }, [berikut])
 
@@ -44,9 +45,14 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: Inf
     const total = nilai("pokok") + nilai("jasa") + nilai("adm") + nilai("provisi")
     // Kirim pokok hanya bila benar-benar diubah: nilai jadwal punya 4 desimal, sedangkan isian dibulatkan.
     const pokokDiubah = !!berikut && ubah && Number(isian.pokok || 0) !== berikut.pokok
-    const sisaBeda = !!berikut && berikut.ke === berikut.lama && Math.abs(berikut.sisa - berikut.pokok) > 1
-    // Jasa di bawah jadwal (selisih lebih dari Rp 1): server mewajibkan alasan, yang ikut tercatat di keterangan angsuran.
-    const jasaKurang = !!berikut && ubah && Number(isian.jasa || 0) < berikut.jasa - 1
+    const sisaBeda = !!berikut && !berikut.kontrak && berikut.ke === berikut.lama && Math.abs(berikut.sisa - berikut.pokok) > 1
+    // Pinjaman bank, jasa di bawah jadwal (selisih lebih dari Rp 1): server mewajibkan alasan, yang ikut tercatat di keterangan angsuran.
+    // Pinjaman KOPERASI tidak butuh alasan: jasa yang kurang tetap tertagih sampai angsuran terakhir.
+    const jasaKurang = !!berikut && !berikut.kontrak && ubah && Number(isian.jasa || 0) < berikut.jasa - 1
+    const jasaDitunda = !!berikut && berikut.kontrak && !berikut.akhir && ubah && Number(isian.jasa || 0) < berikut.jasa - 1
+    // Angsuran terakhir pinjaman KOPERASI: pokok + jasa harus pas sisa tagihan (pokok + jasa kontrak yang belum dibayar).
+    const sisaTagihan = berikut ? Math.max(berikut.sisa, 0) + Math.max(berikut.sisaJasa, 0) : 0
+    const akhirKurang = !!berikut && berikut.akhir && Math.abs(nilai("pokok") + nilai("jasa") - sisaTagihan) > 100
     return (
         <form onSubmit={onSubmit} className="space-y-4">
             <Field label="Pinjaman" htmlFor="noPinjaman">
@@ -61,8 +67,11 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: Inf
             {berikut && (
                 <div className="rounded-md border bg-muted/30 p-3 text-sm">
                     <div className="mb-2 flex flex-wrap items-baseline justify-between gap-2">
-                        <span className="font-semibold">Angsuran ke-{berikut.ke} dari {berikut.lama}</span>
-                        <span className="text-xs text-muted-foreground">Sisa pokok <b className="tabular-nums text-foreground">{formatRupiah(berikut.sisa)}</b></span>
+                        <span className="font-semibold">{berikut.ke > berikut.lama ? `Pelunasan sisa (cicilan ${berikut.lama} sudah penuh)` : `Angsuran ke-${berikut.ke} dari ${berikut.lama}`}</span>
+                        <span className="text-xs text-muted-foreground">
+                            Sisa pokok <b className="tabular-nums text-foreground">{formatRupiah(berikut.sisa)}</b>
+                            {berikut.kontrak && <> · Sisa jasa <b className="tabular-nums text-foreground">{formatRupiah(Math.max(berikut.sisaJasa, 0))}</b></>}
+                        </span>
                     </div>
                     <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
                         {(["pokok", "jasa", "adm", "provisi"] as const).map((k) => (
@@ -93,6 +102,12 @@ function AngsuranTunai({ info, akunKas, hariIni, onSelesai, pilih }: { info: Inf
                                 placeholder="mis. pelunasan dipercepat, jasa dibebaskan pengurus" />
                             <p className="text-xs text-muted-foreground">Alasan tercatat di keterangan angsuran dan muncul di Audit Data. Bila anggota membatalkan pinjaman, pakai Batalkan Pencairan, bukan angsuran.</p>
                         </div>
+                    )}
+                    {jasaDitunda && <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">Jasa di bawah jadwal ({formatRupiah(berikut.jasa)}). Kekurangannya tetap tertagih dan wajib lunas paling lambat di angsuran terakhir.</p>}
+                    {berikut.akhir && (
+                        <p className={`mt-2 text-xs ${akhirKurang ? "font-semibold text-destructive" : "text-muted-foreground"}`}>
+                            Angsuran terakhir: pokok + jasa harus melunasi sisa tagihan {formatRupiah(sisaTagihan)}. Pembagian pokok dan jasa boleh diubah asal totalnya sama.
+                        </p>
                     )}
                     {sisaBeda && <p className="mt-2 text-xs text-amber-700 dark:text-amber-400">Ini angsuran terakhir dan sisa pokok berbeda dengan jadwal. Centang ubah supaya pokoknya sama dengan sisa, kalau tidak pinjaman selesai dengan saldo tersisa.</p>}
                 </div>

@@ -12,7 +12,7 @@ Pengajuan dari aplikasi anggota baru diperiksa di server sebelum masuk ke daftar
 - Jenis kredit sesuai status anggota: anggota staff hanya bisa memilih produk staff, non staff hanya produk non staff.
 - Besar pinjaman tidak melebihi **batas plafon**: nominal **grade anggota** bila jenis kredit mengunci grade (grade diutamakan), selain itu **Maksimal Plafond** jenis kredit bila diisi. Aturan lengkapnya ada di panduan *Jenis pinjaman*.
 - Jenis kredit yang bertanda **Tidak untuk mobile** tidak ditampilkan di aplikasi anggota.
-- Untuk jenis kredit yang dikunci sisa: tidak ada pinjaman jenis yang sama yang masih bersisa lebih dari **Rp 100**. Sisa receh pembulatan Rp 100 ke bawah dianggap lunas.
+- Untuk jenis kredit yang dikunci sisa: tidak ada pinjaman jenis yang sama yang belum lunas. Pinjaman koperasi lunas bila sisa pokok + sisa jasa kontraknya sampai **Rp 100** (receh pembulatan); jasa yang kurang dibayar ikut mengunci.
 - Lama pinjaman 1 sampai maksimal cicilan jenis kredit; tanggal realisasi tidak sebelum hari ini dan paling lambat satu tahun ke depan.
 - Persen bunga, adm, provisi, dan denda **diambil dari data jenis kredit**, bukan dari isian anggota.
 - Satu anggota hanya bisa punya satu pengajuan **Menunggu** untuk jenis kredit yang sama.

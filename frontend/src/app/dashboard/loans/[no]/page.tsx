@@ -74,6 +74,8 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
     const jasaDibebankan = bayar.reduce((t, b) => t + b.kredit_bunga, 0)
     // Pinjaman lunas yang jasanya dibayar kurang dari yang dibebankan: selisihnya tidak ditagih (dibebaskan), ditampilkan supaya pengurus tahu.
     const jasaTidakDitagih = r.lunas && !penutupan && !batalCair ? Math.max(jasaDibebankan - totBayar.b, 0) : 0
+    // Pinjaman KOPERASI belum lunas: jasa kontrak yang belum dibayar tetap tertagih dan wajib lunas di angsuran terakhir (keputusan 16 November 2026).
+    const sisaJasa = info.group_pinjaman === "KOPERASI" && !r.lunas && !batalCair ? Math.max(Number(r.temp_total_jasa) - totBayar.b, 0) : 0
     let saldo = 0
     const baris = bayar.map((b) => { saldo += b.kredit_pokok - b.debit_pokok; return { ...b, saldo } })
     const tunggak = Number(r.jml_tunggakan ?? 0)
@@ -164,6 +166,12 @@ export default async function DetailPinjamanPage(props: { params: Promise<{ no: 
                 {!r.lunas && Math.abs(Number(r.sisa_buku) - Number(r.sisa_pokok)) > 100 && (
                     <p className="mt-3 text-xs text-muted-foreground">
                         Sisa Pokok mengikuti jadwal cicilan seperti aplikasi desktop. Buku pinjaman membagi pembayaran berbeda, dengan saldo buku Rp {formatAngka(r.sisa_buku)}; rinciannya ada di Riwayat Pembayaran.
+                    </p>
+                )}
+                {sisaJasa > 100 && (
+                    <p className="mt-3 text-xs text-amber-700 dark:text-amber-400">
+                        Sisa jasa Rp {formatAngka(sisaJasa)}: jasa kontrak Rp {formatAngka(Number(r.temp_total_jasa))}, yang dibayar Rp {formatAngka(totBayar.b)}.
+                        Pinjaman baru lunas bila pokok dan jasa kontrak terbayar penuh{r.jml_cicilan >= r.lama_angsuran ? "; terima pelunasan sisa lewat Setoran Angsuran, atau Tutup Pinjaman bila memang dibebaskan" : ""}.
                     </p>
                 )}
                 {jasaTidakDitagih > 100 && (

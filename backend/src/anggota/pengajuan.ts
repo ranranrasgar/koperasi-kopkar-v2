@@ -1,13 +1,12 @@
 import type pg from 'pg';
 import type { Db } from '../db.ts';
 import { batasPlafon, pesanPlafon } from '../posting/plafon.ts';
+import { sqlLunasTunai } from '../pinjaman-sisa.ts';
 
 // Pengajuan kredit oleh anggota (PWA). Aplikasi lama hanya memvalidasi di HP dan server menerima persen bunga/biaya
 // dari HP (docs/analisis-aplikasi-mobile-lama.md bagian 4). Di sini semua aturan dicek di server dengan urutan yang
 // sama, dan persen selalu diambil dari jenis_kredit.
 
-/** Sisa pinjaman (pokok + jasa) sampai nilai ini dianggap lunas: receh pembulatan tidak mengunci pengajuan (keputusan pengguna 23 Oktober 2026). */
-export const SISA_LUNAS = 100;
 /** Tanggal realisasi paling jauh dari hari ini. */
 const MAKS_HARI_REALISASI = 365;
 
@@ -37,18 +36,15 @@ export async function jenisKreditUntuk(db: pg.Pool | Db, anggotaId: number) {
 /**
  * Id jenis kredit yang masih punya pinjaman tunai belum lunas milik anggota ini, atau pengajuan yang sudah disetujui tetapi belum
  * dicairkan (menunggu_cair). Dipakai aturan "Kunci jika belum lunas" (kunci_jika_sisa) saat mengajukan dan untuk menandai jenis yang terkunci di form.
- * Lunas sama dengan Daftar Pinjaman admin (lib/queries/pinjaman-sql.ts): cicilan penuh ATAU sisa pokok <= SISA_LUNAS. Sisa jasa tidak dihitung:
- * jasa tidak dicatat sebagai piutang di jurnal, dan jasa yang tidak ditagih (mis. pinjaman dibatalkan lewat angsuran berjasa 0) dianggap dilepas.
+ * Lunas sama dengan Daftar Pinjaman admin (sqlLunasTunai, backend/src/pinjaman-sisa.ts): pinjaman KOPERASI lunas bila pokok + jasa kontrak
+ * sudah terbayar (jasa yang kurang dibayar tetap mengunci); pinjaman bank: cicilan penuh ATAU sisa pokok <= SISA_LUNAS.
  */
 export async function jenisBelumLunas(db: pg.Pool | Db, anggotaId: number): Promise<Set<string>> {
     const r = await db.query<{ id: string }>(
         `SELECT DISTINCT pt.jenis_kredit_id::text id FROM pinjaman_tunai pt
-           JOIN LATERAL (SELECT count(*) n, SUM(kredit_pokok - debit_pokok) sisa
-                           FROM pinjaman_tunai_rincian WHERE pinjaman_tunai_id = pt.id) r ON true
-          WHERE pt.anggota_id = $1 AND pt.jenis_kredit_id IS NOT NULL AND pt.jml_cicilan < pt.lama_angsuran
-            AND CASE WHEN r.n = 0 THEN pt.rp_pinjaman_pokok - pt.rp_uang_muka ELSE r.sisa END > $2
+          WHERE pt.anggota_id = $1 AND pt.jenis_kredit_id IS NOT NULL AND NOT ${sqlLunasTunai('pt')}
          UNION
-         SELECT jenis_kredit_id::text FROM pengajuan_pinjaman WHERE anggota_id = $1 AND status = 'Y' AND menunggu_cair AND jenis_kredit_id IS NOT NULL`, [anggotaId, SISA_LUNAS]);
+         SELECT jenis_kredit_id::text FROM pengajuan_pinjaman WHERE anggota_id = $1 AND status = 'Y' AND menunggu_cair AND jenis_kredit_id IS NOT NULL`, [anggotaId]);
     return new Set(r.rows.map((x) => x.id));
 }
 

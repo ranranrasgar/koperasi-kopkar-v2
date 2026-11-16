@@ -102,7 +102,7 @@ Jurnal koreksi memperbaiki Buku Besar, tetapi nomor buktinya berbeda. Karena itu
 | Pinjaman Tunai | Hitungan cicilan berbeda dengan buku | Kolom Bayar tidak sama dengan jumlah baris angsuran. Sebagian wajar, misalnya pinjaman yang ditutup |
 | Pinjaman Tunai | Cicilan selesai tetapi masih bersaldo | Saldo pokok masih lebih dari Rp 100 |
 | Pinjaman Tunai | Pokok dibayar melebihi pinjaman | Pokok yang dibayar melebihi pokok pinjaman lebih dari Rp 100 |
-| Pinjaman Tunai | Angsuran dengan jasa di bawah jadwal | Jasa yang dibayar kurang dari jadwal tagih angsuran itu (nilai = jasa tidak ditagih). Pinjaman bank tidak diperiksa |
+| Pinjaman Tunai | Angsuran dengan jasa di bawah jadwal | Jasa yang dibayar kurang dari jadwal tagih angsuran itu (nilai = selisihnya). Pada pinjaman koperasi selisih ini tetap tertagih sampai angsuran terakhir. Pinjaman bank tidak diperiksa |
 | KPR | Angsuran tanpa jurnal, nilai berbeda, pokok dibayar berlebih | Sama seperti pinjaman tunai. Pencairan KPR memang tidak berjurnal |
 
 Bagian **Buku Besar** menampilkan jumlah bukti tidak seimbang dan baris ke akun yang tidak ada di COA, dengan tautan ke **Jurnal Bermasalah**.
