@@ -33,10 +33,14 @@ const PECAHAN_IZIN = {
     'Batal Transaksi (web)': [], // mengubah saldo: awalnya hanya superadmin, grup lain diberi lewat Kelola Hak Akses
     'Unit Usaha (web)': [MENU_MODE], // membuat kantin dan akun COA-nya: awalnya grup admin
     'Produk Kantin (web)': [], // awalnya hanya superadmin dan grup Kantin (di bawah)
+    // Menu kantin berikutnya: grup yang sudah memegang menu kantin lain (grup Kantin, admin lewat Unit Usaha).
+    'Kasir Kantin (web)': ['Produk Kantin (web)', 'Unit Usaha (web)'],
+    'Stok Kantin (web)': ['Produk Kantin (web)', 'Unit Usaha (web)'],
+    'Penjualan Kantin (web)': ['Produk Kantin (web)', 'Unit Usaha (web)'],
 };
 // Grup untuk petugas kantin (boleh orang luar): hanya menu kantin. Dibuat sekali; setelah itu izinnya milik Kelola Hak Akses.
 const GRUP_KANTIN = 'Kantin';
-const IZIN_KANTIN = ['Produk Kantin (web)'];
+const IZIN_KANTIN = ['Produk Kantin (web)', 'Kasir Kantin (web)', 'Stok Kantin (web)', 'Penjualan Kantin (web)'];
 
 function envLokal() {
     try {
@@ -69,7 +73,8 @@ async function main() {
             await c.query(`INSERT INTO opr_hak_akses (urut, id_opr, menu, akses, grup_id) VALUES (nextval('seq_opr_hak_akses_urut'), $1, $2, 'T', $3)
                 ON CONFLICT (grup_id, menu) DO UPDATE SET akses = 'T'`, [g.urut, MENU_MODE, g.id]);
         await c.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['opr_grup']);
-        const kantin = (await c.query(`INSERT INTO opr_grup (urut, nama_grup) SELECT COALESCE(MAX(urut), 0) + 1, $1::varchar FROM opr_grup
+        // MAX() tanpa GROUP BY selalu menghasilkan satu baris, jadi syarat "belum ada" diletakkan di luar agregatnya.
+        const kantin = (await c.query(`INSERT INTO opr_grup (urut, nama_grup) SELECT x.m + 1, $1::varchar FROM (SELECT COALESCE(MAX(urut), 0) m FROM opr_grup) x
             WHERE NOT EXISTS (SELECT 1 FROM opr_grup WHERE lower(nama_grup) = lower($1)) RETURNING id, urut`, [GRUP_KANTIN])).rows[0];
         let pecahan = 0;
         for (const [menu, asal] of Object.entries(PECAHAN_IZIN))

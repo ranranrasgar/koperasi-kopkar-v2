@@ -25,4 +25,4 @@ Menu: **Unit Usaha → Produk Kantin**. Petugas hanya melihat kantin tempat ia d
 
 ## Stok
 
-Stok tidak diketik di form produk. Stok hanya berubah lewat stok masuk, penjualan, dan opname, supaya selalu cocok dengan akun Persediaan. Menu stok masuk hadir bersama menu kasir. Angka stok yang mencapai stok minimal ditandai kuning di daftar.
+Stok tidak diketik di form produk. Stok hanya berubah lewat stok masuk, penjualan, dan opname, supaya selalu cocok dengan akun Persediaan. Barang datang dicatat di menu **Stok Masuk**. Angka stok yang mencapai stok minimal ditandai kuning di daftar.

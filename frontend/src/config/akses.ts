@@ -88,6 +88,9 @@ export const MENU = {
     unitUsaha: "Unit Usaha (web)",
     // Khusus web; produk kantin. Operator selain pemegang izin Unit Usaha hanya melihat kantin yang ditugaskan (unit_usaha_opr).
     produkKantin: "Produk Kantin (web)",
+    kasirKantin: "Kasir Kantin (web)",
+    stokKantin: "Stok Kantin (web)",
+    penjualanKantin: "Penjualan Kantin (web)",
 } as const
 
 /**
@@ -211,6 +214,9 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/pesan": [MENU.pesanAnggota],
     "/dashboard/unit-usaha": [MENU.unitUsaha],
     "/dashboard/kantin/produk": [MENU.produkKantin],
+    "/dashboard/kantin/kasir": [MENU.kasirKantin],
+    "/dashboard/kantin/stok": [MENU.stokKantin],
+    "/dashboard/kantin/penjualan": [MENU.penjualanKantin],
 }
 
 /** Menu yang memakai pencarian anggota di form transaksi. */
@@ -231,7 +237,8 @@ export const AKSI_IZIN: Record<string, readonly AksiIzin[]> = {
     [MENU.setoranSimpanan]: TAMBAH, [MENU.pencairanSimpanan]: TAMBAH, [MENU.pengajuan]: UBAH,
     [MENU.cairKoperasi]: TAMBAH, [MENU.cairBank]: TAMBAH, [MENU.cairKpr]: TAMBAH, [MENU.angsurKoperasi]: TAMBAH, [MENU.angsurBank]: TAMBAH, [MENU.angsurKpr]: TAMBAH,
     [MENU.titipan]: ["tambah", "hapus"], [MENU.jurnalUmum]: SEMUA, [MENU.jurnalPenyesuaian]: SEMUA, [MENU.bankBook]: SEMUA,
-    [MENU.generatePotongan]: ["tambah", "ubah"], [MENU.unitUsaha]: ["tambah", "ubah"], [MENU.produkKantin]: ["tambah", "ubah"], [MENU.tutupBuku]: TAMBAH, [MENU.hitungShu]: TAMBAH, [MENU.shu]: ["tambah", "hapus"],
+    [MENU.generatePotongan]: ["tambah", "ubah"], [MENU.unitUsaha]: ["tambah", "ubah"], [MENU.produkKantin]: ["tambah", "ubah"],
+    [MENU.kasirKantin]: TAMBAH, [MENU.stokKantin]: TAMBAH, [MENU.penjualanKantin]: ["hapus"], [MENU.tutupBuku]: TAMBAH, [MENU.hitungShu]: TAMBAH, [MENU.shu]: ["tambah", "hapus"],
 }
 
 /**

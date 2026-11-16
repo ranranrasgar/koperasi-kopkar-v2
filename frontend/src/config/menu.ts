@@ -185,6 +185,21 @@ export const allGroups: MenuGroup[] = [
         groupLabel: "Unit Usaha",
         items: [
             {
+                label: "Kasir Kantin",
+                icon: "point_of_sale",
+                href: "/dashboard/kantin/kasir"
+            },
+            {
+                label: "Penjualan Kantin",
+                icon: "receipt_long",
+                href: "/dashboard/kantin/penjualan"
+            },
+            {
+                label: "Stok Masuk",
+                icon: "inventory_2",
+                href: "/dashboard/kantin/stok"
+            },
+            {
                 label: "Produk Kantin",
                 icon: "restaurant_menu",
                 href: "/dashboard/kantin/produk"

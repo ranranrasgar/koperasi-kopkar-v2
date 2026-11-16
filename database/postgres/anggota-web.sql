@@ -302,6 +302,86 @@ CREATE TABLE IF NOT EXISTS kantin_harga_riwayat (
     waktu timestamptz NOT NULL DEFAULT now()
 );
 CREATE INDEX IF NOT EXISTS ix_kantin_harga_riwayat_produk ON kantin_harga_riwayat (produk_id, waktu DESC);
+-- Sesi kasir: dibuka dengan modal laci, ditutup dengan hitung uang fisik.
+CREATE TABLE IF NOT EXISTS kantin_sesi_kasir (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id),
+    opr_id bigint NOT NULL REFERENCES opr(id),
+    opr varchar(50) NOT NULL,
+    dibuka_pada timestamptz NOT NULL DEFAULT now(),
+    modal_awal numeric(20,4) NOT NULL DEFAULT 0,
+    ditutup_pada timestamptz,
+    total_tunai_sistem numeric(20,4),
+    uang_fisik numeric(20,4),
+    selisih numeric(20,4),
+    catatan varchar(255)
+);
+-- Satu sesi terbuka per operator per kantin.
+CREATE UNIQUE INDEX IF NOT EXISTS ux_kantin_sesi_terbuka ON kantin_sesi_kasir (unit_usaha_id, opr_id) WHERE ditutup_pada IS NULL;
+
+-- Penjualan (POS dan nanti pesanan aplikasi anggota). Nomor KTN-yymm-n dari seq_kantin_jual.
+CREATE SEQUENCE IF NOT EXISTS seq_kantin_jual START 1;
+CREATE SEQUENCE IF NOT EXISTS seq_kantin_stok START 1;
+CREATE TABLE IF NOT EXISTS kantin_penjualan (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    no_bukti varchar(30) NOT NULL UNIQUE,
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id),
+    sesi_kasir_id bigint REFERENCES kantin_sesi_kasir(id),
+    anggota_id bigint REFERENCES anggota(id),
+    tanggal date NOT NULL,
+    sumber varchar(10) NOT NULL DEFAULT 'pos' CHECK (sumber IN ('pos', 'mobile')),
+    status varchar(16) NOT NULL DEFAULT 'selesai' CHECK (status IN ('menunggu_bayar', 'dibayar', 'diproses', 'siap', 'selesai', 'batal')),
+    metode varchar(10) NOT NULL CHECK (metode IN ('tunai', 'sukarela')),
+    model varchar(12) NOT NULL,                              -- model unit saat transaksi (menentukan jurnalnya)
+    subtotal numeric(20,4) NOT NULL,
+    diskon numeric(20,4) NOT NULL DEFAULT 0,
+    total numeric(20,4) NOT NULL,
+    total_pokok numeric(20,4) NOT NULL DEFAULT 0,
+    persen_bagi_hasil numeric(7,4),
+    bagi_hasil numeric(20,4) NOT NULL DEFAULT 0,
+    uang_diterima numeric(20,4),
+    kembalian numeric(20,4),
+    kunci_idempoten uuid UNIQUE,
+    catatan varchar(255),
+    dibuat_pada timestamptz NOT NULL DEFAULT now(),
+    opr varchar(50) NOT NULL,
+    dibatalkan_pada timestamptz,
+    opr_batal varchar(50),
+    alasan_batal varchar(255)
+);
+CREATE INDEX IF NOT EXISTS ix_kantin_penjualan_unit ON kantin_penjualan (unit_usaha_id, tanggal DESC);
+CREATE INDEX IF NOT EXISTS ix_kantin_penjualan_anggota ON kantin_penjualan (anggota_id, tanggal DESC) WHERE anggota_id IS NOT NULL;
+CREATE TABLE IF NOT EXISTS kantin_penjualan_item (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    penjualan_id bigint NOT NULL REFERENCES kantin_penjualan(id) ON DELETE CASCADE,
+    produk_id bigint NOT NULL REFERENCES kantin_produk(id),
+    nama_produk varchar(100) NOT NULL,
+    satuan varchar(20) NOT NULL,
+    qty numeric(20,4) NOT NULL,
+    harga_jual numeric(20,4) NOT NULL,
+    harga_pokok numeric(20,4) NOT NULL,
+    subtotal numeric(20,4) NOT NULL
+);
+CREATE INDEX IF NOT EXISTS ix_kantin_penjualan_item_jual ON kantin_penjualan_item (penjualan_id);
+
+-- Kartu stok: setiap perubahan stok produk berstok (stok masuk, penjualan, batal, opname).
+CREATE TABLE IF NOT EXISTS kantin_stok_mutasi (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    produk_id bigint NOT NULL REFERENCES kantin_produk(id),
+    unit_usaha_id bigint NOT NULL REFERENCES unit_usaha(id),
+    waktu timestamptz NOT NULL DEFAULT now(),
+    tanggal date NOT NULL,
+    jenis varchar(8) NOT NULL CHECK (jenis IN ('masuk', 'jual', 'batal', 'opname', 'rusak')),
+    qty numeric(20,4) NOT NULL,                              -- positif masuk, negatif keluar
+    harga numeric(20,4) NOT NULL,                            -- harga beli (masuk) atau harga pokok (keluar)
+    stok_setelah numeric(20,4) NOT NULL,
+    no_bukti varchar(30) NOT NULL,
+    opr varchar(50) NOT NULL,
+    keterangan varchar(255)
+);
+CREATE INDEX IF NOT EXISTS ix_kantin_stok_mutasi_produk ON kantin_stok_mutasi (produk_id, waktu);
+CREATE INDEX IF NOT EXISTS ix_kantin_stok_mutasi_bukti ON kantin_stok_mutasi (no_bukti);
+
 -- Gambar produk memakai pengumuman_gambar (jenis ref 'produk').
 ALTER TABLE pengumuman_gambar_ref DROP CONSTRAINT IF EXISTS pengumuman_gambar_ref_jenis_check;
 ALTER TABLE pengumuman_gambar_ref ADD CONSTRAINT pengumuman_gambar_ref_jenis_check CHECK (jenis IN ('himbauan', 'promo', 'notifikasi', 'produk'));

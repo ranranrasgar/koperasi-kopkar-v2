@@ -99,9 +99,19 @@ async function buatAkun(db: Pemanggil, s: SpekAkun, namaUnit: string) {
     const terpakai = new Set((await db.query<{ k: string }>('SELECT kode_perkiraan k FROM perkiraan WHERE kode_perkiraan LIKE $1', [`${awal}__`])).rows.map((r) => r.k));
     for (let n = s.mulai; n <= 99; n++) {
         const kode = `${awal}${String(n).padStart(2, '0')}`;
-        if (!terpakai.has(kode)) return { id: await sisipAkun(db, atas, kode, `${s.awalan} ${namaUnit}`, s.dk, s.flag), kode };
+        if (!terpakai.has(kode)) return { id: await sisipAkun(db, atas, kode, `${s.awalan} ${namaUnit}`.trim(), s.dk, s.flag), kode };
     }
     throw new KantinSalah(`Nomor akun di bawah ${s.induk} sudah penuh; buat akun ${s.awalan} ${namaUnit} manual di COA`);
+}
+
+/** Akun bersama semua kantin menurut namanya (mis. Selisih Kas Kantin), dibuat sekali bila belum ada; mengembalikan kode akunnya. */
+export async function akunBersama(db: Pemanggil, nama: string, indukKode: string, mulai: number, dk: 'D' | 'C') {
+    const ada = (await db.query<{ kode_perkiraan: string }>('SELECT kode_perkiraan FROM perkiraan WHERE nama_perkiraan = $1 ORDER BY id LIMIT 1', [nama])).rows[0];
+    if (ada) return ada.kode_perkiraan;
+    await db.query('SELECT pg_advisory_xact_lock(hashtext($1))', ['perkiraan.pr_id']);
+    const lagi = (await db.query<{ kode_perkiraan: string }>('SELECT kode_perkiraan FROM perkiraan WHERE nama_perkiraan = $1 ORDER BY id LIMIT 1', [nama])).rows[0];
+    if (lagi) return lagi.kode_perkiraan;
+    return (await buatAkun(db, { kolom: '', induk: indukKode, mulai, awalan: nama, dk, flag: '-' }, '')).kode;
 }
 
 // ---------- unit usaha ----------
