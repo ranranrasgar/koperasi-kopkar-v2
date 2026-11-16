@@ -91,7 +91,7 @@ export async function jualSukarelaAction(i: { unitId: number; items: { produkId:
             data: { ...r, waktu: new Date().toISOString(), kasir: o.namaLengkap, unit: u.nama } }
     })
     if (h.ok && !h.pesan.startsWith("MODE UJI") && !h.data.ulang && h.data.anggotaId) {
-        const rp = (s: string | undefined) => `Rp ${Number(s ?? 0).toLocaleString("id-ID")}`
+        const rp = (s: string | undefined) => `Rp ${Number(s ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 0 })}`
         await kirimNotifikasi(pool, h.data.anggotaId, { judul: "Pembayaran berhasil", url: "/kantin", email: false,
             isi: `Belanja ${h.data.unit} ${rp(h.data.total)} dibayar dari Simpanan Sukarela (${h.data.noBukti}). Sisa saldo sukarela ${rp(h.data.saldoSukarela)}.` })
             .catch((e) => console.error("notifikasi bayar kantin gagal:", e))

@@ -12,6 +12,12 @@
             "runtimeExecutable": "npm",
             "runtimeArgs": ["run", "dev:uji", "-w", "frontend"],
             "port": 3101
+        },
+        {
+            "name": "anggota-uji",
+            "runtimeExecutable": "npm",
+            "runtimeArgs": ["run", "dev:uji", "-w", "anggota"],
+            "port": 3201
         }
     ]
 }

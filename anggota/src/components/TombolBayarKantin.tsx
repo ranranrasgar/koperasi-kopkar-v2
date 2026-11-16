@@ -27,12 +27,14 @@ export function TombolBayarKantin({ saldo }: { saldo: number }) {
     const [lunas, setLunas] = useState<Extract<StatusBayar, { lunas: true }> | null>(null)
     const [sibuk, mulai] = useTransition()
     const teks = useRef("")
+    const berakhir = useRef(0)
 
     const muat = () => mulai(async () => {
         setGalat(""); setLunas(null)
         const r = await buatQrBayarAction()
         if (!r.ok) { setSvg(""); setGalat(r.error); return }
         teks.current = r.teks
+        berakhir.current = Date.now() + (r.detik + 10) * 1000
         setSvg(gambarQr(r.teks))
         setSisa(r.detik)
     })
@@ -41,15 +43,17 @@ export function TombolBayarKantin({ saldo }: { saldo: number }) {
         const t = setTimeout(() => setSisa(sisa - 1), 1000)
         return () => clearTimeout(t)
     }, [buka, sisa, lunas])
-    // Periksa status selama QR masih berlaku (dan beberapa detik sesudahnya: kasir bisa memindai di detik terakhir).
+    // Periksa status selama QR masih berlaku (dan beberapa detik sesudahnya: kasir bisa memindai di detik terakhir). Tidak bergantung pada
+    // hitung mundur `sisa`, yang berubah tiap detik dan akan mengulang interval sebelum sempat berjalan.
     useEffect(() => {
-        if (!buka || lunas || !teks.current || sisa < -5) return
+        if (!buka || lunas || !svg) return
         const t = setInterval(async () => {
+            if (Date.now() > berakhir.current) { clearInterval(t); return }
             const s = await statusBayarAction(teks.current)
             if (s.lunas) { setLunas(s); router.refresh() }
         }, 2000)
         return () => clearInterval(t)
-    }, [buka, lunas, sisa, router])
+    }, [buka, lunas, svg, router])
 
     const habis = !sibuk && !galat && svg !== "" && sisa <= 0 && !lunas
     return (
