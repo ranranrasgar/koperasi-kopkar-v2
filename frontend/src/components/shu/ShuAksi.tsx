@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { AkunBox } from "@/components/bankbook/AkunBox"
 import { useRouter } from "next/navigation"
 import { Calculator, CheckCheck, HandCoins, Loader2, Lock, PiggyBank, Undo2 } from "lucide-react"
 import { batalkanShuAction, cairkanShuAction, hitungShuAction, postingShuAction, postingSukarelaAction, tutupBukuAction } from "@/app/actions/shu"
@@ -129,14 +130,13 @@ export function TombolPostingSukarela({ tahun, belum, hariIni }: { tahun: number
 function FormCairkan({ tahun, kodeAgt, akunKas, hariIni, selesai }: { tahun: number; kodeAgt: string; akunKas: Akun[]; hariIni: string; selesai: () => void }) {
     const { hasil, onSubmit, pending } = useAksiForm(cairkanShuAction)
     useTutupSetelahBerhasil(hasil?.ok, selesai, 1500)
+    const [kas, setKas] = useState(akunKas.find((a) => a.kode_perkiraan === "1.1.01.41")?.kode_perkiraan ?? akunKas[0]?.kode_perkiraan ?? "")
     return (
         <form onSubmit={onSubmit} className="space-y-4">
             <input type="hidden" name="tahun" value={tahun} />
             <input type="hidden" name="kodeAgt" value={kodeAgt} />
             <Field label="Dibayar dari kas / bank" htmlFor="akunKas">
-                <select id="akunKas" name="akunKas" required className={selectClass} defaultValue={akunKas.find((a) => a.kode_perkiraan === "1.1.01.41")?.kode_perkiraan ?? akunKas[0]?.kode_perkiraan}>
-                    {akunKas.map((a) => <option key={a.id} value={a.kode_perkiraan}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
-                </select>
+                <AkunBox akun={akunKas} nilai={kas} onUbah={setKas} dataF="akunKas" name="akunKas" label="Dibayar dari kas / bank" />
             </Field>
             <Field label="Tanggal pencairan" htmlFor="tanggal"><Input id="tanggal" name="tanggal" type="date" required defaultValue={hariIni} /></Field>
             <HasilTransaksi hasil={hasil} />

@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { AkunBox } from "@/components/bankbook/AkunBox"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
 import { AlertCircle, CheckCircle2, Loader2, Plus, Trash2 } from "lucide-react"
@@ -62,9 +63,7 @@ export function StokMasuk({ unit, produk, akun, mutasi, produkFilter, lebihDariS
                         <div className="grid gap-4 sm:grid-cols-3">
                             <Field label="Tanggal"><Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} required /></Field>
                             {unit.model === "milik" && <Field label="Dibayar dari / dicatat ke" className="sm:col-span-2">
-                                <select className={selectClass} value={akunBayar} onChange={(e) => setAkunBayar(e.target.value)} required>
-                                    {akun.map((a) => <option key={a.kode_perkiraan} value={a.kode_perkiraan}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
-                                </select>
+                                <AkunBox akun={akun} nilai={akunBayar} onUbah={setAkunBayar} dataF="akunBayar" name="akunBayar" label="Dibayar dari / dicatat ke" />
                             </Field>}
                             <Field label="Keterangan (pemasok, no. nota)" className="sm:col-span-3"><Input value={ket} onChange={(e) => setKet(e.target.value)} maxLength={255} /></Field>
                         </div>

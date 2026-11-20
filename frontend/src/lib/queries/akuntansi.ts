@@ -100,3 +100,9 @@ export const akunKas = () =>
                  WHERE kas_perkiraan_id IS NOT NULL GROUP BY 1) k ON k.id = c.id
          WHERE c.kode_perkiraan BETWEEN '1.1.01.10' AND '1.1.01.60'
          ORDER BY COALESCE(k.n, 0) DESC, c.kode_perkiraan`)
+
+/** Akun pencairan pinjaman tunai: kas/bank (urutan `akunKas`) lalu akun detail kewajiban 2.x (mis. Hutang Motor, seperti di desktop). */
+export const akunPencairan = async () => [...await akunKas(), ...await query<Akun>(
+    `SELECT p.id, p.kode_perkiraan, p.nama_perkiraan FROM perkiraan p
+      WHERE p.kode_perkiraan LIKE '2.%' AND NOT EXISTS (SELECT 1 FROM perkiraan x WHERE x.parent_id = p.id AND x.id <> p.id)
+      ORDER BY p.kode_perkiraan`)]

@@ -12,7 +12,6 @@ export default async function JenisSimpananPage() {
             FROM jenis_simpanan j LEFT JOIN perkiraan p ON p.id = j.coa_id ORDER BY j.kode_simpanan`),
         semuaAkun(),
     ])
-    const opsiAkun = akun.map((a) => ({ value: String(a.id), label: `${a.kode_perkiraan} ${a.nama_perkiraan}` }))
     return (
         <DaftarEdit title="Jenis Simpanan" description="Akun COA dipakai mesin posting saat setoran dan pengambilan."
             kolom={[
@@ -26,7 +25,7 @@ export default async function JenisSimpananPage() {
                 { name: "nama_simpanan", label: "Nama Simpanan", required: true },
                 { name: "persen_laba", label: "Persen Laba (%)", type: "number" },
                 { name: "up_persen", label: "Kenaikan (%)", type: "number" },
-                { name: "coa_id", label: "Akun COA", type: "select", options: opsiAkun, required: true, wide: true },
+                { name: "coa_id", label: "Akun COA", type: "akun", akun, required: true, wide: true },
                 { name: "endapan", label: "Endapan", type: "checkbox" },
             ]}
             aksi={simpanJenisSimpananAction} />

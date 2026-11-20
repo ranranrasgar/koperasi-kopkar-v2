@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useTransition } from "react"
+import { AkunBox } from "@/components/bankbook/AkunBox"
 import { useRouter } from "next/navigation"
 import { AlertCircle, Calculator, CheckCircle2, Loader2, XCircle } from "lucide-react"
 import { batalPenyelesaianAction, hitungPenyelesaianAction, simpanPenyelesaianAction } from "@/app/actions/kantin"
@@ -105,9 +106,7 @@ export function PenyelesaianTenant({ unit, akun, riwayat }: { unit: { id: number
                     <div className="grid gap-4 sm:grid-cols-4">
                         <Field label="Tanggal jurnal"><Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} /></Field>
                         {neto !== 0 && <Field label={neto > 0 ? "Ditransfer dari" : "Diterima ke"} className="sm:col-span-2">
-                            <select className={selectClass} value={akunKas} onChange={(e) => setAkunKas(e.target.value)}>
-                                {akun.map((a) => <option key={a.kode_perkiraan} value={a.kode_perkiraan}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
-                            </select>
+                            <AkunBox akun={akun} nilai={akunKas} onUbah={setAkunKas} dataF="akunKas" name="akunKas" label={neto > 0 ? "Ditransfer dari" : "Diterima ke"} />
                         </Field>}
                         <Field label="Catatan (no. transfer)" className={neto !== 0 ? "" : "sm:col-span-3"}><Input value={catatan} onChange={(e) => setCatatan(e.target.value)} maxLength={255} /></Field>
                     </div>

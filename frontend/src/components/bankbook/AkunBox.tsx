@@ -10,7 +10,7 @@ import type { Akun } from "@/components/transaksi/common"
  * memasang pilihan; `onSelesai` dipanggil setelah Enter supaya fokus pindah ke isian berikutnya. Nilai dikirim lewat input tersembunyi.
  */
 export function AkunBox({ akun, nilai, onUbah, onSelesai, dataF, name, label }: {
-    akun: Akun[]; nilai: string; onUbah: (kode: string) => void; onSelesai?: () => void; dataF: string; name: string; label: string
+    akun: Pick<Akun, "kode_perkiraan" | "nama_perkiraan">[]; nilai: string; onUbah: (kode: string) => void; onSelesai?: () => void; dataF: string; name: string; label: string
 }) {
     const [buka, setBuka] = useState(false)
     const [q, setQ] = useState("")
@@ -43,7 +43,7 @@ export function AkunBox({ akun, nilai, onUbah, onSelesai, dataF, name, label }: 
         return cocok.slice(0, 50)
     }, [akun, q])
 
-    const pilih = (a: Akun | undefined) => {
+    const pilih = (a: { kode_perkiraan: string } | undefined) => {
         if (a) onUbah(a.kode_perkiraan)
         setBuka(false); setQ("")
     }
@@ -72,7 +72,7 @@ export function AkunBox({ akun, nilai, onUbah, onSelesai, dataF, name, label }: 
                     className="z-[100] max-h-72 overflow-auto rounded-md border bg-popover text-popover-foreground shadow-lg">
                     {hasil.length === 0 && <li className="px-3 py-2 text-sm text-muted-foreground">Akun tidak ditemukan</li>}
                     {hasil.map((a, i) => (
-                        <li key={a.id} role="option" aria-selected={i === aktif}
+                        <li key={a.kode_perkiraan} role="option" aria-selected={i === aktif}
                             data-aktif={i === aktif ? "" : undefined}
                             onMouseDown={(e) => { e.preventDefault(); pilih(a); onSelesai?.() }} onMouseEnter={() => setAktif(i)}
                             className={cn("cursor-pointer px-3 py-1.5 text-sm", i === aktif && "bg-blue-600 text-white")}>

@@ -13,7 +13,7 @@ Tekan **Tambah Akun** (di samping pilihan Pohon/Tabel; hanya muncul bila grup An
 | --- | --- |
 | Nomor Akun (Acct Number) | Kode akun, mis. `1.1.01.47`. Hanya angka, huruf, dan titik; harus belum dipakai. **Tidak bisa diubah setelah disimpan.** |
 | Nama Akun (Acct Name) | Nama yang tampil di laporan dan pilihan akun. |
-| Induk (Parent) | Akun golongan di atasnya. Akun yang **sudah punya jurnal tidak bisa menjadi induk** (ditandai *berjurnal* dan tidak bisa dipilih), karena akun itu akan berubah menjadi akun induk. |
+| Induk (Parent) | Akun golongan di atasnya; ketik kode atau nama akun untuk mencarinya. Akun yang **sudah punya jurnal tidak bisa menjadi induk** (tidak ditampilkan di pilihan), karena akun itu akan berubah menjadi akun induk. |
 | Debit / Kredit | Posisi saldo normal. Otomatis mengikuti induk, boleh diganti. |
 | Group | AKTIVA, HUTANG, MODAL, PENDAPATAN, atau BIAYA-BIAYA. Otomatis mengikuti induk, boleh diganti. |
 | Flag | `-` untuk akun biasa; `BANK` atau `GC` membuat akun muncul di Bank Book. Flag sistem tutup buku (Laba Ditahan, Hutang Pajak) tidak bisa dipilih di sini. |

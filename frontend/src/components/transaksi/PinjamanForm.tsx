@@ -158,7 +158,7 @@ export function PinjamanForm({ jenis, akunKas, hariIni, awal, bolehUbahBunga = f
                                     value={bolehUbahBunga ? persenBunga : ""} onChange={(e) => setPersenBunga(e.target.value)}
                                     readOnly={!bolehUbahBunga} disabled={!bolehUbahBunga} className={bolehUbahBunga ? undefined : "bg-muted/50"} />
                             </Field>
-                            <Field label="Dibayar dari Kas/Bank" htmlFor="kas" className="sm:col-span-2">
+                            <Field label="Dibayar dari Kas/Bank/Hutang" className="sm:col-span-2" hint="Ketik kode atau nama akun. Daftar: akun kas/bank lalu akun kewajiban (2.x).">
                                 <KasSelect akun={akunKas} defaultValue={akunKas.find((a) => a.kode_perkiraan === KAS_BAWAAN)?.id} />
                             </Field>
                             <Field label="Keterangan" htmlFor="keterangan" className="sm:col-span-2" hint="Opsional, mis. tempat pencairan. Tersimpan di data pinjaman dan ikut di email informasi pencairan ke anggota.">

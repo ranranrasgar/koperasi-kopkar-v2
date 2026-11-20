@@ -20,7 +20,9 @@ Bagan akun berisi **152 akun** dalam tiga tingkat: kelompok utama, sub-kelompok,
 
 ## Akun kas dan bank
 
-Akun yang bisa dipilih di isian **Kas/Bank** pada form transaksi adalah akun `1.1.01.10` sampai `1.1.01.60`, antara lain Kas, Kas Induk, Kas Kecil, Kas Operasional, Kas Simp. Sukarela, Bank BTN Purwakarta, **Bank OCBC NISP**, Bank OCBC NISP OMI, Bank Muamalat, Bank Saudara, Bank BRI, Bank DKI, Bank BTN Syariah, Bank Danamon, Bank BKE, Bank BRI 2, dan Temporary. Akun yang paling sering dipakai otomatis muncul paling atas.
+Akun yang bisa dipilih di isian **Kas/Bank** pada form transaksi adalah akun `1.1.01.10` sampai `1.1.01.60`, antara lain Kas, Kas Induk, Kas Kecil, Kas Operasional, Kas Simp. Sukarela, Bank BTN Purwakarta, **Bank OCBC NISP**, Bank OCBC NISP OMI, Bank Muamalat, Bank Saudara, Bank BRI, Bank DKI, Bank BTN Syariah, Bank Danamon, Bank BKE, Bank BRI 2, dan Temporary. Akun yang paling sering dipakai otomatis muncul paling atas. Pencairan pinjaman tunai juga memuat akun kewajiban 2.x (mis. Hutang Motor).
+
+Semua isian pilihan akun (Kas/Bank di form transaksi, Cairkan SHU, Stok Masuk dan Penyelesaian Tenant kantin, Akun COA di Jenis Simpanan, Induk di Tambah Akun) **bisa diketik**: ketik sebagian kode atau nama (mis. `bri` atau `hutang motor`), pilih dengan panah atas/bawah, lalu Enter atau klik.
 
 ## Tampilan pohon
 

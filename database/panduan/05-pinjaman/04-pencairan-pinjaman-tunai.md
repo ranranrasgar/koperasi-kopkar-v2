@@ -22,7 +22,7 @@ Menu: **Pinjaman Tunai → Input Pinjaman Tunai**. Membutuhkan izin pencairan pi
    - **Tidak tersedia untuk anggota ini** (tidak bisa dipilih, dengan alasannya): hanya untuk Staff / bukan untuk Staff, masih ada pinjaman jenis ini yang berjalan (jenis yang mengunci tunggakan), atau grade anggota belum diisi.
 3. Isi **Tanggal Pencairan** (tanggal dana keluar; jatuh tempo angsuran dihitung dari tanggal ini), **Pokok Pinjaman (Rp)**, dan **Lama Angsuran (kali)**. Di bawah isian pokok tampil **batas maksimal** anggota untuk jenis itu; bila pokok melebihinya muncul pesan merah dan tombol Cairkan nonaktif.
 4. **Bunga (%)** mengikuti pengaturan jenis kredit. **Hanya admin atau superadmin yang boleh mengubahnya**; untuk operator lain isian ini terkunci.
-5. **Dibayar dari Kas/Bank** sudah terisi akun **1.1.01.41 Bank OCBC NISP**; ganti bila dana keluar dari akun lain.
+5. **Dibayar dari Kas/Bank/Hutang** sudah terisi akun **1.1.01.41 Bank OCBC NISP**; ganti bila dana keluar dari akun lain. Ketik kode atau nama akun (mis. `hutang motor`), pilih dengan panah atas/bawah, lalu Enter. Daftarnya berisi akun kas/bank lalu akun kewajiban 2.x, mis. **2.2.00.14 Hutang Motor** untuk pencairan yang dibayar lewat pihak ketiga.
 6. Periksa **Pratinjau Jadwal** di samping form: total jasa, adm, provisi, dan jadwal setiap angsuran beserta tanggal jatuh temponya. Pratinjau dihitung dengan rumus yang sama dengan saat menyimpan.
 7. Isi **Keterangan** bila perlu (opsional, maksimal 255 karakter), mis. *Pencairan dilakukan di Bank OCBC NISP*. Keterangan tersimpan di data pinjaman dan ikut di email informasi pencairan ke anggota.
 8. Tekan **Cairkan Pinjaman**.
@@ -54,7 +54,7 @@ Riwayat ini alat bantu keputusan; sistem tidak menolak pencairan hanya karena ri
 | Data pinjaman | Anggota, jenis, pokok, lama, bunga, adm, provisi, tanggal jatuh tempo |
 | Rincian | Satu baris *PENCAIRAN PINJAMAN* berisi pokok dan total jasa |
 | Jadwal tagih | Satu baris per angsuran: pokok, jasa, adm/provisi (angsuran 1), tanggal jatuh tempo |
-| Jurnal | **Debit** akun piutang jenis pinjaman, **Kredit** kas/bank, sebesar **pokok** |
+| Jurnal | **Debit** akun piutang jenis pinjaman, **Kredit** akun pencairan yang dipilih (kas/bank atau hutang), sebesar **pokok** |
 
 Contoh C01 Rp 6.000.000 dari Bank OCBC NISP:
 

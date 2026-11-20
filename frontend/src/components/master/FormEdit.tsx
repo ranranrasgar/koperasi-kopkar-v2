@@ -5,15 +5,17 @@ import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { Input } from "@/components/ui/input"
 import { InputUangBebas } from "@/components/ui/InputUang"
 import { Textarea } from "@/components/ui/textarea"
-import { Field, selectClass } from "@/components/transaksi/common"
+import { Field, KasSelect, selectClass, type Akun } from "@/components/transaksi/common"
 import type { HasilSimpan } from "@/app/actions/master"
 import { cn } from "@/lib/utils"
 
 export interface FieldSpec {
     name: string
     label: string
-    type?: "text" | "number" | "uang" | "date" | "time" | "select" | "checkbox" | "textarea"
+    type?: "text" | "number" | "uang" | "date" | "time" | "select" | "akun" | "checkbox" | "textarea"
     options?: { value: string; label: string }[]
+    /** Untuk `type: "akun"`: daftar akun COA (pilihan bisa diketik), mengirim id akun. */
+    akun?: Akun[]
     required?: boolean
     hint?: string
     wide?: boolean
@@ -73,7 +75,9 @@ export function FormEdit({ fields, nilai, aksi, tombol = "Simpan", onSelesai, ko
                     }
                     return (
                         <Field key={f.name} label={f.label} htmlFor={id} hint={f.hint} className={f.wide ? "sm:col-span-full" : undefined}>
-                            {f.type === "select" ? (
+                            {f.type === "akun" ? (
+                                <KasSelect akun={f.akun ?? []} name={f.name} defaultValue={v == null || v === "" ? null : Number(v)} />
+                            ) : f.type === "select" ? (
                                 <select id={id} name={f.name} className={selectClass} defaultValue={v == null ? "" : String(v)} required={f.required}>
                                     {!f.required && <option value="">-</option>}
                                     {f.options?.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}

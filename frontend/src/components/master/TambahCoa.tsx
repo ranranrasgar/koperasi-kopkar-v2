@@ -4,7 +4,7 @@ import { useActionState, useState } from "react"
 import { AlertCircle, CheckCircle2, Loader2, Plus } from "lucide-react"
 import { tambahCoaAction } from "@/app/actions/master-aksi"
 import { useBolehAksi } from "@/components/layout/SidebarContext"
-import { Field, selectClass } from "@/components/transaksi/common"
+import { Field, KasSelect, selectClass } from "@/components/transaksi/common"
 import { Input } from "@/components/ui/input"
 import { TombolModal, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { MENU } from "@/config/akses"
@@ -17,6 +17,7 @@ function FormTambahCoa({ induk, klasifikasi, selesai }: { induk: IndukCoa[]; kla
     const [dk, setDk] = useState("D")
     const [kelas, setKelas] = useState(String(klasifikasi[0]?.kode_klasifikasi ?? ""))
     useTutupSetelahBerhasil(hasil?.ok, selesai)
+    const bolehInduk = induk.filter((p) => !p.punya_jurnal)
 
     const pilihInduk = (id: string) => {
         const p = induk.find((x) => String(x.id) === id)
@@ -34,15 +35,8 @@ function FormTambahCoa({ induk, klasifikasi, selesai }: { induk: IndukCoa[]; kla
                 <Input id="nama_perkiraan" name="nama_perkiraan" required maxLength={100} />
             </Field>
             <Field label="Induk (Parent)" htmlFor="parent_id" className="sm:col-span-2"
-                hint="Akun yang sudah punya jurnal tidak bisa menjadi induk.">
-                <select id="parent_id" name="parent_id" required defaultValue="" className={selectClass} onChange={(e) => pilihInduk(e.target.value)}>
-                    <option value="" disabled>Pilih akun induk</option>
-                    {induk.map((p) => (
-                        <option key={p.id} value={p.id} disabled={p.punya_jurnal}>
-                            {p.kode_perkiraan} {p.nama_perkiraan}{p.punya_jurnal ? " (berjurnal)" : ""}
-                        </option>
-                    ))}
-                </select>
+                hint="Ketik kode atau nama akun. Akun yang sudah punya jurnal tidak bisa menjadi induk dan tidak ditampilkan.">
+                <KasSelect akun={bolehInduk} name="parent_id" defaultValue={null} onPilih={(a) => a && pilihInduk(String(a.id))} />
             </Field>
             <Field label="Debit / Kredit" htmlFor="d_k">
                 <select id="d_k" name="d_k" value={dk} onChange={(e) => setDk(e.target.value)} className={selectClass}>

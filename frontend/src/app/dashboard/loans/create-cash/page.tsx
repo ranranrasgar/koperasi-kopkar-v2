@@ -1,14 +1,14 @@
 import { PinjamanForm, type AwalPinjaman } from "@/components/transaksi/PinjamanForm"
 import { query } from "@/lib/db"
 import { jenisKredit } from "@/lib/queries/pinjaman"
-import { akunKas } from "@/lib/queries/akuntansi"
+import { akunPencairan } from "@/lib/queries/akuntansi"
 import { hariIni } from "@/lib/format"
 import { wajibIzin } from "@/lib/operator"
 import { MENU_CAIR_GRUP } from "@/config/akses"
 
 export default async function Page(props: PageProps<"/dashboard/loans/create-cash">) {
     const o = await wajibIzin("/dashboard/loans/create-cash") // layout tidak dijalankan ulang pada navigasi antarhalaman
-    const [jenis, kas] = await Promise.all([jenisKredit(), akunKas()])
+    const [jenis, kas] = await Promise.all([jenisKredit(), akunPencairan()])
     // KPR punya form sendiri (titipan tanpa bunga); grup lain hanya bila grup operator berizin mencairkannya.
     const boleh = jenis.filter((j) => MENU_CAIR_GRUP[j.group_pinjaman] && o.izin.includes(MENU_CAIR_GRUP[j.group_pinjaman]))
     // Dari Pengajuan Kredit: isi awal form dengan pengajuan yang sudah disetujui.

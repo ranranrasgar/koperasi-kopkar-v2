@@ -1,6 +1,7 @@
 "use client"
 
 import { PindaiQr } from "@/components/transaksi/PindaiQr"
+import { AkunBox } from "@/components/bankbook/AkunBox"
 import { TombolKwitansi } from "@/components/transaksi/TombolKwitansi"
 import React, { useActionState, useEffect, useRef, useState, useTransition } from "react"
 import { CheckCircle2, AlertCircle, Loader2, QrCode, Search, X } from "lucide-react"
@@ -28,11 +29,15 @@ export function Field({ label, htmlFor, children, hint, className }: {
     )
 }
 
-export function KasSelect({ akun, name = "kas", defaultValue }: { akun: Akun[]; name?: string; defaultValue?: number }) {
+/** Pilihan akun yang bisa diketik (kode atau nama); mengirim `id` akun lewat `name`. `onPilih` dipanggil saat akun berganti. */
+export function KasSelect({ akun, name = "kas", defaultValue, onPilih }: { akun: Akun[]; name?: string; defaultValue?: number | null; onPilih?: (a: Akun | undefined) => void }) {
+    const [kode, setKode] = useState((defaultValue === undefined ? akun[0] : akun.find((a) => a.id === Number(defaultValue)))?.kode_perkiraan ?? "")
     return (
-        <select id={name} name={name} required className={selectClass} defaultValue={defaultValue ?? akun[0]?.id}>
-            {akun.map((a) => <option key={a.id} value={a.id}>{a.kode_perkiraan} {a.nama_perkiraan}</option>)}
-        </select>
+        <>
+            <input type="hidden" name={name} value={akun.find((a) => a.kode_perkiraan === kode)?.id ?? ""} />
+            <AkunBox akun={akun} nilai={kode} dataF={name} name={`${name}_kode`} label="Akun"
+                onUbah={(k) => { setKode(k); onPilih?.(akun.find((a) => a.kode_perkiraan === k)) }} />
+        </>
     )
 }
 
