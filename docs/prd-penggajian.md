@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Disetujui pengguna 20 November 2026 (enam rekomendasi). **Tahap 1 selesai** (20 November); berikutnya Tahap 2. |
+| Status | Disetujui pengguna 20 November 2026 (enam rekomendasi). **Tahap 1-2 selesai** (20 November); berikutnya Tahap 3 (lembur). |
 | Sumber | Excel `10. Slip gaji October 2015 new umk.xlsx` (milik pengguna, di luar repo): sheet Master Karyawan, ATN, Absen bln / OT per orang, Rate Lembur, PPh 21, Slip S, TGL CUTI, Sheet1 |
 | Menggantikan | Menu Absensi lama (`/dashboard/attendance`, jam masuk/pulang anggota berstatus Staff dari QR) menjadi bagian dari penggajian |
 

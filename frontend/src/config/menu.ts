@@ -48,11 +48,6 @@ export const allGroups: MenuGroup[] = [
                 label: "User Mobile",
                 icon: "smartphone",
                 href: "/dashboard/members/mobile-users"
-            },
-            {
-                label: "Absensi Fingerprint",
-                icon: "fingerprint",
-                href: "/dashboard/attendance"
             }
         ]
     },
@@ -63,6 +58,11 @@ export const allGroups: MenuGroup[] = [
                 label: "Data Karyawan",
                 icon: "id_card",
                 href: "/dashboard/kepegawaian/karyawan"
+            },
+            {
+                label: "Absensi Karyawan",
+                icon: "fingerprint",
+                href: "/dashboard/attendance"
             },
             {
                 label: "Pengaturan Gaji",

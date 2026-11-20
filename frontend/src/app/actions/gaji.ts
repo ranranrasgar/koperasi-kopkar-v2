@@ -8,6 +8,7 @@ import { MENU, type AksiIzin } from "@/config/akses"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { STATUS_PTKP } from "@kopkar/backend/src/gaji/hitung.ts"
 import { simpanPengaturanGaji } from "@kopkar/backend/src/gaji/pengaturan.ts"
+import { aturHadir, bukaPeriode, GalatGaji, isiHadirKosong } from "@kopkar/backend/src/gaji/periode.ts"
 import type { HasilSimpan } from "@/app/actions/master"
 
 class Salah extends Error {}
@@ -23,7 +24,7 @@ async function simpan(menu: string, path: string, aksi: AksiIzin, fn: (db: Db, o
         revalidatePath(path)
         return { ok: true, pesan }
     } catch (e) {
-        if (!(e instanceof Salah) && !(e instanceof GalatSesi)) console.error("simpan penggajian gagal:", e)
+        if (!(e instanceof Salah) && !(e instanceof GalatSesi) && !(e instanceof GalatGaji)) console.error("simpan penggajian gagal:", e)
         return { ok: false, error: e instanceof Error ? e.message : "Gagal menyimpan" }
     }
 }
@@ -95,5 +96,28 @@ export async function simpanPengaturanGajiAction(_: HasilSimpan, f: FormData): P
             throw new Salah(e instanceof Error ? e.message : "Pengaturan tidak valid")
         }
         return "Pengaturan gaji disimpan"
+    })
+}
+
+// ---------- periode dan kehadiran (izin menu Absensi Karyawan) ----------
+
+const ABSEN = "/dashboard/attendance"
+
+export async function bukaPeriodeAction(periode: string): Promise<HasilSimpan> {
+    return simpan(MENU.absensi, ABSEN, "tambah", async (db, opr) => {
+        const p = await bukaPeriode(db, periode, opr)
+        return `Periode gaji ${p.periode} (${p.dari} s/d ${p.sampai}) dibuka`
+    })
+}
+
+export async function aturHadirAction(periodeId: number, karyawanId: number, tanggal: string, kode: string): Promise<HasilSimpan> {
+    return simpan(MENU.absensi, ABSEN, "tambah", (db) => aturHadir(db, { periodeId, karyawanId, tanggal, kode: kode || null }))
+}
+
+/** Isi hari kosong: dari pindai QR, dan bila `pola` hari kerja ATN / hari istirahat RD. Isian yang sudah ada tidak ditimpa. */
+export async function isiHadirKosongAction(periodeId: number, karyawanId: number | null, pola: boolean): Promise<HasilSimpan> {
+    return simpan(MENU.absensi, ABSEN, "tambah", async (db) => {
+        const r = await isiHadirKosong(db, { periodeId, karyawanId, pola })
+        return `${r.qr} hari terisi dari pindai QR${pola ? `, ${r.pola} hari terisi pola hari kerja/istirahat` : ""}`
     })
 }

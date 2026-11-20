@@ -16,9 +16,11 @@ export async function absenQr(db: Pemanggil, teks: string): Promise<HasilAbsen> 
     const q = await bacaQr(db, teks);
     if (!q) return { ok: false, error: 'QR tidak dikenal atau sudah kedaluwarsa. Minta anggota membuat QR baru.' };
     if (!q.aktif) return { ok: false, error: `${q.nama} tidak aktif` };
+    // Boleh: anggota berstatus Staff, atau anggota yang tertaut ke karyawan koperasi aktif (Data Karyawan; hari pindai mengisi ATN di grid gaji).
     const a = (await db.query<{ id: string; staff: boolean }>(
-        `SELECT id, lower(trim(status_staff)) = 'staff' AS staff FROM anggota WHERE kode_agt = $1`, [q.kode_agt])).rows[0];
-    if (!a?.staff) return { ok: false, error: `${q.nama} bukan staff, absensi hanya untuk staff` };
+        `SELECT a.id, lower(trim(a.status_staff)) = 'staff' OR EXISTS (SELECT 1 FROM karyawan k WHERE k.anggota_id = a.id AND k.aktif) AS staff
+           FROM anggota a WHERE a.kode_agt = $1`, [q.kode_agt])).rows[0];
+    if (!a?.staff) return { ok: false, error: `${q.nama} bukan staff atau karyawan koperasi, absensi hanya untuk mereka` };
 
     const hasil = (pesan: string, sudah = false) => ({ ok: true as const, kode_agt: q.kode_agt, nik: q.nik, nama: q.nama, pesan, sudah });
     const hari = `(now() ${JKT})::date`;

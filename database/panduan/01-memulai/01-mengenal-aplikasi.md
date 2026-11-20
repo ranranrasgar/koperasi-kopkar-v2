@@ -11,7 +11,8 @@ Menu samping disusun dari yang paling sering dipakai sehari-hari ke yang jarang,
 
 | Grup menu | Isi | Menu |
 | --- | --- | --- |
-| Keanggotaan | Data anggota, karyawan Mattel dari HR, akun aplikasi anggota, absensi | Daftar Anggota, Karyawan Mattel, User Mobile, Absensi Fingerprint |
+| Keanggotaan | Data anggota, karyawan Mattel dari HR, akun aplikasi anggota | Daftar Anggota, Karyawan Mattel, User Mobile |
+| Kepegawaian | Karyawan koperasi sendiri: data, absensi, pengaturan gaji | Data Karyawan, Absensi Karyawan, Pengaturan Gaji |
 | Simpanan | Setoran dan pengambilan lima jenis simpanan, laporan saldo | Setoran, Pengambilan, Rekap, Buku, Kartu, Berjangka, Grafik |
 | Pinjaman | Pengajuan, pencairan pinjaman tunai dan KPR, angsuran, titipan, tunggakan | Setoran Angsuran, Pengajuan Kredit, Input Pinjaman Tunai dan KPR, Titipan, Daftar Pinjaman, Cari Pinjaman, Kredit Macet |
 | Potongan Gaji | Potongan gaji bulanan anggota | Generate & Posting, Transaksi Potongan |
