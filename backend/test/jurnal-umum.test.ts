@@ -2,7 +2,9 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import { postJournal } from '../src/posting/journal.ts';
-import { alasanTerkunci, bacaJurnalUmum, hapusBarisJurnal, hapusJurnalUmum, hapusSemuaBarisKosong, postJurnalUmum, STATUS_PENYESUAIAN, tandaiPenyesuaian, ubahJurnalUmum } from '../src/posting/jurnal-umum.ts';
+import { batalSimpanan } from '../src/posting/koreksi.ts';
+import { setorSimpanan } from '../src/posting/simpanan.ts';
+import { alasanTerkunci, alasanTolakHapus, bacaJurnalUmum, hapusBarisJurnal, hapusJurnalUmum, hapusSemuaBarisKosong, postJurnalUmum, STATUS_PENYESUAIAN, tandaiPenyesuaian, ubahJurnalUmum } from '../src/posting/jurnal-umum.ts';
 
 const pool = createPool();
 const ROLLBACK = new Error('rollback-uji');
@@ -177,5 +179,30 @@ test('jurnal manual menolak akun induk, tetapi jurnal lama yang memakainya tetap
         await db.query('SAVEPOINT b');
         await assert.rejects(ubahJurnalUmum(db, a.nomorBukti, { tanggal: '2031-04-01', deskripsi: 'Ubah', opr: 'uji', lines: [{ kodePerkiraan: '5.0.00.00', debit: 1000 }, lawan] }), /akun induk/);
         await db.query('ROLLBACK TO b');
+    });
+});
+
+test('jurnal transaksi yang masih ada tidak bisa dihapus; pasangan batal terkunci untuk ubah dan hapus', async () => {
+    const a = (await pool.query("SELECT kode_agt FROM anggota WHERE aktif ORDER BY id LIMIT 1")).rows[0].kode_agt;
+    await inTx(async (db) => {
+        const kas = (await db.query("SELECT id FROM perkiraan WHERE kode_perkiraan = '1.1.01.41'")).rows[0].id;
+        const gagal = async (fn: () => Promise<unknown>, pola: RegExp) => {
+            await db.query('SAVEPOINT g'); await assert.rejects(fn(), pola); await db.query('ROLLBACK TO SAVEPOINT g');
+        };
+        const { noBukti } = await setorSimpanan(db, { kodeAgt: a, jenisSimpanan: '03', tanggal: '2026-11-06', jumlah: 50000, kasPerkiraanId: kas, opr: 'uji' });
+        assert.match(await alasanTolakHapus(db, noBukti) ?? '', /Batal Transaksi/);
+        assert.equal(await alasanTolakHapus(db, 'JU/261106/1'), null, 'jurnal manual selalu boleh');
+        await gagal(() => hapusJurnalUmum(db, noBukti), /Batal Transaksi/);
+        const baris = (await db.query('SELECT urutan FROM jurnal_umum WHERE nomor_bukti = $1 ORDER BY urutan LIMIT 1', [noBukti])).rows[0];
+        await gagal(() => hapusBarisJurnal(db, Number(baris.urutan)), /Batal Transaksi/);
+        assert.equal((await bacaJurnalUmum(db, noBukti))?.terkunci, null, 'sebelum batal masih boleh diubah');
+
+        const r = await batalSimpanan(db, { noBukti, tanggal: '2026-11-06', alasan: 'Salah input nominal setoran', opr: 'uji' });
+        for (const no of [noBukti, r.noBukti]) {
+            assert.match((await bacaJurnalUmum(db, no))?.terkunci ?? '', /pembatalan/);
+            await gagal(() => hapusJurnalUmum(db, no), /pembatalan/);
+            await gagal(() => ubahJurnalUmum(db, no, { tanggal: '2026-11-06', deskripsi: 'x', opr: 'uji',
+                lines: [{ kodePerkiraan: '1.1.01.41', debit: '1' }, { kodePerkiraan: '5.1.00.95', kredit: '1' }] }), /pembatalan/);
+        }
     });
 });

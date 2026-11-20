@@ -19,12 +19,14 @@ Di sisi kanan tiap baris ada ikon:
 | --- | --- | --- |
 | Printer | **Cetak voucher** | Semua bukti |
 | Pensil | **Ubah** | Semua jenis bukti, kecuali jurnal tutup buku `TBT/` |
-| Tempat sampah | **Hapus baris ini** | Semua jenis bukti, kecuali jurnal tutup buku `TBT/` |
+| Tempat sampah | **Hapus baris ini** | Jurnal manual (`JU/`, `JP/`, `BB/`). Jurnal dari transaksi hanya bila transaksi asalnya sudah tidak ada. Jurnal tutup buku `TBT/` dan jurnal pembatalan selalu terkunci |
 | Mata | Detail baris | Semua |
 
 **Voucher** adalah dokumen cetak satu bukti: kop koperasi, nomor bukti, tanggal, keterangan, rincian akun (kode, nama, keterangan, debit, kredit), total, dan tiga kolom tanda tangan (Dibuat, Diperiksa, Disetujui). Ukurannya otomatis muat di kertas A4.
 
-> **Penting:** Bukti dari transaksi lain (simpanan, pinjaman, angsuran, SHU) kini bisa diubah atau dihapus dari sini, tetapi **hanya jurnalnya yang berubah**; saldo simpanan atau sisa pinjaman asalnya tidak ikut berubah dan bisa tidak sinkron dengan buku besar. Dialog dan form ubah memberi peringatan untuk bukti seperti ini. Untuk membatalkan transaksinya dengan benar, pakai Audit Data → Batalkan Transaksi. Jurnal tutup buku `TBT/` tetap terkunci; batalkan lewat menu Tutup Buku & SHU. Periode yang sudah ditutup ditolak.
+> **Penting:** Bukti dari transaksi lain (simpanan, pinjaman, angsuran, SHU, kantin) bisa **diubah** dari sini, misalnya untuk mengganti akun, tetapi **hanya jurnalnya yang berubah**; saldo simpanan atau sisa pinjaman asalnya tidak ikut berubah. Bukti seperti ini **tidak bisa dihapus** selama transaksinya masih ada: untuk membatalkan transaksi, pakai Audit Data → Batalkan Transaksi, yang otomatis membuat jurnal pembalik.
+>
+> **Jurnal pembatalan dikunci.** Setelah transaksi dibatalkan, jurnal asal dan jurnal pembaliknya (`BTL`, `BTLA`, `BTLC`, `BTLKA`, `BTLKC`) saling meniadakan. Keduanya tidak bisa diubah atau dihapus, karena bila salah satunya hilang, saldo akun bergeser. Tidak perlu menghapus apa pun setelah membatalkan transaksi. Jurnal tutup buku `TBT/` tetap terkunci; batalkan lewat menu Tutup Buku & SHU. Periode yang sudah ditutup ditolak.
 
 Tanda *Reconcile* yang tampak pada baris kas/bank bukan rekonsiliasi bank: aplikasi desktop menandainya otomatis saat Bank Book disimpan, dan tanda itu **tidak menguncinya**.
 
@@ -48,7 +50,7 @@ Tekan ikon pensil pada baris jurnal `JU/`. Isinya dimuat ke form yang sama; ubah
 
 ## Menghapus baris jurnal
 
-Ikon tempat sampah menghapus **satu baris**, misalnya baris kosong bernilai nol dengan kode akun `0`. Bukti harus tetap seimbang, jadi baris bernilai yang membuat bukti tidak seimbang tidak bisa dihapus sendiri. Dalam kasus itu sistem menawarkan menghapus **seluruh bukti**. Bukti di tahun yang sudah ditutup atau bukti Bank Book yang sudah direkonsiliasi ditolak.
+Ikon tempat sampah menghapus **satu baris**, misalnya baris kosong bernilai nol dengan kode akun `0`. Bukti harus tetap seimbang, jadi baris bernilai yang membuat bukti tidak seimbang tidak bisa dihapus sendiri. Dalam kasus itu sistem menawarkan menghapus **seluruh bukti**, kecuali untuk jurnal dari transaksi yang masih ada atau jurnal pembatalan: keduanya ditolak dengan pesan penyebabnya. Bukti di tahun yang sudah ditutup atau bukti Bank Book yang sudah direkonsiliasi ditolak.
 
 Baris kosong juga bisa dihapus dari **Akuntansi → Jurnal Bermasalah**: ikon di baris bernilai nol, atau tombol **Hapus ... baris kosong** untuk semuanya sekaligus. Tombol sekaligus butuh izin hapus di Jurnal Umum dan Bank Book. Baris berisi di bukti yang sama tidak berubah, dan bukti yang terkunci dilewati.
 

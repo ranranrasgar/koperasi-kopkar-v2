@@ -47,6 +47,7 @@ Pastikan aplikasi tidak sedang **Mode Uji**, karena dalam mode itu perbaikan tid
 | **Angsuran tanpa jurnal** | Mutasi bank atau potongan gaji bulan itu | Benar terjadi: jurnal susulan. Keliru: batalkan bila itu angsuran terakhir |
 | **Nilai angsuran berbeda** | Pokok, jasa, adm, dan provisi di buku pinjaman dibanding jurnalnya | Buku salah dan angsuran terakhir: batalkan, lalu input ulang. Selain itu: jurnal koreksi sebesar selisihnya |
 | **Hitungan cicilan berbeda** | Buka pinjamannya, bandingkan kolom Bayar dengan baris angsuran | Tidak ada jurnal yang perlu dibuat. Wajar bila pinjaman dilunasi lewat potongan atau ditutup: biarkan dengan catatan. Pinjaman yang pencairannya dibatalkan lewat Batal Transaksi tidak ikut diperiksa. Bila pinjaman masih berjalan dan salah, minta pengelola sistem memperbaiki datanya |
+| **Jurnal pembatalan tidak berpasangan** | Buka jurnal asal dan pembaliknya di Jurnal Umum (ketik nomor bukti di pencarian) | Saldo akun bergeser sebesar nilainya. Kedua jurnal terkunci di Jurnal Umum sejak 20 November 2026, jadi minta pengelola sistem menyamakan lagi pasangan jurnalnya (menghapus pembalik yang tertinggal atau membuat ulang jurnal asal dari salinan di riwayat koreksi) |
 | **Cicilan selesai masih bersaldo** | Apakah pinjaman dilunasi langsung ke bank atau di-top-up | **Tutup Pinjaman** tidak bisa dipakai karena cicilannya sudah selesai. Bila piutang di neraca harus dikeluarkan: jurnal koreksi. Bila tidak: biarkan dengan catatan |
 | **Pokok dibayar melebihi pinjaman** | Apakah ada angsuran dobel | Angsuran terakhir yang dobel: batalkan. Selain itu: jurnal koreksi, dan bila uangnya harus dikembalikan, catat pengembaliannya bersama akuntan |
 | **Angsuran dengan jasa di bawah jadwal** | Apakah pembebasan jasanya disetujui pengurus; alasan ada di keterangan (wajib sejak 14 November 2026) | Disetujui: biarkan, pendapatan jasa memang tidak masuk. Pinjaman yang sebenarnya dibatalkan anggota: batalkan angsurannya lalu Batalkan Pencairan. Jasa yang seharusnya ditagih: tagih lewat angsuran berikutnya atau jurnal bersama akuntan |
@@ -104,6 +105,7 @@ Jurnal koreksi memperbaiki Buku Besar, tetapi nomor buktinya berbeda. Karena itu
 | Pinjaman Tunai | Pokok dibayar melebihi pinjaman | Pokok yang dibayar melebihi pokok pinjaman lebih dari Rp 100 |
 | Pinjaman Tunai | Angsuran dengan jasa di bawah jadwal | Jasa yang dibayar kurang dari jadwal tagih angsuran itu (nilai = selisihnya). Pada pinjaman koperasi selisih ini tetap tertagih sampai angsuran terakhir. Pinjaman bank tidak diperiksa |
 | KPR | Angsuran tanpa jurnal, nilai berbeda, pokok dibayar berlebih | Sama seperti pinjaman tunai. Pencairan KPR memang tidak berjurnal |
+| Jurnal | Jurnal pembatalan tidak berpasangan | Transaksi yang dibatalkan, tetapi jurnal asal dan pembaliknya tidak lagi saling meniadakan per akun (salah satunya pernah dihapus atau diubah). Nilai = selisih yang tertinggal di saldo akun |
 
 Bagian **Buku Besar** menampilkan jumlah bukti tidak seimbang dan baris ke akun yang tidak ada di COA, dengan tautan ke **Jurnal Bermasalah**.
 

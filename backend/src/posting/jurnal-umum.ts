@@ -62,14 +62,48 @@ export interface BuktiJurnal {
 }
 
 /**
- * Semua jenis bukti boleh diubah atau dihapus dari web. Yang berubah hanya jurnalnya: buku pembantu transaksi asal
- * (simpanan, pinjaman, SHU) tidak ikut berubah. Periode tutup buku dijaga cekBuktiTerbuka.
+ * Semua jenis bukti boleh diubah dari web (mis. mengganti akun jurnal pencairan). Yang berubah hanya jurnalnya: buku pembantu transaksi asal
+ * (simpanan, pinjaman, SHU) tidak ikut berubah. Periode tutup buku dijaga cekBuktiTerbuka. Hapus dibatasi lagi oleh alasanTolakHapus.
  * Pengecualian: jurnal tutup buku (TBT/). Bukti itu bertanggal di awal tahun yang baru dibuka dan postJournal tidak memeriksa periodenya,
  * jadi cekBuktiTerbuka tidak melindunginya; ubah atau batalkan lewat menu Tutup Buku & SHU.
  */
 export function alasanTerkunci(nomorBukti: string): string | null {
     if (nomorBukti.startsWith('TBT/')) return 'Jurnal tutup buku tidak bisa diubah atau dihapus di sini; batalkan lewat menu Tutup Buku & SHU.';
     return null;
+}
+
+/**
+ * Bukti yang sudah dibatalkan lewat Batal Transaksi, atau pembaliknya: kedua jurnal saling meniadakan. Bila salah satunya diubah atau dihapus,
+ * pembatalan tidak lagi nol dan saldo akun bergeser (kejadian 18 November: ANGS dihapus, pembalik BTLA tertinggal). Jadi keduanya dikunci.
+ */
+async function alasanBatal(db: Pick<Db, 'query'>, nomorBukti: string): Promise<string | null> {
+    const k = (await db.query<{ no_bukti: string; no_bukti_pembalik: string }>(
+        "SELECT no_bukti, no_bukti_pembalik FROM transaksi_koreksi WHERE aksi = 'batal' AND $1 IN (no_bukti, no_bukti_pembalik) LIMIT 1", [nomorBukti])).rows[0];
+    return k ? `Bukti ini bagian dari pembatalan ${k.no_bukti} (pembalik ${k.no_bukti_pembalik}). Jurnal asal dan pembaliknya saling meniadakan, jadi tidak bisa diubah atau dihapus.` : null;
+}
+
+/** Bukti manual: Jurnal Umum, Jurnal Penyesuaian, Bank Book. */
+const MANUAL = /^(JU|JP|BB)\//;
+
+/**
+ * Alasan bukti tidak boleh dihapus dari Jurnal Umum/Jurnal Bermasalah, atau null. Bukti manual boleh. Jurnal dari transaksi hanya boleh dihapus
+ * bila transaksi asalnya sudah tidak ada (jurnal yatim); selama transaksinya ada, hapus jurnalnya membuat buku pembantu dan Buku Besar berbeda,
+ * jadi pakai Batal Transaksi (membuat pembalik) atau ubah jurnalnya.
+ */
+export async function alasanTolakHapus(db: Pick<Db, 'query'>, nomorBukti: string): Promise<string | null> {
+    if (MANUAL.test(nomorBukti)) return null;
+    const ada = (await db.query<{ ada: boolean }>(
+        `SELECT EXISTS (SELECT 1 FROM simpanan WHERE no_bukti = $1)
+             OR EXISTS (SELECT 1 FROM pinjaman_tunai_rincian WHERE no_bukti = $1)
+             OR EXISTS (SELECT 1 FROM pinjaman_tunai WHERE no_pinjaman = $1)
+             OR EXISTS (SELECT 1 FROM kpr_rincian WHERE no_bukti = $1)
+             OR EXISTS (SELECT 1 FROM kpr WHERE no_pinjaman = $1)
+             OR EXISTS (SELECT 1 FROM kantin_penjualan WHERE no_bukti = $1)
+             OR EXISTS (SELECT 1 FROM kantin_stok_mutasi WHERE no_bukti = $1)
+             OR EXISTS (SELECT 1 FROM tenant_penyelesaian WHERE no_bukti = $1)
+             OR EXISTS (SELECT 1 FROM jurnal_umum j JOIN kantin_sesi_kasir k ON k.id::text = j.sumber_id::text
+                         WHERE j.nomor_bukti = $1 AND j.sumber_tipe = 'kantin_sesi') AS ada`, [nomorBukti])).rows[0].ada;
+    return ada ? `Bukti ${nomorBukti} dibuat oleh transaksi yang masih ada. Batalkan transaksinya lewat Batal Transaksi (jurnal pembalik dibuat otomatis) atau ubah jurnalnya; jangan dihapus dari Jurnal Umum.` : null;
 }
 
 /** Baca satu bukti lengkap (untuk voucher dan form ubah); null bila tidak ada. */
@@ -88,7 +122,7 @@ export async function bacaJurnalUmum(db: Pick<Db, 'query'>, nomorBukti: string):
         // Jurnal lama tanpa keterangan_bukti: keterangan baris yang paling sering (baris tanpa keterangan sendiri memakainya).
         deskripsi: r.rows[0].keterangan_bukti ?? [...baris.reduce((m, x) => m.set(x.deskripsi, (m.get(x.deskripsi) ?? 0) + 1), new Map<string, number>())]
             .sort((a, b) => b[1] - a[1])[0][0],
-        terkunci: alasanTerkunci(nomorBukti),
+        terkunci: alasanTerkunci(nomorBukti) ?? await alasanBatal(db, nomorBukti),
     };
 }
 
@@ -136,6 +170,8 @@ export async function hapusBarisJurnal(db: Db, urutan: number) {
     if (b.terkunci) throw new Error(`Bukti ${r.nomor_bukti}: ${b.terkunci}`);
     await cekBuktiTerbuka(db, r.nomor_bukti);
     if (r.bernilai) {
+        const tolak = await alasanTolakHapus(db, r.nomor_bukti);
+        if (tolak) throw new Error(tolak);
         const s = (await db.query<{ selisih: string }>(
             'SELECT COALESCE(SUM(debit_jurnalumum - kredit_jurnalumum), 0) AS selisih FROM jurnal_umum WHERE nomor_bukti = $1 AND urutan <> $2', [r.nomor_bukti, urutan])).rows[0];
         if (Math.abs(Number(s.selisih)) >= 0.01) throw new Error(`Menghapus baris ini membuat bukti ${r.nomor_bukti} tidak seimbang`);
@@ -163,11 +199,13 @@ export async function hapusSemuaBarisKosong(db: Db, dari: string, sampai: string
     return { dihapus, dilewati };
 }
 
-/** Hapus bukti JU/, JP/, atau BB/. */
+/** Hapus bukti JU/, JP/, atau BB/, atau jurnal transaksi yang transaksinya sudah tidak ada (lihat alasanTolakHapus). */
 export async function hapusJurnalUmum(db: Db, nomorBukti: string) {
     const b = await bacaJurnalUmum(db, nomorBukti);
     if (!b) throw new Error(`Bukti ${nomorBukti} tidak ditemukan`);
     if (b.terkunci) throw new Error(`Bukti ${nomorBukti}: ${b.terkunci}`);
+    const tolak = await alasanTolakHapus(db, nomorBukti);
+    if (tolak) throw new Error(tolak);
     await cekBuktiTerbuka(db, nomorBukti);
     await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [nomorBukti]);
 }

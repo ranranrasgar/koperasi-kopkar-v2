@@ -4,7 +4,7 @@
 // $1 = dari, $2 = sampai. Jurnal ditautkan lewat nomor_bukti karena sumber_tipe/sumber_id hasil migrasi tidak lengkap.
 // Batas selisih 1 rupiah: simpanan menyimpan 4 desimal sedangkan jurnal 2 desimal.
 
-export type ModulAudit = "Simpanan" | "Pinjaman Tunai" | "KPR"
+export type ModulAudit = "Simpanan" | "Pinjaman Tunai" | "KPR" | "Jurnal"
 
 export interface CekAudit {
     id: string
@@ -139,6 +139,21 @@ export const CEK_AUDIT: CekAudit[] = [
                 FROM (SELECT k.tgl_pinjaman, k.no_pinjaman, a.nama, a.kode_agt, k.kode_kredit, k.rp_pinjaman_pokok AS pokok, ${DIBAYAR_KPR} AS dibayar
                         FROM kpr k JOIN anggota a ON a.id = k.anggota_id WHERE k.tgl_pinjaman BETWEEN $1 AND $2) t
                WHERE t.dibayar - t.pokok > 100`,
+    },
+    {
+        id: "jurnal-batal-sepihak", modul: "Jurnal", judul: "Jurnal pembatalan tidak berpasangan",
+        arti: "Transaksi yang dibatalkan lewat Batal Transaksi punya dua jurnal yang saling meniadakan: jurnal asal dan pembaliknya. Bila salah satunya dihapus atau diubah, jumlah keduanya per akun tidak lagi nol dan saldo akun bergeser. Nilai = selisih yang tertinggal. Sejak 20 November 2026 kedua jurnal itu dikunci di Jurnal Umum; temuan lama dibereskan dengan menyamakan lagi pasangan jurnalnya (hubungi pengelola sistem).",
+        sql: `SELECT k.waktu::date AS tanggal, k.no_bukti AS bukti, NULL::varchar AS anggota, NULL::varchar AS kode_agt,
+                     'Pembalik ' || k.no_bukti_pembalik || '; debit jurnal asal ' || TO_CHAR(s.asal, 'FM999G999G999G990') || ', pembalik ' || TO_CHAR(s.pembalik, 'FM999G999G999G990') AS keterangan,
+                     s.selisih AS nilai
+                FROM transaksi_koreksi k
+                CROSS JOIN LATERAL (
+                     SELECT COALESCE(SUM(ABS(x.n)), 0) / 2 AS selisih, COALESCE(SUM(x.asal), 0) AS asal, COALESCE(SUM(x.pembalik), 0) AS pembalik
+                       FROM (SELECT j.kode_perkiraan, SUM(j.debit_jurnalumum - j.kredit_jurnalumum) AS n,
+                                    SUM(j.debit_jurnalumum) FILTER (WHERE j.nomor_bukti = k.no_bukti) AS asal,
+                                    SUM(j.debit_jurnalumum) FILTER (WHERE j.nomor_bukti = k.no_bukti_pembalik) AS pembalik
+                               FROM jurnal_umum j WHERE j.nomor_bukti IN (k.no_bukti, k.no_bukti_pembalik) GROUP BY j.kode_perkiraan) x) s
+               WHERE k.aksi = 'batal' AND k.waktu::date BETWEEN $1 AND $2 AND s.selisih >= 1`,
     },
 ]
 

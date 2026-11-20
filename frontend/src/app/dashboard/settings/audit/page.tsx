@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic"
 
 const TAMPIL = 500 // baris temuan di layar; Ekspor sampai BATAS_EKSPOR
 const BATAS_EKSPOR = 5000
-const MODUL: ModulAudit[] = ["Simpanan", "Pinjaman Tunai", "KPR"]
+const MODUL: ModulAudit[] = ["Simpanan", "Pinjaman Tunai", "KPR", "Jurnal"]
 const JENIS_KOREKSI: Record<string, string> = { simpanan: "Simpanan", angsuran: "Angsuran", pencairan: "Pencairan", kpr_angsuran: "Angsuran KPR", kpr_pencairan: "Pencairan KPR" }
 /** Pemeriksaan yang temuannya bisa diberi jurnal susulan. */
 const CEK_SUSULAN = ["simpanan-tanpa-jurnal", "pencairan-tanpa-jurnal", "angsuran-tanpa-jurnal", "kpr-angsuran-tanpa-jurnal"]
@@ -40,6 +40,7 @@ export default async function AuditDataPage(props: PageProps<"/dashboard/setting
     const bolehBuku = o.izin.includes(MENU.lapBukuSimpanan), bolehPinjaman = punyaIzin(o.izin, AKSES_HALAMAN["/dashboard/loans/[no]"]), bolehJurnal = o.izin.includes(MENU.jurnalUmum)
     // Tautan bukti ke halaman asalnya, hanya bila operator boleh membukanya.
     const tautan = (b: BarisAudit) => {
+        if (cek?.modul === "Jurnal") return bolehJurnal ? `/dashboard/accounting/journal?search=${encodeURIComponent(b.bukti)}` : null
         if (cek?.modul === "Simpanan") {
             if (cek.id === "jurnal-simpanan-yatim") return bolehJurnal ? `/dashboard/accounting/journal?search=${encodeURIComponent(b.bukti)}` : null
             return bolehBuku ? `/dashboard/savings/ledger?search=${encodeURIComponent(b.bukti)}` : null
