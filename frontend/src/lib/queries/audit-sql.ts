@@ -79,12 +79,12 @@ export const CEK_AUDIT: CekAudit[] = [
     },
     {
         id: "cicilan-beda-rincian", modul: "Pinjaman Tunai", judul: "Hitungan cicilan berbeda dengan buku",
-        arti: "Kolom Bayar (jml_cicilan) tidak sama dengan jumlah baris angsuran di buku pinjaman. Sebagian wajar: pelunasan lewat potongan atau penutupan pinjaman tidak selalu tercatat di rincian.",
+        arti: "Kolom Bayar (jml_cicilan) tidak sama dengan jumlah baris angsuran di buku pinjaman. Sebagian wajar: pelunasan lewat potongan atau penutupan pinjaman tidak selalu tercatat di rincian. Pinjaman yang pencairannya dibatalkan tidak diperiksa (batal mengisi Bayar = lama angsuran tanpa baris angsuran).",
         sql: `SELECT p.tgl_pinjaman AS tanggal, p.no_pinjaman AS bukti, a.nama AS anggota, a.kode_agt AS kode_agt,
                      'Bayar ' || p.jml_cicilan || ', baris buku ' || r.n AS keterangan, ABS(p.jml_cicilan - r.n)::numeric AS nilai
                 FROM pinjaman_tunai p JOIN anggota a ON a.id = p.anggota_id
                 JOIN LATERAL (SELECT COUNT(*)::int AS n FROM pinjaman_tunai_rincian x WHERE x.pinjaman_tunai_id = p.id AND x.angsuran_ke > 0 AND x.debit_pokok + x.debit_bunga > 0) r ON true
-               WHERE p.tgl_pinjaman BETWEEN $1 AND $2 AND p.jml_cicilan <> r.n`,
+               WHERE p.tgl_pinjaman BETWEEN $1 AND $2 AND p.jml_cicilan <> r.n AND ${BELUM_BATAL("p.no_pinjaman")}`,
     },
     {
         id: "lunas-bersaldo", modul: "Pinjaman Tunai", judul: "Cicilan selesai tetapi masih bersaldo",

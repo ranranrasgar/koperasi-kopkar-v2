@@ -46,7 +46,7 @@ Pastikan aplikasi tidak sedang **Mode Uji**, karena dalam mode itu perbaikan tid
 | **Pencairan tanpa jurnal** | Mutasi bank pencairan. Pinjaman 2017 umumnya saldo awal | Benar terjadi: jurnal susulan. Tidak pernah terjadi dan belum ada angsuran: batalkan |
 | **Angsuran tanpa jurnal** | Mutasi bank atau potongan gaji bulan itu | Benar terjadi: jurnal susulan. Keliru: batalkan bila itu angsuran terakhir |
 | **Nilai angsuran berbeda** | Pokok, jasa, adm, dan provisi di buku pinjaman dibanding jurnalnya | Buku salah dan angsuran terakhir: batalkan, lalu input ulang. Selain itu: jurnal koreksi sebesar selisihnya |
-| **Hitungan cicilan berbeda** | Buka pinjamannya, bandingkan kolom Bayar dengan baris angsuran | Tidak ada jurnal yang perlu dibuat. Wajar bila pinjaman dilunasi lewat potongan atau ditutup: biarkan dengan catatan. Bila pinjaman masih berjalan dan salah, minta pengelola sistem memperbaiki datanya |
+| **Hitungan cicilan berbeda** | Buka pinjamannya, bandingkan kolom Bayar dengan baris angsuran | Tidak ada jurnal yang perlu dibuat. Wajar bila pinjaman dilunasi lewat potongan atau ditutup: biarkan dengan catatan. Pinjaman yang pencairannya dibatalkan lewat Batal Transaksi tidak ikut diperiksa. Bila pinjaman masih berjalan dan salah, minta pengelola sistem memperbaiki datanya |
 | **Cicilan selesai masih bersaldo** | Apakah pinjaman dilunasi langsung ke bank atau di-top-up | **Tutup Pinjaman** tidak bisa dipakai karena cicilannya sudah selesai. Bila piutang di neraca harus dikeluarkan: jurnal koreksi. Bila tidak: biarkan dengan catatan |
 | **Pokok dibayar melebihi pinjaman** | Apakah ada angsuran dobel | Angsuran terakhir yang dobel: batalkan. Selain itu: jurnal koreksi, dan bila uangnya harus dikembalikan, catat pengembaliannya bersama akuntan |
 | **Angsuran dengan jasa di bawah jadwal** | Apakah pembebasan jasanya disetujui pengurus; alasan ada di keterangan (wajib sejak 14 November 2026) | Disetujui: biarkan, pendapatan jasa memang tidak masuk. Pinjaman yang sebenarnya dibatalkan anggota: batalkan angsurannya lalu Batalkan Pencairan. Jasa yang seharusnya ditagih: tagih lewat angsuran berikutnya atau jurnal bersama akuntan |
@@ -99,7 +99,7 @@ Jurnal koreksi memperbaiki Buku Besar, tetapi nomor buktinya berbeda. Karena itu
 | Pinjaman Tunai | Pencairan tanpa jurnal | Pinjaman tidak punya jurnal pencairan |
 | Pinjaman Tunai | Angsuran tanpa jurnal | Sisa pinjaman berkurang, tetapi Buku Besar tidak |
 | Pinjaman Tunai | Nilai angsuran berbeda dengan jurnal | Pokok + jasa + adm + provisi tidak sama dengan total debit jurnal |
-| Pinjaman Tunai | Hitungan cicilan berbeda dengan buku | Kolom Bayar tidak sama dengan jumlah baris angsuran. Sebagian wajar, misalnya pinjaman yang ditutup |
+| Pinjaman Tunai | Hitungan cicilan berbeda dengan buku | Kolom Bayar tidak sama dengan jumlah baris angsuran. Sebagian wajar, misalnya pinjaman yang ditutup. Pinjaman yang pencairannya dibatalkan tidak diperiksa |
 | Pinjaman Tunai | Cicilan selesai tetapi masih bersaldo | Saldo pokok masih lebih dari Rp 100 |
 | Pinjaman Tunai | Pokok dibayar melebihi pinjaman | Pokok yang dibayar melebihi pokok pinjaman lebih dari Rp 100 |
 | Pinjaman Tunai | Angsuran dengan jasa di bawah jadwal | Jasa yang dibayar kurang dari jadwal tagih angsuran itu (nilai = selisihnya). Pada pinjaman koperasi selisih ini tetap tertagih sampai angsuran terakhir. Pinjaman bank tidak diperiksa |
