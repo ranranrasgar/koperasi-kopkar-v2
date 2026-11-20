@@ -44,18 +44,21 @@ export interface AnggotaPotongan {
     dipotong: boolean; alasan: string | null; diubah_oleh: string | null; bukti_wajib: string | null; bukti_sukarela: string | null
 }
 
+/** Filter tabel anggota periode: cari ($2), status staff ($3), tampil ($4: '' semua, 'dipotong', 'tidak'). Dipakai tabel, cetak, dan ekspor. */
+export interface FilterPotongan { cari: string; staff: string; tampil: string }
+const SARING = `($2 = '' OR g.nama ILIKE '%' || $2 || '%' OR g.kode_agt ILIKE '%' || $2 || '%' OR g.nik ILIKE '%' || $2 || '%')
+            AND ($3 = '' OR g.status_staff = $3)
+            AND ($4 = '' OR ($4 = 'tidak' AND NOT g.dipotong) OR ($4 = 'dipotong' AND g.dipotong))`
+
 /** Anggota satu periode, disaring nama/kode/KPK, staff, dan status dipotong; jumlah = hanya anggota yang dipotong. */
-export async function anggotaPeriode(periode: string, f: { cari: string; staff: string; tampil: string }) {
+export async function anggotaPeriode(periode: string, f: FilterPotongan) {
     const rows = await query<AnggotaPotongan>(
         `SELECT g.kode_agt, g.nik, g.nama, g.status_staff, g.bank_nama, g.bank_no_rek, g.bank_atas_nama, COALESCE(a.kota, '') kota,
                 g.s_pokok::float8, g.s_wajib::float8, g.s_sukarela::float8, g.koperasi::float8, g.bank::float8, g.kpr::float8, g.adm::float8,
                 (g.s_wajib + g.s_sukarela + g.koperasi + g.bank + g.kpr + g.adm)::float8 total,
                 g.dipotong, g.alasan, g.diubah_oleh, g.bukti_wajib, g.bukti_sukarela
            FROM potongan_gaji_anggota g JOIN potongan_gaji p ON p.id = g.potongan_gaji_id LEFT JOIN anggota a ON a.id = g.anggota_id
-          WHERE p.periode = $1
-            AND ($2 = '' OR g.nama ILIKE '%' || $2 || '%' OR g.kode_agt ILIKE '%' || $2 || '%' OR g.nik ILIKE '%' || $2 || '%')
-            AND ($3 = '' OR g.status_staff = $3)
-            AND ($4 = '' OR ($4 = 'tidak' AND NOT g.dipotong) OR ($4 = 'diubah' AND g.diubah_oleh IS NOT NULL))
+          WHERE p.periode = $1 AND ${SARING}
           ORDER BY g.nama, g.kode_agt`, [periode, f.cari, f.staff, f.tampil])
     const kolom = ["s_pokok", "s_wajib", "s_sukarela", "koperasi", "bank", "kpr", "adm", "total"] as const
     const jumlah = Object.fromEntries(kolom.map((k) => [k, rows.filter((r) => r.dipotong).reduce((t, r) => t + r[k], 0)])) as Record<typeof kolom[number], number>
@@ -97,17 +100,17 @@ export interface RekapPotongan {
 }
 
 /**
- * Anggota yang dipotong pada satu periode untuk Rekap Potongan Anggota (cetak) dan file potongan gaji (export Excel),
- * sama dengan desktop: urut nama, bisa dibatasi status staff. Kota dari data anggota.
+ * Anggota satu periode untuk Rekap Potongan Anggota (cetak) dan file potongan gaji (export Excel), urut nama.
+ * Mengikuti filter tabel (cari, staff, tampil), jadi "Semua Anggota" ikut memuat yang tidak dipotong. Kota dari data anggota.
  */
-export const rekapPotongan = (periode: string, staff: string) =>
+export const rekapPotongan = (periode: string, f: FilterPotongan) =>
     query<RekapPotongan>(
         `SELECT g.nik, g.nama, g.bank_no_rek, g.bank_atas_nama, g.bank_nama, COALESCE(a.kota, '') kota,
                 g.s_pokok::float8, g.s_wajib::float8, g.s_sukarela::float8, g.koperasi::float8, g.bank::float8, g.kpr::float8, g.adm::float8,
                 (g.s_wajib + g.s_sukarela + g.koperasi + g.bank + g.kpr + g.adm)::float8 total
            FROM potongan_gaji_anggota g JOIN potongan_gaji p ON p.id = g.potongan_gaji_id JOIN anggota a ON a.id = g.anggota_id
-          WHERE p.periode = $1 AND g.dipotong AND ($2 = '' OR g.status_staff = $2)
-          ORDER BY g.nama, g.kode_agt`, [periode, staff])
+          WHERE p.periode = $1 AND ${SARING}
+          ORDER BY g.nama, g.kode_agt`, [periode, f.cari, f.staff, f.tampil])
 
 /** Akun kas bawaan posting potongan gaji: Bank OCBC NISP (1.1.01.41), tempat perusahaan menyetor potongan gaji. */
 export async function kasBawaanPotongan() {

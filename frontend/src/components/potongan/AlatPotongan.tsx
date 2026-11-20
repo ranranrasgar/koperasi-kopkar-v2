@@ -6,7 +6,7 @@ import { Download, Loader2, Printer, Search } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { kopCetakAction } from "@/app/actions/cetak"
 import { bukaCetak, esc } from "@/lib/cetak-klien"
-import type { RekapPotongan } from "@/lib/queries/potongan-gaji"
+import type { FilterPotongan as FilterTabel, RekapPotongan } from "@/lib/queries/potongan-gaji"
 
 const angka = (v: number) => Math.round(v).toLocaleString("id-ID")
 const KOLOM: [keyof RekapPotongan, string][] = [["s_pokok", "Pokok"], ["s_wajib", "Wajib"], ["s_sukarela", "Sukarela"], ["koperasi", "Koperasi"], ["bank", "Bank"],
@@ -30,18 +30,22 @@ function rekapHtml(rows: RekapPotongan[], kota: string, koperasi: string, ketera
 <table class="rekap"><thead>${kepala}</thead><tbody>${isi}</tbody><tfoot>${total}</tfoot></table>${ttd}`
 }
 
+/** Pilihan filter Tampilkan (nilai `tampil` di alamat); kosong = semua anggota. */
+const TAMPIL: Record<string, string> = { dipotong: "Hanya yang dipotong", tidak: "Hanya tidak dipotong" }
+
 /** Tombol Cetak (Rekap Potongan Anggota) dan Ekspor (file potongan gaji Excel) untuk satu periode. */
-export function CetakEksporPotongan({ periode, judulPeriode, keterangan, rows, staff }: { periode: string; judulPeriode: string; keterangan: string; rows: RekapPotongan[]; staff: string }) {
+export function CetakEksporPotongan({ periode, judulPeriode, keterangan, rows, filter }: { periode: string; judulPeriode: string; keterangan: string; rows: RekapPotongan[]; filter: FilterTabel }) {
     const [sibuk, setSibuk] = useState(false)
     const cetak = async () => {
         setSibuk(true)
         const kop = await kopCetakAction()
         const galat = await bukaCetak({ judul: "Rekap Potongan Anggota", orientasi: "lanskap",
-            subjudul: `Periode ${judulPeriode}${staff ? ` · ${staff}` : ""}`, isi: rekapHtml(rows, kop?.kota ?? "", kop?.nama ?? "", keterangan) }, kop)
+            subjudul: [`Periode ${judulPeriode}`, filter.staff, TAMPIL[filter.tampil], filter.cari && `Cari "${filter.cari}"`].filter(Boolean).join(" · "), isi: rekapHtml(rows, kop?.kota ?? "", kop?.nama ?? "", keterangan) }, kop)
         setSibuk(false)
         if (galat) alert(galat)
     }
-    const unduh = `/dashboard/deductions/periode/${periode}/ekspor${staff ? `?staff=${encodeURIComponent(staff)}` : ""}`
+    const p = new URLSearchParams(Object.entries({ q: filter.cari, staff: filter.staff, tampil: filter.tampil }).filter(([, v]) => v))
+    const unduh = `/dashboard/deductions/periode/${periode}/ekspor${p.size ? `?${p}` : ""}`
     return (
         <div className="flex items-center gap-2 print:hidden">
             <Button onClick={cetak} variant="outline" size="sm" className="h-9 font-medium shadow-sm" disabled={sibuk || rows.length === 0}>
@@ -76,7 +80,7 @@ export function FilterPotongan() {
                 <option value="">Semua Staff</option><option value="Staff">Staff</option><option value="No Staff">No Staff</option>
             </select>
             <select className={kelasFilter} value={sp.get("tampil") ?? ""} title="Tampilkan" onChange={(e) => ubah("tampil", e.target.value)}>
-                <option value="">Semua Anggota</option><option value="tidak">Hanya tidak dipotong</option><option value="diubah">Hanya yang diubah</option>
+                <option value="">Semua Anggota</option><option value="dipotong">{TAMPIL.dipotong}</option><option value="tidak">{TAMPIL.tidak}</option>
             </select>
         </div>
     )

@@ -33,3 +33,5 @@ Karena dihitung dari angsuran berikutnya, angka potongan seorang anggota otomati
 ## Daftar potongan per periode
 
 Halaman detail satu periode di **Generate & Posting** dan cetakannya memakai kolom yang sama dengan sistem desktop: KPK, Nama, CB (cara bayar, selalu P), Accrek, Namarek, Bank, Kota, Pokok, Wajib, Sukarela, Koperasi, Bank, Kpr, Adm Bank, Total, dan Keterangan. Klik nama untuk mengubah nominal. **Total** tidak termasuk Pokok, karena simpanan pokok diposting terpisah bila bagiannya dicentang. **Ekspor** tetap berupa file potongan untuk bank.
+
+Di halaman detail periode, saring tabel dengan pencarian (kode, KPK, nama), **Staff**, dan **Tampilkan**: *Semua Anggota*, *Hanya yang dipotong*, atau *Hanya tidak dipotong*. **Cetak** dan **Ekspor** mengikuti filter yang sedang aktif. Pilih **Hanya yang dipotong** sebelum mengekspor file untuk bank, karena *Semua Anggota* ikut memuat anggota yang tidak dipotong.

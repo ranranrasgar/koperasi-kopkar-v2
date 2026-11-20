@@ -4,7 +4,7 @@ Log kerja untuk agent berikutnya. **Entri terbaru di paling atas.** Tiap entri: 
 
 ## Status ringkas dan serah terima (perbarui setiap sesi)
 
-Terakhir diperbarui 20 November 2026 (entri terbaru: Pilihan COA bisa diketik di semua form). **Entri terbaru `### Hak akses mengikuti sidebar, Tambah Anggota, kolom No. Rekening (4 November)` dan `### Ringkasan sesi 3 November` ada tepat di bawah bagian Lingkungan; baca itu dulu.** Agent baru: baca bagian ini dulu, lalu entri bertanggal bila butuh rincian. Ada dua gaya entri: `### judul (23 Oktober)` tepat di bawah bagian ini, dan `## 2026-10-24 — judul` setelah **Jebakan yang sudah ditemui** (entri 24 Oktober ada di sana). Entri terbaru: **Potongan Gaji bulanan (24 Oktober, malam)** di bawah bagian ini.
+Terakhir diperbarui 20 November 2026 (entri terbaru: Potongan Gaji filter Tampilkan, cetak dan ekspor ikut filter). **Entri terbaru `### Hak akses mengikuti sidebar, Tambah Anggota, kolom No. Rekening (4 November)` dan `### Ringkasan sesi 3 November` ada tepat di bawah bagian Lingkungan; baca itu dulu.** Agent baru: baca bagian ini dulu, lalu entri bertanggal bila butuh rincian. Ada dua gaya entri: `### judul (23 Oktober)` tepat di bawah bagian ini, dan `## 2026-10-24 — judul` setelah **Jebakan yang sudah ditemui** (entri 24 Oktober ada di sana). Entri terbaru: **Potongan Gaji bulanan (24 Oktober, malam)** di bawah bagian ini.
 
 ### Keadaan repo
 - Branch `main`, remote `origin` = github.com/ranranrasgar/koperasi-kopkar-v2. Semua commit sudah di-push (`main` = `origin/main` = `863ea82` per 3 November) dan **VPS sudah diperbarui ke `863ea82`** (3 November). `.env.local` tidak ikut repo; buat ulang di komputer lain.
@@ -36,6 +36,11 @@ Terakhir diperbarui 20 November 2026 (entri terbaru: Pilihan COA bisa diketik di
 - **Disk C: sering hampir penuh**: cache `.next/dev/cache` bisa 2 GB+, `.next-uji` ±430 MB, database uji ±600 MB. Cek ruang disk sebelum `uji:reset`, `dev:uji`, atau build.
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
+
+### Potongan Gaji: filter Tampilkan, cetak dan ekspor ikut filter (20 November)
+- Laporan pengguna: "Hanya yang diubah" hasilnya sama dengan "Hanya tidak dipotong". Penyebab: `diubah_oleh` hanya terisi saat saklar dipotong diubah, dan di periode 2026-10 semua yang diubah adalah 32 anggota tidak dipotong. Opsi diganti **Hanya yang dipotong** (`tampil=dipotong`).
+- Filter tabel jadi satu (`SARING` + `FilterPotongan` di `lib/queries/potongan-gaji.ts`); `rekapPotongan(periode, f)` kini mengikuti cari/staff/tampil, jadi Cetak dan Ekspor (`ekspor/route.ts`, parameter `q`, `staff`, `tampil`; nama file diberi akhiran) sama dengan tabel. **Perubahan perilaku**: dulu cetak/ekspor selalu hanya yang dipotong; sekarang "Semua Anggota" ikut memuat yang tidak dipotong. Panduan menyarankan memilih "Hanya yang dipotong" sebelum ekspor ke bank.
+- Diuji: typecheck bersih; browser periode 2026-10: opsi Semua/dipotong/tidak, tautan Ekspor membawa `?tampil=dipotong`, ekspor tiga filter 200 (621 KB / 602 KB / 22 KB), jumlah dipotong 1048 sesuai data. Isi xlsx tidak dibuka satu per satu; dialog cetak tidak dicoba.
 
 ### Pilihan COA bisa diketik di semua form; pinjaman tunai memuat akun hutang (20 November)
 - Pengguna: akun di Input Pinjaman Tunai tidak bisa diketik dan akun hutang tidak muncul. Penyebab: `akunKas()` hanya 1.1.01.10-1.1.01.60, padahal desktop memakai **2.2.00.14 Hutang Motor** untuk 44 pencairan. Mesin posting tidak membatasi akun.

@@ -7,15 +7,16 @@ import { hariIni } from "@/lib/format"
 import { buatXlsx, type Sel } from "@/lib/xlsx"
 
 // File potongan gaji untuk perusahaan/bank, sama dengan export desktop (lembar EXPORT): kop KODE DISKET, KODE PERUSAHAAN,
-// TANGGAL, lalu satu baris per anggota yang dipotong. GAJI = jumlah potongan. ACCREK disimpan sebagai teks supaya nomor
+// TANGGAL, lalu satu baris per anggota sesuai filter tabel (cari, staff, tampil). GAJI = jumlah potongan. ACCREK disimpan sebagai teks supaya nomor
 // rekening tidak berubah menjadi notasi ilmiah (6,0211E+11) dan digitnya tidak hilang.
 export async function GET(request: NextRequest, ctx: { params: Promise<{ periode: string }> }) {
     const o = await operatorSesi()
     if (!o || !punyaIzin(o.izin, [MENU.generatePotongan])) return new NextResponse("Tidak berizin", { status: 403 })
     const { periode } = await ctx.params
     if (!PERIODE.test(periode)) return new NextResponse("Periode tidak sah", { status: 400 })
-    const staff = request.nextUrl.searchParams.get("staff") ?? ""
-    const [rows, k] = await Promise.all([rekapPotongan(periode, staff), identitasKoperasi()])
+    const q = request.nextUrl.searchParams
+    const f = { cari: q.get("q") ?? "", staff: q.get("staff") ?? "", tampil: q.get("tampil") ?? "" }
+    const [rows, k] = await Promise.all([rekapPotongan(periode, f), identitasKoperasi()])
 
     const t = hariIni() // YYYY-MM-DD
     const ket = `${namaPeriode(periode).split(" ")[0]} ${periode.slice(2, 4)}` // Oktober 26
@@ -32,7 +33,7 @@ export async function GET(request: NextRequest, ctx: { params: Promise<{ periode
     return new Response(isi as BodyInit, {
         headers: {
             "Content-Type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-            "Content-Disposition": `attachment; filename="potongan-gaji-${periode}${staff ? `-${staff.replace(/\s+/g, "")}` : ""}.xlsx"`,
+            "Content-Disposition": `attachment; filename="potongan-gaji-${periode}${f.staff ? `-${f.staff.replace(/\s+/g, "")}` : ""}${f.tampil ? `-${f.tampil === "tidak" ? "tidakdipotong" : f.tampil}` : ""}.xlsx"`,
             "Cache-Control": "no-store",
         },
     })

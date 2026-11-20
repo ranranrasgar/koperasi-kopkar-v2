@@ -27,7 +27,7 @@ export default async function DetailPeriodePage(props: PageProps<"/dashboard/ded
     const s = await props.searchParams
     const f = { cari: sp(s, "q"), staff: sp(s, "staff"), tampil: sp(s, "tampil") }
     const [p, { rows, jumlah }, rekap, akun, kasBawaan, bagian] = await Promise.all([satuPeriode(periode), anggotaPeriode(periode, f),
-        rekapPotongan(periode, f.staff), akunKas(), kasBawaanPotongan(), bagianPeriode(periode)])
+        rekapPotongan(periode, f), akunKas(), kasBawaanPotongan(), bagianPeriode(periode)])
     if (!p) notFound()
     const draf = p.status === "draf"
     const sub = `${p.anggota - p.tidak_dipotong} dari ${p.anggota} anggota dipotong`
@@ -49,8 +49,8 @@ export default async function DetailPeriodePage(props: PageProps<"/dashboard/ded
                         {p.tidak_dipotong > 0 && <Link href={`?tampil=tidak`} className="text-amber-700 dark:text-amber-400 hover:underline">{p.tidak_dipotong} anggota tidak dipotong</Link>}
                     </div>
                     <div className="flex flex-wrap items-center gap-2">
-                        {/* Cetak dan Ekspor: anggota yang dipotong, mengikuti filter Staff (seperti desktop). */}
-                        <CetakEksporPotongan periode={periode} judulPeriode={namaPeriode(periode)} keterangan={keterangan} rows={rekap} staff={f.staff} />
+                        {/* Cetak dan Ekspor: mengikuti filter tabel (cari, Staff, Tampilkan). */}
+                        <CetakEksporPotongan periode={periode} judulPeriode={namaPeriode(periode)} keterangan={keterangan} rows={rekap} filter={f} />
                         {p.status !== "diposting" && <ModalPosting periode={periode} akun={akun} kasBawaan={kasBawaan} tanggalBawaan={akhirBulan(periode)}
                             ringkas={`${sub}, total Rp ${formatAngka(p.total)}. Anggota dengan saklar mati tidak ikut diposting.`}
                             bagian={bagian.map((b) => ({ bagian: b.bagian, nama: NAMA_BAGIAN[b.bagian], transaksi: b.transaksi, jumlah: Number(b.jumlah), posting: b.posting }))} />}
