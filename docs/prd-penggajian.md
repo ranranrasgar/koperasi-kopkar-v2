@@ -2,7 +2,7 @@
 
 | | |
 | --- | --- |
-| Status | Disetujui pengguna 20 November 2026 (enam rekomendasi). **Tahap 1-2 selesai** (20 November); berikutnya Tahap 3 (lembur). |
+| Status | Disetujui pengguna 20 November 2026 (enam rekomendasi). **Tahap 1-3 selesai** (21 November); berikutnya Tahap 4 (penggajian, slip, ekspor). |
 | Sumber | Excel `10. Slip gaji October 2015 new umk.xlsx` (milik pengguna, di luar repo): sheet Master Karyawan, ATN, Absen bln / OT per orang, Rate Lembur, PPh 21, Slip S, TGL CUTI, Sheet1 |
 | Menggantikan | Menu Absensi lama (`/dashboard/attendance`, jam masuk/pulang anggota berstatus Staff dari QR) menjadi bagian dari penggajian |
 
@@ -83,7 +83,7 @@ Angka persen BPJS dan premi harus diperiksa bendahara sebelum dipakai; Excel 201
 | --- | --- | --- |
 | Data Karyawan | `Data Karyawan (web)` | Daftar + tambah/ubah karyawan |
 | Absensi Karyawan | `Absensi Karyawan` (izin lama) | Grid kode harian per periode, pindai QR tetap ada |
-| Lembur | `Lembur Karyawan (web)` | Input lembur per hari, ringkasan jam berbobot |
+| Lembur Karyawan | `Lembur Karyawan (web)` | Input lembur per hari, ringkasan jam berbobot (`/dashboard/kepegawaian/lembur`) |
 | Penggajian | `Penggajian (web)` | Rekap seperti sheet Master, isian manual, final, slip, ekspor |
 | Pengaturan Gaji | `Pengaturan Gaji (web)` | Isian bagian 4 dan tabel TER |
 

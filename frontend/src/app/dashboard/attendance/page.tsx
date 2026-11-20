@@ -12,24 +12,16 @@ import { wajibIzin } from "@/lib/operator"
 import { daftarAbsensi } from "@/lib/queries/absensi"
 import { bacaPengaturanGaji } from "@kopkar/backend/src/gaji/pengaturan.ts"
 import { bacaPeriode, gridHadir } from "@kopkar/backend/src/gaji/periode.ts"
-import { KODE_HADIR, rentangPeriode, type KodeHadir } from "@kopkar/backend/src/gaji/hitung.ts"
+import { KODE_HADIR, periodeDariTanggal, rentangPeriode, type KodeHadir } from "@kopkar/backend/src/gaji/hitung.ts"
 
 export const dynamic = "force-dynamic"
-
-/** Periode yang memuat tanggal `hari`: mulai tanggal awal, periode milik bulan berikutnya. */
-function periodeHari(hari: string, tanggalAwal: number) {
-    const [y, m, d] = hari.split("-").map(Number)
-    const naik = tanggalAwal > 1 && d >= tanggalAwal
-    const t = new Date(Date.UTC(y, m - 1 + (naik ? 1 : 0), 1))
-    return t.toISOString().slice(0, 7)
-}
 
 /** Absensi karyawan koperasi: grid kode kehadiran per periode gaji, dan pindai QR (jam masuk/pulang) untuk karyawan yang tertaut anggota. */
 export default async function AbsensiPage(props: PageProps<"/dashboard/attendance">) {
     await wajibIzin("/dashboard/attendance") // layout tidak dijalankan ulang pada navigasi antarhalaman
     const s = await props.searchParams
     const atur = await bacaPengaturanGaji(pool)
-    const periode = /^\d{4}-(0[1-9]|1[0-2])$/.test(sp(s, "periode")) ? sp(s, "periode") : periodeHari(hariIni(), atur.tanggalAwal)
+    const periode = /^\d{4}-(0[1-9]|1[0-2])$/.test(sp(s, "periode")) ? sp(s, "periode") : periodeDariTanggal(hariIni(), atur.tanggalAwal)
     const p = await bacaPeriode(pool, periode)
     const rentang = p ?? rentangPeriode(periode, atur.tanggalAwal)
     const [grid, log] = await Promise.all([p ? gridHadir(pool, p.id) : Promise.resolve([]), daftarAbsensi(rentang.dari, rentang.sampai)])

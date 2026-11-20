@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { hitungGaji, jamBobot, jamLembur, kategoriTer, PENGATURAN_BAWAAN, rentangPeriode, tarifTer, type BarisTer, type InputGaji } from '../src/gaji/hitung.ts';
+import { hitungGaji, jamBobot, jamLembur, kategoriTer, PENGATURAN_BAWAAN, periodeDariTanggal, rentangPeriode, tarifTer, type BarisTer, type InputGaji } from '../src/gaji/hitung.ts';
 
 // Pengaturan seperti Excel Oktober 2015: JHT 2%, BPJS 0,5%, tanpa JP dan premi perusahaan.
 const EXCEL = { ...PENGATURAN_BAWAAN, jhtPersen: 2, jpPersen: 0, kesPersen: 0.5, premiPerusahaanPersen: 0, kesPerusahaanPersen: 0 };
@@ -59,4 +59,6 @@ test('periode: tanggal 23 bulan lalu s/d 22 bulan ini', () => {
     assert.deepEqual(rentangPeriode('2026-01', 23), { dari: '2025-12-23', sampai: '2026-01-22' });
     assert.deepEqual(rentangPeriode('2026-02', 1), { dari: '2026-02-01', sampai: '2026-02-28' });
     assert.throws(() => rentangPeriode('2026-13', 23), /YYYY-MM/);
+    assert.deepEqual(['2026-11-22', '2026-11-23', '2026-12-31'].map((t) => periodeDariTanggal(t, 23)), ['2026-11', '2026-12', '2027-01']);
+    assert.equal(periodeDariTanggal('2026-11-30', 1), '2026-11');
 });

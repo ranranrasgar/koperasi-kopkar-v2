@@ -8,7 +8,7 @@ import { MENU, type AksiIzin } from "@/config/akses"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { STATUS_PTKP } from "@kopkar/backend/src/gaji/hitung.ts"
 import { simpanPengaturanGaji } from "@kopkar/backend/src/gaji/pengaturan.ts"
-import { aturHadir, bukaPeriode, GalatGaji, isiHadirKosong } from "@kopkar/backend/src/gaji/periode.ts"
+import { aturHadir, bukaPeriode, GalatGaji, hapusLembur, isiHadirKosong, simpanLembur } from "@kopkar/backend/src/gaji/periode.ts"
 import type { HasilSimpan } from "@/app/actions/master"
 
 class Salah extends Error {}
@@ -120,4 +120,24 @@ export async function isiHadirKosongAction(periodeId: number, karyawanId: number
         const r = await isiHadirKosong(db, { periodeId, karyawanId, pola })
         return `${r.qr} hari terisi dari pindai QR${pola ? `, ${r.pola} hari terisi pola hari kerja/istirahat` : ""}`
     })
+}
+
+// ---------- lembur (izin menu Lembur Karyawan) ----------
+
+const LEMBUR = "/dashboard/kepegawaian/lembur"
+
+export async function simpanLemburAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
+    return simpan(MENU.lemburKaryawan, LEMBUR, "tambah", async (db, opr) => {
+        const jenis = String(f.get("jenis_hari") ?? "")
+        const r = await simpanLembur(db, {
+            periodeId: Number(f.get("periode_id")), karyawanId: Number(f.get("karyawan_id")), tanggal: String(f.get("tanggal") ?? ""),
+            mulai: String(f.get("mulai") ?? ""), selesai: String(f.get("selesai") ?? ""),
+            jenisHari: jenis === "kerja" || jenis === "istirahat" ? jenis : null, keterangan: String(f.get("keterangan") ?? ""), opr,
+        })
+        return r.pesan
+    })
+}
+
+export async function hapusLemburAction(id: number): Promise<HasilSimpan> {
+    return simpan(MENU.lemburKaryawan, LEMBUR, "hapus", (db) => hapusLembur(db, id))
 }

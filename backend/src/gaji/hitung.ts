@@ -127,3 +127,10 @@ export function rentangPeriode(periode: string, tanggalAwal: number): { dari: st
     if (tanggalAwal === 1) return { dari: tgl(new Date(Date.UTC(y, m - 1, 1))), sampai: tgl(new Date(Date.UTC(y, m, 0))) };
     return { dari: tgl(new Date(Date.UTC(y, m - 2, tanggalAwal))), sampai: tgl(new Date(Date.UTC(y, m - 1, tanggalAwal - 1))) };
 }
+
+/** Periode 'YYYY-MM' yang memuat tanggal `hari`: mulai tanggalAwal, tanggal itu milik periode bulan berikutnya. */
+export function periodeDariTanggal(hari: string, tanggalAwal: number): string {
+    const [y, m, d] = hari.split('-').map(Number);
+    const naik = tanggalAwal > 1 && d >= tanggalAwal;
+    return new Date(Date.UTC(y, m - 1 + (naik ? 1 : 0), 1)).toISOString().slice(0, 7);
+}

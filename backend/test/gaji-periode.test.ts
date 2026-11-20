@@ -3,7 +3,7 @@ import { after, test } from 'node:test';
 import { absenQr } from '../src/absensi.ts';
 import { buatQr } from '../src/anggota/qr.ts';
 import { createPool, withTx, type Db } from '../src/db.ts';
-import { aturHadir, bukaPeriode, gridHadir, isiHadirKosong } from '../src/gaji/periode.ts';
+import { aturHadir, bukaPeriode, daftarLembur, gridHadir, hapusLembur, isiHadirKosong, simpanLembur } from '../src/gaji/periode.ts';
 
 const pool = createPool();
 after(() => pool.end());
@@ -63,4 +63,35 @@ test('pindai QR: karyawan tertaut anggota boleh absen, harinya terisi ATN', () =
     assert.equal(isi.qr, 1);
     const g = (await gridHadir(db, periode)).find((x) => x.karyawan_id === k)!;
     assert.equal(g.hari[hari], 'ATN');
+}));
+
+test('lembur: jenis hari dari kehadiran, jam dan bobot seperti Rate Lembur, simpan ulang memperbarui, tolak hari tidak hadir', () => inTx(async (db) => {
+    await db.query("DELETE FROM pengaturan_web WHERE kunci = 'gaji'"); // 6 hari kerja
+    const k = await karyawan(db, 'UJI03');
+    const p = await bukaPeriode(db, '2031-03', 'uji');
+    await aturHadir(db, { periodeId: p.id, karyawanId: k, tanggal: '2031-03-02', kode: 'RD' });
+    await aturHadir(db, { periodeId: p.id, karyawanId: k, tanggal: '2031-03-04', kode: 'MED' });
+    const dasar = { periodeId: p.id, karyawanId: k, opr: 'uji' };
+
+    // Hari kerja 17:00-21:00 = 4 jam, dikurangi 1 jam istirahat = 3 jam, bobot 1,5 + 2 + 2.
+    const a = await simpanLembur(db, { ...dasar, tanggal: '2031-03-03', mulai: '17:00', selesai: '21:00' });
+    assert.deepEqual([a.jam, a.jamBobot], [3, 5.5]);
+    // Hari istirahat (RD) 08:00-17:00 = 9 jam: 7 x 2 + 3 + 4.
+    const b = await simpanLembur(db, { ...dasar, tanggal: '2031-03-02', mulai: '08:00', selesai: '17:00', keterangan: 'stok opname' });
+    assert.deepEqual([b.jam, b.jamBobot], [9, 21]);
+    // Simpan ulang hari yang sama memperbarui, bukan menambah.
+    const c = await simpanLembur(db, { ...dasar, tanggal: '2031-03-03', mulai: '17:00', selesai: '19:00' });
+    assert.deepEqual([c.jam, c.jamBobot], [2, 3.5]);
+    const l = await daftarLembur(db, p.id);
+    assert.deepEqual(l.map((x) => [x.tanggal, x.jenis_hari, x.jam, x.jam_bobot]), [['2031-03-02', 'istirahat', 9, 21], ['2031-03-03', 'kerja', 2, 3.5]]);
+
+    await gagal(db, () => simpanLembur(db, { ...dasar, tanggal: '2031-03-04', mulai: '17:00', selesai: '20:00' }), /MED/);
+    await gagal(db, () => simpanLembur(db, { ...dasar, tanggal: '2031-03-05', mulai: '17:00', selesai: '17:30' }), /kurang dari 1 jam/);
+    await gagal(db, () => simpanLembur(db, { ...dasar, tanggal: '2031-03-23', mulai: '17:00', selesai: '20:00' }), /di luar periode/);
+    await gagal(db, () => simpanLembur(db, { ...dasar, tanggal: '2031-03-05', mulai: '25:00', selesai: '20:00' }), /HH:MM/);
+
+    await hapusLembur(db, l[0].id);
+    assert.equal((await daftarLembur(db, p.id)).length, 1);
+    await db.query("UPDATE gaji_periode SET status = 'final' WHERE id = $1", [p.id]);
+    await gagal(db, () => hapusLembur(db, l[1].id), /sudah final/);
 }));

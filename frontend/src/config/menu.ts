@@ -65,6 +65,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/attendance"
             },
             {
+                label: "Lembur Karyawan",
+                icon: "more_time",
+                href: "/dashboard/kepegawaian/lembur"
+            },
+            {
                 label: "Pengaturan Gaji",
                 icon: "tune",
                 href: "/dashboard/kepegawaian/pengaturan"
