@@ -38,6 +38,9 @@ const PECAHAN_IZIN = {
     'Stok Kantin (web)': ['Produk Kantin (web)', 'Unit Usaha (web)'],
     'Penjualan Kantin (web)': ['Produk Kantin (web)', 'Unit Usaha (web)'],
     'Penyelesaian Tenant (web)': ['Unit Usaha (web)'], // transfer uang ke tenant: pemegang izin Unit Usaha (admin)
+    // Penggajian karyawan koperasi (docs/prd-penggajian.md): data gaji pribadi, awalnya grup admin.
+    'Data Karyawan (web)': [MENU_MODE],
+    'Pengaturan Gaji (web)': [MENU_MODE],
 };
 // Grup untuk petugas kantin (boleh orang luar): hanya menu kantin. Dibuat sekali; setelah itu izinnya milik Kelola Hak Akses.
 const GRUP_KANTIN = 'Kantin';

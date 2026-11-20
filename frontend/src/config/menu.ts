@@ -57,6 +57,21 @@ export const allGroups: MenuGroup[] = [
         ]
     },
     {
+        groupLabel: "Kepegawaian",
+        items: [
+            {
+                label: "Data Karyawan",
+                icon: "id_card",
+                href: "/dashboard/kepegawaian/karyawan"
+            },
+            {
+                label: "Pengaturan Gaji",
+                icon: "tune",
+                href: "/dashboard/kepegawaian/pengaturan"
+            }
+        ]
+    },
+    {
         groupLabel: "Simpanan",
         items: [
             {

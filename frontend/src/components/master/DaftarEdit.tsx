@@ -11,7 +11,7 @@ import { FormEdit, type FieldSpec } from "./FormEdit"
 type Nilai = Record<string, string | number | boolean | null>
 
 /** Tabel data master dengan form ubah (dan tambah) di modal. */
-export function DaftarEdit({ title, description, kolom, baris, fields, fieldsBaru, aksi, kunci = "id" }: {
+export function DaftarEdit({ title, description, kolom, baris, fields, fieldsBaru, nilaiBaru = {}, aksi, kunci = "id" }: {
     title: string
     description: string
     kolom: { key: string; label: string; align?: "right" | "center"; format?: "persen" | "rupiah" | "ya" }[]
@@ -19,6 +19,8 @@ export function DaftarEdit({ title, description, kolom, baris, fields, fieldsBar
     fields: FieldSpec[]
     /** Isian tambahan saat menambah data baru (mis. kode). Tanpa ini tombol tambah tidak muncul. */
     fieldsBaru?: FieldSpec[]
+    /** Nilai awal form tambah (mis. centang aktif). */
+    nilaiBaru?: Nilai
     aksi: (prev: HasilSimpan, f: FormData) => Promise<HasilSimpan>
     kunci?: string
 }) {
@@ -77,7 +79,7 @@ export function DaftarEdit({ title, description, kolom, baris, fields, fieldsBar
                 judul={edit === "baru" ? `Tambah ${title}` : `Ubah ${title}`} keterangan="Perubahan berlaku untuk transaksi berikutnya.">
                 {edit && <FormEdit key={edit === "baru" ? "baru" : String(edit[kunci])}
                     fields={edit === "baru" ? [...(fieldsBaru ?? []), ...fields] : [{ name: kunci, label: "", hidden: true } as FieldSpec, ...fields]}
-                    nilai={edit === "baru" ? {} : edit} aksi={aksi} onSelesai={selesai} kolom={2} />}
+                    nilai={edit === "baru" ? nilaiBaru : edit} aksi={aksi} onSelesai={selesai} kolom={2} />}
             </ModalForm>
         </div>
     )

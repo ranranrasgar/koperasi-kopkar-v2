@@ -93,6 +93,8 @@ export const MENU = {
     penjualanKantin: "Penjualan Kantin (web)",
     // Khusus web; penyelesaian bulanan dengan tenant kantin (bagi hasil/sewa, transfer neto). Awalnya pemegang izin Unit Usaha.
     penyelesaianTenant: "Penyelesaian Tenant (web)",
+    dataKaryawan: "Data Karyawan (web)",
+    pengaturanGaji: "Pengaturan Gaji (web)",
 } as const
 
 /**
@@ -203,6 +205,8 @@ export const AKSES_HALAMAN: Record<string, string[]> = {
     "/dashboard/accounting/closing": [MENU.tutupBuku],
     "/dashboard/shu": [MENU.lapShu, MENU.shu, MENU.hitungShu],
     "/dashboard/attendance": [MENU.absensi],
+    "/dashboard/kepegawaian/karyawan": [MENU.dataKaryawan],
+    "/dashboard/kepegawaian/pengaturan": [MENU.pengaturanGaji],
     "/dashboard/settings/akses": [MENU.kelolaAkses],
     "/dashboard/settings/operator": [MENU.kelolaAkses],
     // Pusat Panduan (/dashboard/panduan) sengaja tanpa entri: semua operator boleh membaca.
@@ -241,7 +245,7 @@ export const AKSI_IZIN: Record<string, readonly AksiIzin[]> = {
     [MENU.cairKoperasi]: TAMBAH, [MENU.cairBank]: TAMBAH, [MENU.cairKpr]: TAMBAH, [MENU.angsurKoperasi]: TAMBAH, [MENU.angsurBank]: TAMBAH, [MENU.angsurKpr]: TAMBAH,
     [MENU.titipan]: ["tambah", "hapus"], [MENU.jurnalUmum]: SEMUA, [MENU.jurnalPenyesuaian]: SEMUA, [MENU.bankBook]: SEMUA,
     [MENU.generatePotongan]: ["tambah", "ubah"], [MENU.unitUsaha]: ["tambah", "ubah"], [MENU.produkKantin]: ["tambah", "ubah"],
-    [MENU.kasirKantin]: TAMBAH, [MENU.stokKantin]: TAMBAH, [MENU.penjualanKantin]: ["hapus"], [MENU.penyelesaianTenant]: ["tambah", "hapus"], [MENU.tutupBuku]: TAMBAH, [MENU.hitungShu]: TAMBAH, [MENU.shu]: ["tambah", "hapus"],
+    [MENU.kasirKantin]: TAMBAH, [MENU.stokKantin]: TAMBAH, [MENU.penjualanKantin]: ["hapus"], [MENU.penyelesaianTenant]: ["tambah", "hapus"], [MENU.dataKaryawan]: ["tambah", "ubah"], [MENU.pengaturanGaji]: UBAH, [MENU.tutupBuku]: TAMBAH, [MENU.hitungShu]: TAMBAH, [MENU.shu]: ["tambah", "hapus"],
 }
 
 /**
