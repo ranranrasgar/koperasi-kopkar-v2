@@ -42,6 +42,7 @@ const PECAHAN_IZIN = {
     'Data Karyawan (web)': [MENU_MODE],
     'Pengaturan Gaji (web)': [MENU_MODE],
     'Lembur Karyawan (web)': [MENU_MODE],
+    'Penggajian (web)': [MENU_MODE],
 };
 // Grup untuk petugas kantin (boleh orang luar): hanya menu kantin. Dibuat sekali; setelah itu izinnya milik Kelola Hak Akses.
 const GRUP_KANTIN = 'Kantin';

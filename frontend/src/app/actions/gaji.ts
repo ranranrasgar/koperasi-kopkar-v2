@@ -8,6 +8,7 @@ import { MENU, type AksiIzin } from "@/config/akses"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { STATUS_PTKP } from "@kopkar/backend/src/gaji/hitung.ts"
 import { simpanPengaturanGaji } from "@kopkar/backend/src/gaji/pengaturan.ts"
+import { bukaKembaliPeriode, finalkanPeriode, simpanIsianSlip } from "@kopkar/backend/src/gaji/penggajian.ts"
 import { aturHadir, bukaPeriode, GalatGaji, hapusLembur, isiHadirKosong, simpanLembur } from "@kopkar/backend/src/gaji/periode.ts"
 import type { HasilSimpan } from "@/app/actions/master"
 
@@ -140,4 +141,25 @@ export async function simpanLemburAction(_: HasilSimpan, f: FormData): Promise<H
 
 export async function hapusLemburAction(id: number): Promise<HasilSimpan> {
     return simpan(MENU.lemburKaryawan, LEMBUR, "hapus", (db) => hapusLembur(db, id))
+}
+
+// ---------- penggajian (izin menu Penggajian): isian manual = ubah, final = tambah, buka kembali = hapus ----------
+
+const GAJI = "/dashboard/kepegawaian/penggajian"
+
+export async function simpanIsianSlipAction(_: HasilSimpan, f: FormData): Promise<HasilSimpan> {
+    return simpan(MENU.penggajian, GAJI, "ubah", (db) => simpanIsianSlip(db, {
+        periodeId: Number(f.get("periode_id")), karyawanId: Number(f.get("karyawan_id")),
+        cadResiko: Number(rupiah(f, "cad_resiko", "Cadangan risiko")), thr: Number(rupiah(f, "thr", "THR")), tunjLain: Number(rupiah(f, "tunj_lain", "Tunjangan lain")),
+        potKoperasi: Number(rupiah(f, "pot_koperasi", "Potongan koperasi")), potLain: Number(rupiah(f, "pot_lain", "Potongan lain-lain")),
+        ketPotLain: String(f.get("ket_pot_lain") ?? ""),
+    }))
+}
+
+export async function finalkanPeriodeAction(periodeId: number): Promise<HasilSimpan> {
+    return simpan(MENU.penggajian, GAJI, "tambah", (db, opr) => finalkanPeriode(db, periodeId, opr))
+}
+
+export async function bukaKembaliPeriodeAction(periodeId: number): Promise<HasilSimpan> {
+    return simpan(MENU.penggajian, GAJI, "hapus", (db) => bukaKembaliPeriode(db, periodeId))
 }

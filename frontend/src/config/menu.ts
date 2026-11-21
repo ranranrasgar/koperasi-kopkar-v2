@@ -70,6 +70,11 @@ export const allGroups: MenuGroup[] = [
                 href: "/dashboard/kepegawaian/lembur"
             },
             {
+                label: "Penggajian",
+                icon: "payments",
+                href: "/dashboard/kepegawaian/penggajian"
+            },
+            {
                 label: "Pengaturan Gaji",
                 icon: "tune",
                 href: "/dashboard/kepegawaian/pengaturan"
