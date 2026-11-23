@@ -142,3 +142,29 @@ CREATE INDEX IF NOT EXISTS ix_log_aktivitas_waktu ON log_aktivitas (waktu DESC);
 
 -- Keterangan bebas saat pencairan pinjaman tunai (form Pencairan). Kolom deskripsi desktop hanya 25 karakter, jadi tidak dipakai.
 ALTER TABLE pinjaman_tunai ADD COLUMN IF NOT EXISTS keterangan varchar(255);
+
+-- Templat pesan untuk Kirim Notifikasi (pengumuman yang berulang). {isian} di judul/isi menjadi kotak isian saat templat dipakai:
+-- nama berisi "tanggal" = pilihan tanggal, "jam" = pilihan jam, "bulan" = pilihan bulan, selainnya teks bebas.
+CREATE TABLE IF NOT EXISTS notifikasi_templat (
+    id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    nama varchar(60) NOT NULL,
+    judul varchar(50) NOT NULL,
+    isi varchar(500) NOT NULL,
+    urutan integer NOT NULL DEFAULT 0,
+    diubah_oleh varchar(50),
+    diubah_pada timestamptz NOT NULL DEFAULT now()
+);
+-- Isi awal sekali saja (penanda di pengaturan_web), supaya templat yang dihapus pengurus tidak muncul lagi saat pemasangan diulang.
+INSERT INTO notifikasi_templat (nama, judul, isi, urutan, diubah_oleh)
+SELECT v.nama, v.judul, v.isi, v.urutan, 'isi awal' FROM (VALUES
+    ('Pemeliharaan server', 'Pemeliharaan Aplikasi {tanggal}', 'Aplikasi anggota dan layanan online koperasi tidak dapat diakses pada {tanggal} pukul {jam mulai} sampai {jam selesai} WIB karena pemeliharaan server. Transaksi di kantor koperasi tetap berjalan seperti biasa. Mohon maaf atas ketidaknyamanannya.', 1),
+    ('Undangan RAT', 'Undangan RAT Tahun Buku {tahun buku}', 'Rapat Anggota Tahunan (RAT) tahun buku {tahun buku} diselenggarakan pada {tanggal} pukul {jam} WIB di {tempat}. Agenda: laporan pertanggungjawaban pengurus, pengesahan laporan keuangan, dan pembagian SHU. Kehadiran Bapak/Ibu anggota sangat kami harapkan.', 2),
+    ('Pembagian SHU', 'SHU Tahun Buku {tahun buku} Dibagikan', 'Sisa Hasil Usaha (SHU) tahun buku {tahun buku} dapat diambil mulai {tanggal}. Besaran SHU Anda dapat dilihat di menu SHU pada aplikasi anggota. {keterangan}', 3),
+    ('Libur layanan', 'Layanan Koperasi Libur {tanggal}', 'Kantor koperasi tutup pada {tanggal} dalam rangka {keterangan}. Layanan kembali normal pada {tanggal buka}. Aplikasi anggota tetap dapat digunakan untuk melihat simpanan, pinjaman, dan mengajukan kredit.', 4),
+    ('Jadwal potongan gaji', 'Info Potongan Gaji {bulan}', 'Potongan gaji untuk simpanan dan angsuran bulan {bulan} dilakukan pada {tanggal}. Perkiraan potongan Anda dapat dilihat di menu Potongan pada aplikasi anggota. Hubungi pengurus bila ada yang tidak sesuai.', 5),
+    ('Batas pengajuan kredit', 'Batas Pengajuan Kredit {bulan}', 'Pengajuan kredit untuk pencairan bulan {bulan} diterima paling lambat {tanggal}. Ajukan lewat menu Ajukan pada aplikasi anggota. Pengajuan setelah tanggal tersebut diproses pada periode berikutnya.', 6),
+    ('Pembaruan aplikasi', 'Aplikasi Anggota Diperbarui', 'Aplikasi anggota telah diperbarui: {keterangan}. Bila tampilan belum berubah, tutup lalu buka kembali aplikasi.', 7),
+    ('Promo', 'Promo {nama promo}', '{keterangan} Berlaku {tanggal mulai} sampai {tanggal selesai}. Info lengkap hubungi pengurus koperasi.', 8)
+) v(nama, judul, isi, urutan)
+WHERE NOT EXISTS (SELECT 1 FROM pengaturan_web WHERE kunci = 'notifikasi_templat.isi_awal');
+INSERT INTO pengaturan_web (kunci, nilai, diubah_oleh) VALUES ('notifikasi_templat.isi_awal', '1', 'pemasangan') ON CONFLICT (kunci) DO NOTHING;

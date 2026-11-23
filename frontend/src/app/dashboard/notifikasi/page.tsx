@@ -1,5 +1,7 @@
 import { MAKS_ISI, MAKS_JUDUL, ringkasanPush } from "@kopkar/backend/src/anggota/push.ts"
+import { KelolaTemplat } from "@/components/notifikasi/KelolaTemplat"
 import { ModalKirimNotifikasi } from "@/components/notifikasi/KirimNotifikasi"
+import type { TemplatNotifikasi } from "@/app/actions/notifikasi"
 import { FormCard } from "@/components/transaksi/common"
 import { pool, query } from "@/lib/db"
 import { wajibIzin } from "@/lib/operator"
@@ -7,6 +9,8 @@ import { wajibIzin } from "@/lib/operator"
 export default async function KirimNotifikasiPage() {
     await wajibIzin("/dashboard/notifikasi") // layout tidak dijalankan ulang pada navigasi antarhalaman
     const r = await ringkasanPush(pool)
+    // Tabel templat dipasang npm run pengaturan:pasang; sebelum itu halaman tetap jalan tanpa templat.
+    const templat = await query<TemplatNotifikasi>("SELECT id, nama, judul, isi FROM notifikasi_templat ORDER BY urutan, nama").catch(() => [] as TemplatNotifikasi[])
     // Pesan yang sama ke banyak anggota dihitung satu baris.
     const riwayat = await query<{ title: string | null; pesan: string | null; waktu: string; penerima: number }>(
         `SELECT title, pesan, to_char(max(datetimes), 'YYYY-MM-DD HH24:MI') waktu, count(*)::int penerima
@@ -20,9 +24,10 @@ export default async function KirimNotifikasiPage() {
                         {r.perangkat} perangkat dari {r.anggotaBerPerangkat} anggota sudah mengaktifkan notifikasi (dari {r.anggotaAktif} anggota aktif).
                         Anggota lain tetap menerima pesan ini di menu Notifikasi aplikasi mereka. Persetujuan dan penolakan pengajuan kredit dikirim otomatis.
                     </p>
-                    <ModalKirimNotifikasi anggotaAktif={r.anggotaAktif} maksJudul={MAKS_JUDUL} maksIsi={MAKS_ISI} />
+                    <ModalKirimNotifikasi anggotaAktif={r.anggotaAktif} maksJudul={MAKS_JUDUL} maksIsi={MAKS_ISI} templat={templat} />
                 </div>
             </FormCard>
+            <KelolaTemplat templat={templat} />
             <FormCard title="Pesan terakhir" description="15 kiriman terbaru dalam 90 hari.">
                 {riwayat.length === 0 ? <p className="text-sm text-muted-foreground">Belum ada.</p> : (
                     <ul className="divide-y text-sm">
