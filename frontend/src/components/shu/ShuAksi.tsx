@@ -9,6 +9,7 @@ import type { Hasil } from "@/app/actions/transaksi"
 import { Input } from "@/components/ui/input"
 import { TombolModal, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { Field, HasilTransaksi, SubmitButton, selectClass, useAksiForm, type Akun } from "@/components/transaksi/common"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 const tombol = "inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-md border text-sm font-medium shadow-sm hover:bg-muted"
 const tombolUtama = "inline-flex items-center justify-center gap-1.5 h-9 px-3 rounded-md text-sm font-semibold shadow-sm bg-blue-600 hover:bg-blue-700 text-white"
@@ -158,11 +159,11 @@ export function TombolCairkan({ tahun, kodeAgt, nama, jumlah, akunKas, hariIni }
 export function TombolBatal({ tahun, kodeAgt, nama }: { tahun: number; kodeAgt: string; nama: string }) {
     const router = useRouter()
     const [sibuk, mulai] = useTransition()
-    const batal = () => {
-        if (!confirm(`Batalkan pencairan SHU ${tahun} untuk ${nama}? Jurnal pencairannya dihapus dan statusnya kembali belum diambil.`)) return
+    const batal = async () => {
+        if (!(await tanyaYa(`Batalkan pencairan SHU ${tahun} untuk ${nama}? Jurnal pencairannya dihapus dan statusnya kembali belum diambil.`))) return
         mulai(async () => {
             const h = await batalkanShuAction(tahun, kodeAgt)
-            if (h) alert(h.ok ? h.pesan : h.error)
+            if (h) void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok })
             router.refresh()
         })
     }

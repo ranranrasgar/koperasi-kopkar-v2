@@ -12,6 +12,7 @@ import { Field, FormCard, selectClass } from "@/components/transaksi/common"
 import type { IzinBaris, KelompokBaris } from "@/lib/queries/akses"
 import { LABEL_AKSI, type AksiIzin } from "@/config/akses"
 import { cn } from "@/lib/utils"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 interface Grup { id: number; nama_grup: string }
 
@@ -236,13 +237,13 @@ export function KelolaOperator({ operator, grup, sayaId }: { operator: OperatorB
                                             <button type="button" title="Ubah data operator" aria-label={`Ubah ${o.nama}`} onClick={() => setUbah(o)} className="rounded p-1.5 hover:bg-muted"><Pencil className="h-4 w-4" /></button>
                                             {o.id !== sayaId && <>
                                                 <button type="button" disabled={sibuk !== null} title="Reset password" aria-label={`Reset password ${o.nama}`}
-                                                    onClick={() => confirm(`Buat password sementara baru untuk ${o.nama}? Password lama tidak berlaku lagi.`)
+                                                    onClick={async () => (await tanyaYa(`Buat password sementara baru untuk ${o.nama}? Password lama tidak berlaku lagi.`))
                                                         && jalankan(o.id, () => resetPasswordAction(o.id), { punya_password: true, wajib_ganti_password: true })}
                                                     className="rounded p-1.5 text-primary hover:bg-muted disabled:opacity-50">
                                                     {sibuk === o.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <KeyRound className="h-4 w-4" />}
                                                 </button>
                                                 <button type="button" disabled={sibuk !== null} title="Hapus operator" aria-label={`Hapus ${o.nama}`}
-                                                    onClick={() => confirm(`Hapus operator ${o.nama}? Hanya bisa untuk akun yang belum pernah dipakai.`) && setSibuk(o.id) === undefined && startTransition(async () => {
+                                                    onClick={async () => (await tanyaYa(`Hapus operator ${o.nama}? Hanya bisa untuk akun yang belum pernah dipakai.`)) && setSibuk(o.id) === undefined && startTransition(async () => {
                                                         const r = await hapusOperatorAction(o.id)
                                                         setHasil(r)
                                                         if (r.ok) { setDaftar((d) => d.filter((x) => x.id !== o.id)); router.refresh() }

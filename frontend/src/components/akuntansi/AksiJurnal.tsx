@@ -9,6 +9,7 @@ import { hapusBarisJurnalAction, hapusJurnalAction, tandaiPenyesuaianAction } fr
 import { TombolJurnalUbah } from "@/components/transaksi/JurnalForm"
 import { cetakVoucher } from "@/lib/cetak-voucher"
 import { hariIni } from "@/lib/format"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 const tombol = "grid h-8 w-8 place-items-center rounded-md hover:bg-muted/50 disabled:opacity-50"
 
@@ -20,7 +21,7 @@ export function TombolVoucher({ nomorBukti }: { nomorBukti: string }) {
             setSibuk(true)
             const galat = await cetakVoucher(nomorBukti)
             setSibuk(false)
-            if (galat) alert(galat)
+            if (galat) void beriTahu(galat, { ok: false })
         }}>
             {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />}
         </button>
@@ -41,25 +42,25 @@ export function AksiJurnal({ item }: { item: Record<string, unknown> }) {
     const asalLain = !/^(JU|JP|BB)\//.test(nomor) // bukti dari transaksi simpanan/pinjaman/SHU dsb.
     const catatanAsal = asalLain ? `\n\nBukti ini dibuat oleh transaksi lain. Hanya jurnalnya yang berubah; data simpanan/pinjaman asalnya tidak ikut berubah.` : ""
     const penyesuaian = jp || item.jenis === "penyesuaian"
-    const tandai = () => {
-        if (!confirm(penyesuaian ? `Kembalikan ${nomor} menjadi jurnal umum biasa?` : `Tandai ${nomor} sebagai jurnal penyesuaian? Nomor tetap; jurnal ini akan dipisahkan di kolom penyesuaian neraca lajur.`)) return
+    const tandai = async () => {
+        if (!(await tanyaYa(penyesuaian ? `Kembalikan ${nomor} menjadi jurnal umum biasa?` : `Tandai ${nomor} sebagai jurnal penyesuaian? Nomor tetap; jurnal ini akan dipisahkan di kolom penyesuaian neraca lajur.`))) return
         mulai(async () => {
             const h = await tandaiPenyesuaianAction(nomor, !penyesuaian)
-            if (h) alert(h.ok ? h.pesan : h.error)
+            if (h) void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok })
             router.refresh()
         })
     }
-    const hapus = () => {
-        if (!confirm(`Hapus baris ini dari bukti ${nomor}? Tidak bisa dibatalkan.${catatanAsal}`)) return
+    const hapus = async () => {
+        if (!(await tanyaYa(`Hapus baris ini dari bukti ${nomor}? Tidak bisa dibatalkan.${catatanAsal}`))) return
         mulai(async () => {
             const h = await hapusBarisJurnalAction(nomor, Number(item.urutan))
             if (h && !h.ok && h.error.includes("tidak seimbang")) {
                 // Baris bernilai tidak bisa dihapus sendiri; tawarkan menghapus seluruh bukti seperti sebelumnya.
-                if (confirm(`${h.error}. Hapus seluruh bukti ${nomor}? Semua barisnya ikut terhapus dan tidak bisa dibatalkan.`)) {
+                if ((await tanyaYa(`${h.error}. Hapus seluruh bukti ${nomor}? Semua barisnya ikut terhapus dan tidak bisa dibatalkan.`))) {
                     const r = await hapusJurnalAction(nomor)
-                    if (r) alert(r.ok ? r.pesan : r.error)
+                    if (r) void beriTahu(r.ok ? r.pesan : r.error, { ok: !!r.ok })
                 }
-            } else if (h) alert(h.ok ? h.pesan : h.error)
+            } else if (h) void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok })
             router.refresh()
         })
     }

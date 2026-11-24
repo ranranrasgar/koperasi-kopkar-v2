@@ -11,6 +11,7 @@ import type { Pengajuan } from "@/lib/queries/keanggotaan"
 import { formatAngka2, formatRupiah, formatTanggal } from "@/lib/format"
 import { EmailAnggotaPengajuan } from "./EmailAnggotaPengajuan"
 import { RiwayatAnggotaPanel, RingkasRisiko } from "./RiwayatAnggota"
+import { beriTahu } from "@/components/ui/Tanya"
 
 /** Nomor HP Indonesia ke format wa.me (628...); null bila tidak berupa nomor HP. */
 function nomorWa(hp: string | null | undefined) {
@@ -119,7 +120,7 @@ export function TinjauPengajuan({ p, onTutup, onPutuskan, sibuk }: {
         if (!p || !t || !i) return
         const galat = await bukaCetak({ judul: "Tinjauan Pengajuan Kredit", subjudul: `${p.nama} (${p.kd_anggota}) · realisasi ${formatTanggal(p.tgl_realisasi)}`, orientasi: "potret",
             isi: htmlTinjauan(t, Number(gaji) || 0) })
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     }
     /** Buka WhatsApp ke HP anggota dengan ringkasan pengajuan; PDF dilampirkan manual (wa.me tidak bisa membawa berkas). */
     const kirimWa = () => {

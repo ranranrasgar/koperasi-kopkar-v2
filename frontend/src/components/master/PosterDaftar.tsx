@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react"
 import { Check, Copy, Download, MessageCircle, Printer } from "lucide-react"
 import qrcode from "qrcode-generator"
 import { Button } from "@/components/ui/button"
+import { beriTahu } from "@/components/ui/Tanya"
 
 // Poster pendaftaran digambar sekali di canvas: pratinjau, cetak, dan gambar unduhan berasal dari hasil yang sama. Ukuran A5 pada 300 dpi.
 const LEBAR = 1748, TINGGI = 2480
@@ -136,7 +137,7 @@ export function PosterDaftar({ url, nama, logo, wa, tanpaEnv }: { url: string; n
     }
     const cetak = () => {
         const w = window.open("", "_blank")
-        if (!w) { alert("Jendela cetak diblokir browser. Izinkan pop-up untuk situs ini."); return }
+        if (!w) { void beriTahu("Jendela cetak diblokir browser. Izinkan pop-up untuk situs ini."); return }
         w.document.write(`<!doctype html><html lang="id"><head><meta charset="utf-8"><title>Poster Daftar Anggota</title><style>@page{size:A5 portrait;margin:0}html,body{margin:0}img{display:block;width:148mm;height:210mm}</style></head><body><img src="${kanvas.current!.toDataURL("image/png")}" onload="window.focus();window.print()"></body></html>`)
         w.document.close()
     }

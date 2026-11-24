@@ -14,6 +14,7 @@ import { MAKS_SEMUA } from "@/lib/halaman"
 import { dataCetakAction } from "@/app/actions/cetak"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 import { unduhExcel } from "@/lib/ekspor-excel"
+import { beriTahu } from "@/components/ui/Tanya"
 
 interface Row {
     tgl_pinjaman: string; no_pinjaman: string; kode_agt: string; nik: string | null; nama: string; bank_no_rek: string | null; bank_atas_nama: string | null; kode_kredit: string | null; opr: string | null
@@ -134,7 +135,7 @@ export function LoansDashboard({ data, filter, jenisKredit, daftarTahun }: Loans
     // Cetak dan Ekspor berisi SEMUA pinjaman sesuai filter yang sedang diterapkan (bukan hanya halaman ini), dengan kop dan total.
     const siapkan = async () => {
         const r = await dataCetakAction(pathname, Object.fromEntries(new URLSearchParams(window.location.search)))
-        if ("error" in r) { alert(r.error); return null }
+        if ("error" in r) { void beriTahu(r.error, { ok: false }); return null }
         const items = r.items as unknown as typeof rows
         const kolom: KolomTabel[] = kolomTampil.map((k) => ({ label: k.judul, kanan: k.kanan, tengah: k.tengah, mono: k.mono && !k.kanan }))
         const baris = items.map((x) => kolomTampil.map((k) => k.teks(x)))
@@ -148,14 +149,14 @@ export function LoansDashboard({ data, filter, jenisKredit, daftarTahun }: Loans
         const d = await siapkan()
         if (!d) return
         const galat = await bukaCetak({ judul: "Daftar Pinjaman", subjudul: d.subjudul, isi: tabelHtml(d.kolom, d.baris, d.jumlah, { total: d.total }) })
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     }
     const handleExport = async () => {
         const d = await siapkan()
         if (!d) return
         const galat = await unduhExcel({ nama: "daftar-pinjaman", judul: "Daftar Pinjaman", subjudul: d.subjudul,
             bagian: [{ kolom: d.kolom, baris: d.baris, total: d.total, nomor: true, jumlahTotal: d.jumlah }] })
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     }
 
     return (

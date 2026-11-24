@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 import { formatAngka, formatAngka2, formatTanggal } from "@/lib/format"
 import type { BarisShu } from "@/lib/queries/shu"
+import { beriTahu } from "@/components/ui/Tanya"
 
 interface Data { items: BarisShu[]; total: number; page: number; pageSize: number; totalPages: number; jumlah: { rp_sukarela: number; rp_jasa_uang: number; rp_jasa_barang: number; rp_bagian: number } }
 
@@ -42,7 +43,7 @@ export function TabelShu({ data, tahun, statusTahun, akunKas, hariIni, bolehCair
 
     const semua = async () => {
         const r = await dataCetakAction("/dashboard/shu", { ...Object.fromEntries(sp.entries()), tahun: String(tahun) })
-        return "error" in r ? (alert(r.error), null) : r
+        return "error" in r ? (void beriTahu(r.error, { ok: false }), null) : r
     }
     const baris = (items: BarisShu[]) => items.map((a) => [a.kode_agt, a.nik ?? "-", a.nama, a.status_staff ?? "-", String(a.lama_agt), formatAngka(a.rp_sukarela),
         formatAngka(a.rp_jasa_uang), formatAngka(a.rp_jasa_barang), formatAngka2(a.rp_bagian), statusTeks(a), a.no_reff ?? ""])
@@ -61,7 +62,7 @@ export function TabelShu({ data, tahun, statusTahun, akunKas, hariIni, bolehCair
             if (!r) return
             const items = r.items as unknown as BarisShu[]
             const galat = await bukaCetak({ judul: "SHU Anggota", subjudul: subjudul(), isi: tabelHtml(KOLOM_CETAK, baris(items), r.total, { total: barisTotal(items) }) })
-            if (galat) alert(galat)
+            if (galat) void beriTahu(galat, { ok: false })
         } finally { setMencetak(false) }
     }
     const ekspor = async () => {
@@ -70,7 +71,7 @@ export function TabelShu({ data, tahun, statusTahun, akunKas, hariIni, bolehCair
         const items = r.items as unknown as BarisShu[]
         const galat = await unduhExcel({ nama: `shu-anggota_${tahun}`, judul: "SHU Anggota", subjudul: subjudul(),
             bagian: [{ kolom: KOLOM_CETAK, baris: baris(items), total: barisTotal(items), nomor: true, jumlahTotal: r.total }] })
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     }
     const dapatDicairkan = statusTahun === "posting" && bolehCair
 

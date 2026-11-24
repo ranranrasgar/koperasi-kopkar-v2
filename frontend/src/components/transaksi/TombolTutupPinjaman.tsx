@@ -4,6 +4,7 @@ import { useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { CircleCheck, Loader2, Undo2 } from "lucide-react"
 import { batalTutupPinjamanAction, tutupPinjamanAction } from "@/app/actions/master-aksi"
+import { beriTahu, tanyaIsian, tanyaYa } from "@/components/ui/Tanya"
 
 const kelasTombol = "inline-flex items-center gap-1.5 h-9 px-3 rounded-md border text-sm font-medium shadow-sm hover:bg-muted disabled:opacity-50"
 
@@ -11,12 +12,13 @@ const kelasTombol = "inline-flex items-center gap-1.5 h-9 px-3 rounded-md border
 export function TombolTutupPinjaman({ noPinjaman, sisa }: { noPinjaman: string; sisa: string }) {
     const router = useRouter()
     const [sibuk, mulai] = useTransition()
-    const tutup = () => {
-        const alasan = prompt(`Tutup ${noPinjaman} sebagai LUNAS tanpa jurnal?\n\nSisa pokok ${sisa} tidak dibukukan, jadi neraca dan laporan keuangan tetap. Angsuran pinjaman ini tidak ikut Potongan Gaji lagi.\n\nTulis alasannya:`)
+    const tutup = async () => {
+        const alasan = await tanyaIsian(`Tutup ${noPinjaman} sebagai LUNAS tanpa jurnal?\n\nSisa pokok ${sisa} tidak dibukukan, jadi neraca dan laporan keuangan tetap. Angsuran pinjaman ini tidak ikut Potongan Gaji lagi.\n\nTulis alasannya:`,
+            { judul: "Tutup pinjaman", tombol: "Tutup pinjaman", wajib: false })
         if (alasan === null) return
         mulai(async () => {
             const h = await tutupPinjamanAction(noPinjaman, alasan)
-            alert(h?.ok ? h.pesan : h?.error)
+            void beriTahu((h?.ok ? h.pesan : h?.error) ?? "", { ok: !!h?.ok })
             router.refresh()
         })
     }
@@ -31,11 +33,11 @@ export function TombolTutupPinjaman({ noPinjaman, sisa }: { noPinjaman: string; 
 export function TombolBatalTutup({ noPinjaman }: { noPinjaman: string }) {
     const router = useRouter()
     const [sibuk, mulai] = useTransition()
-    const batal = () => {
-        if (!confirm(`Batalkan penutupan ${noPinjaman}? Pinjaman kembali berjalan dan ikut Potongan Gaji lagi.`)) return
+    const batal = async () => {
+        if (!(await tanyaYa(`Batalkan penutupan ${noPinjaman}? Pinjaman kembali berjalan dan ikut Potongan Gaji lagi.`))) return
         mulai(async () => {
             const h = await batalTutupPinjamanAction(noPinjaman)
-            alert(h?.ok ? h.pesan : h?.error)
+            void beriTahu((h?.ok ? h.pesan : h?.error) ?? "", { ok: !!h?.ok })
             router.refresh()
         })
     }

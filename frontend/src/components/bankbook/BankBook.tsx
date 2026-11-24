@@ -13,6 +13,7 @@ import { TombolModal, tombolModalUtama, useTutupSetelahBerhasil } from "@/compon
 import { Field, HasilTransaksi, SubmitButton, selectClass, useAksiForm, type Akun } from "@/components/transaksi/common"
 import { formatRupiah } from "@/lib/format"
 import type { BuktiBankBook } from "@kopkar/backend/src/posting/bankbook.ts"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 interface Baris { id: number; kode: string; ket: string; debit: string; kredit: string }
 let nextId = 1
@@ -167,11 +168,11 @@ export function TombolBankBookHapus({ nomorBukti }: { nomorBukti: string }) {
     const boleh = useBolehAksi()
     const router = useRouter()
     const [sibuk, mulai] = useTransition()
-    const hapus = () => {
-        if (!confirm(`Hapus bukti ${nomorBukti}? Semua baris jurnalnya ikut terhapus dan tidak bisa dibatalkan.`)) return
+    const hapus = async () => {
+        if (!(await tanyaYa(`Hapus bukti ${nomorBukti}? Semua baris jurnalnya ikut terhapus dan tidak bisa dibatalkan.`))) return
         mulai(async () => {
             const h = await hapusBankBookAction(nomorBukti)
-            if (h) alert(h.ok ? h.pesan : h.error)
+            if (h) void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok })
             router.refresh()
         })
     }

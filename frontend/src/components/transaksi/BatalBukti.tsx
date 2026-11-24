@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { Loader2, Undo2 } from "lucide-react"
 import { batalBuktiAction, batalPinjamanAction } from "@/app/actions/transaksi"
 import { ModalForm } from "@/components/ui/Modal"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 /**
  * Form alasan pembatalan. Transaksi asal tetap ada; pembalik dibuat oleh backend/src/posting/koreksi.ts.
@@ -14,10 +15,10 @@ export function FormBatal({ no, onSelesai, seluruhPinjaman = false }: { no: stri
     const [alasan, setAlasan] = useState("")
     const [pesan, setPesan] = useState<string | null>(null)
     const [sibuk, mulai] = useTransition()
-    const kirim = () => {
-        if (!confirm(seluruhPinjaman
+    const kirim = async () => {
+        if (!(await tanyaYa(seluruhPinjaman
             ? `Batalkan pinjaman ${no} beserta SEMUA angsurannya? Pembalik bertanggal hari ini dibuat untuk setiap angsuran dan pencairannya, dan ini tidak bisa diurungkan.`
-            : `Batalkan ${no}? Transaksi pembalik bertanggal hari ini akan dibuat, dan ini tidak bisa diurungkan.`)) return
+            : `Batalkan ${no}? Transaksi pembalik bertanggal hari ini akan dibuat, dan ini tidak bisa diurungkan.`))) return
         mulai(async () => {
             const h = seluruhPinjaman ? await batalPinjamanAction(no, alasan) : await batalBuktiAction(no, alasan)
             setPesan(h?.ok ? h.pesan : h?.error ?? "Gagal membatalkan")

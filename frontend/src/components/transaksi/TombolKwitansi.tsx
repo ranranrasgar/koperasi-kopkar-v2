@@ -6,6 +6,7 @@ import { dataBuktiAction } from "@/app/actions/kwitansi"
 import { bukaBuku, bukaKwitansi } from "@/lib/cetak-kwitansi"
 import type { JenisBukti } from "@/lib/kwitansi-tipe"
 import { LihatBuktiSimpanan } from "./LihatBuktiSimpanan"
+import { beriTahu } from "@/components/ui/Tanya"
 
 /** Cetak kwitansi atau buku pinjaman untuk dot matrix. `ikon`: tombol kecil tanpa teks untuk baris tabel. `ulang`: judul kwitansi diberi tanda cetak ulang. */
 export function TombolKwitansi({ jenis, no, label = "Cetak Kwitansi", ikon = false, ulang = false }: { jenis: JenisBukti; no: string; label?: string; ikon?: boolean; ulang?: boolean }) {
@@ -13,7 +14,7 @@ export function TombolKwitansi({ jenis, no, label = "Cetak Kwitansi", ikon = fal
     const cetak = () => mulai(async () => {
         const r = await dataBuktiAction(jenis, no)
         const galat = "error" in r ? r.error : "buku" in r ? bukaBuku(r.buku, r.kop) : bukaKwitansi(ulang ? { ...r.kwitansi, judul: `${r.kwitansi.judul} (CETAK ULANG)` } : r.kwitansi, r.kop)
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     })
     const Ikon = sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Printer className="h-4 w-4" />
     if (ikon) return <button type="button" onClick={cetak} disabled={sibuk} title={label} aria-label={`${label} ${no}`} className="rounded p-1.5 hover:bg-muted disabled:opacity-50">{Ikon}</button>

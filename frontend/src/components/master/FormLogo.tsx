@@ -4,6 +4,7 @@ import React, { useActionState, useEffect, useRef, useState, useTransition } fro
 import { AlertCircle, CheckCircle2, ImageUp, Loader2, RotateCcw } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { simpanLogoAction } from "@/app/actions/master"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 /** Unggah logo koperasi: tampil di sidebar, halaman login, dan ikon tab browser. */
 export function FormLogo({ logo, logoSendiri }: { logo: string; logoSendiri: boolean }) {
@@ -21,11 +22,11 @@ export function FormLogo({ logo, logoSendiri }: { logo: string; logoSendiri: boo
         }
     }, [hasil])
 
-    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    const onSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault()
         const tombol = (e.nativeEvent as SubmitEvent).submitter as HTMLButtonElement | null
-        if (tombol?.value === "hapus" && !confirm("Hapus logo dan kembali memakai logo bawaan?")) return
-        const data = new FormData(e.currentTarget, tombol)
+        const data = new FormData(e.currentTarget, tombol) // sebelum await: e.currentTarget kosong setelah event selesai
+        if (tombol?.value === "hapus" && !(await tanyaYa("Hapus logo dan kembali memakai logo bawaan?", { bahaya: true }))) return
         startTransition(() => jalankan(data))
     }
 

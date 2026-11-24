@@ -5,6 +5,7 @@ import { Loader2, Printer } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { bukaCetak, type Orientasi } from "@/lib/cetak-klien"
 import { cetakBagian, dariMentah, type BagianMentah } from "@/lib/ekspor-excel"
+import { beriTahu } from "@/components/ui/Tanya"
 
 /**
  * Cetak laporan di halaman ini sebagai dokumen cetak sendiri (kop surat dari Pengaturan Perusahaan, orientasi kertas otomatis,
@@ -25,7 +26,7 @@ export function TombolCetak({ label = "Cetak", orientasi = "auto", bagian, judul
         setSibuk(true)
         const galat = bagian ? await cetakBagian({ judul, subjudul, orientasi, bagian: bagian.map(dariMentah) }) : await bukaCetak({ judul, subjudul, orientasi, isi: area })
         setSibuk(false)
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     }
     return (
         <Button type="button" onClick={cetak} disabled={sibuk} variant="outline" size="sm" className="h-9 font-medium shadow-sm print:hidden">

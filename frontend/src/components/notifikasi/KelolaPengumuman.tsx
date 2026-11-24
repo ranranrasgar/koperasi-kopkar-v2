@@ -12,6 +12,7 @@ import { PilihGambar } from "./PilihGambar"
 import { PilihSasaran, ringkasSasaran, SASARAN_AWAL, type OpsiGrup, type OpsiStatus } from "./PilihSasaran"
 import { Field, HasilTransaksi, SubmitButton, useAksiForm } from "@/components/transaksi/common"
 import { ModalForm } from "@/components/ui/Modal"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 export interface Pengumuman { id: number; judul: string; isi: string; aktif: boolean; gambar: string | null; sasaran: Sasaran }
 
@@ -98,7 +99,7 @@ export function KelolaPengumuman({ jenis, nama, daftar, opsiStatus, opsiGrup }: 
                                     className="h-8 rounded px-2 text-xs font-semibold hover:bg-muted disabled:opacity-50">{d.aktif ? "Sembunyikan" : "Tampilkan"}</button>
                                 <button type="button" title="Ubah" onClick={() => { setHasil(null); setForm(d) }} className="grid h-8 w-8 place-items-center rounded hover:bg-muted"><Pencil className="h-4 w-4" /></button>
                                 <button type="button" title="Hapus" disabled={sibuk}
-                                    onClick={() => { if (window.confirm(`Hapus ${nama.toLowerCase()} "${d.judul}"?`)) aksi(() => hapusPengumumanAction(jenis, d.id)) }}
+                                    onClick={async () => { if ((await tanyaYa(`Hapus ${nama.toLowerCase()} "${d.judul}"?`))) aksi(() => hapusPengumumanAction(jenis, d.id)) }}
                                     className="grid h-8 w-8 place-items-center rounded text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"><Trash2 className="h-4 w-4" /></button>
                             </div>
                         </li>

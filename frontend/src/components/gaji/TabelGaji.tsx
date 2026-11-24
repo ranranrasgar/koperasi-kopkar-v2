@@ -13,6 +13,7 @@ import { bukaCetak } from "@/lib/cetak-klien"
 import { cn } from "@/lib/utils"
 import type { BarisGaji, RekapGaji } from "@kopkar/backend/src/gaji/penggajian.ts"
 import { slipHtml } from "./slip-gaji"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 const n = (v: number) => Math.round(v).toLocaleString("id-ID")
 type KolomGaji = keyof BarisGaji["gaji"]
@@ -34,8 +35,8 @@ export function TabelGaji({ rekap }: { rekap: RekapGaji }) {
     const total = (k: KolomGaji) => rekap.baris.reduce((t, b) => t + Number(b.gaji[k]), 0)
     const kosong = rekap.baris.filter((b) => b.hariKosong > 0)
 
-    const jalan = (fn: () => Promise<{ ok: true; pesan: string } | { ok: false; error: string } | null>, tanya: string) => {
-        if (!confirm(tanya)) return
+    const jalan = async (fn: () => Promise<{ ok: true; pesan: string } | { ok: false; error: string } | null>, tanya: string) => {
+        if (!(await tanyaYa(tanya))) return
         mulai(async () => {
             const r = await fn()
             if (r) setPesan(r.ok ? { ok: true, teks: r.pesan } : { ok: false, teks: r.error })
@@ -45,7 +46,7 @@ export function TabelGaji({ rekap }: { rekap: RekapGaji }) {
     const cetak = (daftar: BarisGaji[]) => mulai(async () => {
         const kop = await kopCetakAction()
         const galat = await bukaCetak({ judul: "Slip Pembayaran Gaji", subjudul: `Periode ${p.periode}`, orientasi: "lanskap", isi: slipHtml(daftar, p, kop?.kota ?? "", kop?.nama ?? "") }, kop)
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     })
     const fields: FieldSpec[] = [
         { name: "periode_id", label: "", hidden: true }, { name: "karyawan_id", label: "", hidden: true },

@@ -9,6 +9,7 @@ import { MENU } from "@/config/akses"
 import { cn } from "@/lib/utils"
 import { KODE_HADIR, type KodeHadir } from "@kopkar/backend/src/gaji/hitung.ts"
 import type { BarisHadir } from "@kopkar/backend/src/gaji/periode.ts"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 const KODE = Object.keys(KODE_HADIR) as KodeHadir[]
 const WARNA: Record<KodeHadir, string> = {
@@ -42,8 +43,8 @@ export function GridHadir({ periodeId, tanggal, baris, final }: { periodeId: num
             } else if (r?.pesan.startsWith("MODE UJI")) setPesan({ ok: true, teks: r.pesan })
         })
     }
-    const isiKosong = (karyawanId: string | null) => {
-        if (!confirm("Isi hari yang masih kosong: hari dengan pindai QR menjadi ATN, hari kerja lain ATN, hari istirahat RD. Isian yang sudah ada tidak berubah. Lanjut?")) return
+    const isiKosong = async (karyawanId: string | null) => {
+        if (!(await tanyaYa("Isi hari yang masih kosong: hari dengan pindai QR menjadi ATN, hari kerja lain ATN, hari istirahat RD. Isian yang sudah ada tidak berubah. Lanjut?"))) return
         mulai(async () => {
             const r = await isiHadirKosongAction(periodeId, karyawanId ? Number(karyawanId) : null, true)
             if (r) setPesan(r.ok ? { ok: true, teks: r.pesan } : { ok: false, teks: r.error })

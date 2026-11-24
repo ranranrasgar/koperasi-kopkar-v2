@@ -13,6 +13,7 @@ import { InputUang } from "@/components/ui/InputUang"
 import { ModalForm } from "@/components/ui/Modal"
 import type { AnggotaRingkas } from "@/lib/queries/anggota"
 import type { ModelKantin } from "@kopkar/backend/src/unit-usaha/kantin.ts"
+import { tanyaIsian, tanyaYa } from "@/components/ui/Tanya"
 import { cn } from "@/lib/utils"
 
 export interface ProdukPos { id: number; kode: string; barcode: string | null; nama: string; kategori: string | null; satuan: string; harga: number; kelola_stok: boolean; stok: number; gambar: string | null }
@@ -268,7 +269,7 @@ export function KasirPos({ unit, produk, sesi, kasir, lebihDariSatu }: { unit: {
                         <button type="button" onClick={() => { setModal("pesanan"); muatPesanan() }} className={cn("col-span-2 inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs hover:bg-muted", pesanan.some((p) => p.status === "menunggu" || p.status === "dibayar") && "border-amber-400 bg-amber-50 font-semibold text-amber-900")}>
                             <Bell className="h-3.5 w-3.5" /> F6 Pesanan aplikasi ({pesanan.length})</button>
                         <button type="button" onClick={tahanAtauPanggil} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs hover:bg-muted"><Pause className="h-3.5 w-3.5" /> F7 {keranjang.length ? "Tahan" : `Panggil (${tahan.length})`}</button>
-                        <button type="button" disabled={!keranjang.length} onClick={() => confirm("Kosongkan keranjang?") && kosongkan()} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs text-red-700 hover:bg-red-50 disabled:opacity-40"><X className="h-3.5 w-3.5" /> Batal</button>
+                        <button type="button" disabled={!keranjang.length} onClick={async () => { if (await tanyaYa("Kosongkan keranjang?", { tombol: "Kosongkan" })) kosongkan() }} className="inline-flex items-center justify-center gap-1 rounded-md border px-2 py-2 text-xs text-red-700 hover:bg-red-50 disabled:opacity-40"><X className="h-3.5 w-3.5" /> Batal</button>
                     </div>
                 </div>
             </div>
@@ -451,7 +452,7 @@ function DaftarPesanan({ unitId, pesanan, muatUlang, onMuat }: { unitId: number;
                         {p.status !== "siap" && <button type="button" disabled={sibuk} onClick={() => jalan(() => ubahStatusPesananAction(unitId, p.id, "siap"))} className="rounded-md border px-3 py-1 hover:bg-muted">Siap diambil</button>}
                         {p.metode === "sukarela" && p.status === "siap" && <button type="button" disabled={sibuk} onClick={() => jalan(() => ubahStatusPesananAction(unitId, p.id, "selesai"))} className="rounded-md bg-primary px-3 py-1 font-semibold text-primary-foreground">Sudah diambil</button>}
                         {p.metode === "tunai" && <button type="button" onClick={() => onMuat(p)} className="rounded-md bg-primary px-3 py-1 font-semibold text-primary-foreground">Muat ke keranjang (bayar tunai)</button>}
-                        <button type="button" disabled={sibuk} onClick={() => { const a = prompt(`Tolak pesanan #${p.id}? Tulis alasannya:`); if (a) jalan(() => batalPesananKasirAction(unitId, p.id, a)) }} className="rounded-md border border-red-300 px-3 py-1 text-red-700 hover:bg-red-50">Tolak</button>
+                        <button type="button" disabled={sibuk} onClick={async () => { const a = await tanyaIsian(`Tolak pesanan #${p.id}?${p.metode === "sukarela" ? " Saldo Simpanan Sukarela anggota dikembalikan." : ""} Tulis alasannya:`, { judul: "Tolak pesanan", tombol: "Tolak pesanan", bahaya: true, minimal: 3 }); if (a !== null) jalan(() => batalPesananKasirAction(unitId, p.id, a)) }} className="rounded-md border border-red-300 px-3 py-1 text-red-700 hover:bg-red-50">Tolak</button>
                     </div>
                 </div>
             ))}

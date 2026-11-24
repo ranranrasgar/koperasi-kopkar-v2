@@ -6,6 +6,7 @@ import { FilePlus2, Loader2 } from "lucide-react"
 import { jurnalSusulanAction, pratinjauSusulanAction } from "@/app/actions/transaksi"
 import { ModalForm } from "@/components/ui/Modal"
 import { formatAngka, formatTanggal } from "@/lib/format"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 /** Ikon baris temuan Audit Data: pratinjau jurnal yang hilang, lalu simpan dengan alasan. */
 export function TombolJurnalSusulan({ no }: { no: string }) {
@@ -20,8 +21,8 @@ export function TombolJurnalSusulan({ no }: { no: string }) {
         setBuka(true); setData(null); setPesan(null); setSelesai(false); setAlasan("")
         pratinjauSusulanAction(no).then(setData)
     }
-    const simpan = () => {
-        if (!confirm(`Buat jurnal susulan untuk ${no}? Pastikan sudah dicocokkan dengan mutasi bank.`)) return
+    const simpan = async () => {
+        if (!(await tanyaYa(`Buat jurnal susulan untuk ${no}? Pastikan sudah dicocokkan dengan mutasi bank.`))) return
         mulai(async () => {
             const h = await jurnalSusulanAction(no, alasan)
             setPesan(h?.ok ? h.pesan : h?.error ?? "Gagal menyimpan")

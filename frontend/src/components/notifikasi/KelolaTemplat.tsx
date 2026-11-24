@@ -8,6 +8,7 @@ import { FormEdit } from "@/components/master/FormEdit"
 import { FormCard } from "@/components/transaksi/common"
 import { ModalForm } from "@/components/ui/Modal"
 import { isianTemplat } from "./KirimNotifikasi"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 /** Daftar templat pesan Kirim Notifikasi: tambah, ubah, hapus. */
 export function KelolaTemplat({ templat }: { templat: TemplatNotifikasi[] }) {
@@ -35,9 +36,9 @@ export function KelolaTemplat({ templat }: { templat: TemplatNotifikasi[] }) {
                                 </div>}
                             </div>
                             <button type="button" title="Ubah" onClick={() => setEdit(t)} className="rounded p-1.5 hover:bg-muted"><Pencil className="h-4 w-4" /></button>
-                            <button type="button" title="Hapus" disabled={sibuk} onClick={() => {
-                                if (!confirm(`Hapus templat "${t.nama}"?`)) return
-                                mulai(async () => { const h = await hapusTemplatAction(t.id); if (h && !h.ok) alert(h.error); router.refresh() })
+                            <button type="button" title="Hapus" disabled={sibuk} onClick={async () => {
+                                if (!(await tanyaYa(`Hapus templat "${t.nama}"?`))) return
+                                mulai(async () => { const h = await hapusTemplatAction(t.id); if (h && !h.ok) void beriTahu(h.error, { ok: false }); router.refresh() })
                             }} className="rounded p-1.5 text-red-600 hover:bg-red-50"><Trash2 className="h-4 w-4" /></button>
                         </li>
                     ))}

@@ -8,6 +8,7 @@ import { batalJualAction } from "@/app/actions/kantin"
 import { useBolehAksi } from "@/components/layout/SidebarContext"
 import { FormCard } from "@/components/transaksi/common"
 import { Input } from "@/components/ui/input"
+import { beriTahu, tanyaIsian } from "@/components/ui/Tanya"
 import { MENU } from "@/config/akses"
 import type { UnitOperator } from "@kopkar/backend/src/unit-usaha/kantin.ts"
 import { cn } from "@/lib/utils"
@@ -35,13 +36,14 @@ export function PenjualanKantin({ unit, dari, sampai, nota, rekap, lebihDariSatu
     const bolehBatal = unit.peran !== "kasir" && boleh([MENU.penjualanKantin], "hapus")
     const hariIni = new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/Jakarta" })
 
-    const batal = (n: NotaKantin) => {
-        const alasan = prompt(`Batalkan nota ${n.no_bukti} Rp ${rp(n.total)}?\nStok dikembalikan dan jurnalnya dihapus. Tulis alasannya:`)
-        if (!alasan) return
+    const batal = async (n: NotaKantin) => {
+        const alasan = await tanyaIsian(`Nota ${n.no_bukti} Rp ${rp(n.total)}. Stok dikembalikan, jurnalnya dihapus${n.metode === "sukarela" ? ", dan saldo Simpanan Sukarela anggota kembali" : ""}. Tulis alasannya:`,
+            { judul: "Batalkan nota", tombol: "Batalkan nota", bahaya: true, label: "Mis. salah input", minimal: 3 })
+        if (alasan === null) return
         mulai(async () => {
             const h = await batalJualAction(unit.id, n.id, alasan)
-            if (h) alert(h.ok ? h.pesan : h.error)
             router.refresh()
+            if (h) await beriTahu(h.ok ? h.pesan : h.error, { ok: h.ok })
         })
     }
 

@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation"
 import { AlertCircle, CheckCircle2, FlaskConical, Loader2, Radio } from "lucide-react"
 import { aturModeAction, type HasilMode } from "@/app/actions/mode"
 import { cn } from "@/lib/utils"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 /** Saklar geser dua posisi: Uji (setiap simpan di-rollback) atau Live (tersimpan permanen). */
 export function SaklarMode({ uji, terkunci }: { uji: boolean; terkunci: boolean }) {
@@ -12,12 +13,12 @@ export function SaklarMode({ uji, terkunci }: { uji: boolean; terkunci: boolean 
     const [hasil, setHasil] = useState<HasilMode | null>(null)
     const [pending, startTransition] = useTransition()
 
-    const pilih = (keUji: boolean) => {
+    const pilih = async (keUji: boolean) => {
         if (keUji === uji || terkunci || pending) return
         const tanya = keUji
             ? "Pindah ke mode UJI?\n\nSemua transaksi berikutnya (oleh semua operator) akan dibatalkan dan TIDAK tersimpan."
             : "Pindah ke mode LIVE?\n\nSemua transaksi berikutnya (oleh semua operator) akan TERSIMPAN PERMANEN ke data koperasi dan membentuk jurnal."
-        if (!confirm(tanya)) return
+        if (!(await tanyaYa(tanya))) return
         startTransition(async () => {
             setHasil(await aturModeAction(keUji))
             router.refresh()

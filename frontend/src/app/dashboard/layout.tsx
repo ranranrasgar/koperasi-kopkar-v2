@@ -7,6 +7,7 @@ import { cssTema } from "@kopkar/backend/src/tampilan.ts"
 import { BilahProgres } from "@/components/layout/BilahProgres"
 import { DashboardShell } from "@/components/layout/DashboardShell"
 import { SinyalAktif } from "@/components/layout/SinyalAktif"
+import { DialogTanya } from "@/components/ui/Tanya"
 import { modeAplikasi, pool, serverUji } from "@/lib/db"
 import { identitasKoperasi } from "@/lib/koperasi"
 import { temaOperator } from "@/lib/tampilan"
@@ -26,6 +27,7 @@ export default async function Layout({ children }: { children: React.ReactNode }
             {tema && <style dangerouslySetInnerHTML={{ __html: cssTema(tema) }} />}
             <Suspense fallback={null}><BilahProgres /></Suspense>
             <SinyalAktif />
+            <DialogTanya />
             {serverUji && (
                 <div role="status" className="mb-4 rounded-md border border-violet-400 bg-violet-50 dark:bg-violet-500/10 px-4 py-2 text-sm text-violet-800 dark:text-violet-300">
                     <span className="font-semibold">Server uji, database {serverUji}.</span> Transaksi benar-benar disimpan, tetapi di salinan database,

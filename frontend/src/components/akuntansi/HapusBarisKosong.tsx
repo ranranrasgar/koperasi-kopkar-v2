@@ -4,16 +4,17 @@ import { useTransition } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2, Trash2 } from "lucide-react"
 import { hapusBarisJurnalAction, hapusSemuaBarisKosongAction } from "@/app/actions/transaksi"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 /** Hapus satu baris kosong (debit dan kredit nol) di Jurnal Bermasalah; baris lain di bukti itu tidak tersentuh. */
 export function TombolHapusKosong({ nomor, urutan }: { nomor: string; urutan: number }) {
     const [sibuk, mulai] = useTransition()
     const router = useRouter()
-    const hapus = () => {
-        if (!confirm(`Hapus baris kosong ini dari bukti ${nomor}? Baris lain di bukti itu tidak berubah.`)) return
+    const hapus = async () => {
+        if (!(await tanyaYa(`Hapus baris kosong ini dari bukti ${nomor}? Baris lain di bukti itu tidak berubah.`))) return
         mulai(async () => {
             const h = await hapusBarisJurnalAction(nomor, urutan)
-            if (h && !h.ok) alert(h.error)
+            if (h && !h.ok) void beriTahu(h.error, { ok: false })
             router.refresh()
         })
     }
@@ -29,11 +30,11 @@ export function TombolHapusKosong({ nomor, urutan }: { nomor: string; urutan: nu
 export function TombolHapusSemuaKosong({ sampai, jumlah }: { sampai: string; jumlah: number }) {
     const [sibuk, mulai] = useTransition()
     const router = useRouter()
-    const hapus = () => {
-        if (!confirm(`Hapus ${jumlah} baris kosong? Hanya baris bernilai nol yang dihapus; baris berisi di bukti yang sama tidak berubah.`)) return
+    const hapus = async () => {
+        if (!(await tanyaYa(`Hapus ${jumlah} baris kosong? Hanya baris bernilai nol yang dihapus; baris berisi di bukti yang sama tidak berubah.`))) return
         mulai(async () => {
             const h = await hapusSemuaBarisKosongAction(sampai)
-            if (h) alert(h.ok ? h.pesan : h.error)
+            if (h) void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok })
             router.refresh()
         })
     }

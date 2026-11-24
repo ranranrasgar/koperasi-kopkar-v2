@@ -16,6 +16,7 @@ import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 import { unduhExcel } from "@/lib/ekspor-excel"
 import { FormCard } from "./common"
 import { TinjauPengajuan } from "./TinjauPengajuan"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 const STATUS: Record<string, { label: string; cls: string }> = {
     P: { label: "Menunggu", cls: "bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-400" },
@@ -76,9 +77,9 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
     const ubahStatus = (v: string) => { simpanStatus(v); ubah({ status: v === "P" ? null : v === "" ? "" : v }) }
     const urut = (key: string) => ubah({ sortBy: key, sortOrder: urutKey === key && urutArah === "asc" ? "desc" : "asc" })
 
-    const putuskan = (p: Pengajuan, setuju: boolean) => {
+    const putuskan = async (p: Pengajuan, setuju: boolean) => {
         const aksi = setuju ? "Setujui" : p.status === "Y" ? "Batalkan persetujuan" : "Tolak"
-        if (!confirm(`${aksi} pengajuan ${p.nama} sebesar ${formatRupiah(p.rp_pinjaman_pokok)}?${p.status === "Y" ? " Status menjadi Ditolak dan anggota dikabari." : ""}`)) return
+        if (!(await tanyaYa(`${aksi} pengajuan ${p.nama} sebesar ${formatRupiah(p.rp_pinjaman_pokok)}?${p.status === "Y" ? " Status menjadi Ditolak dan anggota dikabari." : ""}`))) return
         setSibuk(p.id)
         startTransition(async () => {
             setHasil(await putuskanPengajuanAction(p.id, setuju))
@@ -94,7 +95,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
         setMenyiapkan(cara)
         try {
             const r = await dataCetakAction(pathname, Object.fromEntries(sp.entries()))
-            if ("error" in r) { alert(r.error); return }
+            if ("error" in r) { void beriTahu(r.error, { ok: false }); return }
             const items = r.items as unknown as Pengajuan[]
             const baris = items.map((p) => [formatTanggal(p.tgl_realisasi), p.kode_agt, p.nik ?? "-", p.nama, p.nama_kredit ?? "-", formatAngka(p.rp_pinjaman_pokok),
                 `${p.lama_angsuran} bln`, `${formatAngka2(p.persen_bunga)}%`, p.keterangan ?? "", STATUS[statusTampil(p) ?? ""]?.label ?? p.status ?? ""])
@@ -104,7 +105,7 @@ export function PengajuanList({ data, jenis, bolehCair }: { data: PageData<Penga
             const galat = cara === "cetak"
                 ? await bukaCetak({ judul: "Pengajuan Kredit", subjudul, isi: tabelHtml(KOLOM_CETAK, baris, r.total, { total }) })
                 : await unduhExcel({ nama: "pengajuan-kredit", judul: "Pengajuan Kredit", subjudul, bagian: [{ kolom: KOLOM_CETAK, baris, total, nomor: true, jumlahTotal: r.total }] })
-            if (galat) alert(galat)
+            if (galat) void beriTahu(galat, { ok: false })
         } finally {
             setMenyiapkan(null)
         }

@@ -9,6 +9,7 @@ import { FormEdit, type FieldSpec } from "@/components/master/FormEdit"
 import { MENU } from "@/config/akses"
 import { formatAngka } from "@/lib/format"
 import type { BarisLembur } from "@kopkar/backend/src/gaji/periode.ts"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 /** Form lembur harian (simpan ulang tanggal yang sama memperbarui) dan daftar lembur satu periode. */
 export function KelolaLembur({ periodeId, dari, sampai, final, karyawan, baris, pembagiLembur }: {
@@ -39,11 +40,11 @@ export function KelolaLembur({ periodeId, dari, sampai, final, karyawan, baris, 
         r.uang = Math.round(r.bobot * Number(b.jml_upah) / pembagiLembur)
         rekap.set(b.karyawan_id, r)
     }
-    const hapus = (b: BarisLembur) => {
-        if (!confirm(`Hapus lembur ${b.kode} ${b.nama} tanggal ${b.tanggal}?`)) return
+    const hapus = async (b: BarisLembur) => {
+        if (!(await tanyaYa(`Hapus lembur ${b.kode} ${b.nama} tanggal ${b.tanggal}?`))) return
         mulai(async () => {
             const r = await hapusLemburAction(Number(b.id))
-            if (r && !r.ok) alert(r.error)
+            if (r && !r.ok) void beriTahu(r.error, { ok: false })
             router.refresh()
         })
     }

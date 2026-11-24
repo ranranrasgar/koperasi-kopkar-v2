@@ -11,6 +11,7 @@ import { Input } from "@/components/ui/input"
 import { TombolCetak } from "@/components/ui/TombolCetak"
 import { MENU } from "@/config/akses"
 import type { HitungPenyelesaian } from "@kopkar/backend/src/posting/kantin-tenant.ts"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 import { cn } from "@/lib/utils"
 
 export interface RiwayatPenyelesaian {
@@ -48,17 +49,17 @@ export function PenyelesaianTenant({ unit, akun, riwayat }: { unit: { id: number
         const r = await hitungPenyelesaianAction(unitId, dari, sampai)
         if (r.ok) setH(r.data); else { setH(null); setPesan({ ok: false, teks: r.error }) }
     })
-    const simpan = () => {
-        if (!h || !confirm(`Simpan penyelesaian ${h.nama} ${dari} s.d. ${sampai}? Nota periode ini tidak bisa dibatalkan lagi sampai penyelesaiannya dibatalkan.`)) return
+    const simpan = async () => {
+        if (!h || !(await tanyaYa(`Simpan penyelesaian ${h.nama} ${dari} s.d. ${sampai}? Nota periode ini tidak bisa dibatalkan lagi sampai penyelesaiannya dibatalkan.`, { tombol: "Simpan" }))) return
         mulai(async () => {
             const r = await simpanPenyelesaianAction({ unitId, dari, sampai, tanggal, akunKas, catatan })
             if (r) setPesan(r.ok ? { ok: true, teks: r.pesan } : { ok: false, teks: r.error })
             if (r?.ok) { setH(null); router.refresh() }
         })
     }
-    const batal = (p: RiwayatPenyelesaian) => {
-        if (!confirm(`Batalkan penyelesaian ${p.no_bukti}? Jurnalnya dihapus; transfer yang sudah dilakukan perlu dicatat ulang.`)) return
-        mulai(async () => { const r = await batalPenyelesaianAction(p.id); if (r) alert(r.ok ? r.pesan : r.error); router.refresh() })
+    const batal = async (p: RiwayatPenyelesaian) => {
+        if (!(await tanyaYa(`Batalkan penyelesaian ${p.no_bukti}? Jurnalnya dihapus; transfer yang sudah dilakukan perlu dicatat ulang.`, { tombol: "Batalkan penyelesaian", bahaya: true }))) return
+        mulai(async () => { const r = await batalPenyelesaianAction(p.id); router.refresh(); if (r) await beriTahu(r.ok ? r.pesan : r.error, { ok: r.ok }) })
     }
 
     if (!unit.length) return <FormCard title="Penyelesaian Tenant" description="Belum ada kantin tenant (model bagi hasil atau sewa)."><p className="text-sm text-muted-foreground">Tambahkan di Daftar Unit Usaha.</p></FormCard>
