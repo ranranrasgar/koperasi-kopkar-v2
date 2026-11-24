@@ -149,6 +149,38 @@ export async function stokMasuk(db: Db, i: StokMasukInput) {
     return { noBukti: no, total: fromUnits(total) };
 }
 
+/**
+ * Hapus permanen satu bukti stok masuk (KTB) karena salah input: baris kartu stok dan jurnalnya dihapus tanpa jurnal balik, stok dan HPP rata-rata
+ * dikembalikan. Hanya boleh bila bukti ini mutasi terakhir setiap produknya; kalau sesudahnya sudah ada penjualan/opname, urutan kartu stok dan HPP
+ * yang sudah dipakai ikut salah, jadi ditolak.
+ */
+export async function hapusStokMasuk(db: Db, i: { unitId: number; noBukti: string }) {
+    const no = String(i.noBukti ?? '').trim();
+    const baris = (await db.query<{ id: string; produk_id: string; qty: string; harga: string }>(
+        `SELECT id, produk_id, qty, harga FROM kantin_stok_mutasi WHERE no_bukti = $1 AND unit_usaha_id = $2 AND jenis = 'masuk' ORDER BY produk_id, id DESC`,
+        [no, i.unitId])).rows;
+    if (!no.startsWith('KTB-') || !baris.length) throw new KantinSalah(`Stok masuk ${no} tidak ditemukan di kantin ini`);
+    await cekBuktiTerbuka(db, no);
+    let total = 0n;
+    for (const b of baris) {
+        const p = (await db.query<{ nama: string; stok: string; harga_pokok: string }>('SELECT nama, stok, harga_pokok FROM kantin_produk WHERE id = $1 FOR UPDATE', [b.produk_id])).rows[0];
+        const lanjut = (await db.query<{ no_bukti: string }>(
+            'SELECT no_bukti FROM kantin_stok_mutasi WHERE produk_id = $1 AND id > $2 AND no_bukti <> $3 ORDER BY id LIMIT 1', [b.produk_id, b.id, no])).rows[0];
+        if (lanjut) throw new KantinSalah(`${p.nama} sudah punya mutasi sesudahnya (${lanjut.no_bukti}); hanya stok masuk terakhir yang bisa dihapus`);
+        const q = toUnits(b.qty), beli = toUnits(b.harga), stok = toUnits(p.stok), pokok = toUnits(p.harga_pokok);
+        const stokLama = stok - q;
+        if (stokLama < 0n) throw new KantinSalah(`Stok ${p.nama} tinggal ${fromUnits(stok).replace(/\.?0+$/, '')}, kurang dari jumlah yang dihapus`);
+        // Kebalikan rata-rata bergerak. Bila stok sebelumnya nol, HPP dibiarkan: stok masuk berikutnya memakai harga belinya sendiri.
+        const balik = stokLama > 0n ? (stok * pokok - q * beli) / stokLama : pokok;
+        const pokokLama = balik < 0n ? 0n : balik;
+        await db.query('UPDATE kantin_produk SET stok = $1, harga_pokok = $2, diubah_pada = now() WHERE id = $3', [fromUnits(stokLama), fromUnits(pokokLama), b.produk_id]);
+        total += kali(beli, q);
+    }
+    await db.query("DELETE FROM kantin_stok_mutasi WHERE no_bukti = $1 AND unit_usaha_id = $2 AND jenis = 'masuk'", [no, i.unitId]);
+    await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [no]);
+    return { noBukti: no, produk: new Set(baris.map((b) => b.produk_id)).size, total: fromUnits(total) };
+}
+
 // ---------- opname dan barang rusak ----------
 
 export interface PenyesuaianInput {

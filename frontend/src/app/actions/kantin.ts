@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache"
 import { bersihkanYatim, GambarSalah, lepasGambar, simpanGambar, tautkanGambar } from "@kopkar/backend/src/anggota/gambar.ts"
 import type { Db } from "@kopkar/backend/src/db.ts"
 import { KantinSalah, simpanProduk, simpanUnit, type UnitInput } from "@kopkar/backend/src/unit-usaha/kantin.ts"
-import { batalJual, batalTagihan, bukaSesi, buatTagihan, jualSukarela, jualTunai, penyesuaianStok, ringkasSesi, sesiTerbuka, statusTagihan, stokMasuk, tutupSesi } from "@kopkar/backend/src/posting/kantin.ts"
+import { batalJual, batalTagihan, bukaSesi, buatTagihan, hapusStokMasuk, jualSukarela, jualTunai, penyesuaianStok, ringkasSesi, sesiTerbuka, statusTagihan, stokMasuk, tutupSesi } from "@kopkar/backend/src/posting/kantin.ts"
 import { batalPenyelesaian, hitungPenyelesaian, simpanPenyelesaian } from "@kopkar/backend/src/posting/kantin-tenant.ts"
 import { batalkanKedaluwarsa, batalPesanan, ubahStatusPesanan } from "@kopkar/backend/src/posting/kantin-pesanan.ts"
 import { kirimNotifikasi } from "@kopkar/backend/src/anggota/push.ts"
@@ -216,6 +216,14 @@ export async function stokMasukAction(i: { unitId: number; tanggal: string; akun
         const u = await unitTugas(db, o, i.unitId, true)
         const r = await stokMasuk(db, { ...i, opr: o.nama })
         return { pesan: `Stok masuk ${u.nama} ${r.noBukti} Rp ${Number(r.total).toLocaleString("id-ID")}`, data: r }
+    })
+}
+
+export async function hapusStokMasukAction(unitId: number, noBukti: string): Promise<HasilSimpan> {
+    return jalankan(MENU.stokKantin, "/dashboard/kantin/stok", "hapus", async (db, o) => {
+        const u = await unitTugas(db, o, unitId, true)
+        const r = await hapusStokMasuk(db, { unitId, noBukti })
+        return `Stok masuk ${r.noBukti} ${u.nama} dihapus (${r.produk} produk, Rp ${Number(r.total).toLocaleString("id-ID")})`
     })
 }
 
