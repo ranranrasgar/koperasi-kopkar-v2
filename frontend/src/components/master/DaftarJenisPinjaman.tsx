@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input"
 import { ModalForm } from "@/components/ui/Modal"
 import { formatAngka } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 export interface JenisPinjaman {
     id: number; kode_kredit: string; nama_kredit: string; group_pinjaman: string; jenis_pinjaman: string
@@ -83,11 +84,11 @@ function FormJenis({ awal, akun, grade, selesai }: { awal: JenisPinjaman | null;
     const [maks, setMaks] = useState(String(awal?.maks_plafond ?? 0).replace(/\.0+$/, "").replace(/^0$/, ""))
     const [coa, setCoa] = useState({ kredit: awal?.coa_kredit ?? "", jasa: awal?.coa_jasa ?? "", adm: awal?.coa_adm ?? "", provisi: awal?.coa_provisi ?? "" })
 
-    const hapusIni = () => {
-        if (!awal || !confirm(`Hapus jenis pinjaman ${awal.kode_kredit} ${awal.nama_kredit}? Hanya bisa bila belum pernah dipakai.`)) return
+    const hapusIni = async () => {
+        if (!awal || !(await tanyaYa(`Hapus jenis pinjaman ${awal.kode_kredit} ${awal.nama_kredit}? Hanya bisa bila belum pernah dipakai.`))) return
         mulaiHapus(async () => {
             const h = await hapusJenisPinjamanAction(awal.id)
-            if (h) alert(h.ok ? h.pesan : h.error)
+            if (h) void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok })
             if (h?.ok) { router.refresh(); selesai() }
         })
     }

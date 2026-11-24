@@ -2,6 +2,7 @@ import type { Metadata } from "next"
 import { PindaiTagihanKantin } from "@/components/PindaiTagihanKantin"
 import { TombolBayarKantin } from "@/components/TombolBayarKantin"
 import { LABEL_STATUS } from "@kopkar/backend/src/posting/kantin-pesanan.ts"
+import { sqlBuka, sqlKetBuka } from "@kopkar/backend/src/unit-usaha/kantin.ts"
 import { BarisTautan, batasBaris, Blok, JudulBagian, Kartu, Kepala, Kosong, MuatLagi } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { query } from "@/lib/db"
@@ -30,8 +31,8 @@ export default async function KantinPage(props: PageProps<"/kantin">) {
                    FROM kantin_penjualan_item i WHERE i.penjualan_id = p.id) item
            FROM kantin_penjualan p JOIN unit_usaha u ON u.id = p.unit_usaha_id
           WHERE p.anggota_id = $1 ORDER BY p.id DESC LIMIT $2`, [a.anggotaId, batas + 1]),
-        query<{ id: number; nama: string; lokasi: string | null; buka: boolean; tas: number }>(`SELECT u.id, u.nama, u.lokasi,
-                (u.jam_buka IS NULL OR u.jam_tutup IS NULL OR (now() AT TIME ZONE 'Asia/Jakarta')::time BETWEEN u.jam_buka AND u.jam_tutup) buka,
+        query<{ id: number; nama: string; lokasi: string | null; buka: boolean; ket: string; tas: number }>(`SELECT u.id, u.nama, u.lokasi,
+                ${sqlBuka('u')} buka, ${sqlKetBuka('u')} ket,
                 (SELECT COALESCE(SUM(t.qty), 0) FROM kantin_tas t WHERE t.anggota_id = $1 AND t.unit_usaha_id = u.id) tas
            FROM unit_usaha u WHERE u.jenis = 'KANTIN' AND u.aktif AND u.tampil_anggota ORDER BY u.nama`, [a.anggotaId]),
         query<{ id: number; kantin: string; status: string; total: number }>(`SELECT p.id, u.nama kantin, p.status, p.total FROM kantin_pesanan p
@@ -64,7 +65,7 @@ export default async function KantinPage(props: PageProps<"/kantin">) {
                 {kantin.length > 0 && <>
                     <JudulBagian>Pesan dari aplikasi</JudulBagian>
                     <Kartu className="divide-y divide-garis">
-                        {kantin.map((k) => <BarisTautan key={k.id} href={`/kantin/${k.id}`} judul={k.nama} sub={[k.buka ? "Buka" : "Tutup", k.lokasi].filter(Boolean).join(" · ")}
+                        {kantin.map((k) => <BarisTautan key={k.id} href={`/kantin/${k.id}`} judul={k.nama} sub={[k.buka ? "Buka" : k.ket.startsWith("tutup sementara") ? "Tutup sementara" : "Tutup", k.lokasi].filter(Boolean).join(" · ")}
                             nilai={Number(k.tas) > 0 ? `${Number(k.tas)} di tas` : undefined} />)}
                     </Kartu>
                 </>}

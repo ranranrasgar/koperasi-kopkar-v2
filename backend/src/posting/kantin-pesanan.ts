@@ -1,5 +1,5 @@
 import type { Db } from '../db.ts';
-import { KantinSalah } from '../unit-usaha/kantin.ts';
+import { KantinSalah, sqlBuka, sqlPesanTutup } from '../unit-usaha/kantin.ts';
 import { batalJual, jualAplikasiSukarela } from './kantin.ts';
 import { fromUnits, toUnits } from './money.ts';
 
@@ -43,12 +43,12 @@ export async function batalkanKedaluwarsa(db: Q) {
  * ditolak supaya anggota tidak membayar nilai yang tidak ia setujui. Sukarela: PIN sudah diperiksa pemanggil.
  */
 export async function checkout(db: Db, i: { anggotaId: number; unitId: number; metode: 'tunai' | 'sukarela'; catatan?: string; totalDilihat: string | number; tanggal: string }) {
-    const u = (await db.query<{ nama: string; aktif: boolean; tampil_anggota: boolean; terima_tunai: boolean; terima_sukarela: boolean; buka: boolean; menit: number }>(
+    const u = (await db.query<{ nama: string; aktif: boolean; tampil_anggota: boolean; terima_tunai: boolean; terima_sukarela: boolean; buka: boolean; pesan_tutup: string | null; menit: number }>(
         `SELECT nama, aktif, tampil_anggota, terima_tunai, terima_sukarela, menit_batal_pesanan menit,
-                (jam_buka IS NULL OR jam_tutup IS NULL OR (now() AT TIME ZONE 'Asia/Jakarta')::time BETWEEN jam_buka AND jam_tutup) buka
-           FROM unit_usaha WHERE id = $1 AND jenis = 'KANTIN'`, [i.unitId])).rows[0];
+                ${sqlBuka('u')} buka, ${sqlPesanTutup('u')} pesan_tutup
+           FROM unit_usaha u WHERE id = $1 AND jenis = 'KANTIN'`, [i.unitId])).rows[0];
     if (!u?.aktif || !u.tampil_anggota) throw new KantinSalah('Kantin tidak tersedia');
-    if (!u.buka) throw new KantinSalah(`${u.nama} sedang tutup`);
+    if (!u.buka) throw new KantinSalah(`${u.nama} sedang tutup${u.pesan_tutup ? `: ${u.pesan_tutup}` : ''}`);
     if (i.metode === 'tunai' && !u.terima_tunai) throw new KantinSalah(`${u.nama} tidak menerima tunai`);
     if (i.metode === 'sukarela' && !u.terima_sukarela) throw new KantinSalah(`${u.nama} tidak menerima Simpanan Sukarela`);
     const tas = (await db.query<{ produk_id: string; qty: string; nama: string; satuan: string; harga_jual: string; aktif: boolean; tampil_anggota: boolean; kelola_stok: boolean; stok: string }>(

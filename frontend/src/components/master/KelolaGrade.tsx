@@ -9,6 +9,7 @@ import { FormCard } from "@/components/transaksi/common"
 import { ModalForm } from "@/components/ui/Modal"
 import { hapusGradeAction, simpanGradeAction, terapkanGradeAction } from "@/app/actions/master"
 import { FormEdit } from "./FormEdit"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 export interface BarisGrade { id: number; nama: string; nominal: number; aktif: number | string; jumlah: number | string; beda: number | string }
 
@@ -23,11 +24,11 @@ export function KelolaGrade({ baris, belumTertaut }: { baris: BarisGrade[]; belu
     const selesai = useCallback(() => { router.refresh(); setTimeout(() => setEdit(null), 1000) }, [router])
     const totalBeda = baris.reduce((t, b) => t + Number(b.beda), 0)
 
-    const jalankan = (konfirmasi: string, fn: () => Promise<{ ok: boolean; pesan?: string; error?: string } | null>) => {
-        if (!confirm(konfirmasi)) return
+    const jalankan = async (konfirmasi: string, fn: () => Promise<{ ok: boolean; pesan?: string; error?: string } | null>) => {
+        if (!(await tanyaYa(konfirmasi))) return
         mulai(async () => {
             const h = await fn()
-            if (h) alert(h.ok ? h.pesan : h.error)
+            if (h) void beriTahu((h.ok ? h.pesan : h.error) ?? "", { ok: !!h.ok })
             router.refresh()
         })
     }

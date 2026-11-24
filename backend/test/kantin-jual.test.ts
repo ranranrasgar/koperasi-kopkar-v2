@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import crypto from 'node:crypto';
 import { createPool, withTx, type Db } from '../src/db.ts';
 import { simpanProduk, simpanUnit, type UnitInput } from '../src/unit-usaha/kantin.ts';
-import { batalJual, bukaSesi, jualTunai, penyesuaianStok, stokMasuk, tutupSesi } from '../src/posting/kantin.ts';
+import { batalJual, bukaSesi, hapusStokMasuk, ubahStokMasuk, jualTunai, penyesuaianStok, stokMasuk, tutupSesi } from '../src/posting/kantin.ts';
 
 const pool = createPool();
 const ROLLBACK = new Error('rollback-uji');
@@ -69,6 +69,35 @@ test('batal penjualan: stok kembali, jurnal terhapus, tidak bisa dua kali; nota 
         assert.deepEqual(await produk(db, s.botol), { stok: 5, harga_pokok: 4000 });
         assert.equal((await jurnal(db, j.noBukti)).length, 0);
         await assert.rejects(batalJual(db, { id: j.id, unitId: s.unitId, alasan: 'lagi', opr: 'uji', hariIni: TGL, semuaHari: true }), /sudah dibatalkan/);
+    });
+});
+
+test('hapus stok masuk: stok, HPP, kartu stok, dan jurnal kembali; ditolak bila sudah ada mutasi sesudahnya', async () => {
+    await inTx(async (db) => {
+        const s = await siapkan(db);
+        const bayar = { unitId: s.unitId, tanggal: TGL, opr: 'uji', akunBayar: '1.1.01.20' };
+        await stokMasuk(db, { ...bayar, items: [{ produkId: s.botol, qty: 10, hargaBeli: 4000 }] });
+        const m2 = await stokMasuk(db, { ...bayar, items: [{ produkId: s.botol, qty: 6, hargaBeli: 5000 }] });
+        assert.deepEqual(await produk(db, s.botol), { stok: 16, harga_pokok: 4375 });
+        const h = await hapusStokMasuk(db, { unitId: s.unitId, noBukti: m2.noBukti });
+        assert.equal(Number(h.total), 30000);
+        assert.deepEqual(await produk(db, s.botol), { stok: 10, harga_pokok: 4000 });
+        assert.equal((await jurnal(db, m2.noBukti)).length, 0);
+        assert.equal((await db.query('SELECT 1 FROM kantin_stok_mutasi WHERE no_bukti = $1', [m2.noBukti])).rowCount, 0);
+        await assert.rejects(hapusStokMasuk(db, { unitId: s.unitId, noBukti: m2.noBukti }), /tidak ditemukan/);
+
+        const m4 = await stokMasuk(db, { ...bayar, items: [{ produkId: s.botol, qty: 5, hargaBeli: 6000 }] });
+        const u = await ubahStokMasuk(db, { ...bayar, noBukti: m4.noBukti, keterangan: 'nota 12', items: [{ produkId: s.botol, qty: 10, hargaBeli: 5000 }] });
+        assert.equal(u.noBukti, m4.noBukti);
+        assert.deepEqual(await produk(db, s.botol), { stok: 20, harga_pokok: 4500 });
+        assert.deepEqual((await jurnal(db, m4.noBukti)).map((x) => [x.d, x.k]), [[50000, 0], [0, 50000]]);
+        assert.equal((await db.query('SELECT 1 FROM kantin_stok_mutasi WHERE no_bukti = $1', [m4.noBukti])).rowCount, 1);
+        await hapusStokMasuk(db, { unitId: s.unitId, noBukti: m4.noBukti });
+
+        const m3 = await stokMasuk(db, { ...bayar, items: [{ produkId: s.botol, qty: 2, hargaBeli: 4000 }] });
+        await penyesuaianStok(db, { unitId: s.unitId, tanggal: TGL, opr: 'uji', jenis: 'rusak', keterangan: 'pecah', items: [{ produkId: s.botol, qty: 1 }] });
+        await assert.rejects(hapusStokMasuk(db, { unitId: s.unitId, noBukti: m3.noBukti }), /sudah punya mutasi sesudahnya/);
+        await assert.rejects(ubahStokMasuk(db, { ...bayar, noBukti: m3.noBukti, items: [{ produkId: s.botol, qty: 1, hargaBeli: 1 }] }), /sudah punya mutasi sesudahnya/);
     });
 });
 

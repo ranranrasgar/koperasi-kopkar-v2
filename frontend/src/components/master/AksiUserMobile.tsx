@@ -6,6 +6,7 @@ import { Check, KeyRound, Loader2, LockKeyhole, Mail, Trash2, UserPlus, X } from
 import { dataLengkapiAnggotaAction, hapusPinAkunAction, hapusUserMobileAction, jadikanAnggotaAction, passwordSementaraAkunAction, putuskanPendaftaranAction, ubahEmailAkunAction, ubahStatusAkunAction, type HasilPendaftaran } from "@/app/actions/pendaftaran"
 import { Button } from "@/components/ui/button"
 import { FormLengkapiAnggota, type BahanLengkapi } from "@/components/master/FormLengkapiAnggota"
+import { beriTahu, tanyaIsian, tanyaYa } from "@/components/ui/Tanya"
 
 /** Aksi per baris User Mobile: setujui/tolak pendaftaran baru, aktifkan/nonaktifkan akun lain kapan saja, dan hapus akun (aturan hak di server). */
 export function AksiUserMobile({ item }: { item: Record<string, unknown> }) {
@@ -19,21 +20,22 @@ export function AksiUserMobile({ item }: { item: Record<string, unknown> }) {
     const verif = Boolean(item.email) // keputusan akhir ada di server (email harus terverifikasi)
 
     /** Hapus akun; untuk akun beranggota, kode anggota yang diketik (verifikasi) juga menghapus keanggotaan dan mengembalikan status karyawan. */
-    const hapus = () => {
+    const hapus = async () => {
         const punya = item.punya_anggota === true
-        if (!confirm(punya
+        if (!(await tanyaYa(punya
             ? `Hapus akun ${nama} beserta semua data aplikasinya (foto, notifikasi, pesan)? Akun ini terhubung ke anggota, hanya superadmin/admin yang boleh. Tidak bisa dibatalkan.`
-            : `Hapus akun ${nama}? Tidak bisa dibatalkan.`)) return
+            : `Hapus akun ${nama}? Tidak bisa dibatalkan.`))) return
         let kode: string | undefined
         if (punya) {
             const kodeAgt = String(item.kode_agt ?? "")
-            const k = prompt(`Hapus juga KEANGGOTAAN ${nama} (${kodeAgt}) beserta pengajuan dan notifikasinya, sehingga data karyawan kembali bukan anggota?\n\nKetik kode anggota ${kodeAgt} untuk menghapusnya juga. Kosongkan bila anggota harus tetap ada. Ditolak otomatis bila anggota sudah punya transaksi (simpanan, pinjaman, dll).`)
+            const k = await tanyaIsian(`Hapus juga KEANGGOTAAN ${nama} (${kodeAgt}) beserta pengajuan dan notifikasinya, sehingga data karyawan kembali bukan anggota?\n\nKetik kode anggota ${kodeAgt} untuk menghapusnya juga. Kosongkan bila anggota harus tetap ada. Ditolak otomatis bila anggota sudah punya transaksi (simpanan, pinjaman, dll).`,
+                { judul: "Hapus keanggotaan juga?", tombol: "Lanjut hapus akun", bahaya: true, wajib: false, label: `Kode anggota ${kodeAgt} (opsional)` })
             if (k === null) return
             kode = k.trim() || undefined
         }
         mulai(async () => {
             const h = await hapusUserMobileAction(id, kode)
-            setPesan(h); alert(h.ok ? h.pesan : h.error); router.refresh()
+            setPesan(h); void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok }); router.refresh()
         })
     }
 
@@ -43,46 +45,48 @@ export function AksiUserMobile({ item }: { item: Record<string, unknown> }) {
      */
     const lengkapi = (setuju: boolean) => mulai(async () => {
         const d = await dataLengkapiAnggotaAction(id)
-        if (!d.ok) { alert(d.error); return }
+        if (!d.ok) { void beriTahu(d.error, { ok: false }); return }
         if (d.sudahAnggota) {
-            if (!confirm(setuju ? `Setujui pendaftaran ${nama}? Akun aktif dan tertaut ke anggota ${d.kode}.` : `Tautkan ${nama} ke anggota ${d.kode}?`)) return
+            if (!(await tanyaYa(setuju ? `Setujui pendaftaran ${nama}? Akun aktif dan tertaut ke anggota ${d.kode}.` : `Tautkan ${nama} ke anggota ${d.kode}?`))) return
             const h = setuju ? await putuskanPendaftaranAction(id, true) : await jadikanAnggotaAction(id)
-            setPesan(h); alert(h.ok ? h.pesan : h.error); router.refresh()
+            setPesan(h); void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok }); router.refresh()
             return
         }
         setBahan({ setuju, data: { username: d.username, nik: d.nik, form: d.form, dariPengaturan: d.dariPengaturan, daftarGrade: d.daftarGrade, gradeKaryawan: d.gradeKaryawan } })
     })
 
     /** Ubah email akun atas permintaan anggota; email baru perlu diverifikasi anggota di aplikasi. */
-    const ubahEmail = () => {
-        const baru = prompt(`Email baru untuk ${nama}${item.email ? ` (sekarang ${String(item.email)})` : ""}.
+    const ubahEmail = async () => {
+        const baru = await tanyaIsian(`Email baru untuk ${nama}${item.email ? ` (sekarang ${String(item.email)})` : ""}.
 
-Kode verifikasi langsung dikirim ke email baru ini; anggota tinggal membuka emailnya lalu memverifikasi.`, String(item.email ?? ""))
+Kode verifikasi langsung dikirim ke email baru ini; anggota tinggal membuka emailnya lalu memverifikasi.`, { judul: "Ubah email", tombol: "Simpan email", awal: String(item.email ?? ""), label: "email@contoh.com" })
         if (baru === null || !baru.trim()) return
         mulai(async () => {
             const h = await ubahEmailAkunAction(id, baru)
-            setPesan(h); alert(h.ok ? h.pesan : h.error); router.refresh()
+            setPesan(h); void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok }); router.refresh()
         })
     }
 
     /** Password sementara untuk anggota yang lupa password; tampil sekali di kotak yang bisa disalin. */
-    const passwordSementara = () => {
-        if (!confirm(`Buat password sementara baru untuk ${nama}? Password lama tidak berlaku lagi dan perangkat yang sedang masuk akan keluar. Di aplikasi web anggota, ${nama} wajib mengganti password setelah masuk.`)) return
+    const passwordSementara = async () => {
+        if (!(await tanyaYa(`Buat password sementara baru untuk ${nama}? Password lama tidak berlaku lagi dan perangkat yang sedang masuk akan keluar. Di aplikasi web anggota, ${nama} wajib mengganti password setelah masuk.`))) return
         mulai(async () => {
             const h = await passwordSementaraAkunAction(id)
             setPesan(h)
-            if (!h.ok) alert(h.error)
-            else prompt(`${h.pesan}. Password ini hanya tampil sekali: salin lalu sampaikan langsung ke ${nama}.`, h.passwordSementara)
+            if (!h.ok) void beriTahu(h.error, { ok: false })
+            else void beriTahu(`${h.pesan}. Password ini hanya tampil sekali: salin lalu sampaikan langsung ke ${nama}.
+
+${h.passwordSementara}`, { judul: "Password sementara", ok: true })
             router.refresh()
         })
     }
 
-    const jalankan = (konfirmasi: string, fn: () => Promise<HasilPendaftaran>) => {
-        if (!confirm(konfirmasi)) return
+    const jalankan = async (konfirmasi: string, fn: () => Promise<HasilPendaftaran>) => {
+        if (!(await tanyaYa(konfirmasi))) return
         mulai(async () => {
             const h = await fn()
             setPesan(h)
-            alert(h.ok ? h.pesan : h.error)
+            void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok })
             router.refresh()
         })
     }
@@ -141,7 +145,7 @@ Kode verifikasi langsung dikirim ke email baru ini; anggota tinggal membuka emai
             <FormLengkapiAnggota bahan={bahan?.data ?? null} tombol={bahan?.setuju ? "Setujui dan jadikan anggota" : "Jadikan anggota"} onTutup={() => setBahan(null)}
                 onSimpan={async (lengkap) => {
                     const h = bahan?.setuju ? await putuskanPendaftaranAction(id, true, lengkap) : await jadikanAnggotaAction(id, lengkap)
-                    if (h.ok) { setPesan(h); alert(h.pesan); router.refresh() }
+                    if (h.ok) { setPesan(h); void beriTahu(h.pesan); router.refresh() }
                     return h
                 }} />
         </>

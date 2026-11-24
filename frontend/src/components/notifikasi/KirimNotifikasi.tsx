@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import type { AnggotaRingkas } from "@/lib/queries/anggota"
 import { PilihGambar } from "./PilihGambar"
 import { AnggotaPicker, Field, HasilTransaksi, SubmitButton, selectClass, useAksiForm } from "@/components/transaksi/common"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 type Batas = { anggotaAktif: number; maksJudul: number; maksIsi: number; templat: TemplatNotifikasi[] }
 
@@ -49,7 +50,7 @@ function teksIsian(jenis: ReturnType<typeof jenisIsian>, v: string) {
 const ganti = (teks: string, nilai: Record<string, string>) => teks.replace(/\{([^{}]+)\}/g, (m, k: string) => nilai[k.trim()] || m)
 
 export function KirimNotifikasi({ anggotaAktif, maksJudul, maksIsi, templat, selesai }: Batas & { selesai: () => void }) {
-    const { hasil, onSubmit, pending } = useAksiForm(kirimNotifikasiAction)
+    const { hasil, kirim, pending } = useAksiForm(kirimNotifikasiAction)
     // Jeda lebih lama: hasil kiriman (jumlah penerima dan perangkat) perlu sempat dibaca.
     useTutupSetelahBerhasil(hasil?.ok, selesai, 2500)
     const [sasaran, setSasaran] = useState<"semua" | "satu">("semua")
@@ -76,10 +77,12 @@ export function KirimNotifikasi({ anggotaAktif, maksJudul, maksIsi, templat, sel
     }
 
     return (
-        <form onSubmit={(e) => {
-            if (belum.length) { e.preventDefault(); alert(`Isi dulu: ${belum.map((x) => `{${x}}`).join(", ")}`); return }
-            if (sasaran === "semua" && !window.confirm(`Kirim pesan ini ke ${anggotaAktif} anggota aktif? Pesan yang sudah terkirim tidak bisa ditarik.`)) { e.preventDefault(); return }
-            onSubmit(e)
+        <form onSubmit={async (e) => {
+            e.preventDefault() // harus sebelum await: konfirmasi di bawah menunggu dialog
+            const form = e.currentTarget
+            if (belum.length) { void beriTahu(`Isi dulu: ${belum.map((x) => `{${x}}`).join(", ")}`, { ok: false }); return }
+            if (sasaran === "semua" && !(await tanyaYa(`Kirim pesan ini ke ${anggotaAktif} anggota aktif? Pesan yang sudah terkirim tidak bisa ditarik.`, { tombol: "Kirim" }))) return
+            kirim(form)
         }} className="space-y-4">
             {templat.length > 0 && (
                 <Field label="Pakai templat (opsional)" hint="Pilih pesan yang sering dikirim, lalu lengkapi isiannya. Judul dan isi tetap bisa disunting sebelum dikirim.">

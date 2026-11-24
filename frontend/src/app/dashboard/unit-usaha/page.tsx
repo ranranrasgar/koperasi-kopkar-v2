@@ -1,5 +1,6 @@
 import { KelolaUnitUsaha, type BarisUnit, type PilihanOperator } from "@/components/kantin/KelolaUnitUsaha"
 import { query } from "@/lib/db"
+import { sqlBuka, sqlKetBuka } from "@kopkar/backend/src/unit-usaha/kantin.ts"
 import { wajibIzin } from "@/lib/operator"
 
 export const dynamic = "force-dynamic"
@@ -8,6 +9,7 @@ export default async function UnitUsahaPage() {
     await wajibIzin("/dashboard/unit-usaha") // layout tidak dijalankan ulang pada navigasi antarhalaman
     const [unit, operator] = await Promise.all([
         query<BarisUnit>(`SELECT u.id, u.kode, u.nama, u.lokasi, to_char(u.jam_buka, 'HH24:MI') jam_buka, to_char(u.jam_tutup, 'HH24:MI') jam_tutup,
+                u.status_buka, u.pesan_tutup, u.tutup_sampai::text, ${sqlBuka('u')} buka_sekarang, ${sqlKetBuka('u')} ket_buka,
                 u.aktif, u.tampil_anggota, u.model, u.terima_tunai, u.terima_sukarela, u.batas_sukarela_transaksi::text, u.batas_sukarela_harian::text,
                 u.saldo_sukarela_minimal::text, u.menit_batal_pesanan,
                 t.nama_usaha, t.pemilik, t.telepon, t.email, t.bank, t.no_rekening, t.nama_rekening,

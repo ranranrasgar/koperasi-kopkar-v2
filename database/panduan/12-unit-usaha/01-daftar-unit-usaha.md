@@ -1,6 +1,6 @@
 ---
 judul: Membuat kantin dan menugaskan petugas
-ringkasan: Menambah kantin milik koperasi atau kantin tenant, akun jurnal yang dibuat otomatis, cara bayar, kontrak tenant, dan petugas kantin.
+ringkasan: Menambah kantin milik koperasi atau kantin tenant, jam buka dan tutup sementara, akun jurnal yang dibuat otomatis, cara bayar, kontrak tenant, dan petugas kantin.
 menu: /dashboard/unit-usaha
 ---
 Menu: **Unit Usaha → Daftar Unit Usaha**. Izinnya baris **Daftar Unit Usaha** di Kelola Hak Akses (bawaan: superadmin dan grup admin). Pemegang izin ini juga melihat dan mengelola semua kantin di menu kantin lain.
@@ -14,6 +14,16 @@ Dipilih per kantin di tab **Umum**:
 | **Milik koperasi** | Koperasi | Penjualan dikurangi HPP | Kas, Persediaan, Penjualan, HPP |
 | **Tenant bagi hasil** | Tenant | Persen penjualan, paling sedikit nilai minimum per bulan | Piutang Tenant, Utang ke Tenant, Pendapatan Bagi Hasil |
 | **Tenant sewa tetap** | Tenant | Sewa per bulan | Piutang Tenant, Utang ke Tenant, Pendapatan Sewa |
+
+## Jam buka dan tutup sementara
+
+Di tab **Umum**, bagian **Jam buka untuk pesanan dari aplikasi anggota**, pilih salah satu:
+
+- **Sesuai jadwal**: isi **Jam buka** dan **Jam tutup**; berlaku setiap hari. Bila jam tutup lebih kecil dari jam buka, jadwalnya lewat tengah malam (mis. 20:00 - 08:00 = buka malam sampai pagi).
+- **Buka 24 jam**: pesanan dari aplikasi diterima kapan saja.
+- **Tutup sementara**: untuk libur, stok opname, renovasi, dan sebagainya. Isi **pesan untuk anggota** (mis. "Libur Lebaran, buka lagi Senin") dan, bila sudah tahu, **tutup sampai tanggal**. Setelah tanggal itu lewat, kantin otomatis kembali ke jadwal yang tersimpan. Tanpa tanggal, kantin tetap tutup sampai Anda memilih Sesuai jadwal atau Buka 24 jam lagi.
+
+Saat tutup, anggota tetap bisa melihat menu dan mengisi tas, tetapi tidak bisa mengirim pesanan; pesan tutup sementara tampil di halaman kantin. Kolom **Nama** di daftar menampilkan status saat ini, mis. *Buka sekarang · buka 08:00-17:00*. Jam ini hanya untuk pesanan dari aplikasi; kasir di kantin tetap bisa berjualan.
 
 ## Akun jurnal otomatis
 

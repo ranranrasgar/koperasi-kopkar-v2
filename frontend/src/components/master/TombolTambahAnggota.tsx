@@ -6,6 +6,7 @@ import { Loader2, Plus } from "lucide-react"
 import { bahanAnggotaBaruAction, tambahAnggotaAction } from "@/app/actions/master-aksi"
 import { FormLengkapiAnggota, type BahanLengkapi } from "@/components/master/FormLengkapiAnggota"
 import { tombolModalUtama } from "@/components/ui/Modal"
+import { beriTahu } from "@/components/ui/Tanya"
 
 /** Tombol Tambah Anggota di Daftar Anggota: bahan form (nilai simpanan, grade) dimuat saat dibuka. */
 export function TombolTambahAnggota() {
@@ -14,7 +15,7 @@ export function TombolTambahAnggota() {
     const [memuat, mulai] = useTransition()
     const buka = () => mulai(async () => {
         const d = await bahanAnggotaBaruAction()
-        if (!d.ok) { alert(d.error); return }
+        if (!d.ok) { void beriTahu(d.error, { ok: false }); return }
         setBahan({ username: "", nik: "", form: d.form, dariPengaturan: d.dariPengaturan, daftarGrade: d.daftarGrade, gradeKaryawan: "" })
     })
     return (
@@ -26,7 +27,7 @@ export function TombolTambahAnggota() {
                 onTutup={() => setBahan(null)}
                 onSimpan={async (data, nik) => {
                     const h = (await tambahAnggotaAction(nik, data))! // simpan() selalu mengembalikan hasil
-                    if (h.ok) { alert(h.pesan); router.refresh() }
+                    if (h.ok) { void beriTahu(h.pesan); router.refresh() }
                     return h
                 }} />
         </>

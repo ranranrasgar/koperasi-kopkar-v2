@@ -207,10 +207,14 @@ export function SubmitButton({ pending, disabled, children }: { pending: boolean
 export function useAksiForm(aksi: (prev: Hasil, f: FormData) => Promise<Hasil>) {
     const [hasil, jalankan, pending] = useActionState<Hasil, FormData>(aksi, null)
     const [, startTransition] = useTransition()
-    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
-        e.preventDefault()
-        const data = new FormData(e.currentTarget)
+    /** Kirim form tertentu; untuk handler yang menunggu konfirmasi dulu (event sudah selesai, jadi e.currentTarget tidak bisa dipakai lagi). */
+    const kirim = (form: HTMLFormElement) => {
+        const data = new FormData(form)
         startTransition(() => jalankan(data))
     }
-    return { hasil, onSubmit, pending }
+    const onSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+        e.preventDefault()
+        kirim(e.currentTarget)
+    }
+    return { hasil, onSubmit, kirim, pending }
 }

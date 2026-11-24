@@ -7,6 +7,7 @@ import { toast } from "sonner"
 import { KUNCI_TEMA, LABEL_TEMA, PRESET, TEMA_BAWAAN, peringatanKontras, teksDiAtas, temaSah, temaSama, type Tema } from "@kopkar/backend/src/tampilan.ts"
 import { resetTampilanAction, simpanTampilanAction } from "@/app/actions/tampilan"
 import { cn } from "@/lib/utils"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 /** Pratinjau mini: menu samping, header, kartu, dan tombol dengan warna tema yang sedang diedit. */
 function Pratinjau({ t }: { t: Tema }) {
@@ -51,8 +52,8 @@ export function EditorTampilan({ awal, adaTersimpan }: { awal: Tema; adaTersimpa
         if (!h.ok) { toast.error(h.error); return }
         toast.success(h.pesan); setTersimpan(t); setAda(true); router.refresh()
     })
-    const reset = () => {
-        if (!confirm("Kembalikan tampilan ke pengaturan awal aplikasi?")) return
+    const reset = async () => {
+        if (!(await tanyaYa("Kembalikan tampilan ke pengaturan awal aplikasi?"))) return
         mulai(async () => {
             const h = await resetTampilanAction()
             if (!h.ok) { toast.error(h.error); return }

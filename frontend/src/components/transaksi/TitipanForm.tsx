@@ -11,6 +11,7 @@ import {
 import type { AnggotaRingkas } from "@/lib/queries/anggota"
 import { formatRupiah, formatTanggal } from "@/lib/format"
 import { AnggotaPicker, Field, FormCard, HasilTransaksi, KasSelect, SubmitButton, selectClass, useAksiForm, type Akun } from "./common"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 /**
  * Titipan angsuran pinjaman tunai (pengganti form desktop "Setoran Titipan Angsuran"): anggota menitipkan uang sedikit demi sedikit,
@@ -140,8 +141,8 @@ function SimpanKeAngsuran({ noPinjaman, data, akunKas, hariIni, onSelesai }: {
 function DaftarTitipan({ data, semua, setSemua, onHapus }: { data: DataTitipan; semua: boolean; setSemua: (v: boolean) => void; onHapus: () => void }) {
     const [sibuk, mulai] = useTransition()
     const [pesan, setPesan] = useState<string | null>(null)
-    const hapus = (id: number, jumlah: number) => {
-        if (!confirm(`Hapus titipan ${formatRupiah(jumlah)}?`)) return
+    const hapus = async (id: number, jumlah: number) => {
+        if (!(await tanyaYa(`Hapus titipan ${formatRupiah(jumlah)}?`))) return
         mulai(async () => {
             const h = await hapusTitipanAction(id)
             setPesan(h && !h.ok ? h.error : null)

@@ -23,6 +23,7 @@ import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 import { useKolomTersimpan } from "@/lib/kolom-tersimpan"
 import { MemuatData } from "@/components/ui/MemuatData"
 import { PilihKolom } from "@/components/ui/PilihKolom"
+import { beriTahu } from "@/components/ui/Tanya"
 
 type Row = Record<string, unknown>
 
@@ -124,7 +125,7 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
     const [mengekspor, setMengekspor] = useState(false)
     const ambilSemua = async () => {
         const r = await dataCetakAction(pathname, Object.fromEntries(searchParams?.entries() ?? []))
-        if ("error" in r) { alert(r.error); return null }
+        if ("error" in r) { void beriTahu(r.error, { ok: false }); return null }
         return r
     }
     const subjudulSaringan = () => [
@@ -150,7 +151,7 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
             if (!r) return
             const baris = r.items.map((item) => activeColumns.map((col) => [selTeks(item, col), col.subKey ? item[col.subKey] : ""].filter(Boolean).join("\n")))
             const galat = await bukaCetak({ judul: config.title, subjudul: subjudulSaringan(), isi: tabelHtml(kolomTabel(activeColumns), baris, r.total) })
-            if (galat) alert(galat)
+            if (galat) void beriTahu(galat, { ok: false })
         } finally {
             setMencetak(false)
         }
@@ -168,7 +169,7 @@ export function ModuleTable({ config, data, actions, aksiBaris: AksiBaris, jumla
             })
             const galat = await unduhExcel({ nama: pathname.replace(/^\/dashboard\//, "").replace(/\//g, "_"), judul: config.title, subjudul: subjudulSaringan(),
                 bagian: [{ kolom: kolomTabel(kolomEkspor), baris: r.items.map((item) => kolomEkspor.map((col) => selTeks(item, col))), nomor: true, jumlahTotal: r.total }] })
-            if (galat) alert(galat)
+            if (galat) void beriTahu(galat, { ok: false })
         } finally {
             setMengekspor(false)
         }

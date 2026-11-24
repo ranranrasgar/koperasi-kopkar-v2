@@ -7,6 +7,7 @@ import { buatCadanganAction, hapusCadanganAction, periksaCadanganAction, pulihka
 import type { Cadangan } from "@/lib/cadangan"
 import { UnggahCadangan } from "./UnggahCadangan"
 import { cn } from "@/lib/utils"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 const ukuranBaca = (b: number) =>
     b >= 1 << 30 ? `${(b / (1 << 30)).toFixed(2)} GB` : b >= 1 << 20 ? `${(b / (1 << 20)).toFixed(1)} MB` : `${Math.max(1, Math.round(b / 1024))} kB`
@@ -113,7 +114,7 @@ export function KelolaCadangan({ daftar, folder, ruangKosong, ukuranDatabase, da
                             <FragmenBaris key={c.nama} c={c} buka={buka === c.nama} sibuk={sibuk} sorot={sorot === c.nama}
                                 onBuka={() => setBuka(buka === c.nama ? null : c.nama)}
                                 onPeriksa={() => jalankan(`Memeriksa ${c.nama}...`, () => periksaCadanganAction(c.nama))}
-                                onHapus={() => { if (confirm(`Hapus cadangan ${c.nama}?\n\nBerkasnya dihapus dari server dan tidak bisa dikembalikan.`)) jalankan(`Menghapus ${c.nama}...`, () => hapusCadanganAction(c.nama)) }}
+                                onHapus={async () => { if ((await tanyaYa(`Hapus cadangan ${c.nama}?\n\nBerkasnya dihapus dari server dan tidak bisa dikembalikan.`))) jalankan(`Menghapus ${c.nama}...`, () => hapusCadanganAction(c.nama)) }}
                                 onPulihkan={() => { setPulih(c); setKetik("") }} />
                         ))}
                     </tbody>

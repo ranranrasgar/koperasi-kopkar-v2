@@ -249,7 +249,7 @@ export const AKSI_IZIN: Record<string, readonly AksiIzin[]> = {
     [MENU.cairKoperasi]: TAMBAH, [MENU.cairBank]: TAMBAH, [MENU.cairKpr]: TAMBAH, [MENU.angsurKoperasi]: TAMBAH, [MENU.angsurBank]: TAMBAH, [MENU.angsurKpr]: TAMBAH,
     [MENU.titipan]: ["tambah", "hapus"], [MENU.jurnalUmum]: SEMUA, [MENU.jurnalPenyesuaian]: SEMUA, [MENU.bankBook]: SEMUA,
     [MENU.generatePotongan]: ["tambah", "ubah"], [MENU.unitUsaha]: ["tambah", "ubah"], [MENU.produkKantin]: ["tambah", "ubah"],
-    [MENU.kasirKantin]: TAMBAH, [MENU.stokKantin]: TAMBAH, [MENU.penjualanKantin]: ["hapus"], [MENU.penyelesaianTenant]: ["tambah", "hapus"], [MENU.dataKaryawan]: ["tambah", "ubah"], [MENU.pengaturanGaji]: UBAH, [MENU.lemburKaryawan]: ["tambah", "hapus"], [MENU.penggajian]: SEMUA, [MENU.tutupBuku]: TAMBAH, [MENU.hitungShu]: TAMBAH, [MENU.shu]: ["tambah", "hapus"],
+    [MENU.kasirKantin]: TAMBAH, [MENU.stokKantin]: ["tambah", "hapus"], [MENU.penjualanKantin]: ["hapus"], [MENU.penyelesaianTenant]: ["tambah", "hapus"], [MENU.dataKaryawan]: ["tambah", "ubah"], [MENU.pengaturanGaji]: UBAH, [MENU.lemburKaryawan]: ["tambah", "hapus"], [MENU.penggajian]: SEMUA, [MENU.tutupBuku]: TAMBAH, [MENU.hitungShu]: TAMBAH, [MENU.shu]: ["tambah", "hapus"],
 }
 
 /**

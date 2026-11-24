@@ -13,6 +13,7 @@ import { formatAngka, formatTanggal } from "@/lib/format"
 import { MAKS_SEMUA, ukuranHalaman } from "@/lib/halaman"
 import { useKolomTersimpan } from "@/lib/kolom-tersimpan"
 import type { BarisKpr } from "@/lib/queries/kpr"
+import { beriTahu } from "@/components/ui/Tanya"
 
 interface Kolom {
     judul: string; nilai: (r: BarisKpr) => string | number; kanan?: boolean; tengah?: boolean; mono?: boolean; tebal?: boolean; warna?: string
@@ -115,12 +116,12 @@ export function DaftarKpr({ data, filter, jenis, daftarTahun }: {
     const cetak = async () => {
         const d = siapkan()
         const galat = await bukaCetak({ judul: "Daftar KPR", subjudul: d.subjudul, isi: tabelHtml(d.kolom, d.baris, urut.length, { total: d.total }) })
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     }
     const ekspor = async () => {
         const d = siapkan()
         const galat = await unduhExcel({ nama: "daftar-kpr", judul: "Daftar KPR", subjudul: d.subjudul, bagian: [{ kolom: d.kolom, baris: d.baris, total: d.total, nomor: true, jumlahTotal: urut.length }] })
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     }
 
     return (

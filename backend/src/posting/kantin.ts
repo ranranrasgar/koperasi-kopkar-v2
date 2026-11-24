@@ -108,8 +108,11 @@ export interface StokMasukInput {
     items: { produkId: number; qty: string | number; hargaBeli: string | number }[]
 }
 
-/** Barang datang: stok bertambah, HPP rata-rata bergerak diperbarui, kartu stok dicatat. Kantin milik koperasi: Dr Persediaan / Cr akun bayar. */
-export async function stokMasuk(db: Db, i: StokMasukInput) {
+/**
+ * Barang datang: stok bertambah, HPP rata-rata bergerak diperbarui, kartu stok dicatat. Kantin milik koperasi: Dr Persediaan / Cr akun bayar.
+ * `nomor`: hanya dari ubahStokMasuk (bukti lama dipakai lagi); bukan bagian input supaya tidak bisa dikirim dari form.
+ */
+export async function stokMasuk(db: Db, i: StokMasukInput, nomor?: string) {
     const tanggal = tgl(i.tanggal);
     const u = await unit(db, i.unitId);
     if (!i.items.length) throw new KantinSalah('Isi minimal satu barang');
@@ -122,7 +125,7 @@ export async function stokMasuk(db: Db, i: StokMasukInput) {
         if (akunBayar === u.persediaan) throw new KantinSalah('Akun pembayaran tidak boleh akun persediaan');
         await cekAkunDetail(db, [akunBayar]);
     }
-    const no = `KTB-${yymm(tanggal)}-${(await db.query<{ n: string }>("SELECT nextval('seq_kantin_stok') n")).rows[0].n}`;
+    const no = nomor ?? `KTB-${yymm(tanggal)}-${(await db.query<{ n: string }>("SELECT nextval('seq_kantin_stok') n")).rows[0].n}`;
     let total = 0n;
     const baris = [...i.items].sort((a, b) => a.produkId - b.produkId); // urutan kunci tetap: tidak saling menunggu
     for (const it of baris) {
@@ -136,8 +139,8 @@ export async function stokMasuk(db: Db, i: StokMasukInput) {
         const lama = stok > 0n ? stok * pokok : 0n;
         const pokokBaru = (lama + q * beli) / (stok > 0n ? stokBaru : q);
         await db.query('UPDATE kantin_produk SET stok = $1, harga_pokok = $2, diubah_pada = now() WHERE id = $3', [fromUnits(stokBaru), fromUnits(pokokBaru), it.produkId]);
-        await db.query(`INSERT INTO kantin_stok_mutasi (produk_id, unit_usaha_id, tanggal, jenis, qty, harga, stok_setelah, no_bukti, opr, keterangan)
-            VALUES ($1, $2, $3, 'masuk', $4, $5, $6, $7, $8, $9)`, [it.produkId, i.unitId, tanggal, fromUnits(q), fromUnits(beli), fromUnits(stokBaru), no, i.opr, i.keterangan?.trim().slice(0, 255) || null]);
+        await db.query(`INSERT INTO kantin_stok_mutasi (produk_id, unit_usaha_id, tanggal, jenis, qty, harga, stok_setelah, no_bukti, opr, keterangan, hpp_sebelum)
+            VALUES ($1, $2, $3, 'masuk', $4, $5, $6, $7, $8, $9, $10)`, [it.produkId, i.unitId, tanggal, fromUnits(q), fromUnits(beli), fromUnits(stokBaru), no, i.opr, i.keterangan?.trim().slice(0, 255) || null, fromUnits(pokok)]);
         total += kali(beli, q);
     }
     if (u.model === 'milik' && total > 0n)
@@ -147,6 +150,46 @@ export async function stokMasuk(db: Db, i: StokMasukInput) {
             lines: [{ kodePerkiraan: u.persediaan!, debit: fromUnits(total) }, { kodePerkiraan: akunBayar!, kredit: fromUnits(total) }],
         });
     return { noBukti: no, total: fromUnits(total) };
+}
+
+/**
+ * Hapus permanen satu bukti stok masuk (KTB) karena salah input: baris kartu stok dan jurnalnya dihapus tanpa jurnal balik, stok dan HPP rata-rata
+ * dikembalikan. Hanya boleh bila bukti ini mutasi terakhir setiap produknya; kalau sesudahnya sudah ada penjualan/opname, urutan kartu stok dan HPP
+ * yang sudah dipakai ikut salah, jadi ditolak.
+ */
+export async function hapusStokMasuk(db: Db, i: { unitId: number; noBukti: string }) {
+    const no = String(i.noBukti ?? '').trim();
+    const baris = (await db.query<{ id: string; produk_id: string; qty: string; harga: string; hpp_sebelum: string | null }>(
+        `SELECT id, produk_id, qty, harga, hpp_sebelum FROM kantin_stok_mutasi WHERE no_bukti = $1 AND unit_usaha_id = $2 AND jenis = 'masuk' ORDER BY produk_id, id DESC`,
+        [no, i.unitId])).rows;
+    if (!no.startsWith('KTB-') || !baris.length) throw new KantinSalah(`Stok masuk ${no} tidak ditemukan di kantin ini`);
+    await cekBuktiTerbuka(db, no);
+    let total = 0n;
+    for (const b of baris) {
+        const p = (await db.query<{ nama: string; stok: string; harga_pokok: string }>('SELECT nama, stok, harga_pokok FROM kantin_produk WHERE id = $1 FOR UPDATE', [b.produk_id])).rows[0];
+        const lanjut = (await db.query<{ no_bukti: string }>(
+            'SELECT no_bukti FROM kantin_stok_mutasi WHERE produk_id = $1 AND id > $2 AND no_bukti <> $3 ORDER BY id LIMIT 1', [b.produk_id, b.id, no])).rows[0];
+        if (lanjut) throw new KantinSalah(`${p.nama} sudah punya mutasi sesudahnya (${lanjut.no_bukti}); hanya stok masuk terakhir yang bisa dihapus`);
+        const q = toUnits(b.qty), beli = toUnits(b.harga), stok = toUnits(p.stok), pokok = toUnits(p.harga_pokok);
+        const stokLama = stok - q;
+        if (stokLama < 0n) throw new KantinSalah(`Stok ${p.nama} tinggal ${fromUnits(stok).replace(/\.?0+$/, '')}, kurang dari jumlah yang dihapus`);
+        // HPP sebelum stok masuk tersimpan di baris mutasinya. Baris lama (tanpa hpp_sebelum): kebalikan rata-rata bergerak, bisa selisih pembulatan
+        // 0,0001; bila stok sebelumnya nol HPP dibiarkan, karena stok masuk berikutnya memakai harga belinya sendiri.
+        const balik = b.hpp_sebelum !== null ? toUnits(b.hpp_sebelum) : stokLama > 0n ? (stok * pokok - q * beli) / stokLama : pokok;
+        const pokokLama = balik < 0n ? 0n : balik;
+        await db.query('UPDATE kantin_produk SET stok = $1, harga_pokok = $2, diubah_pada = now() WHERE id = $3', [fromUnits(stokLama), fromUnits(pokokLama), b.produk_id]);
+        total += kali(beli, q);
+    }
+    await db.query("DELETE FROM kantin_stok_mutasi WHERE no_bukti = $1 AND unit_usaha_id = $2 AND jenis = 'masuk'", [no, i.unitId]);
+    await db.query('DELETE FROM jurnal_umum WHERE nomor_bukti = $1', [no]);
+    return { noBukti: no, produk: new Set(baris.map((b) => b.produk_id)).size, total: fromUnits(total) };
+}
+
+/** Ubah stok masuk = hapus bukti lama (aturan hapusStokMasuk) lalu catat ulang dengan nomor bukti yang sama, dalam satu transaksi. */
+export async function ubahStokMasuk(db: Db, i: StokMasukInput & { noBukti: string }) {
+    const { noBukti, ...isi } = i;
+    const lama = await hapusStokMasuk(db, { unitId: i.unitId, noBukti });
+    return stokMasuk(db, isi, lama.noBukti);
 }
 
 // ---------- opname dan barang rusak ----------

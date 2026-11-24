@@ -14,6 +14,7 @@ import { dataCetakAction } from "@/app/actions/cetak"
 import { MemuatData } from "@/components/ui/MemuatData"
 import { bukaCetak, tabelHtml, type KolomTabel } from "@/lib/cetak-klien"
 import { unduhExcel } from "@/lib/ekspor-excel"
+import { beriTahu } from "@/components/ui/Tanya"
 
 type Totals = {
     Setoran_Pokok: number; Ambil_Pokok: number; Saldo_Pokok: number
@@ -42,7 +43,7 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
     const [mengekspor, setMengekspor] = useState(false)
     const siapkan = async () => {
             const r = await dataCetakAction(pathname, { ...Object.fromEntries(searchParams.entries()), endDate })
-            if ("error" in r) { alert(r.error); return null }
+            if ("error" in r) { void beriTahu(r.error, { ok: false }); return null }
             const items = (r.items as unknown as Row[]).filter((x) => !hideZero || x.Saldo_Total !== 0)
             // Hanya saldo per jenis simpanan (tanpa setoran dan pengambilan) supaya muat selembar kertas lanskap.
             const kolom: KolomTabel[] = [
@@ -65,7 +66,7 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
             const d = await siapkan()
             if (!d) return
             const galat = await bukaCetak({ judul: "Rekap Simpanan Anggota", subjudul: d.subjudul, orientasi: "lanskap", isi: tabelHtml(d.kolom, d.baris, d.jumlah, { total: d.total }) })
-            if (galat) alert(galat)
+            if (galat) void beriTahu(galat, { ok: false })
         } finally {
             setMencetak(false)
         }
@@ -77,7 +78,7 @@ export function SavingsSummary({ data, grandTotal, endDate }: { data: PageData<R
             if (!d) return
             const galat = await unduhExcel({ nama: `rekap-simpanan_${endDate}`, judul: "Rekap Simpanan Anggota", subjudul: d.subjudul,
                 bagian: [{ kolom: d.kolom, baris: d.baris, total: d.total, nomor: true, jumlahTotal: d.jumlah }] })
-            if (galat) alert(galat)
+            if (galat) void beriTahu(galat, { ok: false })
         } finally {
             setMengekspor(false)
         }

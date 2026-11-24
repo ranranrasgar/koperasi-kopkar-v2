@@ -3,15 +3,16 @@
 import { useTransition } from "react"
 import { Loader2, Mail } from "lucide-react"
 import { kirimUlangInfoPinjamanAction } from "@/app/actions/transaksi"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 /** Kirim ulang informasi kredit dan jadwal angsuran (notifikasi, email, dan PDF) ke anggota pemilik pinjaman. */
 export function TombolKirimInfo({ noPinjaman, kecil = false }: { noPinjaman: string; kecil?: boolean }) {
     const [sibuk, mulai] = useTransition()
-    const kirim = () => {
-        if (!confirm(`Kirim ulang informasi kredit dan jadwal angsuran ${noPinjaman} ke anggota (notifikasi dan email dengan lampiran PDF)?`)) return
+    const kirim = async () => {
+        if (!(await tanyaYa(`Kirim ulang informasi kredit dan jadwal angsuran ${noPinjaman} ke anggota (notifikasi dan email dengan lampiran PDF)?`))) return
         mulai(async () => {
             const h = await kirimUlangInfoPinjamanAction(noPinjaman)
-            if (h) alert(h.ok ? h.pesan : h.error)
+            if (h) void beriTahu(h.ok ? h.pesan : h.error, { ok: !!h.ok })
         })
     }
     return (

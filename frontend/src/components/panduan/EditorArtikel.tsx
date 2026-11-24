@@ -12,6 +12,7 @@ import { Pesan } from "@/components/panduan/KelolaPanduan"
 import { hapusArtikelAction, simpanArtikelAction, type HasilPanduan } from "@/app/actions/panduan"
 import { slugTeks } from "@/lib/panduan-teks"
 import { cn } from "@/lib/utils"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 export interface ArtikelEdit {
     id: number | null; kategori_id: number | null; slug: string; judul: string; ringkasan: string; isi: string
@@ -101,8 +102,8 @@ export function EditorArtikel({ awal, kategori, menu }: {
                 <span className="flex-1" />
                 {awal.id && (
                     <Button type="button" variant="outline" size="sm" className="text-destructive"
-                        onClick={() => {
-                            if (!confirm(`Hapus artikel "${awal.judul}"? Tindakan ini tidak bisa dibatalkan.`)) return
+                        onClick={async () => {
+                            if (!(await tanyaYa(`Hapus artikel "${awal.judul}"? Tindakan ini tidak bisa dibatalkan.`))) return
                             startTransition(async () => {
                                 const r = await hapusArtikelAction(awal.id!)
                                 setHapus(r)

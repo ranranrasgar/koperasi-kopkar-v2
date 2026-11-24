@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { kopCetakAction } from "@/app/actions/cetak"
 import { bukaCetak, esc } from "@/lib/cetak-klien"
 import type { FilterPotongan as FilterTabel, RekapPotongan } from "@/lib/queries/potongan-gaji"
+import { beriTahu } from "@/components/ui/Tanya"
 
 const angka = (v: number) => Math.round(v).toLocaleString("id-ID")
 const KOLOM: [keyof RekapPotongan, string][] = [["s_pokok", "Pokok"], ["s_wajib", "Wajib"], ["s_sukarela", "Sukarela"], ["koperasi", "Koperasi"], ["bank", "Bank"],
@@ -42,7 +43,7 @@ export function CetakEksporPotongan({ periode, judulPeriode, keterangan, rows, f
         const galat = await bukaCetak({ judul: "Rekap Potongan Anggota", orientasi: "lanskap",
             subjudul: [`Periode ${judulPeriode}`, filter.staff, TAMPIL[filter.tampil], filter.cari && `Cari "${filter.cari}"`].filter(Boolean).join(" · "), isi: rekapHtml(rows, kop?.kota ?? "", kop?.nama ?? "", keterangan) }, kop)
         setSibuk(false)
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     }
     const p = new URLSearchParams(Object.entries({ q: filter.cari, staff: filter.staff, tampil: filter.tampil }).filter(([, v]) => v))
     const unduh = `/dashboard/deductions/periode/${periode}/ekspor${p.size ? `?${p}` : ""}`

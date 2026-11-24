@@ -8,6 +8,7 @@ import { FormEdit, type FieldSpec } from "@/components/master/FormEdit"
 import { ModalForm } from "@/components/ui/Modal"
 import { MENU } from "@/config/akses"
 import type { BarisAbsensi } from "@/lib/queries/absensi"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 const fields: FieldSpec[] = [
     { name: "id", label: "", hidden: true },
@@ -21,11 +22,11 @@ export function AksiAbsen({ item }: { item: BarisAbsensi }) {
     const [ubah, setUbah] = useState(false)
     const [sibuk, mulai] = useTransition()
     const selesai = useCallback(() => { setTimeout(() => setUbah(false), 800) }, [])
-    const hapus = () => {
-        if (!confirm(`Hapus absensi ${item.nama} tanggal ${item.tanggal}?`)) return
+    const hapus = async () => {
+        if (!(await tanyaYa(`Hapus absensi ${item.nama} tanggal ${item.tanggal}?`))) return
         mulai(async () => {
             const r = await hapusAbsenAction(Number(item.id))
-            if (r && !r.ok) alert(r.error)
+            if (r && !r.ok) void beriTahu(r.error, { ok: false })
         })
     }
     return (

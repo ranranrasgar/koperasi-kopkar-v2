@@ -12,6 +12,7 @@ import { aturTerbitAction, hapusArtikelAction, hapusKategoriAction, simpanKatego
 import { slugTeks } from "@/lib/panduan-teks"
 import { formatTanggal } from "@/lib/format"
 import { cn } from "@/lib/utils"
+import { tanyaYa } from "@/components/ui/Tanya"
 
 export interface KategoriKelola {
     id: number; slug: string; nama: string; keterangan: string | null; ikon: string | null; urutan: number
@@ -40,8 +41,8 @@ export function KelolaPanduan({ kategori, namaMenu }: { kategori: KategoriKelola
     const [ubahKategori, setUbahKategori] = useState<number | "baru" | null>(null)
     const tutupKategori = useCallback(() => setUbahKategori(null), [])
 
-    const jalan = (kunci: string, fn: () => Promise<HasilPanduan>, tanya?: string) => {
-        if (tanya && !confirm(tanya)) return
+    const jalan = async (kunci: string, fn: () => Promise<HasilPanduan>, tanya?: string) => {
+        if (tanya && !(await tanyaYa(tanya))) return
         setSibuk(kunci)
         startTransition(async () => {
             setHasil(await fn())

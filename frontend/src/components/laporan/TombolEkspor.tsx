@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Download, Loader2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { dariMentah, unduhExcel, type BagianMentah } from "@/lib/ekspor-excel"
+import { beriTahu } from "@/components/ui/Tanya"
 
 /**
  * Ekspor Excel dari data server (`baris`, baris pertama = judul kolom; atau beberapa `bagian`), dengan kop dan format seperti dokumen cetak.
@@ -21,7 +22,7 @@ export function TombolEkspor({ nama, baris, bagian, judul, subjudul }: { nama: s
             subjudul: subjudul ?? kop?.dataset.periode ?? area?.dataset.subjudulCetak, bagian: daftar.map(dariMentah),
         })
         setSibuk(false)
-        if (galat) alert(galat)
+        if (galat) void beriTahu(galat, { ok: false })
     }
     return (
         <Button type="button" onClick={ekspor} variant="outline" size="sm" className="h-9 font-medium shadow-sm print:hidden" disabled={sibuk || daftar.every((b) => b.baris.length <= 1)}>

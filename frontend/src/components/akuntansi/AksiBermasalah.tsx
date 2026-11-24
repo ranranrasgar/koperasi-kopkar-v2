@@ -11,6 +11,7 @@ import { TombolModal, useTutupSetelahBerhasil } from "@/components/ui/Modal"
 import { TombolJurnalUbah } from "@/components/transaksi/JurnalForm"
 import { MENU } from "@/config/akses"
 import { formatAngka, hariIni } from "@/lib/format"
+import { beriTahu, tanyaYa } from "@/components/ui/Tanya"
 
 const tombol = "grid h-7 w-7 place-items-center rounded-md hover:bg-muted disabled:opacity-50"
 const MIN_ALASAN = 10
@@ -31,8 +32,8 @@ function PanelAsal({ nomorBukti, selesai }: { nomorBukti: string; selesai: () =>
     if (!info) return <p className="text-sm text-muted-foreground">Bukti {nomorBukti} tidak punya transaksi asal di simpanan atau pinjaman.</p>
 
     const bolehHapus = boleh([MENU.batalTransaksi], "hapus")
-    const hapus = () => {
-        if (!confirm(`Hapus ${info.judul.toLowerCase()} ${nomorBukti} beserta ${info.jurnal} baris jurnalnya? Tidak bisa dibatalkan.`)) return
+    const hapus = async () => {
+        if (!(await tanyaYa(`Hapus ${info.judul.toLowerCase()} ${nomorBukti} beserta ${info.jurnal} baris jurnalnya? Tidak bisa dibatalkan.`))) return
         mulai(async () => setHasil(await hapusTransaksiAsalAction(nomorBukti, alasan)))
     }
     return (
@@ -80,11 +81,11 @@ export function AksiBermasalah({ nomorBukti }: { nomorBukti: string }) {
     const asalLain = !/^(JU|JP|BB|TBT)\//.test(nomorBukti) // dibuat oleh transaksi simpanan/pinjaman, bukan jurnal manual
     const tutupBuku = nomorBukti.startsWith("TBT/") // terkunci di server; tombolnya disembunyikan
     const catatan = "Bukti ini dibuat oleh transaksi lain. Hanya jurnalnya yang berubah; data simpanan/pinjaman asalnya tidak ikut berubah."
-    const hapus = () => {
-        if (!confirm(`Hapus seluruh bukti jurnal ${nomorBukti}? Tidak bisa dibatalkan.${asalLain ? `\n\n${catatan}` : ""}`)) return
+    const hapus = async () => {
+        if (!(await tanyaYa(`Hapus seluruh bukti jurnal ${nomorBukti}? Tidak bisa dibatalkan.${asalLain ? `\n\n${catatan}` : ""}`))) return
         mulai(async () => {
             const h = await hapusJurnalAction(nomorBukti)
-            if (h && !h.ok) alert(h.error)
+            if (h && !h.ok) void beriTahu(h.error, { ok: false })
             router.refresh()
         })
     }
