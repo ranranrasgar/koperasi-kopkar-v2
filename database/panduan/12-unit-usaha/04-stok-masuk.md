@@ -1,6 +1,6 @@
 ---
 judul: Stok masuk, opname, barang rusak, dan kartu stok
-ringkasan: Mencatat barang datang, riwayat dan hapus stok masuk yang salah input, stok opname, barang rusak, peringatan stok menipis, dan kartu stok per produk.
+ringkasan: Mencatat barang datang, riwayat, edit, dan hapus stok masuk yang salah input, stok opname, barang rusak, peringatan stok menipis, dan kartu stok per produk.
 menu: /dashboard/kantin/stok
 ---
 Menu: **Unit Usaha → Stok Kantin**. Hanya **pengelola** kantin (dan admin) yang bisa mencatat stok masuk; kasir hanya melihat kartu stok.
@@ -22,15 +22,17 @@ Halaman dibagi empat tab: **Stok Masuk**, **Riwayat Stok Masuk**, **Opname & Rus
 - Kantin milik koperasi: jurnal **KTB-...** Persediaan Kantin debit / akun pembayaran kredit.
 - Kantin tenant: barang milik tenant, jadi tidak ada jurnal koperasi; stok tetap dicatat supaya kasir tahu sisa barang.
 
-## Riwayat dan hapus stok masuk
+## Riwayat, edit, dan hapus stok masuk
 
 Tab **Riwayat Stok Masuk** menampilkan satu baris per bukti **KTB-...**: tanggal, keterangan, akun pembayaran, jumlah produk, total, dan operator. Klik baris untuk melihat rincian produknya. Saring dengan **Dari/Sampai** (bawaannya awal bulan sampai hari ini), **Produk**, dan **Cari** nomor bukti atau keterangan; jumlah baris per halaman bisa diatur.
 
-Ikon **hapus** (tempat sampah) untuk stok masuk yang **salah input atau hanya uji**. Hapus bersifat permanen, tanpa jurnal balik:
+Ikon **edit** (pensil) membuka form stok masuk berisi data lama. Tanggal, akun pembayaran, keterangan, produk, jumlah, dan harga beli boleh diubah. Saat disimpan, transaksi lama dihapus lalu dicatat ulang dengan **nomor bukti yang sama**, sehingga stok, HPP, kartu stok, dan jurnal ikut menyesuaikan.
+
+Ikon **hapus** (tempat sampah) untuk stok masuk yang **salah input atau hanya uji**. Setelah dikonfirmasi di jendela **Hapus permanen**, transaksi dihapus tanpa jurnal balik:
 - Baris kartu stok bukti itu dan jurnal KTB-nya dihapus.
 - Stok produk dikurangi kembali dan HPP rata-rata dikembalikan seperti sebelum stok masuk itu.
 
-Hapus hanya bisa bila produknya **belum punya mutasi lain sesudah bukti itu** (penjualan, opname, barang rusak, atau stok masuk berikutnya); ikonnya abu-abu bila tidak bisa. Kalau barangnya sudah terjual, betulkan dengan opname. Tahun yang sudah tutup buku juga tidak bisa dihapus. Untuk mengubah isi stok masuk, hapus lalu input ulang.
+Edit dan hapus hanya bisa bila produknya **belum punya mutasi lain sesudah bukti itu** (penjualan, opname, barang rusak, atau stok masuk berikutnya); ikonnya abu-abu bila tidak bisa. Kalau barangnya sudah terjual, betulkan dengan opname. Tahun yang sudah tutup buku juga tidak bisa dihapus. 
 
 ## Produk tanpa kelola stok
 

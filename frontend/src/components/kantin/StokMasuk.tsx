@@ -4,8 +4,9 @@ import { Fragment, useState, useTransition } from "react"
 import { AkunBox } from "@/components/bankbook/AkunBox"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Loader2, Plus, Trash2 } from "lucide-react"
-import { hapusStokMasukAction, penyesuaianStokAction, stokMasukAction } from "@/app/actions/kantin"
+import { AlertCircle, CheckCircle2, ChevronDown, ChevronRight, Loader2, Pencil, Plus, Trash2 } from "lucide-react"
+import { hapusStokMasukAction, penyesuaianStokAction, stokMasukAction, ubahStokMasukAction } from "@/app/actions/kantin"
+import { ModalForm } from "@/components/ui/Modal"
 import { useBolehAksi } from "@/components/layout/SidebarContext"
 import { PaginasiUrl } from "@/components/ui/PaginasiUrl"
 import { MENU } from "@/config/akses"
@@ -18,8 +19,9 @@ import { cn } from "@/lib/utils"
 export interface ProdukStok { id: number; kode: string; nama: string; satuan: string; harga_beli: number; harga_pokok: number; stok: number; stok_minimal: number }
 export interface MutasiStok { id: number; tanggal: string; waktu: string; jenis: string; no_bukti: string; nama: string; satuan: string; qty: number; harga: number; stok_setelah: number; opr: string; keterangan: string | null }
 export interface RiwayatMasuk {
-    no_bukti: string; tanggal: string; waktu: string; opr: string; keterangan: string | null; total: number; akun: string | null; bisa_hapus: boolean; total_semua: number
-    item: { nama: string; satuan: string; qty: number; harga: number }[]
+    no_bukti: string; tanggal: string; waktu: string; opr: string; keterangan: string | null; total: number; akun: string | null; akun_kode: string | null
+    bisa_hapus: boolean; total_semua: number
+    item: { produkId: number; nama: string; satuan: string; qty: number; harga: number }[]
 }
 export interface FilterStok { dari: string; sampai: string; produk: number | null; jenis: string; cari: string }
 export const TAB_STOK = ["masuk", "riwayat", "opname", "kartu"] as const
@@ -31,6 +33,12 @@ const hariIni = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/J
 const waktu = (w: string) => new Date(w).toLocaleString("id-ID", { dateStyle: "short", timeStyle: "short" })
 const JENIS: Record<string, string> = { masuk: "Masuk", jual: "Terjual", batal: "Batal jual", opname: "Opname", rusak: "Rusak" }
 type Hal = { page: number; pageSize: number; total: number; totalPages: number }
+const TERKUNCI = "Produknya sudah punya mutasi sesudah bukti ini (terjual, opname, rusak, atau stok masuk berikutnya); tidak bisa diubah atau dihapus"
+
+function Pesan({ hasil }: { hasil: { ok: boolean; teks: string } }) {
+    return <div role="alert" className={cn("mb-3 flex items-start gap-2 rounded-md border px-3 py-2 text-sm", hasil.ok ? "border-emerald-300 bg-emerald-50 text-emerald-900" : "border-red-300 bg-red-50 text-red-900")}>
+        {hasil.ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />} {hasil.teks}</div>
+}
 
 /** Halaman Stok Kantin bertab: catat stok masuk, riwayat stok masuk (hapus salah input), opname/rusak, dan kartu stok. Filter dan halaman lewat URL. */
 export function StokMasuk({ unit, tab, filter, produk, akun, riwayat, mutasi, hal, lebihDariSatu }: {
@@ -54,7 +62,7 @@ export function StokMasuk({ unit, tab, filter, produk, akun, riwayat, mutasi, ha
                 {lebihDariSatu && <Link href="?" className="ml-auto px-2 text-sm text-muted-foreground hover:text-foreground">Ganti kantin ({unit.nama})</Link>}
             </div>
             {tab === "masuk" && <FormMasuk unit={unit} produk={produk} akun={akun} pengelola={pengelola} />}
-            {tab === "riwayat" && <Riwayat unit={unit} filter={filter} produk={produk} riwayat={riwayat} hal={hal} pengelola={pengelola} />}
+            {tab === "riwayat" && <Riwayat unit={unit} filter={filter} produk={produk} akun={akun} riwayat={riwayat} hal={hal} pengelola={pengelola} />}
             {tab === "opname" && (pengelola
                 ? produk.length > 0 ? <Penyesuaian unit={unit} produk={produk} /> : <p className="text-sm text-muted-foreground">Belum ada produk aktif dengan kelola stok.</p>
                 : <p className="text-sm text-muted-foreground">Hanya pengelola kantin yang mencatat opname dan barang rusak.</p>)}
@@ -88,32 +96,36 @@ function Saring({ unit, tab, filter, produk, jenis }: { unit: UnitOperator; tab:
 }
 
 /** Riwayat stok masuk per bukti KTB; baris bisa dibuka untuk rincian produk. Hapus = hapus permanen beserta jurnalnya (salah input / uji). */
-function Riwayat({ unit, filter, produk, riwayat, hal, pengelola }: { unit: UnitOperator; filter: FilterStok; produk: ProdukStok[]; riwayat: RiwayatMasuk[]; hal: Hal; pengelola: boolean }) {
+function Riwayat({ unit, filter, produk, akun, riwayat, hal, pengelola }: {
+    unit: UnitOperator; filter: FilterStok; produk: ProdukStok[]; akun: { kode_perkiraan: string; nama_perkiraan: string }[]; riwayat: RiwayatMasuk[]; hal: Hal; pengelola: boolean
+}) {
     const router = useRouter()
     const boleh = useBolehAksi()
     const [buka, setBuka] = useState<string | null>(null)
+    const [hapusIni, setHapusIni] = useState<RiwayatMasuk | null>(null)
+    const [ubahIni, setUbahIni] = useState<RiwayatMasuk | null>(null)
+    const [pesan, setPesan] = useState<{ ok: boolean; teks: string } | null>(null)
     const [sibuk, mulai] = useTransition()
     const bolehHapus = pengelola && boleh([MENU.stokKantin], "hapus")
     const milik = unit.model === "milik"
-    const hapus = (r: RiwayatMasuk) => {
-        if (!confirm(`Hapus permanen stok masuk ${r.no_bukti} (Rp ${rp(r.total)})?\n\nStok dan HPP dikembalikan, kartu stok${milik ? " dan jurnalnya" : ""} ikut dihapus tanpa jurnal balik. Tidak bisa dibatalkan.`)) return
-        mulai(async () => {
-            const h = await hapusStokMasukAction(unit.id, r.no_bukti)
-            if (h) alert(h.ok ? h.pesan : h.error)
-            router.refresh()
-        })
-    }
+    const hapus = (r: RiwayatMasuk) => mulai(async () => {
+        const h = await hapusStokMasukAction(unit.id, r.no_bukti)
+        if (h) setPesan(h.ok ? { ok: true, teks: h.pesan } : { ok: false, teks: h.error })
+        setHapusIni(null)
+        router.refresh()
+    })
     return (
         <FormCard title="Riwayat Stok Masuk" description="Satu baris per bukti stok masuk (KTB); klik baris untuk rinciannya. Hapus hanya untuk salah input atau uji: stok, HPP, kartu stok, dan jurnalnya dikembalikan seperti sebelum transaksi. Bisa dihapus selama produknya belum punya mutasi lain sesudah bukti itu.">
             <Saring unit={unit} tab="riwayat" filter={filter} produk={produk} />
+            {pesan && <Pesan hasil={pesan} />}
             {hal.total > 0 && <p className="mb-2 text-sm text-muted-foreground">{hal.total} bukti, total pembelian Rp {rp(riwayat[0]?.total_semua ?? 0)}</p>}
-            <div className="overflow-x-auto rounded-md border">
-                <PaginasiUrl className="border-b" page={hal.page} totalPages={hal.totalPages} pageSize={hal.pageSize} total={hal.total} />
+            <div className="rounded-md border">
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead className="bg-muted text-xs text-muted-foreground"><tr>
                         <th className="w-8" /><th className="px-3 py-2 text-left">Tanggal</th><th className="px-3 py-2 text-left">Bukti</th><th className="px-3 py-2 text-left">Keterangan</th>
                         {milik && <th className="px-3 py-2 text-left">Dibayar dari</th>}
-                        <th className="px-3 py-2 text-right">Produk</th><th className="px-3 py-2 text-right">Total</th><th className="px-3 py-2 text-left">Oleh</th>{bolehHapus && <th className="w-10" />}
+                        <th className="px-3 py-2 text-right">Produk</th><th className="px-3 py-2 text-right">Total</th><th className="px-3 py-2 text-left">Oleh</th>{bolehHapus && <th className="w-20" />}
                     </tr></thead>
                     <tbody>
                         {riwayat.map((r) => (
@@ -127,11 +139,13 @@ function Riwayat({ unit, filter, produk, riwayat, hal, pengelola }: { unit: Unit
                                     <td className="px-3 py-1.5 text-right tabular-nums">{r.item.length}</td>
                                     <td className="px-3 py-1.5 text-right tabular-nums">{rp(r.total)}</td>
                                     <td className="px-3 py-1.5 text-xs">{r.opr}</td>
-                                    {bolehHapus && <td className="px-2" onClick={(e) => e.stopPropagation()}>
-                                        <button type="button" disabled={sibuk || !r.bisa_hapus} onClick={() => hapus(r)}
-                                            title={r.bisa_hapus ? "Hapus permanen (salah input)" : "Produknya sudah punya mutasi sesudah bukti ini; tidak bisa dihapus"}
-                                            className="rounded p-1 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:bg-transparent">
-                                            {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}</button>
+                                    {bolehHapus && <td className="whitespace-nowrap px-2" onClick={(e) => e.stopPropagation()}>
+                                        <button type="button" disabled={sibuk || !r.bisa_hapus} onClick={() => { setPesan(null); setUbahIni(r) }}
+                                            title={r.bisa_hapus ? "Edit stok masuk" : TERKUNCI}
+                                            className="rounded p-1 text-primary hover:bg-muted disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:bg-transparent"><Pencil className="h-4 w-4" /></button>
+                                        <button type="button" disabled={sibuk || !r.bisa_hapus} onClick={() => { setPesan(null); setHapusIni(r) }}
+                                            title={r.bisa_hapus ? "Hapus permanen (salah input)" : TERKUNCI}
+                                            className="rounded p-1 text-red-600 hover:bg-red-50 disabled:cursor-not-allowed disabled:text-muted-foreground disabled:hover:bg-transparent"><Trash2 className="h-4 w-4" /></button>
                                     </td>}
                                 </tr>
                                 {buka === r.no_bukti && <tr className="bg-muted/30"><td /><td colSpan={(milik ? 7 : 6) + (bolehHapus ? 1 : 0)} className="px-3 py-2">
@@ -145,7 +159,23 @@ function Riwayat({ unit, filter, produk, riwayat, hal, pengelola }: { unit: Unit
                         {riwayat.length === 0 && <tr><td colSpan={9} className="px-3 py-5 text-center text-muted-foreground">Tidak ada stok masuk pada periode ini.</td></tr>}
                     </tbody>
                 </table>
+                </div>
+                <PaginasiUrl className="sticky bottom-0 z-10 border-t border-outline-variant bg-background/95 backdrop-blur" page={hal.page} totalPages={hal.totalPages} pageSize={hal.pageSize} total={hal.total} />
             </div>
+            <ModalForm open={!!hapusIni} onOpenChange={(b) => { if (!b && !sibuk) setHapusIni(null) }} kunci={false} judul={`Hapus stok masuk ${hapusIni?.no_bukti ?? ""}?`}
+                keterangan={`Rp ${rp(hapusIni?.total ?? 0)}. Stok dan HPP dikembalikan, kartu stok${milik ? " dan jurnalnya" : ""} ikut dihapus tanpa jurnal balik. Tidak bisa dibatalkan.`}>
+                <div className="flex justify-end gap-2">
+                    <button type="button" disabled={sibuk} onClick={() => setHapusIni(null)} className="h-9 rounded-md border px-4 text-sm">Batal</button>
+                    <button type="button" disabled={sibuk} onClick={() => hapusIni && hapus(hapusIni)}
+                        className="inline-flex h-9 items-center gap-2 rounded-md bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50">
+                        {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />} Hapus permanen</button>
+                </div>
+            </ModalForm>
+            <ModalForm open={!!ubahIni} onOpenChange={(b) => { if (!b) setUbahIni(null) }} lebar="sm:max-w-[56rem]" judul={`Edit stok masuk ${ubahIni?.no_bukti ?? ""}`}
+                keterangan="Transaksi lama dihapus lalu dicatat ulang dengan nomor bukti yang sama: stok, HPP, kartu stok, dan jurnal ikut menyesuaikan.">
+                {ubahIni && <FormMasuk unit={unit} produk={produk} akun={akun} pengelola edit={ubahIni}
+                    selesai={(teks) => { setPesan({ ok: true, teks }); setUbahIni(null) }} />}
+            </ModalForm>
         </FormCard>
     )
 }
@@ -154,8 +184,8 @@ function Kartu({ unit, filter, produk, mutasi, hal }: { unit: UnitOperator; filt
     return (
         <FormCard title="Kartu Stok" description="Semua mutasi: stok masuk, terjual, batal jual, opname, dan barang rusak. Pilih produk untuk kartu stok satu produk.">
             <Saring unit={unit} tab="kartu" filter={filter} produk={produk} jenis />
-            <div className="overflow-x-auto rounded-md border">
-                <PaginasiUrl className="border-b" page={hal.page} totalPages={hal.totalPages} pageSize={hal.pageSize} total={hal.total} />
+            <div className="rounded-md border">
+                <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                     <thead className="bg-muted text-xs text-muted-foreground"><tr>
                         <th className="px-3 py-2 text-left">Waktu</th><th className="px-3 py-2 text-left">Bukti</th><th className="px-3 py-2 text-left">Produk</th><th className="px-3 py-2 text-left">Jenis</th>
@@ -177,18 +207,25 @@ function Kartu({ unit, filter, produk, mutasi, hal }: { unit: UnitOperator; filt
                         {mutasi.length === 0 && <tr><td colSpan={8} className="px-3 py-5 text-center text-muted-foreground">Tidak ada mutasi stok pada periode ini.</td></tr>}
                     </tbody>
                 </table>
+                </div>
+                <PaginasiUrl className="sticky bottom-0 z-10 border-t border-outline-variant bg-background/95 backdrop-blur" page={hal.page} totalPages={hal.totalPages} pageSize={hal.pageSize} total={hal.total} />
             </div>
         </FormCard>
     )
 }
 
 /** Catat barang datang (produk berstok). Kantin milik koperasi menjurnal Dr Persediaan / Cr akun bayar. */
-function FormMasuk({ unit, produk, akun, pengelola }: { unit: UnitOperator; produk: ProdukStok[]; akun: { kode_perkiraan: string; nama_perkiraan: string }[]; pengelola: boolean }) {
+function FormMasuk({ unit, produk, akun, pengelola, edit, selesai }: {
+    unit: UnitOperator; produk: ProdukStok[]; akun: { kode_perkiraan: string; nama_perkiraan: string }[]; pengelola: boolean
+    /** Mode edit: isi awal dari bukti lama; selesai dipanggil dengan pesan setelah tersimpan. */
+    edit?: RiwayatMasuk; selesai?: (pesan: string) => void
+}) {
     const router = useRouter()
-    const [tanggal, setTanggal] = useState(hariIni())
-    const [akunBayar, setAkunBayar] = useState(akun[0]?.kode_perkiraan ?? "")
-    const [ket, setKet] = useState("")
-    const [baris, setBaris] = useState<{ produkId: number; qty: string; hargaBeli: string }[]>([])
+    const [tanggal, setTanggal] = useState(edit?.tanggal ?? hariIni())
+    const [akunBayar, setAkunBayar] = useState(edit?.akun_kode ?? akun[0]?.kode_perkiraan ?? "")
+    const [ket, setKet] = useState(edit?.keterangan ?? "")
+    const [baris, setBaris] = useState<{ produkId: number; qty: string; hargaBeli: string }[]>(
+        () => edit?.item.map((it) => ({ produkId: it.produkId, qty: String(it.qty), hargaBeli: String(it.harga) })) ?? [])
     const [hasil, setHasil] = useState<{ ok: boolean; teks: string } | null>(null)
     const [sibuk, mulai] = useTransition()
     const total = baris.reduce((s, b) => s + Number(b.qty || 0) * Number(b.hargaBeli || 0), 0)
@@ -201,16 +238,16 @@ function FormMasuk({ unit, produk, akun, pengelola }: { unit: UnitOperator; prod
         e.preventDefault()
         setHasil(null)
         mulai(async () => {
-            const h = await stokMasukAction({ unitId: unit.id, tanggal, akunBayar: unit.model === "milik" ? akunBayar : null, keterangan: ket, items: baris })
+            const isi = { unitId: unit.id, tanggal, akunBayar: unit.model === "milik" ? akunBayar : null, keterangan: ket, items: baris }
+            const h = edit ? await ubahStokMasukAction({ ...isi, noBukti: edit.no_bukti }) : await stokMasukAction(isi)
             setHasil(h.ok ? { ok: true, teks: h.pesan } : { ok: false, teks: h.error })
-            if (h.ok) { setBaris([]); setKet(""); router.refresh() }
+            if (!h.ok) return
+            router.refresh()
+            if (selesai) selesai(h.pesan)
+            else { setBaris([]); setKet("") }
         })
     }
-    return (
-        <FormCard title={`Stok Masuk ${unit.nama}`} description={unit.model === "milik"
-            ? "Barang datang untuk produk berstok. Stok bertambah, HPP rata-rata diperbarui, dan jurnal Dr Persediaan / Cr akun pembayaran dibuat. Bahan masakan (produk tanpa kelola stok) dicatat lewat Bank Book ke akun Persediaan kantin."
-            : "Barang datang milik tenant: stok bertambah tanpa jurnal koperasi."}>
-            {!pengelola ? <p className="text-sm text-muted-foreground">Hanya pengelola kantin yang mencatat stok masuk.</p> : (
+    const isiForm = (
                 <form onSubmit={simpan} className="space-y-4">
                     <div className="grid gap-4 sm:grid-cols-3">
                         <Field label="Tanggal"><Input type="date" value={tanggal} onChange={(e) => setTanggal(e.target.value)} required /></Field>
@@ -232,7 +269,8 @@ function FormMasuk({ unit, produk, akun, pengelola }: { unit: UnitOperator; prod
                             </tr></thead>
                             <tbody>
                                 {baris.map((b, i) => {
-                                    const p = produk.find((x) => x.id === b.produkId)!
+                                    const lama = edit?.item.find((x) => x.produkId === b.produkId)
+                                    const p = produk.find((x) => x.id === b.produkId) ?? { nama: lama?.nama ?? "?", satuan: lama?.satuan ?? "", harga_pokok: 0, stok: 0 }
                                     return (
                                         <tr key={b.produkId} className="border-t">
                                             <td className="px-3 py-1.5">{p.nama} <span className="text-xs text-muted-foreground">/{p.satuan} · HPP {rp(p.harga_pokok)}</span></td>
@@ -253,11 +291,17 @@ function FormMasuk({ unit, produk, akun, pengelola }: { unit: UnitOperator; prod
                         {hasil.ok ? <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" /> : <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />} {hasil.teks}</div>}
                     <div className="flex justify-end">
                         <button type="submit" disabled={sibuk || !baris.length} className="inline-flex h-9 items-center gap-2 rounded-md bg-primary px-4 text-sm font-semibold text-primary-foreground disabled:opacity-50">
-                            {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} Simpan stok masuk
+                            {sibuk ? <Loader2 className="h-4 w-4 animate-spin" /> : <Plus className="h-4 w-4" />} {edit ? "Simpan perubahan" : "Simpan stok masuk"}
                         </button>
                     </div>
                 </form>
-            )}
+    )
+    if (edit) return isiForm
+    return (
+        <FormCard title={`Stok Masuk ${unit.nama}`} description={unit.model === "milik"
+            ? "Barang datang untuk produk berstok. Stok bertambah, HPP rata-rata diperbarui, dan jurnal Dr Persediaan / Cr akun pembayaran dibuat. Bahan masakan (produk tanpa kelola stok) dicatat lewat Bank Book ke akun Persediaan kantin."
+            : "Barang datang milik tenant: stok bertambah tanpa jurnal koperasi."}>
+            {!pengelola ? <p className="text-sm text-muted-foreground">Hanya pengelola kantin yang mencatat stok masuk.</p> : isiForm}
         </FormCard>
     )
 }

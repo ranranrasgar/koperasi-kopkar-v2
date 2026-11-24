@@ -473,6 +473,8 @@ CREATE TABLE IF NOT EXISTS kantin_stok_mutasi (
 );
 CREATE INDEX IF NOT EXISTS ix_kantin_stok_mutasi_produk ON kantin_stok_mutasi (produk_id, waktu);
 CREATE INDEX IF NOT EXISTS ix_kantin_stok_mutasi_bukti ON kantin_stok_mutasi (no_bukti);
+-- HPP rata-rata produk sebelum stok masuk ini: hapus/ubah stok masuk mengembalikannya persis (baris lama NULL: dihitung balik).
+ALTER TABLE kantin_stok_mutasi ADD COLUMN IF NOT EXISTS hpp_sebelum numeric(20,4);
 
 -- Gambar produk memakai pengumuman_gambar (jenis ref 'produk').
 ALTER TABLE pengumuman_gambar_ref DROP CONSTRAINT IF EXISTS pengumuman_gambar_ref_jenis_check;
