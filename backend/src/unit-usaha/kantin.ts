@@ -116,11 +116,31 @@ export async function akunBersama(db: Pemanggil, nama: string, indukKode: string
 
 // ---------- unit usaha ----------
 
+export type StatusBuka = 'jadwal' | '24jam' | 'tutup';
+const SEKARANG = "(now() AT TIME ZONE 'Asia/Jakarta')";
+const TUTUP_AKTIF = (u: string) => `(${u}.status_buka = 'tutup' AND (${u}.tutup_sampai IS NULL OR ${SEKARANG}::date <= ${u}.tutup_sampai))`;
+/**
+ * Ekspresi SQL boolean: kantin (alias tabel unit_usaha `u`) sedang buka menurut jam WIB. Tutup sementara yang tanggalnya sudah lewat kembali ke
+ * jadwal. Jadwal tanpa jam = selalu buka; jam tutup lebih kecil dari jam buka = lewat tengah malam (mis. 20:00-08:00).
+ */
+export const sqlBuka = (u = 'u') => `(CASE WHEN ${TUTUP_AKTIF(u)} THEN false
+    WHEN ${u}.status_buka = '24jam' OR ${u}.jam_buka IS NULL OR ${u}.jam_tutup IS NULL THEN true
+    WHEN ${u}.jam_buka < ${u}.jam_tutup THEN ${SEKARANG}::time >= ${u}.jam_buka AND ${SEKARANG}::time < ${u}.jam_tutup
+    ELSE ${SEKARANG}::time >= ${u}.jam_buka OR ${SEKARANG}::time < ${u}.jam_tutup END)`;
+/** Ekspresi SQL teks keterangan jam untuk anggota, mis. "buka 08:00-17:00", "buka 24 jam", "tutup sementara s.d. 01-12-2026". */
+export const sqlKetBuka = (u = 'u') => `(CASE WHEN ${TUTUP_AKTIF(u)} THEN 'tutup sementara' || COALESCE(' s.d. ' || to_char(${u}.tutup_sampai, 'DD-MM-YYYY'), '')
+    WHEN ${u}.status_buka = '24jam' OR ${u}.jam_buka IS NULL OR ${u}.jam_tutup IS NULL THEN 'buka 24 jam'
+    ELSE 'buka ' || to_char(${u}.jam_buka, 'HH24:MI') || '-' || to_char(${u}.jam_tutup, 'HH24:MI') END)`;
+/** Ekspresi SQL pesan tutup sementara yang sedang berlaku (NULL bila tidak sedang tutup sementara). */
+export const sqlPesanTutup = (u = 'u') => `(CASE WHEN ${TUTUP_AKTIF(u)} THEN COALESCE(${u}.pesan_tutup, '') END)`;
+
 export interface TenantInput { namaUsaha: string; pemilik?: string; telepon?: string; email?: string; bank?: string; noRekening?: string; namaRekening?: string }
 export interface KontrakInput { mulai: string; selesai?: string; persenBagiHasil?: string | number; minimumBulanan?: string | number; sewaBulanan?: string | number; periode?: 'bulanan' | 'mingguan' }
 export interface UnitInput {
     id?: number | null;
     kode: string; nama: string; lokasi?: string; jamBuka?: string; jamTutup?: string;
+    /** Bawaan: 'jadwal' bila jam diisi, '24jam' bila tidak. 'tutup': tutup sementara sampai `tutupSampai` (inklusif, kosong = sampai diubah lagi) dengan `pesanTutup` untuk anggota. */
+    statusBuka?: StatusBuka; pesanTutup?: string; tutupSampai?: string;
     aktif: boolean; tampilAnggota: boolean; model: ModelKantin;
     terimaTunai: boolean; terimaSukarela: boolean;
     batasSukarelaTransaksi?: string | number; batasSukarelaHarian?: string | number; saldoSukarelaMinimal?: string | number; menitBatalPesanan?: number | string;
@@ -139,10 +159,19 @@ export async function simpanUnit(db: Pemanggil, i: UnitInput, opr: string) {
     if (!(i.model in AKUN_MODEL)) throw new KantinSalah('Model unit tidak dikenal');
     const menit = Number(i.menitBatalPesanan ?? 30);
     if (!Number.isInteger(menit) || menit < 5 || menit > 1440) throw new KantinSalah('Batas waktu ambil pesanan 5-1440 menit');
-    const nilai = [kode, nama, atauNull(teks(i.lokasi, 'Lokasi', 100)), jam(i.jamBuka, 'Jam buka'), jam(i.jamTutup, 'Jam tutup'),
+    const jamBuka = jam(i.jamBuka, 'Jam buka'), jamTutup = jam(i.jamTutup, 'Jam tutup');
+    // Tanpa status (pemanggil lama): dengan jam = jadwal, tanpa jam = 24 jam, sama dengan aturan sebelum ada status_buka.
+    const status = i.statusBuka ?? (jamBuka && jamTutup ? 'jadwal' : '24jam');
+    if (!['jadwal', '24jam', 'tutup'].includes(status)) throw new KantinSalah('Status buka tidak dikenal');
+    if (status === 'jadwal' && (!jamBuka || !jamTutup)) throw new KantinSalah('Isi jam buka dan jam tutup, atau pilih Buka 24 jam');
+    if (status === 'jadwal' && jamBuka === jamTutup) throw new KantinSalah('Jam buka dan jam tutup sama; pilih Buka 24 jam bila kantin tidak pernah tutup');
+    const tutupSampai = status === 'tutup' ? tanggal(i.tutupSampai, 'Tutup sampai') : null;
+    if (tutupSampai && tutupSampai < new Date().toLocaleDateString('sv-SE', { timeZone: 'Asia/Jakarta' })) throw new KantinSalah('Tanggal tutup sampai sudah lewat');
+    const pesanTutup = status === 'tutup' ? atauNull(teks(i.pesanTutup, 'Pesan tutup', 150)) : null;
+    const nilai = [kode, nama, atauNull(teks(i.lokasi, 'Lokasi', 100)), jamBuka, jamTutup,
         !!i.aktif, !!i.tampilAnggota, i.model, !!i.terimaTunai, !!i.terimaSukarela,
         uang(i.batasSukarelaTransaksi, 'Batas sukarela per transaksi'), uang(i.batasSukarelaHarian, 'Batas sukarela per hari'),
-        uang(i.saldoSukarelaMinimal, 'Saldo sukarela minimal'), menit];
+        uang(i.saldoSukarelaMinimal, 'Saldo sukarela minimal'), menit, status, pesanTutup, tutupSampai];
     if (!i.terimaTunai && !i.terimaSukarela) throw new KantinSalah('Pilih minimal satu cara bayar');
     const tenant = periksaTenant(i);
 
@@ -154,13 +183,14 @@ export async function simpanUnit(db: Pemanggil, i: UnitInput, opr: string) {
     if (i.id) {
         const r = await db.query(`UPDATE unit_usaha SET kode=$1, nama=$2, lokasi=$3, jam_buka=$4, jam_tutup=$5, aktif=$6, tampil_anggota=$7, model=$8,
                 terima_tunai=$9, terima_sukarela=$10, batas_sukarela_transaksi=$11, batas_sukarela_harian=$12, saldo_sukarela_minimal=$13,
-                menit_batal_pesanan=$14, diubah_pada=now() WHERE id=$15`, [...nilai, i.id]);
+                menit_batal_pesanan=$14, status_buka=$15, pesan_tutup=$16, tutup_sampai=$17, diubah_pada=now() WHERE id=$18`, [...nilai, i.id]);
         if (!r.rowCount) throw new KantinSalah('Unit usaha tidak ditemukan');
         id = Number(i.id);
     } else {
         id = Number((await db.query<{ id: string }>(`INSERT INTO unit_usaha (kode, nama, lokasi, jam_buka, jam_tutup, aktif, tampil_anggota, model,
-                terima_tunai, terima_sukarela, batas_sukarela_transaksi, batas_sukarela_harian, saldo_sukarela_minimal, menit_batal_pesanan, dibuat_oleh)
-             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING id`, [...nilai, opr])).rows[0].id);
+                terima_tunai, terima_sukarela, batas_sukarela_transaksi, batas_sukarela_harian, saldo_sukarela_minimal, menit_batal_pesanan,
+                status_buka, pesan_tutup, tutup_sampai, dibuat_oleh)
+             VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING id`, [...nilai, opr])).rows[0].id);
     }
 
     // Akun yang belum ada untuk model ini.

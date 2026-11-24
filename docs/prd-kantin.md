@@ -76,7 +76,7 @@ Dipilih saat admin membuat kantin. POS, produk, QR, dan riwayat sama untuk semua
 
 ### 4.1 Admin membuat kantin
 
-1. Menu **Unit Usaha → Daftar Unit Usaha → Tambah**. Isi: jenis (`KANTIN`; PPOB/ECOMMERCE belum aktif), kode (`KTN01`), nama (*Kantin Gedung A*), lokasi, jam buka, aktif, tampil di aplikasi anggota.
+1. Menu **Unit Usaha → Daftar Unit Usaha → Tambah**. Isi: jenis (`KANTIN`; PPOB/ECOMMERCE belum aktif), kode (`KTN01`), nama (*Kantin Gedung A*), lokasi, jam buka (sesuai jadwal termasuk lewat tengah malam, buka 24 jam, atau tutup sementara dengan pesan dan tanggal), aktif, tampil di aplikasi anggota.
 2. Bagian **Akun Jurnal**: pilih **Buat akun otomatis** (bawaan) atau pilih akun yang sudah ada. Otomatis membuat 4 akun detail (bagian 7.1). Akun kas diberi `keterangan = 'GC'` supaya muncul di Bank Book untuk setoran harian.
 3. Bagian **Operator**: tambah operator dan perannya (`pengelola`/`kasir`). Operator baru dibuat dari Kelola Operator seperti biasa, grup **Kantin** (grup bawaan dengan izin menu kantin saja).
 4. Bagian **Pengaturan bayar**: metode yang diterima (tunai, sukarela), batas belanja sukarela per transaksi dan per hari, saldo sukarela minimal yang harus tersisa.

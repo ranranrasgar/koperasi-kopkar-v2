@@ -4,6 +4,7 @@ import { KatalogKantin, type ProdukKatalog } from "@/components/KatalogKantin"
 import { Kepala } from "@/components/ui"
 import { wajibAnggota } from "@/lib/anggota"
 import { query } from "@/lib/db"
+import { sqlBuka, sqlKetBuka, sqlPesanTutup } from "@kopkar/backend/src/unit-usaha/kantin.ts"
 
 export const metadata: Metadata = { title: "Belanja Kantin" }
 
@@ -12,10 +13,9 @@ export default async function KatalogPage(props: PageProps<"/kantin/[unit]">) {
     const a = await wajibAnggota()
     const unitId = Number((await props.params).unit)
     if (!Number.isSafeInteger(unitId)) notFound()
-    const [u] = await query<{ id: number; nama: string; lokasi: string | null; buka: boolean; jam: string | null }>(
-        `SELECT id, nama, lokasi, (jam_buka IS NULL OR jam_tutup IS NULL OR (now() AT TIME ZONE 'Asia/Jakarta')::time BETWEEN jam_buka AND jam_tutup) buka,
-                CASE WHEN jam_buka IS NOT NULL AND jam_tutup IS NOT NULL THEN to_char(jam_buka, 'HH24:MI') || '-' || to_char(jam_tutup, 'HH24:MI') END jam
-           FROM unit_usaha WHERE id = $1 AND jenis = 'KANTIN' AND aktif AND tampil_anggota`, [unitId])
+    const [u] = await query<{ id: number; nama: string; lokasi: string | null; buka: boolean; ket: string; pesan_tutup: string | null }>(
+        `SELECT id, nama, lokasi, ${sqlBuka('u')} buka, ${sqlKetBuka('u')} ket, ${sqlPesanTutup('u')} pesan_tutup
+           FROM unit_usaha u WHERE id = $1 AND jenis = 'KANTIN' AND aktif AND tampil_anggota`, [unitId])
     if (!u) notFound()
     const [produk, tas] = await Promise.all([
         query<ProdukKatalog>(`SELECT p.id, p.nama, p.satuan, p.harga_jual harga, k.nama kategori, p.kelola_stok, p.stok, g.token gambar
@@ -26,8 +26,10 @@ export default async function KatalogPage(props: PageProps<"/kantin/[unit]">) {
     ])
     return (
         <main>
-            <Kepala judul={u.nama} sub={[u.lokasi, u.jam ? `buka ${u.jam}` : null].filter(Boolean).join(" · ") || "Kantin koperasi"} kembali="/kantin" />
-            {!u.buka && <p className="mx-5 mb-3 rounded-xl bg-keluar-lembut px-4 py-2.5 text-sm text-keluar">Kantin sedang tutup. Anda bisa melihat menu, tetapi pesanan baru bisa dikirim saat kantin buka.</p>}
+            <Kepala judul={u.nama} sub={[u.lokasi, u.ket].filter(Boolean).join(" · ")} kembali="/kantin" />
+            {!u.buka && <p className="mx-5 mb-3 rounded-xl bg-keluar-lembut px-4 py-2.5 text-sm text-keluar">
+                {u.pesan_tutup !== null ? `Kantin tutup sementara${u.ket.includes("s.d.") ? ` ${u.ket.slice(u.ket.indexOf("s.d."))}` : ""}.${u.pesan_tutup ? ` ${u.pesan_tutup}.` : ""}` : "Kantin sedang tutup."}
+                {" "}Anda bisa melihat menu, tetapi pesanan baru bisa dikirim saat kantin buka.</p>}
             <KatalogKantin unitId={unitId} produk={produk.map((p) => ({ ...p, harga: Number(p.harga), stok: Number(p.stok) }))}
                 tas={Object.fromEntries(tas.map((t) => [Number(t.produk_id), Number(t.qty)]))} />
         </main>

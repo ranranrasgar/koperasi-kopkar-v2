@@ -475,6 +475,11 @@ CREATE INDEX IF NOT EXISTS ix_kantin_stok_mutasi_produk ON kantin_stok_mutasi (p
 CREATE INDEX IF NOT EXISTS ix_kantin_stok_mutasi_bukti ON kantin_stok_mutasi (no_bukti);
 -- HPP rata-rata produk sebelum stok masuk ini: hapus/ubah stok masuk mengembalikannya persis (baris lama NULL: dihitung balik).
 ALTER TABLE kantin_stok_mutasi ADD COLUMN IF NOT EXISTS hpp_sebelum numeric(20,4);
+-- Status buka kantin (backend/src/unit-usaha/kantin.ts sqlBuka): 'jadwal' (jam_buka-jam_tutup, boleh lewat tengah malam), '24jam', atau
+-- 'tutup' sementara (sampai tutup_sampai, inklusif; NULL = sampai diubah lagi) dengan pesan untuk anggota.
+ALTER TABLE unit_usaha ADD COLUMN IF NOT EXISTS status_buka varchar(10) NOT NULL DEFAULT 'jadwal' CHECK (status_buka IN ('jadwal', '24jam', 'tutup'));
+ALTER TABLE unit_usaha ADD COLUMN IF NOT EXISTS pesan_tutup varchar(150);
+ALTER TABLE unit_usaha ADD COLUMN IF NOT EXISTS tutup_sampai date;
 
 -- Gambar produk memakai pengumuman_gambar (jenis ref 'produk').
 ALTER TABLE pengumuman_gambar_ref DROP CONSTRAINT IF EXISTS pengumuman_gambar_ref_jenis_check;

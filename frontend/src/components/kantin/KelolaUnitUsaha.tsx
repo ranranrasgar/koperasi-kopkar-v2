@@ -10,11 +10,12 @@ import { Input } from "@/components/ui/input"
 import { InputUang } from "@/components/ui/InputUang"
 import { ModalForm } from "@/components/ui/Modal"
 import { MENU } from "@/config/akses"
-import type { ModelKantin, PeranKantin, UnitInput } from "@kopkar/backend/src/unit-usaha/kantin.ts"
+import type { ModelKantin, PeranKantin, StatusBuka, UnitInput } from "@kopkar/backend/src/unit-usaha/kantin.ts"
 import { cn } from "@/lib/utils"
 
 export interface BarisUnit {
     id: number; kode: string; nama: string; lokasi: string | null; jam_buka: string | null; jam_tutup: string | null
+    status_buka: StatusBuka; pesan_tutup: string | null; tutup_sampai: string | null; buka_sekarang: boolean; ket_buka: string
     aktif: boolean; tampil_anggota: boolean; model: ModelKantin; terima_tunai: boolean; terima_sukarela: boolean
     batas_sukarela_transaksi: string; batas_sukarela_harian: string; saldo_sukarela_minimal: string; menit_batal_pesanan: number
     nama_usaha: string | null; pemilik: string | null; telepon: string | null; email: string | null; bank: string | null; no_rekening: string | null; nama_rekening: string | null
@@ -29,6 +30,11 @@ const MODEL: { value: ModelKantin; label: string; ket: string }[] = [
     { value: "bagi_hasil", label: "Tenant bagi hasil", ket: "Tenant memegang barang dan uang tunai; koperasi mendapat persen penjualan (minimal per bulan). Akun: Piutang Tenant, Utang ke Tenant, Pendapatan Bagi Hasil." },
     { value: "sewa", label: "Tenant sewa tetap", ket: "Tenant membayar sewa tetap per bulan. Akun: Piutang Tenant, Utang ke Tenant, Pendapatan Sewa." },
 ]
+const STATUS_BUKA: { value: StatusBuka; label: string; ket: string }[] = [
+    { value: "jadwal", label: "Sesuai jadwal", ket: "Buka di antara jam buka dan jam tutup setiap hari. Jam tutup lebih kecil dari jam buka berarti lewat tengah malam (mis. 20:00 - 08:00)." },
+    { value: "24jam", label: "Buka 24 jam", ket: "Pesanan dari aplikasi anggota diterima kapan saja." },
+    { value: "tutup", label: "Tutup sementara", ket: "Mis. libur, stok opname, renovasi. Anggota tetap bisa melihat menu, tetapi tidak bisa memesan. Bila tanggal diisi, kantin kembali ke jadwal setelah tanggal itu." },
+]
 const LABEL_MODEL = Object.fromEntries(MODEL.map((m) => [m.value, m.label])) as Record<ModelKantin, string>
 const angka = (s: string | null | undefined) => (s === null || s === undefined || s === "" ? "" : String(Number(s)))
 const rp = (s: string | null) => `Rp ${Number(s ?? 0).toLocaleString("id-ID", { maximumFractionDigits: 0 })}`
@@ -36,7 +42,10 @@ const hariIni = () => new Date().toLocaleDateString("sv-SE", { timeZone: "Asia/J
 
 function awal(u: BarisUnit | null): UnitInput {
     return {
-        id: u?.id ?? null, kode: u?.kode ?? "", nama: u?.nama ?? "", lokasi: u?.lokasi ?? "", jamBuka: u?.jam_buka ?? "", jamTutup: u?.jam_tutup ?? "",
+        id: u?.id ?? null, kode: u?.kode ?? "", nama: u?.nama ?? "", lokasi: u?.lokasi ?? "", jamBuka: u?.jam_buka ?? "08:00", jamTutup: u?.jam_tutup ?? "17:00",
+        // Data lama tanpa jam dianggap buka 24 jam, sama dengan aturan sqlBuka.
+        statusBuka: u ? (u.status_buka === "jadwal" && (!u.jam_buka || !u.jam_tutup) ? "24jam" : u.status_buka) : "jadwal",
+        pesanTutup: u?.pesan_tutup ?? "", tutupSampai: u?.tutup_sampai ?? "",
         aktif: u?.aktif ?? true, tampilAnggota: u?.tampil_anggota ?? true, model: u?.model ?? "milik",
         terimaTunai: u?.terima_tunai ?? true, terimaSukarela: u?.terima_sukarela ?? true,
         batasSukarelaTransaksi: angka(u?.batas_sukarela_transaksi ?? "100000"), batasSukarelaHarian: angka(u?.batas_sukarela_harian ?? "200000"),
@@ -84,6 +93,7 @@ export function KelolaUnitUsaha({ unit, operator }: { unit: BarisUnit[]; operato
                                         <td className="px-3 py-1.5">
                                             <div className="font-medium">{u.nama}</div>
                                             {u.lokasi && <div className="text-xs text-muted-foreground">{u.lokasi}</div>}
+                                            <div className={cn("text-xs", u.buka_sekarang ? "text-emerald-700" : "text-red-700")}>{u.buka_sekarang ? "Buka" : "Tutup"} sekarang · {u.ket_buka}</div>
                                         </td>
                                         <td className="px-3 py-1.5">
                                             <div>{LABEL_MODEL[u.model]}</div>
@@ -155,8 +165,27 @@ function FormUnit({ unit, operator, onSelesai }: { unit: BarisUnit | null; opera
                 <Field label="Kode unit" hint="Huruf/angka, mis. KTN01"><Input value={d.kode} onChange={(e) => ubah({ kode: e.target.value.toUpperCase() })} required maxLength={20} /></Field>
                 <Field label="Nama kantin"><Input value={d.nama} onChange={(e) => ubah({ nama: e.target.value })} required maxLength={80} placeholder="Kantin Gedung A" /></Field>
                 <Field label="Lokasi" className="sm:col-span-2"><Input value={d.lokasi} onChange={(e) => ubah({ lokasi: e.target.value })} maxLength={100} /></Field>
-                <Field label="Jam buka"><Input type="time" value={d.jamBuka} onChange={(e) => ubah({ jamBuka: e.target.value })} /></Field>
-                <Field label="Jam tutup"><Input type="time" value={d.jamTutup} onChange={(e) => ubah({ jamTutup: e.target.value })} /></Field>
+                <div className="space-y-2 sm:col-span-2">
+                    <p className="text-sm font-medium">Jam buka untuk pesanan dari aplikasi anggota</p>
+                    <div role="radiogroup" className="flex flex-wrap gap-2">
+                        {STATUS_BUKA.map((s) => (
+                            <button key={s.value} type="button" role="radio" aria-checked={d.statusBuka === s.value} onClick={() => ubah({ statusBuka: s.value })}
+                                className={cn("rounded-full border px-3 py-1.5 text-sm", d.statusBuka === s.value
+                                    ? s.value === "tutup" ? "border-red-600 bg-red-600 text-white" : "border-blue-600 bg-blue-600 text-white" : "hover:bg-muted")}>{s.label}</button>
+                        ))}
+                    </div>
+                    <p className="text-xs text-muted-foreground">{STATUS_BUKA.find((s) => s.value === d.statusBuka)?.ket}</p>
+                </div>
+                {d.statusBuka === "jadwal" && <>
+                    <Field label="Jam buka"><Input type="time" value={d.jamBuka} onChange={(e) => ubah({ jamBuka: e.target.value })} required /></Field>
+                    <Field label="Jam tutup" hint={d.jamBuka && d.jamTutup && d.jamTutup < d.jamBuka ? "Lewat tengah malam: tutup keesokan harinya" : undefined}>
+                        <Input type="time" value={d.jamTutup} onChange={(e) => ubah({ jamTutup: e.target.value })} required /></Field>
+                </>}
+                {d.statusBuka === "tutup" && <>
+                    <Field label="Pesan untuk anggota (opsional)"><Input value={d.pesanTutup} onChange={(e) => ubah({ pesanTutup: e.target.value })} maxLength={150} placeholder="Mis. Libur Lebaran, buka lagi Senin" /></Field>
+                    <Field label="Tutup sampai tanggal (opsional)" hint="Kosongkan bila belum tahu; buka lagi dengan memilih Sesuai jadwal atau Buka 24 jam.">
+                        <Input type="date" value={d.tutupSampai} min={hariIni()} onChange={(e) => ubah({ tutupSampai: e.target.value })} /></Field>
+                </>}
                 <Field label="Model kepemilikan" className="sm:col-span-2" hint={MODEL.find((m) => m.value === d.model)?.ket}>
                     <select className={selectClass} value={d.model} onChange={(e) => ubah({ model: e.target.value as ModelKantin })}>
                         {MODEL.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}
