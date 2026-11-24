@@ -1,6 +1,7 @@
 import { PilihKantin } from "@/components/kantin/PilihKantin"
 import { StokMasuk, type FilterStok, type MutasiStok, type ProdukStok, type RiwayatMasuk, type TabStok } from "@/components/kantin/StokMasuk"
 import { pool, query } from "@/lib/db"
+import { ukuranHalaman } from "@/lib/halaman"
 import { unitBoleh } from "@/lib/kantin"
 import { wajibIzin } from "@/lib/operator"
 
@@ -28,7 +29,7 @@ export default async function StokKantinPage(props: PageProps<"/dashboard/kantin
         jenis: JENIS.includes(teks(sp.jenis)) ? teks(sp.jenis) : "",
         cari: teks(sp.cari).trim().slice(0, 50),
     }
-    const pageSize = [25, 50, 100, 200].includes(Number(sp.pageSize)) ? Number(sp.pageSize) : 50
+    const pageSize = ukuranHalaman(teks(sp.pageSize), 50) // termasuk pilihan "semua", sama dengan tabel lain
     const page = Math.max(1, Math.floor(Number(sp.page)) || 1)
     const offset = (page - 1) * pageSize
     const cari = filter.cari ? `%${filter.cari}%` : ""
