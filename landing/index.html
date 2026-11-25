@@ -68,6 +68,20 @@ a { color: inherit; }
 @media (prefers-color-scheme: dark) { .tombol-utama { color: #06140d; } }
 :focus-visible { outline: 3px solid var(--emas); outline-offset: 2px; }
 
+/* Tombol versi mobile + QR (hanya layar lebar; di HP tidak perlu memindai) */
+.seluler { position: relative; }
+.seluler summary { list-style: none; cursor: pointer; }
+.seluler summary::-webkit-details-marker { display: none; }
+.seluler summary .panah { transition: transform .15s; }
+.seluler[open] summary .panah { transform: rotate(180deg); }
+.seluler .panel { position: absolute; right: 0; top: calc(100% + 8px); width: 220px; padding: 18px; border-radius: 14px; background: var(--latar); border: 1px solid var(--garis); box-shadow: 0 24px 60px -20px rgba(0, 0, 0, .35); text-align: center; }
+.seluler .qr { position: relative; display: block; width: 180px; height: 180px; margin: 0 auto; border-radius: 8px; overflow: hidden; }
+.seluler .qr img.kode { width: 100%; height: 100%; display: block; }
+.seluler .qr img.logo-qr { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; transform: translate(-50%, -50%); background: #fff; border-radius: 50%; padding: 3px; }
+.seluler .panel p { margin: 12px 0 0; font-size: 14px; }
+.seluler .panel a { color: var(--utama); }
+@media (max-width: 720px) { .seluler { display: none; } }
+
 /* Pembuka */
 .pembuka { padding: 72px 0 64px; background: radial-gradient(1000px 420px at 85% 0%, var(--utama-lembut), transparent 70%); }
 .pembuka .wadah { display: grid; grid-template-columns: 1.15fr .85fr; gap: 48px; align-items: center; }
@@ -144,6 +158,20 @@ footer a { color: var(--redup); }
             <a class="tautan" href="#layanan">Layanan</a>
             <a class="tautan" href="#mulai">Cara mulai</a>
             <a class="tautan" href="#kontak">Kontak</a>
+            <details class="seluler">
+                <summary class="tombol tombol-garis">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><rect x="6" y="2" width="12" height="20" rx="2"/><path d="M11 18h2"/></svg>
+                    Versi mobile
+                    <svg class="panah" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="panel">
+                    <span class="qr">
+                        <img class="kode" src="/qr-anggota.svg" alt="Kode QR ke aplikasi anggota anggota.kopkarmjsmattel.com" width="180" height="180">
+                        <img class="logo-qr" src="/logo.png" alt="" width="40" height="40">
+                    </span>
+                    <p>Pindai dengan kamera HP untuk membuka <a href="https://anggota.kopkarmjsmattel.com">aplikasi anggota di ponsel</a></p>
+                </div>
+            </details>
             <a class="tombol tombol-utama" href="https://anggota.kopkarmjsmattel.com/masuk">Masuk</a>
         </nav>
     </div>
@@ -257,6 +285,12 @@ footer a { color: var(--redup); }
         <span><a href="https://anggota.kopkarmjsmattel.com/terms">Syarat dan Ketentuan</a> · <a href="https://anggota.kopkarmjsmattel.com/policy">Kebijakan Privasi</a> · <a href="https://admin.kopkarmjsmattel.com">Pengurus</a></span>
     </div>
 </footer>
-<script>document.getElementById("tahun").textContent = new Date().getFullYear()</script>
+<script>
+document.getElementById("tahun").textContent = new Date().getFullYear()
+// Tutup panel QR saat klik di luar atau tekan Esc
+const seluler = document.querySelector(".seluler")
+document.addEventListener("click", (e) => { if (!seluler.contains(e.target)) seluler.open = false })
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") seluler.open = false })
+</script>
 </body>
 </html>

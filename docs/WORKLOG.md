@@ -37,6 +37,12 @@ Terakhir diperbarui 24 November 2026 (entri terbaru: Stok Kantin bertab dan hapu
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Landing page: tombol "Versi mobile" dengan QR (25 November)
+- Header `landing/index.html` kini punya tombol **Versi mobile** (`<details class="seluler">`) yang membuka panel QR ke `https://anggota.kopkarmjsmattel.com` dengan logo di tengah, seperti tombol "Firefox for mobile". Disembunyikan di layar ≤720px. Klik di luar atau Esc menutup panel.
+- QR berkas statis `landing/qr-anggota.svg` (koreksi galat H supaya logo di tengah tetap terbaca), dibuat sekali dengan `qrcode-generator` dari `node_modules` repo utama. Bila alamat PWA berubah, buat ulang berkas ini.
+- `.claude/launch.json`: konfigurasi `landing` (python http.server port 3300) untuk pratinjau.
+- Verifikasi: di browser 1280px panel terbuka dan tertutup saat klik di luar. QR belum dipindai dengan HP sungguhan.
+
 ### Dialog di halaman pengganti confirm/alert/prompt (24 November, malam)
 - Panel browser aplikasi desktop Claude memblokir dialog bawaan: `prompt()` melempar galat, `confirm()` diam-diam dianggap Batal (tombol hapus terlihat tidak berbuat apa-apa). Di Chrome biasa tetap jalan, tetapi sekarang **semua** pemakaian di `frontend/src` (85 tempat, 40 file) diganti.
 - `frontend/src/components/ui/Tanya.tsx`: `tanyaYa(teks, { judul, tombol, bahaya })` -> Promise<boolean>, `tanyaIsian(teks, { label, wajib, minimal, awal })` -> Promise<string | null>, `beriTahu(teks, { ok })`. `<DialogTanya />` dipasang sekali di `app/dashboard/layout.tsx`; permintaan saat dialog terbuka diantre; dialog yang hilang (pindah halaman/HMR) menjawab Batal; fokus awal di Batal supaya Enter tidak menjalankan aksi. **Halaman baru: jangan pakai confirm/alert/prompt.**

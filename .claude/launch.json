@@ -18,6 +18,12 @@
             "runtimeExecutable": "npm",
             "runtimeArgs": ["run", "dev:uji", "-w", "anggota"],
             "port": 3201
+        },
+        {
+            "name": "landing",
+            "runtimeExecutable": "python",
+            "runtimeArgs": ["-m", "http.server", "3300", "-d", "landing"],
+            "port": 3300
         }
     ]
 }
