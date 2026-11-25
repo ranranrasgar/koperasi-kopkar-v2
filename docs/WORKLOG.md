@@ -37,6 +37,12 @@ Terakhir diperbarui 24 November 2026 (entri terbaru: Stok Kantin bertab dan hapu
 - Akun uji PWA di database **uji**: `Fendra` (app_user.id 146, anggota 958, punya pinjaman/SHU/notifikasi/email/foto), `sulastri` (id 60), `uji_rohayati_pwa`; atur password uji sendiri di database uji saja.
 - **Setiap perubahan fitur atau halaman wajib disertai pembaruan artikel panduan** di `database/panduan` (artikel baru bila halaman baru), lalu jalankan `npm run panduan:pasang`: ia menambah artikel baru dan memperbarui artikel yang belum disunting admin (`diubah_oleh = 'isi awal'`); yang sudah disunting dilaporkan dilewati. `update-vps.sh` menjalankannya otomatis di VPS.
 
+### Landing page didesain ulang bergaya resmi (25 November, lanjutan)
+- `landing/index.html` ditulis ulang atas permintaan pengguna ("lebih profesional, resmi, premium, hindari ikon AI"). Isi teks, tautan, dan kontak sama; tidak ada angka atau klaim baru.
+- Gaya: hijau tua `#0d3b2c` + emas, latar kertas gading, judul serif dari font sistem (Iowan/Palatino/Georgia, tanpa web font), label kecil kapital, garis tipis sebagai pemisah. **Semua ikon dekoratif dibuang** (kartu ikon layanan, ikon kontak, ikon ponsel); layanan jadi daftar bernomor 01-06, kontak jadi daftar berlabel. Ada bilah atas (badan hukum, telepon, email), pita fakta di bawah pembuka, ajakan penutup hijau, dan kaki tiga kolom.
+- **Mode gelap dihapus** (`color-scheme: light`), sengaja: tampilan resmi satu tema.
+- Verifikasi: dilihat di browser 1366px dan 375px (tanpa gulir samping). Panel QR "Versi Mobile" tetap ada.
+
 ### Landing page: tombol "Versi mobile" dengan QR (25 November)
 - Header `landing/index.html` kini punya tombol **Versi mobile** (`<details class="seluler">`) yang membuka panel QR ke `https://anggota.kopkarmjsmattel.com` dengan logo di tengah, seperti tombol "Firefox for mobile". Disembunyikan di layar ≤720px. Klik di luar atau Esc menutup panel.
 - QR berkas statis `landing/qr-anggota.svg` (koreksi galat H supaya logo di tengah tetap terbaca), dibuat sekali dengan `qrcode-generator` dari `node_modules` repo utama. Bila alamat PWA berubah, buat ulang berkas ini.
